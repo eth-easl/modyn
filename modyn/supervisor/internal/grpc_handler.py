@@ -71,9 +71,11 @@ class GRPCHandler:
         self,
         modyn_config: dict,
         training_status_queue: Optional[mp.Queue] = None,
+        pipeline_status_queue: Optional[mp.Queue] = None,
     ) -> None:
         self.config = modyn_config
         self.training_status_queue = training_status_queue
+        self.pipeline_status_queue = pipeline_status_queue
 
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
@@ -417,6 +419,7 @@ class GRPCHandler:
         self, training_id: int, pipeline_id: int, trigger_id: int
     ) -> dict[str, Any]:  # pragma: no cover
         assert self.training_status_queue is not None
+        assert self.pipeline_status_queue is not None
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(
@@ -428,7 +431,12 @@ class GRPCHandler:
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
         training_reporter = TrainingStatusReporter(self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale)
         training_reporter.create_tracker()
-        training_reporter.update_status_bar(f"Waiting for training")
+        self.pipeline_status_queue.put({
+            "stage": "Waiting for training",
+            "msg_type": "training",
+            "msg": {"id": training_id},
+            "log": True
+        })
         # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
         # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
@@ -474,7 +482,12 @@ class GRPCHandler:
 
         training_reporter.close_counter()
         # status_tracker.close_counter()
-        training_reporter.update_status_bar("Training completed")
+        self.pipeline_status_queue.put({
+            "stage": "Training completed 🚀",
+            "msg_type": "training",
+            "msg": {"id": training_id},
+            "log": True,
+        })
         logger.info("Training completed 🚀")
 
         return trainer_log
@@ -535,6 +548,7 @@ class GRPCHandler:
                 evaluation_id = response.evaluation_id
                 logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
                 evaluations[evaluation_id] = EvaluationStatusReporter(self.training_status_queue, evaluation_id, dataset_id, response.dataset_size)
+                evaluations[evaluation_id].create_tracker()
 
         return evaluations
 
@@ -590,15 +604,18 @@ class GRPCHandler:
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]) -> None:
+        assert self.pipeline_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
     
         logger.info("wait for evaluation completion")
-        self.training_status_queue.put({"stage": "wait for evaluation",
-                                        "action": "update_status_bar",
-                                        "training_id": training_id,
-                                        "demo": f"Waiting for evaluation (training = {training_id})"})
+        self.pipeline_status_queue.put({
+            "stage": "Waiting for evaluation",
+            "msg_type": "training",
+            "msg": {"id": training_id},
+            "log": True,
+        })
         #  self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
@@ -606,7 +623,7 @@ class GRPCHandler:
         working_queue: deque[int] = deque()
         blocked_in_a_row: dict[int, int] = {}
         for evaluation_id, evaluation_reporter in evaluations.items():
-            evaluation_reporter.create_counter(training_id, evaluation_id)
+            evaluation_reporter.create_counter(training_id)
             working_queue.append(evaluation_id)
             blocked_in_a_row[evaluation_id] = 0
 
@@ -649,10 +666,12 @@ class GRPCHandler:
             working_queue.append(current_evaluation_id)
             sleep(1)
 
-        self.training_status_queue.put({"stage": "wait for evaluation",
-                                        "action": "update_status_bar",
-                                        "training_id": training_id,
-                                        "demo": "Evaluation completed"})
+        self.pipeline_status_queue.put({
+            "stage": "Evaluation completed ✅",
+            "msg_type": "training",
+            "msg": {"id": training_id},
+            "log": True,
+        })
         # self.status_bar.update(demo="Evaluation completed")
         logger.info("Evaluation completed ✅")
 

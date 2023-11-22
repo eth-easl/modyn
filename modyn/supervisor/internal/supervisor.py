@@ -359,7 +359,7 @@ class Supervisor:
             if training_status_detail is not None:
                 ret["training_status_detail"] = training_status_detail
 
-            logger.info(f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail},\n\ttraining_status_detail: {training_status_detail}") 
+            logger.info(f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail}, training_status_detail: {training_status_detail}") 
         else:
             ret["status"] = "exit"
 
