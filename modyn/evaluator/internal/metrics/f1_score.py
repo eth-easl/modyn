@@ -86,11 +86,9 @@ class F1Score(AbstractDecomposableMetric):
         false_negatives = self.classification_matrix[2]
 
         denominator = 2 * true_positives + false_positives + false_negatives
-        if not np.all(denominator):
-            self.warning("Observed denominator for F1-scores to be zero.")
-            return 0
-
-        f1_scores = 2 * true_positives / denominator
+        numerator = 2 * true_positives
+        # For whichever class the denominator is zero, we output a F1 score for this class of zero
+        f1_scores = np.divide(numerator, denominator, out=np.zeros(numerator.shape, dtype=float), where=denominator!=0)
 
         if self.average == F1ScoreTypes.BINARY:
             return f1_scores[self.pos_label]
