@@ -6,7 +6,7 @@ from typing import Optional
 
 import enlighten
 from modynclient.client.internal.grpc_handler import GRPCHandler
-from modynclient.client.internal.utils import TrainingStatusTracker, EvaluationStatusTracker
+from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
 
 POLL_TIMEOUT = 2
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class Client:
     def __init__(
-        self, 
+        self,
         client_config: dict,
         pipeline_config: dict,
         eval_directory: pathlib.Path,
@@ -46,20 +46,19 @@ class Client:
         self.pbar: Optional[enlighten.Counter] = None
         self.evaluations: dict[int, EvaluationStatusTracker] = {}
 
-
     def start_pipeline(self) -> None:
         logger.info(f"model id: {self.pipeline_config['model']['id']}, maximum_triggers: {self.maximum_triggers}")
         self.pipeline_id = self.grpc.start_pipeline(
-            self.pipeline_config, 
-            self.eval_directory, 
-            self.start_replay_at, 
-            self.stop_replay_at, 
+            self.pipeline_config,
+            self.eval_directory,
+            self.start_replay_at,
+            self.stop_replay_at,
             self.maximum_triggers
         )
         logger.info(f"Pipeline <{self.pipeline_id}> started.")
 
     def _monitor_pipeline_progress(self, msg: dict) -> None:
-        if msg["log"] == True:
+        if msg["log"]:
             logger.info(msg)
 
         msg_type = msg['msg_type']
@@ -72,7 +71,9 @@ class Client:
         elif msg_type == "counter":
             if submsg["action"] == "create":
                 self.pbar = self.progress_mgr.counter(
-                    total=submsg["new_data_len"], desc=f"[Pipeline {self.pipeline_id}] Processing New Samples", unit="samples"
+                    total=submsg["new_data_len"],
+                    desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
+                    unit="samples"
                 )
             elif submsg["action"] == "update":
                 assert self.pbar is not None
@@ -85,7 +86,6 @@ class Client:
             demo += f" ({msg_type} = {submsg['id']})"
 
         self.status_bar.update(demo=demo)
-            
 
     def _monitor_training_progress(self, msg: dict) -> None:
         if msg["stage"] == "wait for training":
@@ -113,7 +113,6 @@ class Client:
             elif msg["action"] == "end_counter":
                 self.evaluations[msg["evaluation_id"]].end_counter(msg["error"])
 
-
     def poll_pipeline_status(self) -> None:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
 
@@ -124,16 +123,18 @@ class Client:
 
             if "training_status_detail" in res:
                 self._monitor_training_progress(res["training_status_detail"])
-                
+
             time.sleep(POLL_TIMEOUT)
 
             res = self.grpc.get_pipeline_status(self.pipeline_id)
-            
+
         if res["status"] == "exit":
             if res["pipeline_status_detail"]["exitcode"] == 0:
                 logger.info(f"Pipeline <{self.pipeline_id}> finished successfully.")
             else:
-                logger.info(f"Pipeline <{self.pipeline_id}> exited with error {res['pipeline_status_detail']['exception']}")
+                logger.info(
+                    f"Pipeline <{self.pipeline_id}> exited with error {res['pipeline_status_detail']['exception']}"
+                )
         elif res["status"] == "not found":
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
         else:

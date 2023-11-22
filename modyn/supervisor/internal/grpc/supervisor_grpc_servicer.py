@@ -7,13 +7,9 @@ import threading
 from typing import Optional
 
 import grpc
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
-    StartPipelineRequest,
-    PipelineResponse,
-    GetPipelineStatusRequest,
-    GetPipelineStatusResponse,
-)
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorServicer  # noqa: E402, E501
 from modyn.supervisor.internal.supervisor import Supervisor
 
@@ -58,13 +54,11 @@ class SupervisorGRPCServicer(SupervisorServicer):
         return PipelineResponse(pipeline_id=pipeline_id)
 
     def get_pipeline_status(
-        self, 
-        request: GetPipelineStatusRequest, 
-        context: grpc.ServicerContext
+        self, request: GetPipelineStatusRequest, context: grpc.ServicerContext
     ) -> GetPipelineStatusResponse:
         status = self._supervisor.get_pipeline_status(request.pipeline_id)
-        
-        res = GetPipelineStatusResponse(status = status["status"])
+
+        res = GetPipelineStatusResponse(status=status["status"])
         if "pipeline_status_detail" in status:
             pipeline_status_detail = SupervisorJsonString(value=json.dumps(status["pipeline_status_detail"]))
             res.pipeline_status_detail.CopyFrom(pipeline_status_detail)

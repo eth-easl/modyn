@@ -4,7 +4,6 @@ import multiprocessing as mp
 import os
 import pathlib
 import threading
-import queue
 import time
 from multiprocessing import Manager, Process
 from typing import Any, Optional
@@ -98,7 +97,6 @@ class Supervisor:
         logging.info("Starting pipeline monitor thread.")
         # self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
         # self.pipeline_monitor_thread.start()
-        pass
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (
@@ -338,14 +336,14 @@ class Supervisor:
         )
 
         return pipeline_id
-    
+
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         ret = {}
 
         if pipeline_id not in self._pipeline_process_dict:
             ret["status"] = "not found"
             return ret
-        
+
         p_info = self._pipeline_process_dict[pipeline_id]
 
         if p_info.process_handler.is_alive():
@@ -359,11 +357,14 @@ class Supervisor:
             if training_status_detail is not None:
                 ret["training_status_detail"] = training_status_detail
 
-            logger.info(f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail}, training_status_detail: {training_status_detail}") 
+            logger.info(
+                f"[{pipeline_id}] pipeline_status_detail: {pipeline_status_detail}, "
+                f"training_status_detail: {training_status_detail}"
+            )
         else:
             ret["status"] = "exit"
 
             exception_msg = p_info.check_for_exception()
             ret["pipeline_status_detail"] = {"exitcode": p_info.process_handler.exitcode, "exception": exception_msg}
-    
+
         return ret

@@ -19,6 +19,10 @@ EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).pa
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
 START_TIMESTAMP = 21
 PIPELINE_ID = 42
+EVAL_ID = 42
+EXCEPTION_QUEUE = mp.Queue()
+TRAINING_STATUS_QUEUE = mp.Queue()
+PIPELINE_STATUS_QUEUE = mp.Queue()
 
 
 def get_minimal_training_config() -> dict:
@@ -400,7 +404,7 @@ def test__run_training_with_evaluation(
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
 ):
-    evaluations = {1: EvaluationStatusReporter("MNIST_eval", 1000)}
+    evaluations = {1: EvaluationStatusReporter(TRAINING_STATUS_QUEUE, EVAL_ID, "MNIST_eval", 1000)}
     test_start_evaluation.return_value = evaluations
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     evaluation_pipeline_config = get_minimal_pipeline_config()
@@ -537,9 +541,9 @@ def test_execute_pipeline(
         get_minimal_pipeline_config(),
         EVALUATION_DIRECTORY,
         SUPPORTED_EVAL_RESULT_WRITERS,
-        mp.Queue(),
-        mp.Queue(),
-        mp.Queue(),
+        EXCEPTION_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        PIPELINE_STATUS_QUEUE,
     )
 
     test_init_cluster_connection.assert_called_once()

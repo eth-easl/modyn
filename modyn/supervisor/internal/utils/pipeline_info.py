@@ -19,14 +19,14 @@ class PipelineInfo:
 
         self.training_status_queue = training_status_queue
         self.pipeline_status_queue = pipeline_status_queue
-    
+
     def get_pipeline_status_detail(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
         try:
             # blocks for timeout seconds
             return self.pipeline_status_queue.get(timeout=timeout)
         except queue.Empty:
             return None
-    
+
     def get_training_status_detail(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
         try:
             # blocks for timeout seconds

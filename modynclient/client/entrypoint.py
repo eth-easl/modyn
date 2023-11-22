@@ -96,7 +96,7 @@ def main() -> None:
     client = Client(
         client_config, pipeline_config, args.eval_dir, args.start_replay_at, args.stop_replay_at, args.maximum_triggers
     )
-    
+
     logger.info("Starting pipeline.")
     client.start_pipeline()
     client.poll_pipeline_status()

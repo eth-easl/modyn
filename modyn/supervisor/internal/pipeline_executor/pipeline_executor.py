@@ -73,7 +73,9 @@ class PipelineExecutor:
         self.current_training_id: Optional[int] = None
 
     def init_cluster_connection(self) -> None:
-        self.pipeline_status_queue.put({"stage": "initialize cluster connection", "msg_type": "general", "msg": {}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "initialize cluster connection", "msg_type": "general", "msg": {}, "log": False}
+        )
         self.grpc.init_cluster_connection()
 
     def _determine_pipeline_mode(self) -> None:
@@ -99,7 +101,7 @@ class PipelineExecutor:
 
         assert self.trigger is not None, "Error during trigger initialization"
 
-    def _persist_pipeline_log(self) -> None:        
+    def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
             json.dumps(self.pipeline_log)  # Enforce serialization to catch issues
             return  # But don't actually store in tests
@@ -110,7 +112,9 @@ class PipelineExecutor:
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
         dataset_id = self.pipeline_config["data"]["dataset_id"]
-        self.pipeline_status_queue.put({"stage": "get selector batch size", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "get selector batch size", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False}
+        )
 
         for dataset in self.modyn_config["storage"]["datasets"]:
             if dataset["name"] == dataset_id:
@@ -129,16 +133,18 @@ class PipelineExecutor:
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
         new_data_len = len(new_data)
-        self.pipeline_status_queue.put({
-            "stage": "handle new data", 
-            "msg_type": "counter",
-            "msg": {
-                "action": "create",
-                "new_data_len": new_data_len, 
-                "selector_batch_size": self._selector_batch_size
-            }, 
-            "log": False
-        })
+        self.pipeline_status_queue.put(
+            {
+                "stage": "handle new data",
+                "msg_type": "counter",
+                "msg": {
+                    "action": "create",
+                    "new_data_len": new_data_len,
+                    "selector_batch_size": self._selector_batch_size,
+                },
+                "log": False,
+            }
+        )
         # self.status_bar.update(demo="Handling new data")
         # counter.total = total_new_data_len
         # pbar = self.progress_mgr.counter(
@@ -148,16 +154,14 @@ class PipelineExecutor:
         for i in range(0, new_data_len, self._selector_batch_size):
             batch = new_data[i : i + self._selector_batch_size]
             batch_size = self._selector_batch_size if i + self._selector_batch_size < new_data_len else new_data_len - i
-            self.pipeline_status_queue.put({
-                "stage": "handle new data", 
-                "msg_type": "counter", 
-                "msg": {
-                    "action": "update",
-                    "batch_idx_start": i,
-                    "batch_size": batch_size
-                }, 
-                "log": False
-            })
+            self.pipeline_status_queue.put(
+                {
+                    "stage": "handle new data",
+                    "msg_type": "counter",
+                    "msg": {"action": "update", "batch_idx_start": i, "batch_size": batch_size},
+                    "log": False,
+                }
+            )
             # self.status_bar.update(demo="Handling new data")
             # counter.update = batch_size
             # pbar.update(self._selector_batch_size if i < new_data_len - 1 else pbar.total - pbar.count)
@@ -167,14 +171,9 @@ class PipelineExecutor:
                 logger.info(f"Reached trigger limit ({self.maximum_triggers}), exiting.")
                 break
 
-        self.pipeline_status_queue.put({
-            "stage": "new data handled", 
-            "msg_type": "counter", 
-            "msg": {
-                "action": "close"
-            }, 
-            "log": False
-        })
+        self.pipeline_status_queue.put(
+            {"stage": "new data handled", "msg_type": "counter", "msg": {"action": "close"}, "log": False}
+        )
         # self.status_bar.update(demo="New data handled")
         # pbar.clear(flush=True)
         # pbar.close(clear=True)
@@ -206,7 +205,9 @@ class PipelineExecutor:
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
-        self.pipeline_status_queue.put({"stage": "run training", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "run training", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False}
+        )
         # self.status_bar.update(demo="Training")
         logger.info(f"Running training for trigger {trigger_id}")
 
@@ -223,7 +224,9 @@ class PipelineExecutor:
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["total_trainer_time"] = self._sw.stop()
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["trainer_log"] = trainer_log
 
-        self.pipeline_status_queue.put({"stage": "store trained model", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "store trained model", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False}
+        )
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
@@ -235,12 +238,16 @@ class PipelineExecutor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
-            self.pipeline_status_queue.put({"stage": "evaluate", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False})
+            self.pipeline_status_queue.put(
+                {"stage": "evaluate", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False}
+            )
             # TODO(#300) Add evaluator to pipeline log
             evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
-            self.pipeline_status_queue.put({"stage": "store evaluation results", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False})
+            self.pipeline_status_queue.put(
+                {"stage": "store evaluation results", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False}
+            )
             writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
@@ -248,19 +255,25 @@ class PipelineExecutor:
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
-        self.pipeline_status_queue.put({"stage": "handle triggers within batch", "msg_type": "general", "msg": {"triggering_indices": triggering_indices}, "log": False})
+        self.pipeline_status_queue.put(
+            {
+                "stage": "handle triggers within batch",
+                "msg_type": "general",
+                "msg": {"triggering_indices": triggering_indices},
+                "log": False,
+            }
+        )
         # self.status_bar.update(demo="Handling triggers")
 
         for i, triggering_idx in enumerate(triggering_indices):
-            self.pipeline_status_queue.put({
-                "stage": "inform selector and trigger", 
-                "msg_type": "general", 
-                "msg":{
-                    "triggering_idx_start": previous_trigger_idx, 
-                    "triggering_idx_end": triggering_idx
-                },
-                "log": False
-            })
+            self.pipeline_status_queue.put(
+                {
+                    "stage": "inform selector and trigger",
+                    "msg_type": "general",
+                    "msg": {"triggering_idx_start": previous_trigger_idx, "triggering_idx_end": triggering_idx},
+                    "log": False,
+                }
+            )
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
@@ -278,7 +291,14 @@ class PipelineExecutor:
 
             self._run_training(trigger_id)  # Blocks until training is done.
             # TODO(#317): ??? what is it ???
-            self.pipeline_status_queue.put({"stage": "handle triggers within batch", "msg_type": "trigger", "msg": {"id": trigger_id}, "log": False})
+            self.pipeline_status_queue.put(
+                {
+                    "stage": "handle triggers within batch",
+                    "msg_type": "trigger",
+                    "msg": {"id": trigger_id},
+                    "log": False,
+                }
+            )
             # self.status_bar.update(demo="Handling triggers")
 
             # If no other trigger is coming in this batch,
@@ -291,15 +311,14 @@ class PipelineExecutor:
                     # These data points will be included in the next trigger
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
-                    self.pipeline_status_queue.put({
-                        "stage": "inform selector about remaining data", 
-                        "msg_type": "trigger", 
-                        "msg": {
-                            "id": trigger_id, 
-                            "remaining_data_len": len(remaining_data)
-                        },
-                        "log": False
-                    })
+                    self.pipeline_status_queue.put(
+                        {
+                            "stage": "inform selector about remaining data",
+                            "msg_type": "trigger",
+                            "msg": {"id": trigger_id, "remaining_data_len": len(remaining_data)},
+                            "log": False,
+                        }
+                    )
                     self._sw.start("selector_inform", overwrite=True)
                     selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
                     self.pipeline_log["supervisor"]["selector_informs"].append(
@@ -318,7 +337,9 @@ class PipelineExecutor:
     def replay_data(self) -> None:
         assert self.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
         dataset_id = self.pipeline_config["data"]["dataset_id"]
-        self.pipeline_status_queue.put({"stage": "replay data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "replay data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False}
+        )
         # self.status_bar.update(demo="Replaying data")
         logger.info("Starting data replay.")
 
@@ -339,7 +360,9 @@ class PipelineExecutor:
                 logger.info("Exiting replay loop due to trigger limit.")
                 break
 
-        self.pipeline_status_queue.put({"stage": "replay data done", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "replay data done", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False}
+        )
         # self.status_bar.update(demo="Replay done")
 
     def shutdown_trainer(self) -> None:
@@ -358,7 +381,9 @@ class PipelineExecutor:
 
         try:
             while continue_running:
-                self.pipeline_status_queue.put({"stage": "fetch new data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False})
+                self.pipeline_status_queue.put(
+                    {"stage": "fetch new data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False}
+                )
                 # self.status_bar.update(demo="Fetching new data")
                 trigger_occured = False
                 largest_keys = set()
@@ -386,7 +411,9 @@ class PipelineExecutor:
 
                 previous_largest_keys = largest_keys
                 if not trigger_occured:
-                    self.pipeline_status_queue.put({"stage": "wait for new data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False})
+                    self.pipeline_status_queue.put(
+                        {"stage": "wait for new data", "msg_type": "dataset", "msg": {"id": dataset_id}, "log": False}
+                    )
                     # self.status_bar.update(demo="Waiting for new data...")
                     sleep(2)
 
@@ -398,7 +425,7 @@ class PipelineExecutor:
     def execute(self) -> None:
         logger.info(f"[pipeline {self.pipeline_id}] Get dataset selector batch size.")
         self.get_dataset_selector_batch_size()
-        
+
         logger.info(f"[pipeline {self.pipeline_id}] Start executing, experiment mode {self.experiment_mode}.")
         if self.experiment_mode:
             self.replay_data()
@@ -406,7 +433,9 @@ class PipelineExecutor:
             self.wait_for_new_data(self.start_timestamp)
 
         logger.info(f"[pipeline {self.pipeline_id}] Execution done. Persist log.")
-        self.pipeline_status_queue.put({"stage": "pipeline done. persist log", "msg_type": "general", "msg": {}, "log": False})
+        self.pipeline_status_queue.put(
+            {"stage": "pipeline done. persist log", "msg_type": "general", "msg": {}, "log": False}
+        )
         self._persist_pipeline_log()
 
 

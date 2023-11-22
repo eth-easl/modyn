@@ -43,7 +43,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import TrainingStatusReporter, EvaluationStatusReporter
+from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
@@ -429,14 +429,13 @@ class GRPCHandler:
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
-        training_reporter = TrainingStatusReporter(self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale)
+        training_reporter = TrainingStatusReporter(
+            self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale
+        )
         training_reporter.create_tracker()
-        self.pipeline_status_queue.put({
-            "stage": "Waiting for training",
-            "msg_type": "training",
-            "msg": {"id": training_id},
-            "log": True
-        })
+        self.pipeline_status_queue.put(
+            {"stage": "Waiting for training", "msg_type": "training", "msg": {"id": training_id}, "log": True}
+        )
         # self.status_bar.update(demo=f"Waiting for training (id = {training_id})")
         # status_tracker = TrainingStatusTracker(self.progress_mgr, training_id, total_samples, status_bar_scale)
 
@@ -482,12 +481,14 @@ class GRPCHandler:
 
         training_reporter.close_counter()
         # status_tracker.close_counter()
-        self.pipeline_status_queue.put({
-            "stage": "Training completed 🚀",
-            "msg_type": "training",
-            "msg": {"id": training_id},
-            "log": True,
-        })
+        self.pipeline_status_queue.put(
+            {
+                "stage": "Training completed 🚀",
+                "msg_type": "training",
+                "msg": {"id": training_id},
+                "log": True,
+            }
+        )
         logger.info("Training completed 🚀")
 
         return trainer_log
@@ -547,7 +548,9 @@ class GRPCHandler:
             else:
                 evaluation_id = response.evaluation_id
                 logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                evaluations[evaluation_id] = EvaluationStatusReporter(self.training_status_queue, evaluation_id, dataset_id, response.dataset_size)
+                evaluations[evaluation_id] = EvaluationStatusReporter(
+                    self.training_status_queue, evaluation_id, dataset_id, response.dataset_size
+                )
                 evaluations[evaluation_id].create_tracker()
 
         return evaluations
@@ -603,19 +606,23 @@ class GRPCHandler:
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
-    def wait_for_evaluation_completion(self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]) -> None:
+    def wait_for_evaluation_completion(
+        self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]
+    ) -> None:
         assert self.pipeline_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
-    
+
         logger.info("wait for evaluation completion")
-        self.pipeline_status_queue.put({
-            "stage": "Waiting for evaluation",
-            "msg_type": "training",
-            "msg": {"id": training_id},
-            "log": True,
-        })
+        self.pipeline_status_queue.put(
+            {
+                "stage": "Waiting for evaluation",
+                "msg_type": "training",
+                "msg": {"id": training_id},
+                "log": True,
+            }
+        )
         #  self.status_bar.update(demo=f"Waiting for evaluation (training = {training_id})")
 
         # We are using a deque here in order to fetch the status of each evaluation
@@ -666,12 +673,14 @@ class GRPCHandler:
             working_queue.append(current_evaluation_id)
             sleep(1)
 
-        self.pipeline_status_queue.put({
-            "stage": "Evaluation completed ✅",
-            "msg_type": "training",
-            "msg": {"id": training_id},
-            "log": True,
-        })
+        self.pipeline_status_queue.put(
+            {
+                "stage": "Evaluation completed ✅",
+                "msg_type": "training",
+                "msg": {"id": training_id},
+                "log": True,
+            }
+        )
         # self.status_bar.update(demo="Evaluation completed")
         logger.info("Evaluation completed ✅")
 

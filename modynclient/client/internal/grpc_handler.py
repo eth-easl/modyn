@@ -6,12 +6,9 @@ from typing import Optional
 import grpc
 
 # TODO(#317 client): share with modyn or make a copy?
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
-    StartPipelineRequest, 
-    GetPipelineStatusRequest, 
-    GetPipelineStatusResponse,
-)
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 
@@ -23,7 +20,7 @@ class GRPCHandler:
         self.config = client_config
         self.connected_to_supervisor = False
         self.init_supervisor()
-    
+
     def init_supervisor(self) -> None:
         assert self.config is not None
         supervisor_address = f"{self.config['supervisor']['ip']}:{self.config['supervisor']['port']}"
@@ -41,7 +38,7 @@ class GRPCHandler:
         self.supervisor = SupervisorStub(self.supervisor_channel)
         logger.info("Successfully connected to supervisor.")
         self.connected_to_supervisor = True
-    
+
     def start_pipeline(
         self,
         pipeline_config: dict,
@@ -52,7 +49,7 @@ class GRPCHandler:
     ) -> int:
         if not self.connected_to_supervisor:
             raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
-        
+
         start_pipeline_request = StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
             eval_directory=str(eval_directory),
@@ -68,11 +65,11 @@ class GRPCHandler:
         pipeline_id = self.supervisor.start_pipeline(start_pipeline_request).pipeline_id
 
         return pipeline_id
-    
+
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         if not self.connected_to_supervisor:
             raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
-        
+
         get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
         res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
