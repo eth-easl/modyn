@@ -324,8 +324,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             response.add_timestamps(record.column_2);
           }
 
-          SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
-                      response.labels_size(), records.size());
+          /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
+                      response.labels_size(), records.size()); */
 
           records.clear();
 
@@ -348,16 +348,16 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
               response.add_labels(record.column_1);
               response.add_timestamps(record.column_2);
             }
-            SPDLOG_INFO(
+            /*SPDLOG_INFO(
                 "Sending with response_keys = {}, response_labels = {}, record_buf.size = {} (minus sample_batch_size "
                 "= "
                 "{})",
-                response.keys_size(), response.labels_size(), record_buf.size(), sample_batch_size);
+                response.keys_size(), response.labels_size(), record_buf.size(), sample_batch_size); */
 
             // Now, delete first sample_batch_size elements from vector as we are sending them
             record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
 
-            SPDLOG_INFO("New record_buf size = {}", record_buf.size());
+            //SPDLOG_INFO("New record_buf size = {}", record_buf.size());
 
             ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
                    "The record buffer should never have more than 2*sample_batch_size elements!");
@@ -383,8 +383,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           response.add_labels(record.column_1);
           response.add_timestamps(record.column_2);
         }
-        SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
-                    response.labels_size(), record_buf.size());
+        /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
+                    response.labels_size(), record_buf.size()); */
         record_buf.clear();
         {
           const std::lock_guard<std::mutex> lock(*writer_mutex);
@@ -410,22 +410,18 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<int64_t> sample_labels(num_keys);
       std::vector<int64_t> sample_indices(num_keys);
       std::vector<int64_t> sample_fileids(num_keys);
-      SPDLOG_INFO("Querying labels and files for {} samples.", num_keys);
       const std::string sample_query = fmt::format(
           "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER "
           "BY file_id",
           fmt::join(sample_keys, ","));
       session << sample_query, soci::into(sample_labels), soci::into(sample_indices), soci::into(sample_fileids),
           soci::use(dataset_data.dataset_id);
-      SPDLOG_INFO("Results for {} samples obtained.", num_keys);
 
       int64_t current_file_id = sample_fileids[0];
       int64_t current_file_start_idx = 0;
-      SPDLOG_INFO("Obtaining path for file_id {}.", current_file_id);
       std::string current_file_path;
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
-      SPDLOG_INFO("Path for file_id {} obtained", current_file_id);
 
       if (current_file_path.empty()) {
         SPDLOG_ERROR(fmt::format("Could not obtain full path of file id {} in dataset {}", current_file_id,
@@ -444,11 +440,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
         if (sample_fileid != current_file_id) {
           // 1. Prepare response
-          SPDLOG_INFO("Encountered new file, getting data from disk");
           const std::vector<int64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
                                                   sample_indices.begin() + static_cast<int64_t>(sample_idx));
           const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
-          SPDLOG_INFO("Got data from disk, preparing response.");
 
           // Protobuf expects the data as std::string...
           std::vector<std::string> stringified_data;
@@ -463,14 +457,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                           sample_keys.begin() + static_cast<int64_t>(sample_idx));
           response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
                                             sample_labels.begin() + static_cast<int64_t>(sample_idx));
-          SPDLOG_INFO("Response prepared.");
 
           // 2. Send response
           {
             const std::lock_guard<std::mutex> lock(writer_mutex);
             writer->Write(response);
           }
-          SPDLOG_INFO("Response sent, updating local state.");
 
           // 3. Update state
           current_file_id = sample_fileid;
@@ -479,7 +471,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           file_wrapper->set_file_path(current_file_path);
           current_file_start_idx = static_cast<int64_t>(sample_idx);
-          SPDLOG_INFO("Local state updated.");
         }
       }
 
