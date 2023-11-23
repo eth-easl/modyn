@@ -210,3 +210,7 @@ def evaluate(
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)
         exception_queue.put(exception_msg)
+
+        if evaluation_info.model_path.exists():
+            logger.error("Deleting downloaded model after exception")
+            evaluation_info.model_path.unlink()

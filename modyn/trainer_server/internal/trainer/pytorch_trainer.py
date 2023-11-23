@@ -821,3 +821,6 @@ def train(
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)
         exception_queue.put(exception_msg)
+        pretrained_path = training_info.pretrained_model_path
+        if pretrained_path is not None and pretrained_path.exists():
+            pretrained_path.unlink()
