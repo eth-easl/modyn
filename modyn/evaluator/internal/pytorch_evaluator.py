@@ -111,7 +111,7 @@ class PytorchEvaluator:
 
         self._info(f"Loading model state from {path}")
         with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()))
+            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
