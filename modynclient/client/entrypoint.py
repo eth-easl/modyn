@@ -98,8 +98,9 @@ def main() -> None:
     )
 
     logger.info("Starting pipeline.")
-    client.start_pipeline()
-    client.poll_pipeline_status()
+    started = client.start_pipeline()
+    if started:
+        client.poll_pipeline_status()
 
     logger.info("Client returned, exiting.")
 

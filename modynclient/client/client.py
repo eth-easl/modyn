@@ -46,16 +46,22 @@ class Client:
         self.pbar: Optional[enlighten.Counter] = None
         self.evaluations: dict[int, EvaluationStatusTracker] = {}
 
-    def start_pipeline(self) -> None:
+    def start_pipeline(self) -> bool:
         logger.info(f"model id: {self.pipeline_config['model']['id']}, maximum_triggers: {self.maximum_triggers}")
-        self.pipeline_id = self.grpc.start_pipeline(
+        res = self.grpc.start_pipeline(
             self.pipeline_config,
             self.eval_directory,
             self.start_replay_at,
             self.stop_replay_at,
             self.maximum_triggers
         )
-        logger.info(f"Pipeline <{self.pipeline_id}> started.")
+        if "exception" in res:
+            logger.info(f"Pipeline <{res['pipeline_id']}> failed with error {res['exception']}.")
+            return False
+        else:
+            self.pipeline_id = res['pipeline_id']
+            logger.info(f"Pipeline <{self.pipeline_id}> started.")
+            return True
 
     def _monitor_pipeline_progress(self, msg: dict) -> None:
         if msg["log"]:

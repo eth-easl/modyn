@@ -7,7 +7,7 @@ import grpc
 from google.protobuf.json_format import MessageToDict
 
 # TODO(#317 client): share with modyn or make a copy?
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, GetPipelineStatusRequest, GetPipelineStatusResponse
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
@@ -47,7 +47,7 @@ class GRPCHandler:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-    ) -> int:
+    ) -> dict:
         if not self.connected_to_supervisor:
             raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
 
@@ -63,9 +63,11 @@ class GRPCHandler:
         if maximum_triggers is not None:
             start_pipeline_request.maximum_triggers = maximum_triggers
 
-        pipeline_id = self.supervisor.start_pipeline(start_pipeline_request).pipeline_id
+        res: PipelineResponse = self.supervisor.start_pipeline(start_pipeline_request)
+        ret = MessageToDict(res, preserving_proto_field_name=True, including_default_value_fields=True)
+        print(">>>>>>>>>>>>>>>>", ret)
 
-        return pipeline_id
+        return ret
 
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         if not self.connected_to_supervisor:

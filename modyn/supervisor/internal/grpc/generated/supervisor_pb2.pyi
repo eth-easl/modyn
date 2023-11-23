@@ -70,13 +70,18 @@ class PipelineResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     PIPELINE_ID_FIELD_NUMBER: builtins.int
+    EXCEPTION_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
+    exception: builtins.str
     def __init__(
         self,
         *,
         pipeline_id: builtins.int = ...,
+        exception: builtins.str | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["pipeline_id", b"pipeline_id"]) -> None: ...
+    def HasField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_exception", b"_exception", "exception", b"exception", "pipeline_id", b"pipeline_id"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]) -> typing_extensions.Literal["exception"] | None: ...
 
 global___PipelineResponse = PipelineResponse
 

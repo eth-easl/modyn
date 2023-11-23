@@ -292,50 +292,55 @@ class Supervisor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-    ) -> int:
+    ) -> dict:
         if not self.validate_pipeline_config(pipeline_config):
-            raise ValueError("Invalid pipeline configuration")
+            return {"pipeline_id": -1, "exception": "Invalid pipeline configuration"}
 
         if not is_directory_writable(pathlib.Path(eval_directory)):
-            raise ValueError("No permission to write to the evaluation results directory.")
+            return {"pipeline_id": -1, "exception": "No permission to write to the evaluation results directory."}
 
         if not self.validate_system(pipeline_config):
-            raise ValueError("Invalid system configuration")
+            return {"pipeline_id": -1, "exception": "Invalid system configuration"}
 
-        exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        pipeline_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        try:
+            exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            pipeline_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
-        start_timestamp = self.grpc.get_time_at_storage()
-        pipeline_id = self.register_pipeline(pipeline_config)
-        logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+            start_timestamp = self.grpc.get_time_at_storage()
+            pipeline_id = self.register_pipeline(pipeline_config)
+            logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+        except Exception:  # pylint: disable=broad-except
+            return {"pipeline_id": -1, "exception": "Failed to register pipeline"}
 
-        process = Process(
-            target=execute_pipeline,
-            args=(
-                start_timestamp,
-                pipeline_id,
-                self.modyn_config,
-                pipeline_config,
-                eval_directory,
-                self.supported_evaluation_result_writers,
+        try:
+            process = Process(
+                target=execute_pipeline,
+                args=(
+                    start_timestamp,
+                    pipeline_id,
+                    self.modyn_config,
+                    pipeline_config,
+                    eval_directory,
+                    self.supported_evaluation_result_writers,
+                    exception_queue,
+                    training_status_queue,
+                    pipeline_status_queue,
+                    start_replay_at,
+                    stop_replay_at,
+                    maximum_triggers,
+                ),
+            )
+            process.start()
+            self._pipeline_process_dict[pipeline_id] = PipelineInfo(
+                process,
                 exception_queue,
                 training_status_queue,
                 pipeline_status_queue,
-                start_replay_at,
-                stop_replay_at,
-                maximum_triggers,
-            ),
-        )
-        process.start()
-        self._pipeline_process_dict[pipeline_id] = PipelineInfo(
-            process,
-            exception_queue,
-            training_status_queue,
-            pipeline_status_queue,
-        )
-
-        return pipeline_id
+            )
+            return {"pipeline_id": pipeline_id}
+        except Exception:  # pylint: disable=broad-except
+            return {"pipeline_id": pipeline_id, "exception": "Failed to execute pipeline"}
 
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         ret = {}

@@ -47,20 +47,17 @@ class SupervisorGRPCServicer(SupervisorServicer):
 
         pipeline_config = json.loads(request.pipeline_config.value)
         logger.info(f"[{pid}][{tid}]: pipeline config {pipeline_config}")
-        pipeline_id = self._supervisor.start_pipeline(
+        msg = self._supervisor.start_pipeline(
             pipeline_config,
             request.eval_directory,
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
         )
-
-        return PipelineResponse(pipeline_id=pipeline_id)
+        return ParseDict(msg, PipelineResponse())
 
     def get_pipeline_status(
         self, request: GetPipelineStatusRequest, context: grpc.ServicerContext
     ) -> GetPipelineStatusResponse:
         msg = self._supervisor.get_pipeline_status(request.pipeline_id)
-        res = ParseDict(msg, GetPipelineStatusResponse())
-
-        return res
+        return ParseDict(msg, GetPipelineStatusResponse())
