@@ -442,7 +442,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           // 1. Prepare response
           const std::vector<int64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
                                                   sample_indices.begin() + static_cast<int64_t>(sample_idx));
-          const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
+          std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
 
           // Protobuf expects the data as std::string...
           std::vector<std::string> stringified_data;
@@ -450,6 +450,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           for (const std::vector<unsigned char>& char_vec : data) {
             stringified_data.emplace_back(char_vec.begin(), char_vec.end());
           }
+          data.clear();
+          data.shrink_to_fit();
 
           modyn::storage::GetResponse response;
           response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());

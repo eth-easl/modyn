@@ -2,6 +2,7 @@ import contextlib
 import json
 import logging
 import os
+import gc
 import pathlib
 import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple
@@ -172,7 +173,7 @@ class OnlineDataset(IterableDataset):
 
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
-        for data_tuple in self._get_data_from_storage(keys, worker_id):
+        for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)
@@ -239,6 +240,14 @@ class OnlineDataset(IterableDataset):
 
             with open(log_file, "w", encoding="utf-8") as logfile:
                 json.dump(self._log, logfile)
+
+    def _clear_partition(self, partition_id: int) -> None:
+        with self._partition_locks[partition_id] if self._partition_locks is not None else contextlib.suppress():
+            self._partition_valid[partition_id] = False
+            self._partition_valid_until[partition_id] = -1
+            del self._thread_data_container[partition_id]
+
+        gc.collect()
 
     def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
         assert self._start_prefetch_lock is not None
@@ -368,6 +377,9 @@ class OnlineDataset(IterableDataset):
         self._info(f"Thread for partition {partition_id} joined", worker_id)
         max_idx = self._partition_max_index(partition_id)
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
+        self._info(f"Clearing partition {partition_id}", worker_id)
+        self._clear_partition(partition_id)
+        
 
     def start_prefetching(self, worker_id: int) -> None:
         if self._num_prefetched_partitions < 1:
