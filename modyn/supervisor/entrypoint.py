@@ -66,6 +66,35 @@ def setup_argparser() -> argparse.ArgumentParser:
         "experiments, does not overlap training and evaluation.",
     )
 
+    parser_.add_argument(
+        "--matrix-pipeline",
+        type=int,
+        action="store",
+        help="Pipeline to do matrix evaluation on.",
+    )
+
+    parser_.add_argument(
+        "--matrix-gpus",
+        type=str,
+        action="store",
+        nargs='*',
+        help="gpus to do matrix evaluation on.",
+        default=['cuda:0'],
+    )
+
+    parser_.add_argument(
+        "--matrix-dop",
+        type=int,
+        action="store",
+        help="how many parallel evals in matrix.",
+    )
+
+    parser_.add_argument(
+        "--noeval",
+        action="store_true",
+        help="Whether to disable all eval",
+    )
+
     return parser_
 
 
@@ -110,6 +139,10 @@ def main() -> None:
         args.stop_replay_at,
         args.maximum_triggers,
         args.evaluation_matrix,
+        args.matrix_pipeline,
+        args.matrix_gpus,
+        args.matrix_dop,
+        args.noeval
     )
     logger.info("Starting pipeline.")
     supervisor.pipeline()

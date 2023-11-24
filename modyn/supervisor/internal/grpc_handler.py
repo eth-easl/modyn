@@ -522,11 +522,11 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(
-        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None
+        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None, device: Optional[str] = None
     ) -> dict[int, EvaluationStatusTracker]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
-        device = pipeline_config["evaluation"]["device"]
+        device = pipeline_config["evaluation"]["device"] if device is None else device
         evaluations: dict[int, EvaluationStatusTracker] = {}
 
         if pipeline_id is None:
@@ -574,7 +574,7 @@ class GRPCHandler:
             logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {trigger_eval_response}.")
         else:
             evaluation_id = trigger_eval_response.evaluation_id
-            logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
+            logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id} and device {device}.")
             evaluations[evaluation_id] = EvaluationStatusTracker(dataset_id, trigger_eval_response.dataset_size)
 
         return evaluations
@@ -706,6 +706,41 @@ class GRPCHandler:
 
         logger.info("Evaluation completed ✅")
         self.status_bar.update(demo="Evaluation completed")
+
+    def is_evaluation_running(self, eval_id: int) -> None:
+        if not self.connected_to_evaluator:
+            raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
+        req = EvaluationStatusRequest(evaluation_id=eval_id)
+        res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+
+        if not res.valid:
+            logger.warning(f"Evaluation {eval_id} is invalid at server:\n{res}\n")
+            return False
+
+        if res.blocked:
+            logger.warning(
+                f"Evaluator returned {blocked_in_a_row} blocked response"
+            )
+            return True
+        else:
+            blocked_in_a_row = 0
+
+            if res.HasField("exception") and res.exception is not None:
+                logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
+                return False
+            if not res.is_running:
+                return False
+            if res.state_available:
+                assert res.HasField("samples_seen") and res.HasField(
+                    "batches_seen"
+                ), f"Inconsistent server response:\n{res}"
+
+                return True
+            elif res.is_running:
+                logger.warning("Evaluator is not blocked and is running, but no state is available.")
+
+        return True
+
 
     def store_evaluation_results(
         self,
