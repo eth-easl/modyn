@@ -102,7 +102,7 @@ training:
       limit: -1
       reset_after_trigger: True
 data:
-  dataset_id: criteo
+  dataset_id: criteo_tiny
   bytes_parser_function: |
     import torch
     import numpy as np
