@@ -578,6 +578,7 @@ class Supervisor:
         device_idx = 0
         
         running_evals = []
+        eval_id_to_trigger = {}
 
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
@@ -589,6 +590,7 @@ class Supervisor:
                 assert len(evaluations) == 1
                 eval_id = next(iter(evaluations))
                 running_evals.append((eval_id, evaluations[eval_id]))
+                eval_id_to_trigger[eval_id] = trigger
 
                 if len(running_evals) >= self.matrix_dop:
                     # Wait for one eval to finish before starting the next one
@@ -597,11 +599,13 @@ class Supervisor:
                         sleep(5)
                         for eval_id, tracker in list(running_evals): # iterate over copy to modify on the fly
                             if not self.grpc.is_evaluation_running(eval_id):
+                                done_trigger_id = eval_id_to_trigger[eval_id]
+                                logger.info(f"Evaluation {eval_id} on trigger {done_trigger_id} done.")
                                 one_eval_done = True
                                 running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id]
                                 eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
                                 self.grpc.store_evaluation_results([eval_result_writer], {eval_id: tracker})
-                                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
+                                self.pipeline_log["evaluation_matrix"][model][done_trigger_id] = eval_result_writer.results
                                 self._persist_pipeline_log()
 
                     logger.info("At least evaluation finished, continuing.")
