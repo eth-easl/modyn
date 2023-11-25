@@ -719,12 +719,10 @@ class GRPCHandler:
 
         if res.blocked:
             logger.warning(
-                f"Evaluator returned {blocked_in_a_row} blocked response"
+                f"Evaluator returned blocked response"
             )
             return True
         else:
-            blocked_in_a_row = 0
-
             if res.HasField("exception") and res.exception is not None:
                 logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
                 return False
