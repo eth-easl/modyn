@@ -57,4 +57,4 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 5000000
+    data_points_for_trigger: 500000

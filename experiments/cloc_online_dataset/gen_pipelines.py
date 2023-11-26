@@ -59,15 +59,15 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 5000000
+    data_points_for_trigger: 500000
 """
 
 def main():
     curr_dir = pathlib.Path(__file__).resolve().parent
     for num_dataloader_workers in [16,1,2,8]:
-        for partition_size in [5000, 25000, 100000, 1000000]:
+        for partition_size in [5000, 30000, 85000]:
             for num_prefetched_partitions in [0,1,2,6]:
-                for parallel_pref in [1,2,4,8]:
+                for parallel_pref in [1,2,8]:
                     if num_prefetched_partitions == 0 and parallel_pref > 1:
                         continue
 

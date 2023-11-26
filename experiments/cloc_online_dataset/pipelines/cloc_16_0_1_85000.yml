@@ -1,6 +1,6 @@
 
 pipeline:
-    name: cloc_16_0_1_5000
+    name: cloc_16_0_1_85000
     description: CLOC Training.
     version: 1.0.0
 model:
@@ -38,7 +38,7 @@ training:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 5000
+    maximum_keys_in_memory: 85000
     config:
       storage_backend: "database"
       limit: -1
