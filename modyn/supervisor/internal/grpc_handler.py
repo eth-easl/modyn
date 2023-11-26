@@ -719,7 +719,7 @@ class GRPCHandler:
 
         if res.blocked:
             logger.warning(
-                f"Evaluator returned blocked response"
+                "Evaluator returned blocked response"
             )
             return True
         else:

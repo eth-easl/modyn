@@ -40,6 +40,8 @@ void StorageGrpcServer::run() {
   builder.SetResourceQuota(quota);
   builder.AddChannelArgument(GRPC_ARG_KEEPALIVE_TIME_MS, 2 * 60 * 60 * 1000);
   builder.AddChannelArgument(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
+  builder.SetMaxReceiveMessageSize(1024 * 1024 * 128);
+  builder.SetMaxSendMessageSize(1024 * 1024 * 128);
 
   builder.AddListeningPort(server_address, InsecureServerCredentials());
   builder.RegisterService(&service);
