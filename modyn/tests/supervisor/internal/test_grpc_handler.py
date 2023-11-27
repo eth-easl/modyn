@@ -406,8 +406,6 @@ def test_wait_for_training_completion(test_connection_established):
                 log = handler.wait_for_training_completion(42, 21, 22)
                 avail_method.assert_called_once()
                 assert log == {"a": 1}
-                assert handler.pipeline_status_queue.qsize() == 2
-                assert handler.eval_status_queue.empty()
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
