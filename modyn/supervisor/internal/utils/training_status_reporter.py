@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from typing import Any
 
 
 class TrainingStatusReporter:
@@ -17,7 +18,7 @@ class TrainingStatusReporter:
         self.status_bar_scale = status_bar_scale
         self.stage = "wait for training"
 
-    def _template_msg(self, action: str) -> None:
+    def _template_msg(self, action: str) -> dict[str, Any]:
         return {"stage": self.stage, "action": action, "id": self.training_id}
 
     def create_tracker(self) -> None:

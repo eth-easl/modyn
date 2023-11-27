@@ -1,4 +1,5 @@
 import multiprocessing as mp
+from typing import Any
 
 
 class EvaluationStatusReporter:
@@ -9,7 +10,7 @@ class EvaluationStatusReporter:
         self.dataset_size = dataset_size
         self.stage = "wait for evaluation"
 
-    def _template_msg(self, action: str) -> None:
+    def _template_msg(self, action: str) -> dict[str, Any]:
         return {"stage": self.stage, "action": action, "id": self.evaluation_id}
 
     def create_tracker(self) -> None:
@@ -36,7 +37,7 @@ class EvaluationStatusReporter:
 
     def end_counter(self, error: bool, exception_msg: str = "") -> None:
         ret = self._template_msg("end_counter")
-        params = {"error": error}
+        params: dict[str, Any] = {"error": error}
         if error:
             params["exception_msg"] = exception_msg
         ret["eval_end_counter_params"] = params

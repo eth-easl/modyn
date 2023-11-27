@@ -341,8 +341,8 @@ class Supervisor:
         except Exception:  # pylint: disable=broad-except
             return {"pipeline_id": pipeline_id, "exception": "Failed to execute pipeline"}
 
-    def get_pipeline_status(self, pipeline_id: int) -> dict:
-        ret = {}
+    def get_pipeline_status(self, pipeline_id: int) -> dict[str, Any]:
+        ret: dict[str, Any] = {}
 
         if pipeline_id not in self._pipeline_process_dict:
             ret["status"] = "not found"
@@ -379,7 +379,7 @@ class Supervisor:
             # TODO(#317): get remaining messages in queues
             ret["status"] = "exit"
 
-            msg = {
+            msg: dict[str, Any] = {
                 "stage": "exit",
                 "msg_type": "exit",
                 "log": False,
