@@ -8,13 +8,9 @@ class EvaluationStatusReporter:
         self.dataset_id = dataset_id
         self.dataset_size = dataset_size
         self.stage = "wait for evaluation"
-    
+
     def _template_msg(self, action: str) -> None:
-        return {
-            "stage": self.stage,
-            "action": action,
-            "id": self.evaluation_id
-        }
+        return {"stage": self.stage, "action": action, "id": self.evaluation_id}
 
     def create_tracker(self) -> None:
         ret = self._template_msg("create_tracker")

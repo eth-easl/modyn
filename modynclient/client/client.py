@@ -67,9 +67,9 @@ class Client:
     def _monitor_pipeline_progress(self, msg: dict) -> None:
         if msg["log"]:
             logger.info(msg)
-        
+
         demo = f"Pipeline <{self.pipeline_id}> {msg['stage']}"
-        
+
         if msg["stage"] == "exit":
             if msg["exit_msg"]["exitcode"] == 0:
                 if self.eval_err_count == 0:
@@ -126,7 +126,6 @@ class Client:
             )
         elif msg["action"] == "close_counter":
             self.training_status_tracker.close_counter()
-            
 
     def _monitor_evaluation_progress(self, msg: dict) -> None:
         id = msg["id"]
@@ -154,7 +153,7 @@ class Client:
         if "training_status" in res:
             for i, msg in enumerate(res["training_status"]):
                 self._monitor_training_progress(msg)
-        
+
         if "eval_status" in res:
             for i, msg in enumerate(res["eval_status"]):
                 self._monitor_evaluation_progress(msg)
@@ -162,7 +161,6 @@ class Client:
         if "pipeline_stage" in res:
             for i, msg in enumerate(res["pipeline_stage"]):
                 self._monitor_pipeline_progress(msg)
-        
 
     def poll_pipeline_status(self) -> None:
         res = self.grpc.get_pipeline_status(self.pipeline_id)

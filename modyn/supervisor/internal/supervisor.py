@@ -335,11 +335,7 @@ class Supervisor:
             )
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
-                process,
-                exception_queue,
-                pipeline_status_queue,
-                training_status_queue,
-                eval_status_queue
+                process, exception_queue, pipeline_status_queue, training_status_queue, eval_status_queue
             )
             return {"pipeline_id": pipeline_id}
         except Exception:  # pylint: disable=broad-except
@@ -370,7 +366,7 @@ class Supervisor:
                 while training_status is not None:
                     ret["training_status"].append(training_status)
                     training_status = p_info.get_training_status()
-                
+
             eval_status = p_info.get_eval_status()
             if eval_status is not None:
                 ret["eval_status"] = []
@@ -380,8 +376,9 @@ class Supervisor:
 
             logger.info(f"[{pipeline_id}] {ret}")
         else:
+            # TODO(#317): get remaining messages in queues
             ret["status"] = "exit"
-            
+
             msg = {
                 "stage": "exit",
                 "msg_type": "exit",

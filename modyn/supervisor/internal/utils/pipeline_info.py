@@ -35,7 +35,7 @@ class PipelineInfo:
             return self.training_status_queue.get(timeout=timeout)
         except queue.Empty:
             return None
-    
+
     def get_eval_status(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
         try:
             # blocks for timeout seconds

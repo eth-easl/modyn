@@ -21,8 +21,9 @@ START_TIMESTAMP = 21
 PIPELINE_ID = 42
 EVAL_ID = 42
 EXCEPTION_QUEUE = mp.Queue()
-TRAINING_STATUS_QUEUE = mp.Queue()
 PIPELINE_STATUS_QUEUE = mp.Queue()
+TRAINING_STATUS_QUEUE = mp.Queue()
+EVAL_STATUS_QUEUE = mp.Queue()
 
 
 def get_minimal_training_config() -> dict:
@@ -79,10 +80,11 @@ def noop_constructor_mock(
     pipeline_id: int,
     modyn_config: dict,
     pipeline_config: dict,
-    eval_directory: pathlib.Path,
+    eval_directory: str,
     supervisor_supported_eval_result_writers: dict,
-    status_query_queue: mp.Queue,
-    status_response_queue: mp.Queue,
+    pipeline_status_queue: mp.Queue,
+    training_status_queue: mp.Queue,
+    eval_status_queue: mp.Queue,
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
@@ -112,8 +114,9 @@ def get_non_connecting_pipeline_executor() -> PipelineExecutor:
         get_minimal_pipeline_config(),
         EVALUATION_DIRECTORY,
         SUPPORTED_EVAL_RESULT_WRITERS,
-        mp.Queue(),
-        mp.Queue(),
+        PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
     )
     return pipeline_executor
 
@@ -542,8 +545,9 @@ def test_execute_pipeline(
         EVALUATION_DIRECTORY,
         SUPPORTED_EVAL_RESULT_WRITERS,
         EXCEPTION_QUEUE,
-        TRAINING_STATUS_QUEUE,
         PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
     )
 
     test_init_cluster_connection.assert_called_once()

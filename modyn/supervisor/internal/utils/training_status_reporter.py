@@ -16,13 +16,9 @@ class TrainingStatusReporter:
         self.samples_per_epoch = samples_per_epoch
         self.status_bar_scale = status_bar_scale
         self.stage = "wait for training"
-    
+
     def _template_msg(self, action: str) -> None:
-        return {
-            "stage": self.stage,
-            "action": action,
-            "id": self.training_id
-        }
+        return {"stage": self.stage, "action": action, "id": self.training_id}
 
     def create_tracker(self) -> None:
         ret = self._template_msg("create_tracker")

@@ -48,7 +48,9 @@ class PipelineExecutor:
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
             self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
 
-        self.grpc = GRPCHandler(self.modyn_config, self.pipeline_status_queue, self.training_status_queue, self.eval_status_queue)
+        self.grpc = GRPCHandler(
+            self.modyn_config, self.pipeline_status_queue, self.training_status_queue, self.eval_status_queue
+        )
 
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
