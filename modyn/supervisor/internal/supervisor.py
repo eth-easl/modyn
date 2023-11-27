@@ -359,22 +359,30 @@ class Supervisor:
 
             pipeline_stage = p_info.get_pipeline_stage()
             if pipeline_stage is not None:
-                ret["pipeline_stage"] = pipeline_stage
+                ret["pipeline_stage"] = []
+                while pipeline_stage is not None:
+                    ret["pipeline_stage"].append(pipeline_stage)
+                    pipeline_stage = p_info.get_pipeline_stage()
 
             training_status = p_info.get_training_status()
             if training_status is not None:
-                ret["training_status"] = training_status
-            
+                ret["training_status"] = []
+                while training_status is not None:
+                    ret["training_status"].append(training_status)
+                    training_status = p_info.get_training_status()
+                
             eval_status = p_info.get_eval_status()
             if eval_status is not None:
-                ret["eval_status"] = eval_status
+                ret["eval_status"] = []
+                while eval_status is not None:
+                    ret["eval_status"].append(eval_status)
+                    eval_status = p_info.get_eval_status()
 
-            logger.info(f"[{pipeline_id}] pipeline_stage: {pipeline_stage},"
-                        f"training_status: {training_status}",
-                        f"eval_status: {eval_status}")
+            logger.info(f"[{pipeline_id}] {ret}")
         else:
             ret["status"] = "exit"
-            ret["pipeline_stage"] = {
+            
+            msg = {
                 "stage": "exit",
                 "msg_type": "exit",
                 "log": False,
@@ -382,6 +390,8 @@ class Supervisor:
             }
             exception_msg = p_info.check_for_exception()
             if exception_msg is not None:
-                ret["pipeline_stage"]["exit_msg"]["exception"] = exception_msg
+                msg["exit_msg"]["exception"] = exception_msg
+
+            ret["pipeline_stage"] = [msg]
 
         return ret

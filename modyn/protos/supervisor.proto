@@ -119,7 +119,7 @@ message EvalStatus {
 
 message GetPipelineStatusResponse {
     string status = 1;
-    optional PipelineStage pipeline_stage = 2;
-    optional TrainingStatus training_status = 3;
-    optional EvalStatus eval_status = 4;
+    repeated PipelineStage pipeline_stage = 2;
+    repeated TrainingStatus training_status = 3;
+    repeated EvalStatus eval_status = 4;
 }

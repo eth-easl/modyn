@@ -3,7 +3,9 @@
 isort:skip_file
 """
 import builtins
+import collections.abc
 import google.protobuf.descriptor
+import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
 import typing
@@ -434,26 +436,19 @@ class GetPipelineStatusResponse(google.protobuf.message.Message):
     EVAL_STATUS_FIELD_NUMBER: builtins.int
     status: builtins.str
     @property
-    def pipeline_stage(self) -> global___PipelineStage: ...
+    def pipeline_stage(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PipelineStage]: ...
     @property
-    def training_status(self) -> global___TrainingStatus: ...
+    def training_status(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___TrainingStatus]: ...
     @property
-    def eval_status(self) -> global___EvalStatus: ...
+    def eval_status(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvalStatus]: ...
     def __init__(
         self,
         *,
         status: builtins.str = ...,
-        pipeline_stage: global___PipelineStage | None = ...,
-        training_status: global___TrainingStatus | None = ...,
-        eval_status: global___EvalStatus | None = ...,
+        pipeline_stage: collections.abc.Iterable[global___PipelineStage] | None = ...,
+        training_status: collections.abc.Iterable[global___TrainingStatus] | None = ...,
+        eval_status: collections.abc.Iterable[global___EvalStatus] | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_eval_status", b"_eval_status", "_pipeline_stage", b"_pipeline_stage", "_training_status", b"_training_status", "eval_status", b"eval_status", "pipeline_stage", b"pipeline_stage", "training_status", b"training_status"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_eval_status", b"_eval_status", "_pipeline_stage", b"_pipeline_stage", "_training_status", b"_training_status", "eval_status", b"eval_status", "pipeline_stage", b"pipeline_stage", "status", b"status", "training_status", b"training_status"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_eval_status", b"_eval_status"]) -> typing_extensions.Literal["eval_status"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_pipeline_stage", b"_pipeline_stage"]) -> typing_extensions.Literal["pipeline_stage"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_training_status", b"_training_status"]) -> typing_extensions.Literal["training_status"] | None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["eval_status", b"eval_status", "pipeline_stage", b"pipeline_stage", "status", b"status", "training_status", b"training_status"]) -> None: ...
 
 global___GetPipelineStatusResponse = GetPipelineStatusResponse
