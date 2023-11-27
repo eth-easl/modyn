@@ -1,6 +1,6 @@
 pipeline:
-    name: exp2_retrain_newmodel
-    description: CLOC. Finetuning, i.e., updating model over time.
+    name: exp10_triggerbalanced
+    description: CLOC. do not reset model, train on 25% of all available data balanced across all triggers
     version: 1.0.0
 model:
   id: ResNet50
@@ -15,12 +15,12 @@ training:
   amp: False
   dataloader_workers: 16
   num_prefetched_partitions: 4
-  parallel_prefetch_requests: 2
-  use_previous_model: False
+  parallel_prefetch_requests: 1
+  use_previous_model: True
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 256
+  batch_size: 512
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -36,12 +36,15 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
+    name: CoresetStrategy
     maximum_keys_in_memory: 100000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: False
+      presampling_config:
+        strategy: TriggerBalancedPresamplingStrategy
+        ratio: 25
 data:
   dataset_id: cloc
   transformations: ["transforms.RandomResizedCrop(224)",
@@ -56,7 +59,7 @@ data:
 trigger:
   id: TimeTrigger
   trigger_config:
-    trigger_every: "26w"
+    trigger_every: "52w"
 evaluation:
   device: "cuda:0"
   result_writers: ["json"]
@@ -71,7 +74,7 @@ evaluation:
         import io
         def bytes_parser_function(data: bytes) -> Image:
           return Image.open(io.BytesIO(data)).convert("RGB")
-      batch_size: 128
+      batch_size: 256
       dataloader_workers: 16
       metrics:
         - name: "Accuracy"
@@ -81,8 +84,16 @@ evaluation:
               return torch.argmax(model_output, dim=-1)
         - name: "F1-score"
           config:
-            num_classes: 10
+            num_classes: 713
             average: "macro"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)
+        - name: "WeightedF1-score"
+          config:
+            num_classes: 713
+            average: "weighted"
           evaluation_transformer_function: |
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:

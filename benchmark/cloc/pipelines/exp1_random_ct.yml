@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: CLOC. do not reset model, train on new data
+    name: exp1_random_ct
+    description: CLOC. do not reset model, train on random 25% of new data
     version: 1.0.0
 model:
   id: ResNet50
@@ -36,12 +36,15 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
+    name: CoresetStrategy
     maximum_keys_in_memory: 100000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+      presampling_config:
+        strategy: RandomPresamplingStrategy
+        ratio: 25
 data:
   dataset_id: cloc
   transformations: ["transforms.RandomResizedCrop(224)",

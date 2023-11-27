@@ -1,6 +1,6 @@
 pipeline:
-    name: exp2_retrain_newmodel
-    description: CLOC. Finetuning, i.e., updating model over time.
+    name: exp8_dlis_gradnorm_bts_full
+    description: CLOC. do not reset model, train on 25% of all available data (gradnorm DLIS)
     version: 1.0.0
 model:
   id: ResNet50
@@ -15,12 +15,12 @@ training:
   amp: False
   dataloader_workers: 16
   num_prefetched_partitions: 4
-  parallel_prefetch_requests: 2
+  parallel_prefetch_requests: 1
   use_previous_model: True
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 1024 # 256 * 4
+  batch_size: 512
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -60,7 +60,7 @@ data:
 trigger:
   id: TimeTrigger
   trigger_config:
-    trigger_every: "26w"
+    trigger_every: "52w"
 evaluation:
   device: "cuda:0"
   result_writers: ["json"]
@@ -75,7 +75,7 @@ evaluation:
         import io
         def bytes_parser_function(data: bytes) -> Image:
           return Image.open(io.BytesIO(data)).convert("RGB")
-      batch_size: 128
+      batch_size: 256
       dataloader_workers: 16
       metrics:
         - name: "Accuracy"
@@ -85,8 +85,16 @@ evaluation:
               return torch.argmax(model_output, dim=-1)
         - name: "F1-score"
           config:
-            num_classes: 10
+            num_classes: 713
             average: "macro"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)
+        - name: "WeightedF1-score"
+          config:
+            num_classes: 713
+            average: "weighted"
           evaluation_transformer_function: |
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:

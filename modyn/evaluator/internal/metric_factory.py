@@ -1,8 +1,8 @@
 from typing import Any
 
-from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, AbstractHolisticMetric, Accuracy, F1Score, RocAuc
+from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, AbstractHolisticMetric, Accuracy, F1Score, WeightedF1Score, RocAuc
 
-all_metrics = {Accuracy, F1Score, RocAuc}
+all_metrics = {Accuracy, F1Score, RocAuc, WeightedF1Score}
 
 
 class MetricFactory:

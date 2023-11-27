@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: CLOC. do not reset model, train on new data
+    name: exp3_dlis_loss_bts_ct
+    description: CLOC. do not reset model, train on DLIS Loss 25% of new data
     version: 1.0.0
 model:
   id: ResNet50
@@ -36,12 +36,16 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
+    name: CoresetStrategy
     maximum_keys_in_memory: 100000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+      downsampling_config:
+        strategy: LossDownsamplingStrategy
+        ratio: 25
+        sample_then_batch: False
 data:
   dataset_id: cloc
   transformations: ["transforms.RandomResizedCrop(224)",
