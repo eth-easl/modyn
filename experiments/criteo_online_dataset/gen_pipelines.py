@@ -108,7 +108,7 @@ data:
     def bytes_parser_function(x: memoryview) -> dict:
       return {{
         \"numerical_input\": torch.frombuffer(x, dtype=torch.float32, count=13),
-        \"categorical_input\": torch.frombuffer(x, dtype=torch.long, offset=52)
+        \"categorical_input\": torch.frombuffer(x, dtype=torch.int32, offset=52)
       }}
   label_transformer_function: |
     import torch
