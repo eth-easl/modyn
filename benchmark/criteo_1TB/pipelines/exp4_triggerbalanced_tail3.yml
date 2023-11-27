@@ -1,6 +1,6 @@
 pipeline:
-    name: exp5_gradnorm_bts_full
-    description: DLRM/Criteo Training. Retraining on subsampling on entire dataset, with the old model weights.
+    name: exp4_triggerbalanced_tail3
+    description: DLRM/Criteo Training. do not reset model, train on DLIS GRADNORM 25% of new data
     version: 1.0.0
 model:
   id: DLRM
@@ -54,7 +54,7 @@ training:
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 262144 # 65536 * 4 since this is the pre downsample batch size
+  batch_size: 65536
   optimizers:
     - name: "mlp"
       algorithm: "FusedSGD"
@@ -93,15 +93,15 @@ training:
     activated: False
   selection_strategy:
     name: CoresetStrategy
-    maximum_keys_in_memory: 2000000
+    maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: False
-      downsampling_config:
-        strategy: GradNormDownsamplingStrategy
-        ratio: 25
-        sample_then_batch: False
+      tail_triggers: 3
+      presampling_config:
+        strategy: TriggerBalancedPresamplingStrategy
+        ratio: 30
 data:
   dataset_id: criteo
   bytes_parser_function: |

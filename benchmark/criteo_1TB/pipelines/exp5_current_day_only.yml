@@ -1,6 +1,6 @@
 pipeline:
-    name: exp6_loss_bts_full
-    description: DLRM/Criteo Training. Retraining on subsampling on entire dataset, with the old model weights.
+    name: exp5_current_day_only
+    description: DLRM/Criteo Training. New model each day, on the day only.
     version: 1.0.0
 model:
   id: DLRM
@@ -50,11 +50,11 @@ training:
   dataloader_workers: 16
   num_prefetched_partitions: 4
   parallel_prefetch_requests: 2
-  use_previous_model: True
+  use_previous_model: False
   initial_model: random
   initial_pass:
     activated: False
-  batch_size: 262144 # 65536 * 4 since this is the pre downsample batch size
+  batch_size: 65536
   optimizers:
     - name: "mlp"
       algorithm: "FusedSGD"
@@ -92,16 +92,12 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: CoresetStrategy
-    maximum_keys_in_memory: 2000000
+    name: NewDataStrategy
+    maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
-      reset_after_trigger: False
-      downsampling_config:
-        strategy: LossDownsamplingStrategy
-        ratio: 25
-        sample_then_batch: False
+      reset_after_trigger: True
 data:
   dataset_id: criteo
   bytes_parser_function: |

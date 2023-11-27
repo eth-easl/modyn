@@ -1,6 +1,6 @@
 pipeline:
-    name: exp7_random_full
-    description: DLRM/Criteo Training. Retraining on subsampling on entire dataset, with the old model weights.
+    name: exp1_random_ct
+    description: DLRM/Criteo Training. do not reset model, train on random 25% of new data
     version: 1.0.0
 model:
   id: DLRM
@@ -93,11 +93,11 @@ training:
     activated: False
   selection_strategy:
     name: CoresetStrategy
-    maximum_keys_in_memory: 2000000
+    maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
-      reset_after_trigger: False
+      reset_after_trigger: True
       presampling_config:
         strategy: RandomPresamplingStrategy
         ratio: 25

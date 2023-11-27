@@ -1,5 +1,5 @@
 pipeline:
-    name: exp2_retrain_keeping
+    name: exp7_retrain_keeping
     description: DLRM/Criteo Training. Retraining on entire dataset, on a fresh model each time.
     version: 1.0.0
 model:

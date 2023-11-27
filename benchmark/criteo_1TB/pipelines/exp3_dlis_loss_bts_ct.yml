@@ -1,6 +1,6 @@
 pipeline:
-    name: exp4_retrain_nokeeping
-    description: DLRM/Criteo Training. New model each day, on the day only.
+    name: exp3_dlis_loss_bts_ct
+    description: DLRM/Criteo Training. do not reset model, train on DLIS LOSS 25% of new data
     version: 1.0.0
 model:
   id: DLRM
@@ -50,7 +50,7 @@ training:
   dataloader_workers: 16
   num_prefetched_partitions: 4
   parallel_prefetch_requests: 2
-  use_previous_model: False
+  use_previous_model: True
   initial_model: random
   initial_pass:
     activated: False
@@ -92,12 +92,16 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
+    name: CoresetStrategy
     maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+      downsampling_config:
+        strategy: LossDownsamplingStrategy
+        ratio: 25
+        sample_then_batch: False
 data:
   dataset_id: criteo
   bytes_parser_function: |
