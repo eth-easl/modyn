@@ -101,37 +101,41 @@ class Client:
     def _monitor_training_progress(self, msg: dict) -> None:
         id = msg["id"]
 
-        if msg["stage"] == "wait for training":
-            if msg["action"] == "create_tracker":
-                params = msg["training_create_tracker_params"]
-                self.training_status_tracker = TrainingStatusTracker(
-                    self.progress_mgr, id, params["total_samples"],  params["status_bar_scale"]
-                )
-            elif msg["action"] == "progress_counter":
-                params = msg["training_progress_counter_params"]
-                self.training_status_tracker.progress_counter(
-                    params["samples_seen"], params["downsampling_samples_seen"], params["is_training"]
-                )
-            elif msg["action"] == "close_counter":
-                self.training_status_tracker.close_counter()
+        if msg["action"] == "create_tracker":
+            params = msg["training_create_tracker_params"]
+            self.training_status_tracker = TrainingStatusTracker(
+                self.progress_mgr, id, params["total_samples"],  params["status_bar_scale"]
+            )
+        elif msg["action"] == "progress_counter":
+            params = msg["training_progress_counter_params"]
+            self.training_status_tracker.progress_counter(
+                params["samples_seen"], params["downsampling_samples_seen"], params["is_training"]
+            )
+        elif msg["action"] == "close_counter":
+            self.training_status_tracker.close_counter()
+            
 
-        elif msg["stage"] == "wait for evaluation":
-            if msg["action"] == "create_tracker":
-                params = msg["eval_create_tracker_params"]
-                self.evaluations[id] = EvaluationStatusTracker(
-                    params["dataset_id"], params["dataset_size"]
-                )
-            elif msg["action"] == "create_counter":
-                params = msg["eval_create_counter_params"]
-                self.evaluations[id].create_counter(
-                    self.progress_mgr, params["training_id"], id
-                )
-            elif msg["action"] == "progress_counter":
-                params = msg["eval_progress_counter_params"]
-                self.evaluations[id].progress_counter(params["total_samples_seen"])
-            elif msg["action"] == "end_counter":
-                params = msg["eval_end_counter_params"]
-                self.evaluations[id].end_counter(params["error"])
+    def _monitor_evaluation_progress(self, msg: dict) -> None:
+        id = msg["id"]
+        if msg["action"] == "create_tracker":
+            params = msg["eval_create_tracker_params"]
+            self.evaluations[id] = EvaluationStatusTracker(
+                params["dataset_id"], params["dataset_size"]
+            )
+        elif msg["action"] == "create_counter":
+            params = msg["eval_create_counter_params"]
+            self.evaluations[id].create_counter(
+                self.progress_mgr, params["training_id"], id
+            )
+        elif msg["action"] == "progress_counter":
+            params = msg["eval_progress_counter_params"]
+            self.evaluations[id].progress_counter(params["total_samples_seen"])
+        elif msg["action"] == "end_counter":
+            params = msg["eval_end_counter_params"]
+            self.evaluations[id].end_counter(params["error"])
+            if params["error"]:
+                logger.info(f"Evaluation {id} failed with error: {params['exception_msg']}")
+
 
     def poll_pipeline_status(self) -> None:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
@@ -143,6 +147,9 @@ class Client:
 
             if "training_status" in res:
                 self._monitor_training_progress(res["training_status"])
+            
+            if "eval_status" in res:
+                self._monitor_evaluation_progress(res["eval_status"])
 
             time.sleep(POLL_TIMEOUT)
 

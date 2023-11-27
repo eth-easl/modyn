@@ -15,35 +15,32 @@ class TrainingStatusReporter:
         self.training_id = training_id
         self.samples_per_epoch = samples_per_epoch
         self.status_bar_scale = status_bar_scale
+        self.stage = "wait for training"
+    
+    def _template_msg(self, action: str) -> None:
+        return {
+            "stage": self.stage,
+            "action": action,
+            "id": self.training_id
+        }
 
     def create_tracker(self) -> None:
-        self.training_status_queue.put(
-            {
-                "stage": "wait for training",
-                "action": "create_tracker",
-                "id": self.training_id,
-                "training_create_tracker_params": {
-                    "total_samples": self.samples_per_epoch,
-                    "status_bar_scale": self.status_bar_scale,
-                },
-            }
-        )
+        ret = self._template_msg("create_tracker")
+        ret["training_create_tracker_params"] = {
+            "total_samples": self.samples_per_epoch,
+            "status_bar_scale": self.status_bar_scale,
+        }
+        self.training_status_queue.put(ret)
 
     def progress_counter(self, samples_seen_training: int, samples_seen_downsampling: int, is_training: bool) -> None:
-        self.training_status_queue.put(
-            {
-                "stage": "wait for training",
-                "action": "progress_counter",
-                "id": self.training_id,
-                "training_progress_counter_params": {
-                    "samples_seen": samples_seen_training,
-                    "downsampling_samples_seen": samples_seen_downsampling,
-                    "is_training": is_training,
-                },
-            }
-        )
+        ret = self._template_msg("progress_counter")
+        ret["training_progress_counter_params"] = {
+            "samples_seen": samples_seen_training,
+            "downsampling_samples_seen": samples_seen_downsampling,
+            "is_training": is_training,
+        }
+        self.training_status_queue.put(ret)
 
     def close_counter(self) -> None:
-        self.training_status_queue.put(
-            {"stage": "wait for training", "action": "close_counter", "id": self.training_id}
-        )
+        ret = self._template_msg("close_counter")
+        self.training_status_queue.put(ret)

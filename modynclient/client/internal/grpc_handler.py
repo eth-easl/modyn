@@ -65,7 +65,6 @@ class GRPCHandler:
 
         res: PipelineResponse = self.supervisor.start_pipeline(start_pipeline_request)
         ret = MessageToDict(res, preserving_proto_field_name=True, including_default_value_fields=True)
-        print(">>>>>>>>>>>>>>>>", ret)
 
         return ret
 

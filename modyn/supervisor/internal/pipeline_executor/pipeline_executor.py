@@ -27,8 +27,9 @@ class PipelineExecutor:
         pipeline_config: dict,
         eval_directory: str,
         supervisor_supported_eval_result_writers: dict,
-        training_status_queue: mp.Queue,
         pipeline_status_queue: mp.Queue,
+        training_status_queue: mp.Queue,
+        eval_status_queue: mp.Queue,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
@@ -39,14 +40,15 @@ class PipelineExecutor:
         self.pipeline_config = pipeline_config
         self.eval_directory = pathlib.Path(eval_directory)
         self.supervisor_supported_eval_result_writers = supervisor_supported_eval_result_writers
-        self.training_status_queue = training_status_queue
         self.pipeline_status_queue = pipeline_status_queue
+        self.training_status_queue = training_status_queue
+        self.eval_status_queue = eval_status_queue
 
         self.previous_model_id: Optional[int] = None
         if self.pipeline_config["training"]["initial_model"] == "pretrained":
             self.previous_model_id = self.pipeline_config["training"]["initial_model_id"]
 
-        self.grpc = GRPCHandler(self.modyn_config, self.training_status_queue, self.pipeline_status_queue)
+        self.grpc = GRPCHandler(self.modyn_config, self.pipeline_status_queue, self.training_status_queue, self.eval_status_queue)
 
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
@@ -445,8 +447,9 @@ def execute_pipeline(
     eval_directory: str,
     supervisor_supported_eval_result_writers: dict,
     exception_queue: mp.Queue,
-    training_status_queue: mp.Queue,
     pipeline_status_queue: mp.Queue,
+    training_status_queue: mp.Queue,
+    eval_status_queue: mp.Queue,
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
@@ -459,8 +462,9 @@ def execute_pipeline(
             pipeline_config,
             eval_directory,
             supervisor_supported_eval_result_writers,
-            training_status_queue,
             pipeline_status_queue,
+            training_status_queue,
+            eval_status_queue,
             start_replay_at,
             stop_replay_at,
             maximum_triggers,

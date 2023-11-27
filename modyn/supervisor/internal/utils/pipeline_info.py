@@ -11,14 +11,16 @@ class PipelineInfo:
         self,
         process_handler: mp.Process,
         exception_queue: mp.Queue,
-        training_status_queue: mp.Queue,
         pipeline_status_queue: mp.Queue,
+        training_status_queue: mp.Queue,
+        eval_status_queue: mp.Queue,
     ):
         self.process_handler = process_handler
         self.exception_queue = exception_queue
 
-        self.training_status_queue = training_status_queue
         self.pipeline_status_queue = pipeline_status_queue
+        self.training_status_queue = training_status_queue
+        self.eval_status_queue = eval_status_queue
 
     def get_pipeline_stage(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
         try:
@@ -31,6 +33,13 @@ class PipelineInfo:
         try:
             # blocks for timeout seconds
             return self.training_status_queue.get(timeout=timeout)
+        except queue.Empty:
+            return None
+    
+    def get_eval_status(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
+        try:
+            # blocks for timeout seconds
+            return self.eval_status_queue.get(timeout=timeout)
         except queue.Empty:
             return None
 

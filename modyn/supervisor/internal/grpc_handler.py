@@ -70,12 +70,14 @@ class GRPCHandler:
     def __init__(
         self,
         modyn_config: dict,
-        training_status_queue: Optional[mp.Queue] = None,
         pipeline_status_queue: Optional[mp.Queue] = None,
+        training_status_queue: Optional[mp.Queue] = None,
+        eval_status_queue: Optional[mp.Queue] = None,
     ) -> None:
         self.config = modyn_config
-        self.training_status_queue = training_status_queue
         self.pipeline_status_queue = pipeline_status_queue
+        self.training_status_queue = training_status_queue
+        self.eval_status_queue = eval_status_queue
 
         self.connected_to_storage = False
         self.connected_to_trainer_server = False
@@ -531,7 +533,7 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
-        assert self.training_status_queue is not None
+        assert self.eval_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
@@ -552,7 +554,7 @@ class GRPCHandler:
                 evaluation_id = response.evaluation_id
                 logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
                 evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.training_status_queue, evaluation_id, dataset_id, response.dataset_size
+                    self.eval_status_queue, evaluation_id, dataset_id, response.dataset_size
                 )
                 evaluations[evaluation_id].create_tracker()
 
@@ -643,8 +645,9 @@ class GRPCHandler:
             res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
 
             if not res.valid:
-                logger.warning(f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n")
-                current_evaluation_reporter.end_counter(True)
+                exception_msg = f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n"
+                logger.warning(exception_msg)
+                current_evaluation_reporter.end_counter(error=True, exception_msg=exception_msg)
                 continue
 
             if res.blocked:
@@ -657,11 +660,12 @@ class GRPCHandler:
                 blocked_in_a_row[current_evaluation_id] = 0
 
                 if res.HasField("exception") and res.exception is not None:
-                    logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                    current_evaluation_reporter.end_counter(True)
+                    exception_msg = f"Exception at evaluator occurred:\n{res.exception}\n\n"
+                    logger.warning(exception_msg)
+                    current_evaluation_reporter.end_counter(error=True, exception_msg=exception_msg)
                     continue
                 if not res.is_running:
-                    current_evaluation_reporter.end_counter(False)
+                    current_evaluation_reporter.end_counter(error=False)
                     continue
                 if res.state_available:
                     assert res.HasField("samples_seen") and res.HasField(
@@ -677,13 +681,13 @@ class GRPCHandler:
 
         self.pipeline_status_queue.put(
             {
-                "stage": "Evaluation completed ✅",
+                "stage": "Evaluation completed",
                 "msg_type": "id",
                 "log": True,
                 "id_msg": {"id_type": "training", "id": training_id},
             }
         )
-        logger.info("Evaluation completed ✅")
+        logger.info("Evaluation completed")
 
     def store_evaluation_results(
         self,

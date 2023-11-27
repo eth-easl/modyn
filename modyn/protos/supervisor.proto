@@ -77,23 +77,6 @@ message TrainingStatusProgressCounterParams {
     bool is_training = 3;
 }
 
-message EvaluationStatusCreateTrackerParams {
-    string dataset_id = 1;
-    int32 dataset_size = 2;
-} 
-
-message EvaluationStatusCreateCounterParams {
-    int32 training_id = 1;
-}
-
-message EvaluationStatusProgressCounterParams {
-    int32 total_samples_seen = 1;
-}
-
-message EvaluationStatusEndCounterParams {
-    bool error = 1;
-}
-
 message TrainingStatus {
     string stage = 1;
     string action = 2;
@@ -101,10 +84,36 @@ message TrainingStatus {
     oneof params {
         TrainingStatusCreateTrackerParams training_create_tracker_params = 4;
         TrainingStatusProgressCounterParams training_progress_counter_params = 5;
-        EvaluationStatusCreateTrackerParams eval_create_tracker_params = 6;
-        EvaluationStatusCreateCounterParams eval_create_counter_params = 7;
-        EvaluationStatusProgressCounterParams eval_progress_counter_params = 8;
-        EvaluationStatusEndCounterParams eval_end_counter_params = 9;
+    }
+}
+
+message EvalStatusCreateTrackerParams {
+    string dataset_id = 1;
+    int32 dataset_size = 2;
+} 
+
+message EvalStatusCreateCounterParams {
+    int32 training_id = 1;
+}
+
+message EvalStatusProgressCounterParams {
+    int32 total_samples_seen = 1;
+}
+
+message EvalStatusEndCounterParams {
+    bool error = 1;
+    optional string exception_msg = 2;
+}
+
+message EvalStatus {
+    string stage = 1;
+    string action = 2;
+    int32 id = 3;
+    oneof params {
+        EvalStatusCreateTrackerParams eval_create_tracker_params = 4;
+        EvalStatusCreateCounterParams eval_create_counter_params = 5;
+        EvalStatusProgressCounterParams eval_progress_counter_params = 6;
+        EvalStatusEndCounterParams eval_end_counter_params = 7;
     }
 }
 
@@ -112,4 +121,5 @@ message GetPipelineStatusResponse {
     string status = 1;
     optional PipelineStage pipeline_stage = 2;
     optional TrainingStatus training_status = 3;
+    optional EvalStatus eval_status = 4;
 }

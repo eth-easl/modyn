@@ -304,8 +304,9 @@ class Supervisor:
 
         try:
             exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-            training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
             pipeline_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            eval_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
             start_timestamp = self.grpc.get_time_at_storage()
             pipeline_id = self.register_pipeline(pipeline_config)
@@ -324,8 +325,9 @@ class Supervisor:
                     eval_directory,
                     self.supported_evaluation_result_writers,
                     exception_queue,
-                    training_status_queue,
                     pipeline_status_queue,
+                    training_status_queue,
+                    eval_status_queue,
                     start_replay_at,
                     stop_replay_at,
                     maximum_triggers,
@@ -335,8 +337,9 @@ class Supervisor:
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
                 exception_queue,
-                training_status_queue,
                 pipeline_status_queue,
+                training_status_queue,
+                eval_status_queue
             )
             return {"pipeline_id": pipeline_id}
         except Exception:  # pylint: disable=broad-except
@@ -361,8 +364,14 @@ class Supervisor:
             training_status = p_info.get_training_status()
             if training_status is not None:
                 ret["training_status"] = training_status
+            
+            eval_status = p_info.get_eval_status()
+            if eval_status is not None:
+                ret["eval_status"] = eval_status
 
-            logger.info(f"[{pipeline_id}] pipeline_stage: {pipeline_stage}, " f"training_status: {training_status}")
+            logger.info(f"[{pipeline_id}] pipeline_stage: {pipeline_stage},"
+                        f"training_status: {training_status}",
+                        f"eval_status: {eval_status}")
         else:
             ret["status"] = "exit"
             ret["pipeline_stage"] = {
