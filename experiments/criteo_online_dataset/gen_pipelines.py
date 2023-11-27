@@ -105,15 +105,10 @@ data:
   dataset_id: criteo_tiny
   bytes_parser_function: |
     import torch
-    import numpy as np
-    def bytes_parser_function(x: bytes) -> dict:
-      num_features = x[:52]
-      cat_features = x[52:]
-      num_features_array = np.frombuffer(num_features, dtype=np.float32)
-      cat_features_array = np.frombuffer(cat_features, dtype=np.int32)
+    def bytes_parser_function(x: memoryview) -> dict:
       return {{
-        \"numerical_input\": torch.asarray(num_features_array, copy=True, dtype=torch.float32),
-        \"categorical_input\": torch.asarray(cat_features_array, copy=True, dtype=torch.long)
+        \"numerical_input\": torch.frombuffer(view, dtype=torch.float32, count=13),
+        \"categorical_input\": torch.frombuffer(x, dtype=torch.long, offset=52)
       }}
   label_transformer_function: |
     import torch
@@ -129,7 +124,7 @@ trigger:
 
 def main():
     curr_dir = pathlib.Path(__file__).resolve().parent
-    for num_dataloader_workers in [16,1,2,8]:
+    for num_dataloader_workers in [16,1,4,8]:
         for partition_size in [10000, 100000, 2500000, 5000000]:
             for num_prefetched_partitions in [0,1,2,6]:
                 for parallel_pref in [1,2,4,8]:
