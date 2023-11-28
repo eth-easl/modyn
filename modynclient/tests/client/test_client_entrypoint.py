@@ -6,7 +6,7 @@ import os
 import pathlib
 import tempfile
 from typing import Optional
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from modynclient.client import Client
 

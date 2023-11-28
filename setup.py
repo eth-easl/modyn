@@ -125,7 +125,7 @@ setup(
                    "_modyn_metadata_processor=modyn.metadata_processor.metadata_processor_entrypoint:main",
                    "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main",
                    "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main",
-                   "_modyn_client=modynclient.client.entrypoint:main"]},
+                   "_modyn_client=modynclient.client.client_entrypoint:main"]},
     scripts=[
         'modyn/supervisor/modyn-supervisor',
         'modyn/storage/modyn-storage',
