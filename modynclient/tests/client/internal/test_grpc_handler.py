@@ -124,7 +124,7 @@ def test_start_pipeline(test_grpc_connection_established):
         assert ret_minimal["pipeline_id"] == 42
         assert "exception" not in ret_minimal
         mock.assert_called_once_with(req_minimal)
-    
+
     start_replay_at = 0
     stop_replay_at = 1
     maximum_triggers = 10
