@@ -1,14 +1,20 @@
+import json
 import os
 import pathlib
 from unittest.mock import patch
 
 import grpc
 import pytest
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modynclient.client.internal.grpc_handler import GRPCHandler
 
-EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
+EVAL_DIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
+START_PIPELINE_RES = PipelineResponse(pipeline_id=PIPELINE_ID)
+PIPELINE_STATUS_RES_RUNNING = GetPipelineStatusResponse(status="running")
 
 
 def noop_constructor_mock(self, channel: grpc.Channel) -> None:
@@ -101,19 +107,64 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
         handler.init_supervisor()
 
 
-def test_start_pipeline():
-    pass
+@patch("modynclient.client.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_start_pipeline(test_grpc_connection_established):
+    handler = GRPCHandler(get_simple_config())
+    pipeline_config = get_minimal_pipeline_config()
+
+    req_minimal = StartPipelineRequest(
+        pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+        eval_directory=str(EVAL_DIR),
+    )
+
+    with patch.object(handler.supervisor, "start_pipeline") as mock:
+        mock.return_value = START_PIPELINE_RES
+        ret_minimal = handler.start_pipeline(pipeline_config, EVAL_DIR)
+
+        assert ret_minimal["pipeline_id"] == 42
+        assert "exception" not in ret_minimal
+        mock.assert_called_once_with(req_minimal)
+    
+    start_replay_at = 0
+    stop_replay_at = 1
+    maximum_triggers = 10
+
+    req_full = StartPipelineRequest(
+        pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+        eval_directory=str(EVAL_DIR),
+        start_replay_at=start_replay_at,
+        stop_replay_at=stop_replay_at,
+        maximum_triggers=maximum_triggers
+    )
+
+    with patch.object(handler.supervisor, "start_pipeline") as mock:
+        mock.return_value = START_PIPELINE_RES
+        ret_full = handler.start_pipeline(
+            pipeline_config, EVAL_DIR, start_replay_at, stop_replay_at, maximum_triggers
+        )
+
+        assert ret_full["pipeline_id"] == 42
+        assert "exception" not in ret_full
+        mock.assert_called_once_with(req_full)
 
 
 def test_start_pipeline_throws():
     handler = get_non_connecting_handler()
     handler.connected_to_supervisor = False
     with pytest.raises(ConnectionError):
-        handler.start_pipeline(get_minimal_pipeline_config(), EVALUATION_DIRECTORY)
+        handler.start_pipeline(get_minimal_pipeline_config(), EVAL_DIR)
 
 
-def test_get_pipeline_status():
-    pass
+@patch("modynclient.client.internal.grpc_handler.grpc_connection_established", return_value=True)
+def test_get_pipeline_status(test_grpc_connection_established):
+    handler = GRPCHandler(get_simple_config())
+
+    with patch.object(handler.supervisor, "get_pipeline_status") as mock:
+        mock.return_value = PIPELINE_STATUS_RES_RUNNING
+        ret = handler.get_pipeline_status(PIPELINE_ID)
+
+        assert ret["status"] == "running"
+        mock.assert_called_once_with(GetPipelineStatusRequest(pipeline_id=PIPELINE_ID))
 
 
 def test_get_pipeline_status_throws():
