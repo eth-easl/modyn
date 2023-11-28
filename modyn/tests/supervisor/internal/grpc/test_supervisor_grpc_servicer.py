@@ -72,7 +72,6 @@ def noop_init_metadata_db(self) -> None:
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-@patch.object(Supervisor, "monitor_pipelines", noop)
 def test_init():
     modyn_config = get_minimal_modyn_config()
     sup = Supervisor(modyn_config)
@@ -83,7 +82,6 @@ def test_init():
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-@patch.object(Supervisor, "monitor_pipelines", noop)
 @patch.object(Supervisor, "start_pipeline", return_value={"pipeline_id": 1})
 def test_start_pipeline(test_start_pipeline: MagicMock):
     modyn_config = get_minimal_modyn_config()
@@ -108,7 +106,6 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-@patch.object(Supervisor, "monitor_pipelines", noop)
 @patch.object(
     Supervisor,
     "get_pipeline_status",

@@ -3,8 +3,6 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
-import threading
-import time
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
@@ -21,29 +19,6 @@ from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
-PIPELINE_MONITOR_INTERVAL = 5
-
-
-def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
-    logger.info(f"[{os.getpid()}][pipeline_monitor] start")
-    while True:
-        num_pipelines = len(pipeline_process_dict)
-        if num_pipelines > 0:
-            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_pipelines} pipelines registered")
-
-        num_active_pipeline_processes = 0
-        for p_id, p_info in pipeline_process_dict.items():
-            if p_info.process_handler.is_alive():
-                num_active_pipeline_processes += 1
-                logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
-            else:
-                # TODO(#317): unregister pipeline when process terminates
-                logger.info(
-                    f"[{os.getpid()}][pipeline_monitor] pipeline {p_id}, exit code {p_info.process_handler.exitcode}"
-                )
-        if num_active_pipeline_processes > 0:
-            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
-        time.sleep(PIPELINE_MONITOR_INTERVAL)
 
 
 class Supervisor:
@@ -70,7 +45,6 @@ class Supervisor:
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
         self.grpc = GRPCHandler(self.modyn_config)
-        self.pipeline_monitor_thread: Optional[threading.Thread] = None
         self.init_metadata_db()
 
     def __getstate__(self) -> dict:
@@ -92,11 +66,6 @@ class Supervisor:
         # TODO(#317): seed per pipeline instead of per system
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])
-
-    def monitor_pipelines(self) -> None:
-        logging.info("Starting pipeline monitor thread.")
-        # self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
-        # self.pipeline_monitor_thread.start()
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (
