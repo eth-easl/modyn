@@ -3,6 +3,7 @@ import os
 import pathlib
 import random
 import shutil
+import time
 from typing import Optional
 
 import grpc
@@ -12,15 +13,26 @@ from modyn.metadata_database.metadata_database_connection import MetadataDatabas
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
-from modyn.storage.internal.grpc.generated.storage_pb2 import DatasetAvailableRequest, RegisterNewDatasetRequest
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
+    DatasetAvailableRequest,
+    GetDatasetSizeRequest,
+    GetDatasetSizeResponse,
+    RegisterNewDatasetRequest,
+)
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+CLIENT_CONFIG_FILE = (
+    SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples" / "modyn_client_config_container.yaml"
+)
+MNIST_CONFIG_FILE = SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples" / "mnist.yaml"
+CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
+NEW_DATASET_TIMEOUT = 15
 
 
 def get_modyn_config() -> dict:
@@ -28,6 +40,13 @@ def get_modyn_config() -> dict:
         config = yaml.safe_load(config_file)
 
     return config
+
+
+def get_pipeline_config(pipeline_config_file: pathlib.Path) -> dict:
+    with open(pipeline_config_file, "r", encoding="utf-8") as config_file:
+        pipline_config = yaml.safe_load(config_file)
+
+    return pipline_config
 
 
 def get_minimal_pipeline_config(
@@ -48,7 +67,12 @@ def get_minimal_pipeline_config(
             "learning_rate": 0.1,
             "batch_size": 42,
             "optimizers": [
-                {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+                {
+                    "name": "default1",
+                    "algorithm": "SGD",
+                    "source": "PyTorch",
+                    "param_groups": [{"module": "model", "config": {"lr": 0.1, "momentum": 0.001}}],
+                },
             ],
             "optimization_criterion": {"name": "CrossEntropyLoss"},
             "checkpointing": {"activated": False},
@@ -193,6 +217,7 @@ class DatasetHelper:
             file_wrapper_config=json.dumps({"file_extension": ".png", "label_file_extension": ".txt"}),
             file_wrapper_type="SingleSampleFileWrapper",
             filesystem_wrapper_type="LocalFilesystemWrapper",
+            file_watcher_interval=5,
             version="0.1.0",
         )
 
@@ -206,9 +231,18 @@ class DatasetHelper:
 
         assert response.available, "Dataset is not available."
 
+    def wait_for_dataset(self, expected_size: int) -> None:
+        time.sleep(NEW_DATASET_TIMEOUT)
+        request = GetDatasetSizeRequest(dataset_id="test_dataset")
+        response: GetDatasetSizeResponse = self.storage.GetDatasetSize(request)
+
+        assert response.success, "Dataset is not available."
+        assert response.num_keys >= expected_size
+
     def setup_dataset(self) -> None:
         self.check_get_current_timestamp()  # Check if the storage service is available.
         self.create_dataset_dir()
         self.add_images_to_dataset(0, self.num_images, self.first_added_images)  # Add images to the dataset.
         self.register_new_dataset()
         self.check_dataset_availability()  # Check if the dataset is available.
+        self.wait_for_dataset(self.num_images)

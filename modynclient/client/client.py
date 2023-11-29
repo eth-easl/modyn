@@ -8,7 +8,7 @@ import enlighten
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
 
-POLL_TIMEOUT = 5
+POLL_TIMEOUT = 2
 
 logger = logging.getLogger(__name__)
 
