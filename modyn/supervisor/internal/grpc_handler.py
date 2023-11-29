@@ -707,7 +707,7 @@ class GRPCHandler:
         logger.info("Evaluation completed ✅")
         self.status_bar.update(demo="Evaluation completed")
 
-    def is_evaluation_running(self, eval_id: int) -> None:
+    def is_evaluation_running(self, eval_id: int) -> tuple[bool, bool]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
         req = EvaluationStatusRequest(evaluation_id=eval_id)
@@ -715,29 +715,29 @@ class GRPCHandler:
 
         if not res.valid:
             logger.warning(f"Evaluation {eval_id} is invalid at server:\n{res}\n")
-            return False
+            return False, True
 
         if res.blocked:
             logger.warning(
                 "Evaluator returned blocked response"
             )
-            return True
+            return True, False
         else:
             if res.HasField("exception") and res.exception is not None:
                 logger.warning(f"Exception at evaluator occurred:\n{res.exception}\n\n")
-                return False
+                return False, True
             if not res.is_running:
-                return False
+                return False, False
             if res.state_available:
                 assert res.HasField("samples_seen") and res.HasField(
                     "batches_seen"
                 ), f"Inconsistent server response:\n{res}"
 
-                return True
+                return True, False
             elif res.is_running:
                 logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
-        return True
+        return True, False
 
 
     def store_evaluation_results(
