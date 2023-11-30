@@ -111,18 +111,16 @@ class ClocLocalDataset(IterableDataset):
 
 
     def cloc_generator(self, worker_id: int, num_workers: int) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
-        pathlist_path = pathlib.Path(self._cloc_path) / "pathlist.txt"
-        if not pathlist_path.exists():
-            raise RuntimeError("gimme the pathlist please")
-        self._info("Reading and splitting paths", worker_id)
-        paths = pathlist_path.read_text().split(",")
-        self._info("Paths read and splitted", worker_id)
+        self._info("Globbing paths", worker_id)
+
+        pathlist = sorted(pathlib.Path(self._cloc_path).glob('*.jpg'))
+        self._info("Paths globbed", worker_id)
 
         def split(a, n):
             k, m = divmod(len(a), n)
             return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
 
-        pathgen = split(paths, num_workers)
+        pathgen = split(pathlist, num_workers)
         worker_paths = next(x for i,x in enumerate(pathgen) if i==worker_id)
         self._info(f"Got {len(worker_paths)} paths.", worker_id)
 
