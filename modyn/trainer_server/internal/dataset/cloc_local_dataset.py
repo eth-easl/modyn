@@ -113,9 +113,9 @@ class ClocLocalDataset(IterableDataset):
         pathlist_path = pathlib.Path(self._cloc_path) / "pathlist.txt"
         if not pathlist_path.exists():
             raise RuntimeError("gimme the pathlist please")
-        self._info("Reading and splitting paths")
+        self._info("Reading and splitting paths", worker_id)
         paths = pathlist_path.read_text().split(",")
-        self._info("Paths read and splitted")
+        self._info("Paths read and splitted", worker_id)
 
         def split(a, n):
             k, m = divmod(len(a), n)
@@ -123,6 +123,8 @@ class ClocLocalDataset(IterableDataset):
 
         pathgen = split(paths, num_workers)
         worker_paths = next(x for i,x in enumerate(pathgen) if i==worker_id)
+        self._info(f"Got {len(worker_paths)} paths.", worker_id)
+
         sample_idx = 0
         for path in worker_paths:
             path = pathlib.Path(path)

@@ -117,10 +117,10 @@ class CriteoLocalDataset(IterableDataset):
         record_size = 160
         label_size = 4
         byte_order = "little"
-        self._info("Globbing paths")
+        self._info("Globbing paths", worker_id)
 
         pathlist = sorted(Path(self._criteo_path).glob('**/*.bin'))
-        self._info("Paths globbed")
+        self._info("Paths globbed", worker_id)
 
         def split(a, n):
             k, m = divmod(len(a), n)
@@ -129,6 +129,7 @@ class CriteoLocalDataset(IterableDataset):
         pathgen = split(pathlist, num_workers)
         worker_paths = next(x for i,x in enumerate(pathgen) if i==worker_id)
         sample_idx = 0
+        self._info(f"Got {len(worker_paths)} paths.", worker_id)
         for path in worker_paths:
             fw = BinaryFileWrapper(path, byte_order, record_size, label_size)
             num_samples = fw.get_number_of_samples()
