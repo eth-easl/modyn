@@ -58,11 +58,12 @@ class ClocLocalDataset(IterableDataset):
 
         logger.debug("Initialized ClocDataset.")
 
+    @staticmethod
     def bytes_parser_function(data: memoryview) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
     
     def _setup_composed_transform(self) -> None:
-        self._transform_list = [self.bytes_parser_function, transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+        self._transform_list = [ClocLocalDataset.bytes_parser_function, transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:

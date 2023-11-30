@@ -52,13 +52,15 @@ class CriteoLocalDataset(IterableDataset):
         self._log: dict[str, Any] = {"partitions": {}}
         self._log_lock: Optional[threading.Lock] = None
         self._sw = Stopwatch()
-        self._criteo_path = "/tmp/criteo"
+        #self._criteo_path = "/tmp/criteo"
+        self._criteo_path = "/Users/mboether/phd/dynamic-data/dynamic_datasets_dsl/criteo"
 
         if log_path is None:
             logger.warning("Did not provide log path for CriteoDataset - logging disabled.")
 
         logger.debug("Initialized CriteoDataset.")
 
+    @staticmethod
     def bytes_parser_function(x: memoryview) -> dict:
         return {
             "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
@@ -66,7 +68,7 @@ class CriteoLocalDataset(IterableDataset):
         }
     
     def _setup_composed_transform(self) -> None:
-        self._transform_list = [self.bytes_parser_function]
+        self._transform_list = [CriteoLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
