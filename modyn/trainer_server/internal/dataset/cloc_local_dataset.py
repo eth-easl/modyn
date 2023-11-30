@@ -167,3 +167,6 @@ class ClocLocalDataset(IterableDataset):
                 yield transformed_tuple
 
         self._persist_log(worker_id)
+
+    def end_of_trigger_cleaning(self) -> None:
+        pass

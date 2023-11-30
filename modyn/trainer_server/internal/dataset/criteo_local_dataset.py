@@ -52,8 +52,7 @@ class CriteoLocalDataset(IterableDataset):
         self._log: dict[str, Any] = {"partitions": {}}
         self._log_lock: Optional[threading.Lock] = None
         self._sw = Stopwatch()
-        #self._criteo_path = "/tmp/criteo"
-        self._criteo_path = "/Users/mboether/phd/dynamic-data/dynamic_datasets_dsl/criteo"
+        self._criteo_path = "/tmp/criteo"
 
         if log_path is None:
             logger.warning("Did not provide log path for CriteoDataset - logging disabled.")
@@ -173,3 +172,6 @@ class CriteoLocalDataset(IterableDataset):
                 yield transformed_tuple
 
         self._persist_log(worker_id)
+
+    def end_of_trigger_cleaning(self) -> None:
+        pass
