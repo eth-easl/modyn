@@ -633,7 +633,7 @@ class Supervisor:
                     logger.info("At least evaluation finished, continuing.")
 
         # all copy this deadline induced copy pasta is horrible and needs to be cleaned up with a separate eval matrix PR
-        while len(list(running_evals)):
+        while len(list(running_evals)) > 0:
             one_eval_done = False
             while not one_eval_done:
                 sleep(5)
