@@ -33,9 +33,41 @@ MODYNCLIENT_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modynclient" / "config" /
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
-
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
 NEW_DATASET_TIMEOUT = 15
+
+DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
+DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
+
+
+def get_minimal_pipeline_config(
+    num_workers: int = 1,
+    strategy_config: dict = DEFAULT_SELECTION_STRATEGY,
+    model_storage_config: dict = DEFAULT_MODEL_STORAGE_CONFIG,
+) -> dict:
+    return {
+        "pipeline": {"name": "Test"},
+        "model": {"id": "ResNet18"},
+        "model_storage": model_storage_config,
+        "training": {
+            "gpus": 1,
+            "device": "cpu",
+            "dataloader_workers": num_workers,
+            "use_previous_model": True,
+            "initial_model": "random",
+            "initial_pass": {"activated": False},
+            "learning_rate": 0.1,
+            "batch_size": 42,
+            "optimizers": [
+                {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+            ],
+            "optimization_criterion": {"name": "CrossEntropyLoss"},
+            "checkpointing": {"activated": False},
+            "selection_strategy": strategy_config,
+        },
+        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
+        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+    }
 
 
 def load_config_from_file(config_file: pathlib.Path) -> dict:
