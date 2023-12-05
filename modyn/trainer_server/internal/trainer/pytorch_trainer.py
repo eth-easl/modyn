@@ -416,8 +416,6 @@ class PytorchTrainer:
                         assert weights is not None
                         loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                     else:
-                        self._info(f">>>>>>>>>>>>>>>>>>output {type(output)}: {output.shape}")
-                        self._info(f">>>>>>>>>>>>>>>>>>target {type(target)}: {target.shape}")
                         loss = self._criterion(output, target)
                 stopw.stop("Loss")
 

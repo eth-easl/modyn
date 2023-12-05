@@ -35,10 +35,14 @@ training:
 data:
   dataset_id: tiny_dataset
   bytes_parser_function: |
-    import pickle
-    def bytes_parser_function(data: bytes) -> Tensor:
-      return pickle.loads(data)
+    import pandas as pd
+    import numpy as np
+    from io import BytesIO
+    def bytes_parser_function(data: bytes) -> np.array:
+      df = pd.read_csv(BytesIO(data))
+      arr = df.to_numpy()[0]
+      return arr.astype(np.float32)
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 1
+    data_points_for_trigger: 2

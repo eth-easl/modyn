@@ -19,11 +19,11 @@ fi
 
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
 docker build -t modynbase -f docker/Base/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE .
-docker compose up -d --build tests --abort-on-container-exit --exit-code-from tests
+docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 exitcode=$?
 
 # Cleanup
-# docker compose down
+docker compose down
 if [[ ! -z "$CI" ]]; then
     rm conf/storage_postgresql.conf conf/metadata_postgresql.conf
     mv conf/metadata_postgresql.conf.bak conf/metadata_postgresql.conf

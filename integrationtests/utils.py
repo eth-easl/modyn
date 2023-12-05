@@ -6,6 +6,7 @@ import shutil
 import time
 import torch
 import numpy as np
+import pandas as pd
 from typing import Optional
 
 import grpc
@@ -265,7 +266,7 @@ class TinyDatasetHelper:
     def __init__(
         self,
         num: int = 10,
-        dataset_path: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset",
+        dataset_path: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets" / "tiny_dataset",
     ) -> None:
         self.storage_channel = connect_to_server("storage")
         self.storage = StorageStub(self.storage_channel)
@@ -284,31 +285,25 @@ class TinyDatasetHelper:
         shutil.rmtree(self.dataset_path)
 
     def cleanup_storage_database(self) -> None:
-        request = DatasetAvailableRequest(dataset_id="test_dataset")
+        request = DatasetAvailableRequest(dataset_id="tiny_dataset")
         response = self.storage.DeleteDataset(request)
         assert response.success, "Could not cleanup storage database."
 
     def create_tiny_dataset(self) -> None:
         rng = np.random.default_rng()
         for n in range(self.num):
-            a = rng.random(size=(2,2), dtype=np.float32)
-            t = torch.from_numpy(np.array(a))
-            torch.save(t, self.dataset_path / f"tensor_{n}.pt")
-            label = torch.argmax(t, dim=1)
-            torch.save(label, self.dataset_path / f"label_{n}.pt")
-
-    def load_tiny_dataset(self) -> None:
-        for n in range(self.num):
-            t = torch.load(self.dataset_path / f"tensor_{n}.pt")
-            label = torch.load(self.dataset_path / f"label_{n}.pt")
-            yield (t, label)
+            a = rng.random(size=(1,2), dtype=np.float32)
+            df = pd.DataFrame(a)
+            df.to_csv(self.dataset_path / f"tensor_{n}.csv", index=False)
+            with open(self.dataset_path / f"tensor_{n}.txt", "w") as label_file:
+                label_file.write(f"{n % 2}")
 
     def register_new_dataset(self) -> None:
         request = RegisterNewDatasetRequest(
             base_path=str(self.dataset_path),
             dataset_id="tiny_dataset",
             description="Tiny dataset for integration tests.",
-            file_wrapper_config=json.dumps({"file_extension": ".pt", "label_file_extension": ".pt"}),
+            file_wrapper_config=json.dumps({"file_extension": ".csv", "label_file_extension": ".txt"}),
             file_wrapper_type="SingleSampleFileWrapper",
             filesystem_wrapper_type="LocalFilesystemWrapper",
             file_watcher_interval=5,
@@ -331,12 +326,12 @@ class TinyDatasetHelper:
         response: GetDatasetSizeResponse = self.storage.GetDatasetSize(request)
 
         assert response.success, "Dataset is not available."
-        assert response.num_keys >= expected_size
+        assert response.num_keys >= expected_size, f"{response.num_keys} < {expected_size}"
 
     def setup_dataset(self) -> None:
         self.check_get_current_timestamp()  # Check if the storage service is available.
         self.create_dataset_dir()
-        self.create_tiny_dataset()  # Add images to the dataset.
+        self.create_tiny_dataset()
         self.register_new_dataset()
         self.check_dataset_availability()  # Check if the dataset is available.
         self.wait_for_dataset(self.num)
