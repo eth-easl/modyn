@@ -4,6 +4,8 @@ import pathlib
 import random
 import shutil
 import time
+import torch
+import numpy as np
 from typing import Optional
 
 import grpc
@@ -24,14 +26,24 @@ from modyn.utils import grpc_connection_established
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-CONFIG_FILE = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
-CLIENT_CONFIG_FILE = (
-    SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples" / "modyn_client_config_container.yaml"
-)
-MNIST_CONFIG_FILE = SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples" / "mnist.yaml"
+MODYN_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples"
+CONFIG_FILE = MODYN_CONFIG_PATH / "modyn_config.yaml"
+
+MODYNCLIENT_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples"
+CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
+MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
+DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
+
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
+
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
+TEST_DATASET_CONFIG = {
+    "dataset_id": "test_dataset",
+    "transformations": ["transforms.ToTensor()", "transforms.Normalize((0.1307,), (0.3081,))"],
+    "bytes_parser_function": "from PIL import Image\nimport io\n"
+    "def bytes_parser_function(data: bytes) -> Image:\n \treturn Image.open(io.BytesIO(data)).convert('RGB')\n",
+}
 NEW_DATASET_TIMEOUT = 15
 
 
@@ -53,6 +65,7 @@ def get_minimal_pipeline_config(
     num_workers: int = 1,
     strategy_config: dict = DEFAULT_SELECTION_STRATEGY,
     model_storage_config: dict = DEFAULT_MODEL_STORAGE_CONFIG,
+    dataset_config: dict = TEST_DATASET_CONFIG,
 ) -> dict:
     return {
         "pipeline": {"name": "Test"},
@@ -78,7 +91,7 @@ def get_minimal_pipeline_config(
             "checkpointing": {"activated": False},
             "selection_strategy": strategy_config,
         },
-        "data": {"dataset_id": "test_dataset", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
+        "data": dataset_config,
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
     }
 
@@ -246,3 +259,85 @@ class DatasetHelper:
         self.register_new_dataset()
         self.check_dataset_availability()  # Check if the dataset is available.
         self.wait_for_dataset(self.num_images)
+
+
+class TinyDatasetHelper:
+    def __init__(
+        self,
+        num: int = 10,
+        dataset_path: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset",
+    ) -> None:
+        self.storage_channel = connect_to_server("storage")
+        self.storage = StorageStub(self.storage_channel)
+        self.num = num
+        self.dataset_path = dataset_path
+
+    def check_get_current_timestamp(self) -> None:
+        empty = storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()
+        response = self.storage.GetCurrentTimestamp(empty)
+        assert response.timestamp > 0, "Timestamp is not valid."
+
+    def create_dataset_dir(self) -> None:
+        pathlib.Path(self.dataset_path).mkdir(parents=True, exist_ok=True)
+
+    def cleanup_dataset_dir(self) -> None:
+        shutil.rmtree(self.dataset_path)
+
+    def cleanup_storage_database(self) -> None:
+        request = DatasetAvailableRequest(dataset_id="test_dataset")
+        response = self.storage.DeleteDataset(request)
+        assert response.success, "Could not cleanup storage database."
+
+    def create_tiny_dataset(self) -> None:
+        rng = np.random.default_rng()
+        for n in range(self.num):
+            a = rng.random(size=(2,2), dtype=np.float32)
+            t = torch.from_numpy(np.array(a))
+            torch.save(t, self.dataset_path / f"tensor_{n}.pt")
+            label = torch.argmax(t, dim=1)
+            torch.save(label, self.dataset_path / f"label_{n}.pt")
+
+    def load_tiny_dataset(self) -> None:
+        for n in range(self.num):
+            t = torch.load(self.dataset_path / f"tensor_{n}.pt")
+            label = torch.load(self.dataset_path / f"label_{n}.pt")
+            yield (t, label)
+
+    def register_new_dataset(self) -> None:
+        request = RegisterNewDatasetRequest(
+            base_path=str(self.dataset_path),
+            dataset_id="tiny_dataset",
+            description="Tiny dataset for integration tests.",
+            file_wrapper_config=json.dumps({"file_extension": ".pt", "label_file_extension": ".pt"}),
+            file_wrapper_type="SingleSampleFileWrapper",
+            filesystem_wrapper_type="LocalFilesystemWrapper",
+            file_watcher_interval=5,
+            version="0.1.0",
+        )
+
+        response = self.storage.RegisterNewDataset(request)
+
+        assert response.success, "Could not register new dataset."
+
+    def check_dataset_availability(self) -> None:
+        request = DatasetAvailableRequest(dataset_id="tiny_dataset")
+        response = self.storage.CheckAvailability(request)
+
+        assert response.available, "Dataset is not available."
+    
+    def wait_for_dataset(self, expected_size: int) -> None:
+        time.sleep(NEW_DATASET_TIMEOUT)
+        request = GetDatasetSizeRequest(dataset_id="tiny_dataset")
+        response: GetDatasetSizeResponse = self.storage.GetDatasetSize(request)
+
+        assert response.success, "Dataset is not available."
+        assert response.num_keys >= expected_size
+
+    def setup_dataset(self) -> None:
+        self.check_get_current_timestamp()  # Check if the storage service is available.
+        self.create_dataset_dir()
+        self.create_tiny_dataset()  # Add images to the dataset.
+        self.register_new_dataset()
+        self.check_dataset_availability()  # Check if the dataset is available.
+        self.wait_for_dataset(self.num)
+

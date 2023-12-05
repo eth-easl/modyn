@@ -1,0 +1,44 @@
+pipeline:
+  name: Test
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: Dummy
+  config:
+    num_classes: 10
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  device: "cpu"
+  dataloader_workers: 1
+  use_previous_model: True
+  initial_model: random
+  batch_size: 2
+  optimizers:
+    - name: "default1"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    maximum_keys_in_memory: 10
+data:
+  dataset_id: tiny_dataset
+  bytes_parser_function: |
+    import pickle
+    def bytes_parser_function(data: bytes) -> Tensor:
+      return pickle.loads(data)
+trigger:
+  id: DataAmountTrigger
+  trigger_config:
+    data_points_for_trigger: 1

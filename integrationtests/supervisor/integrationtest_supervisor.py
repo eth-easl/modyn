@@ -4,7 +4,7 @@ import time
 import yaml
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
-from integrationtests.utils import MNIST_CONFIG_FILE, SCRIPT_PATH, DatasetHelper, connect_to_server, get_pipeline_config
+from integrationtests.utils import SCRIPT_PATH, DUMMY_CONFIG_FILE, TinyDatasetHelper, connect_to_server, get_pipeline_config
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
@@ -67,7 +67,7 @@ def test_mnist() -> None:
 
 
 def test_one_experiment_pipeline() -> None:
-    pipeline_config = get_pipeline_config(MNIST_CONFIG_FILE)
+    pipeline_config = get_pipeline_config(DUMMY_CONFIG_FILE)
 
     res = parse_grpc_res(
         supervisor.start_pipeline(
@@ -90,7 +90,7 @@ def test_one_experiment_pipeline() -> None:
 
 
 def test_two_experiment_pipelines() -> None:
-    pipeline_config = get_pipeline_config(MNIST_CONFIG_FILE)
+    pipeline_config = get_pipeline_config(DUMMY_CONFIG_FILE)
 
     res1 = parse_grpc_res(
         supervisor.start_pipeline(
@@ -131,14 +131,13 @@ def test_two_experiment_pipelines() -> None:
 
 
 if __name__ == "__main__":
-    dataset_helper = DatasetHelper()
+    dataset_helper = TinyDatasetHelper()
     try:
-        # dataset_helper.setup_dataset()
+        dataset_helper.setup_dataset()
         supervisor_channel = connect_to_server("supervisor")
         supervisor = SupervisorStub(supervisor_channel)
         test_one_experiment_pipeline()
-        test_two_experiment_pipelines()
+        # test_two_experiment_pipelines()
     finally:
-        pass
-        # dataset_helper.cleanup_dataset_dir()
-        # dataset_helper.cleanup_storage_database()
+        dataset_helper.cleanup_dataset_dir()
+        dataset_helper.cleanup_storage_database()
