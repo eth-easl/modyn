@@ -1,10 +1,15 @@
 import json
 import time
 
-import yaml
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
-from integrationtests.utils import SCRIPT_PATH, DUMMY_CONFIG_FILE, TinyDatasetHelper, connect_to_server, get_pipeline_config
+from integrationtests.utils import (
+    DUMMY_CONFIG_FILE,
+    MNIST_CONFIG_FILE,
+    TinyDatasetHelper,
+    connect_to_server,
+    load_config_from_file,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
@@ -41,9 +46,7 @@ def assert_pipeline_exit_without_error(res: dict) -> None:
 
 
 def test_mnist() -> None:
-    mnist_config_path = SCRIPT_PATH.parent.parent / "benchmark" / "mnist" / "mnist.yaml"
-    with open(mnist_config_path, "r", encoding="utf-8") as config_file:
-        pipeline_config = yaml.safe_load(config_file)
+    pipeline_config = load_config_from_file(MNIST_CONFIG_FILE)
     print(pipeline_config)
 
     res = parse_grpc_res(
@@ -67,7 +70,7 @@ def test_mnist() -> None:
 
 
 def test_one_experiment_pipeline() -> None:
-    pipeline_config = get_pipeline_config(DUMMY_CONFIG_FILE)
+    pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
 
     res = parse_grpc_res(
         supervisor.start_pipeline(
@@ -90,7 +93,7 @@ def test_one_experiment_pipeline() -> None:
 
 
 def test_two_experiment_pipelines() -> None:
-    pipeline_config = get_pipeline_config(DUMMY_CONFIG_FILE)
+    pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
 
     res1 = parse_grpc_res(
         supervisor.start_pipeline(
@@ -137,7 +140,7 @@ if __name__ == "__main__":
         supervisor_channel = connect_to_server("supervisor")
         supervisor = SupervisorStub(supervisor_channel)
         test_one_experiment_pipeline()
-        # test_two_experiment_pipelines()
+        test_two_experiment_pipelines()
     finally:
         dataset_helper.cleanup_dataset_dir()
         dataset_helper.cleanup_storage_database()
