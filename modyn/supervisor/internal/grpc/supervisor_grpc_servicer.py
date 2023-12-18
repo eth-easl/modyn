@@ -45,7 +45,6 @@ class SupervisorGRPCServicer(SupervisorServicer):
             maximum_triggers = request.maximum_triggers
 
         pipeline_config = json.loads(request.pipeline_config.value)
-        logger.info(f"[{pid}][{tid}]: pipeline config {pipeline_config}")
         msg = self._supervisor.start_pipeline(
             pipeline_config,
             request.eval_directory,

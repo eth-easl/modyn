@@ -427,7 +427,7 @@ class GRPCHandler:
             raise ConnectionError(
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
-        logger.info("wait for training completion")
+        logger.debug("wait for training completion")
 
         total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
         status_bar_scale = self.get_status_bar_scale(pipeline_id)
@@ -494,7 +494,7 @@ class GRPCHandler:
                 "id_msg": {"id_type": "training", "id": training_id},
             }
         )
-        logger.info("Training completed 🚀")
+        logger.debug("Training completed 🚀")
 
         return trainer_log
 
@@ -619,7 +619,7 @@ class GRPCHandler:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
-        logger.info("wait for evaluation completion")
+        logger.debug("wait for evaluation completion")
         self.pipeline_status_queue.put(
             {
                 "stage": "Waiting for evaluation",
@@ -687,7 +687,7 @@ class GRPCHandler:
                 "id_msg": {"id_type": "training", "id": training_id},
             }
         )
-        logger.info("Evaluation completed")
+        logger.debug("Evaluation completed")
 
     def store_evaluation_results(
         self,

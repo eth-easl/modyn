@@ -186,7 +186,7 @@ class Supervisor:
     def validate_system(self, pipeline_config: dict) -> bool:
         dataset_available = self.dataset_available(pipeline_config)
         trainer_server_available = self.grpc.trainer_server_available()
-        logger.info(f"Validate system: dataset {dataset_available}, trainer server {trainer_server_available}")
+        logger.debug(f"Validate system: dataset {dataset_available}, trainer server {trainer_server_available}")
         return dataset_available and trainer_server_available
 
     def register_pipeline(self, pipeline_config: dict) -> int:
@@ -342,8 +342,6 @@ class Supervisor:
                 while eval_status is not None:
                     ret["eval_status"].append(eval_status)
                     eval_status = p_info.get_eval_status()
-
-            logger.info(f"[{pipeline_id}] {ret}")
         else:
             # TODO(#317): get remaining messages in queues
             ret["status"] = "exit"
