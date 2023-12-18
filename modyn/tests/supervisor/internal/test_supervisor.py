@@ -394,13 +394,9 @@ def test_start_pipeline_throws_on_invalid_system_config(
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
 @patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
 @patch("modyn.supervisor.internal.pipeline_executor", "execute_pipeline", time.sleep(1))
-@patch.object(PipelineInfo, "get_pipeline_stage", return_value=None)
-@patch.object(PipelineInfo, "get_training_status", return_value=None)
-@patch.object(PipelineInfo, "get_eval_status", return_value=None)
+@patch.object(PipelineInfo, "get_msg_from_queue", return_value=None)
 def test_get_pipeline_status_running(
-    test_get_eval_status,
-    test_get_training_status,
-    test_get_pipeline_stage,
+    test_get_msg_from_queue,
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
@@ -423,13 +419,9 @@ def test_get_pipeline_status_running(
 @patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
 @patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
 @patch("modyn.supervisor.internal.pipeline_executor", "execute_pipeline", noop)
-@patch.object(PipelineInfo, "get_pipeline_stage", return_value=None)
-@patch.object(PipelineInfo, "get_training_status", return_value=None)
-@patch.object(PipelineInfo, "get_eval_status", return_value=None)
+@patch.object(PipelineInfo, "get_msg_from_queue", return_value=None)
 def test_get_pipeline_status_exit(
-    test_get_eval_status,
-    test_get_training_status,
-    test_get_pipeline_stage,
+    test_get_msg_from_queue,
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,

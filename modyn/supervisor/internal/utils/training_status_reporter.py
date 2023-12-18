@@ -1,6 +1,8 @@
 import multiprocessing as mp
 from typing import Any
 
+from modyn.supervisor.internal.grpc.enums import PipelineStage
+
 
 class TrainingStatusReporter:
     def __init__(
@@ -16,10 +18,10 @@ class TrainingStatusReporter:
         self.training_id = training_id
         self.samples_per_epoch = samples_per_epoch
         self.status_bar_scale = status_bar_scale
-        self.stage = "wait for training"
+        self.stage = PipelineStage.WAIT_FOR_TRAINING_COMPLETION
 
     def _template_msg(self, action: str) -> dict[str, Any]:
-        return {"stage": self.stage, "action": action, "id": self.training_id}
+        return {"stage": str(self.stage), "action": action, "id": self.training_id}
 
     def create_tracker(self) -> None:
         ret = self._template_msg("create_tracker")

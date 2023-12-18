@@ -10,6 +10,7 @@ from integrationtests.utils import (
     connect_to_server,
     load_config_from_file,
 )
+from modyn.supervisor.internal.grpc.enums import PipelineStatus, PipelineStage
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
@@ -22,7 +23,7 @@ def wait_for_pipeline(pipeline_id: int) -> str:
     req = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
     res = supervisor.get_pipeline_status(req)
-    while res.status == "running":
+    while res.status == PipelineStatus.RUNNING:
         time.sleep(POLL_TIMEOUT)
         res = supervisor.get_pipeline_status(req)
 
@@ -34,11 +35,11 @@ def parse_grpc_res(msg: Message) -> dict:
 
 
 def assert_pipeline_exit_without_error(res: dict) -> None:
-    assert res["status"] == "exit"
+    assert res["status"] == PipelineStatus.EXIT
 
     exit_msg = {}
     for msg in res["pipeline_stage"]:
-        if msg["stage"] == "exit":
+        if msg["stage"] == PipelineStage.EXIT:
             exit_msg = msg
 
     assert exit_msg

@@ -5,6 +5,7 @@ import time
 from typing import Optional
 
 import enlighten
+from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
 
@@ -70,7 +71,7 @@ class Client:
 
         demo = f"Pipeline <{self.pipeline_id}> {msg['stage']}"
 
-        if msg["stage"] == "exit":
+        if msg["stage"] == PipelineStage.EXIT:
             if msg["exit_msg"]["exitcode"] == 0:
                 if self.eval_err_count == 0:
                     logger.info(f"Pipeline <{self.pipeline_id}> finished successfully.")
@@ -83,26 +84,26 @@ class Client:
                 )
         else:
             msg_type = msg['msg_type']
+            if msg_type in msg:
+                submsg = msg[msg_type]
 
-            if msg_type == "general":
+            if msg_type == MsgType.GENERAL:
                 pass
-            elif msg_type == "id":
-                submsg = msg['id_msg']
+            elif msg_type == MsgType.ID:
                 demo += f" ({submsg['id_type']} = {submsg['id']})"
-            elif msg_type == "dataset":
-                demo += f" (dataset = {msg['dataset_msg']['id']})"
-            elif msg_type == "counter":
-                submsg = msg['counter_msg']
-                if submsg["action"] == "create":
+            elif msg_type == MsgType.DATASET:
+                demo += f" (dataset = {submsg['id']})"
+            elif msg_type == MsgType.COUNTER:
+                if submsg["action"] == CounterAction.CREATE:
                     self.pbar = self.progress_mgr.counter(
                         total=submsg["create_params"]["new_data_len"],
                         desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
                         unit="samples"
                     )
-                elif submsg["action"] == "update":
+                elif submsg["action"] == CounterAction.UPDATE:
                     assert self.pbar is not None
                     self.pbar.update(submsg["update_params"]["batch_size"])
-                elif submsg["action"] == "close":
+                elif submsg["action"] == CounterAction.CLOSE:
                     assert self.pbar is not None
                     self.pbar.clear(flush=True)
                     self.pbar.close(clear=True)
@@ -164,14 +165,14 @@ class Client:
 
     def poll_pipeline_status(self) -> None:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
-        while res["status"] == "running":
+        while res["status"] == PipelineStatus.RUNNING:
             self._process_msgs(res)
             time.sleep(POLL_TIMEOUT)
             res = self.grpc.get_pipeline_status(self.pipeline_id)
 
-        if res["status"] == "exit":
+        if res["status"] == PipelineStatus.EXIT:
             self._process_msgs(res)
-        elif res["status"] == "not found":
+        elif res["status"] == PipelineStatus.NOTFOUND:
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
         else:
             logger.error(f"unknown pipeline status {json.dumps(res, sort_keys=True, indent=2)}")

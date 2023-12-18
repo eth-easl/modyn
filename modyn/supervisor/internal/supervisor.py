@@ -13,6 +13,8 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
+from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
@@ -263,13 +265,13 @@ class Supervisor:
         maximum_triggers: Optional[int] = None,
     ) -> dict:
         if not self.validate_pipeline_config(pipeline_config):
-            return {"pipeline_id": -1, "exception": "Invalid pipeline configuration"}
+            return pipeline_res_msg(exception="Invalid pipeline configuration")
 
         if not is_directory_writable(pathlib.Path(eval_directory)):
-            return {"pipeline_id": -1, "exception": "No permission to write to the evaluation results directory."}
+            return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
 
         if not self.validate_system(pipeline_config):
-            return {"pipeline_id": -1, "exception": "Invalid system configuration"}
+            return pipeline_res_msg(exception="Invalid system configuration")
 
         try:
             exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -281,7 +283,7 @@ class Supervisor:
             pipeline_id = self.register_pipeline(pipeline_config)
             logger.info(f"Pipeline {pipeline_id} registered, start executing.")
         except Exception:  # pylint: disable=broad-except
-            return {"pipeline_id": -1, "exception": "Failed to register pipeline"}
+            return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
             process = Process(
@@ -306,9 +308,9 @@ class Supervisor:
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process, exception_queue, pipeline_status_queue, training_status_queue, eval_status_queue
             )
-            return {"pipeline_id": pipeline_id}
+            return pipeline_res_msg(pipeline_id=pipeline_id)
         except Exception:  # pylint: disable=broad-except
-            return {"pipeline_id": pipeline_id, "exception": "Failed to execute pipeline"}
+            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
     def get_all_msgs_from_queue(self, p_info: PipelineInfo, queue_name: str):
         msgs = []
@@ -324,7 +326,7 @@ class Supervisor:
         ret: dict[str, Any] = {}
 
         if pipeline_id not in self._pipeline_process_dict:
-            ret["status"] = "not found"
+            ret["status"] = str(PipelineStatus.NOTFOUND)
             return ret
 
         p_info = self._pipeline_process_dict[pipeline_id]
@@ -334,19 +336,15 @@ class Supervisor:
         ret["eval_status"] = self.get_all_msgs_from_queue(p_info, "eval_status_queue")
 
         if p_info.process_handler.is_alive():
-            ret["status"] = "running"
+            ret["status"] = str(PipelineStatus.RUNNING)
         else:
-            ret["status"] = "exit"
+            ret["status"] = str(PipelineStatus.EXIT)
 
-            msg: dict[str, Any] = {
-                "stage": "exit",
-                "msg_type": "exit",
-                "log": False,
-                "exit_msg": {"exitcode": p_info.process_handler.exitcode},
-            }
-            exception_msg = p_info.check_for_exception()
-            if exception_msg is not None:
-                msg["exit_msg"]["exception"] = exception_msg
+            msg: dict[str, Any] = pipeline_stage_msg(
+                stage=PipelineStage.EXIT,
+                msg_type=MsgType.EXIT,
+                submsg=exit_submsg(p_info.process_handler.exitcode, p_info.check_for_exception()),
+            )
 
             ret["pipeline_stage"].append(msg)
 

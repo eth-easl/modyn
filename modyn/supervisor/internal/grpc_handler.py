@@ -43,6 +43,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
+from modyn.supervisor.internal.grpc.enums import IdType, MsgType, PipelineStage
+from modyn.supervisor.internal.grpc.template_msg import id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
@@ -436,12 +438,9 @@ class GRPCHandler:
         )
         training_reporter.create_tracker()
         self.pipeline_status_queue.put(
-            {
-                "stage": "Waiting for training",
-                "msg_type": "id",
-                "log": True,
-                "id_msg": {"id_type": "training", "id": training_id},
-            }
+            pipeline_stage_msg(
+                PipelineStage.WAIT_FOR_TRAINING_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
+            )
         )
 
         blocked_in_a_row = 0
@@ -487,14 +486,11 @@ class GRPCHandler:
         training_reporter.close_counter()
         # status_tracker.close_counter()
         self.pipeline_status_queue.put(
-            {
-                "stage": "Training completed 🚀",
-                "msg_type": "id",
-                "log": True,
-                "id_msg": {"id_type": "training", "id": training_id},
-            }
+            pipeline_stage_msg(
+                PipelineStage.TRAINING_COMPLETED, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
+            )
         )
-        logger.debug("Training completed 🚀")
+        logger.debug("Training completed")
 
         return trainer_log
 
@@ -621,12 +617,9 @@ class GRPCHandler:
 
         logger.debug("wait for evaluation completion")
         self.pipeline_status_queue.put(
-            {
-                "stage": "Waiting for evaluation",
-                "msg_type": "id",
-                "log": True,
-                "id_msg": {"id_type": "training", "id": training_id},
-            }
+            pipeline_stage_msg(
+                PipelineStage.WAIT_FOR_EVALUATION_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
+            )
         )
 
         # We are using a deque here in order to fetch the status of each evaluation
@@ -680,12 +673,9 @@ class GRPCHandler:
             sleep(1)
 
         self.pipeline_status_queue.put(
-            {
-                "stage": "Evaluation completed",
-                "msg_type": "id",
-                "log": True,
-                "id_msg": {"id_type": "training", "id": training_id},
-            }
+            pipeline_stage_msg(
+                PipelineStage.EVALUATION_COMPLETED, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
+            )
         )
         logger.debug("Evaluation completed")
 
