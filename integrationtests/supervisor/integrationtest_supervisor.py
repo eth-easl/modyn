@@ -10,7 +10,7 @@ from integrationtests.utils import (
     connect_to_server,
     load_config_from_file,
 )
-from modyn.supervisor.internal.grpc.enums import PipelineStatus, PipelineStage
+from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest

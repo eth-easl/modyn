@@ -30,6 +30,16 @@ class PipelineInfo:
         except queue.Empty:
             return None
 
+    def get_all_msgs_from_queue(self, queue_name: str) -> list[dict]:
+        msgs = []
+
+        pipeline_stage = self.get_msg_from_queue(queue_name)
+        while pipeline_stage is not None:
+            msgs.append(pipeline_stage)
+            pipeline_stage = self.get_msg_from_queue(queue_name)
+
+        return msgs
+
     def check_for_exception(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[str]:
         # As qsize() is unreliable and not implemented on macOS,
         # we try to fetch an element within 100ms. If there is no
