@@ -22,24 +22,11 @@ class PipelineInfo:
         self.training_status_queue = training_status_queue
         self.eval_status_queue = eval_status_queue
 
-    def get_pipeline_stage(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
+    def get_msg_from_queue(self, queue_name: str, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
         try:
             # blocks for timeout seconds
-            return self.pipeline_status_queue.get(timeout=timeout)
-        except queue.Empty:
-            return None
-
-    def get_training_status(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
-        try:
-            # blocks for timeout seconds
-            return self.training_status_queue.get(timeout=timeout)
-        except queue.Empty:
-            return None
-
-    def get_eval_status(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
-        try:
-            # blocks for timeout seconds
-            return self.eval_status_queue.get(timeout=timeout)
+            msg_queue = getattr(self, queue_name)
+            return msg_queue.get(timeout=timeout)
         except queue.Empty:
             return None
 

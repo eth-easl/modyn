@@ -1,8 +1,6 @@
 import enlighten
 from modynclient.client.internal.utils.training_status_tracker import CurrentEvent, TrainingStatusTracker
 
-# TODO(#317): move these to modynclient
-
 
 def test_counter_training_one_epoch():
     mgr = enlighten.get_manager()

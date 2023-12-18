@@ -310,6 +310,16 @@ class Supervisor:
         except Exception:  # pylint: disable=broad-except
             return {"pipeline_id": pipeline_id, "exception": "Failed to execute pipeline"}
 
+    def get_all_msgs_from_queue(self, p_info: PipelineInfo, queue_name: str):
+        msgs = []
+
+        pipeline_stage = p_info.get_msg_from_queue(queue_name)
+        while pipeline_stage is not None:
+            msgs.append(pipeline_stage)
+            pipeline_stage = p_info.get_msg_from_queue(queue_name)
+
+        return msgs
+
     def get_pipeline_status(self, pipeline_id: int) -> dict[str, Any]:
         ret: dict[str, Any] = {}
 
@@ -319,26 +329,9 @@ class Supervisor:
 
         p_info = self._pipeline_process_dict[pipeline_id]
 
-        pipeline_stage = p_info.get_pipeline_stage()
-        if pipeline_stage is not None:
-            ret["pipeline_stage"] = []
-            while pipeline_stage is not None:
-                ret["pipeline_stage"].append(pipeline_stage)
-                pipeline_stage = p_info.get_pipeline_stage()
-
-        training_status = p_info.get_training_status()
-        if training_status is not None:
-            ret["training_status"] = []
-            while training_status is not None:
-                ret["training_status"].append(training_status)
-                training_status = p_info.get_training_status()
-
-        eval_status = p_info.get_eval_status()
-        if eval_status is not None:
-            ret["eval_status"] = []
-            while eval_status is not None:
-                ret["eval_status"].append(eval_status)
-                eval_status = p_info.get_eval_status()
+        ret["pipeline_stage"] = self.get_all_msgs_from_queue(p_info, "pipeline_status_queue")
+        ret["training_status"] = self.get_all_msgs_from_queue(p_info, "training_status_queue")
+        ret["eval_status"] = self.get_all_msgs_from_queue(p_info, "eval_status_queue")
 
         if p_info.process_handler.is_alive():
             ret["status"] = "running"
