@@ -38,7 +38,7 @@ class Supervisor:
         self,
         modyn_config: dict,
     ) -> None:
-        # TODO(#317): redesign tensorboard. ignore it for now
+        # TODO(#317): redesign tensorboard in the future
         # TODO(#325): validate modyn_config
         self.modyn_config = modyn_config
         self._pipeline_process_dict: dict[int, PipelineInfo] = {}
@@ -63,7 +63,7 @@ class Supervisor:
         logging.info("Setting up connections to cluster components.")
         self.grpc.init_cluster_connection()
 
-        # TODO(#317): seed per pipeline instead of per system
+        # TODO(#317): seed per pipeline instead of per system in the future
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])
 
@@ -319,31 +319,30 @@ class Supervisor:
 
         p_info = self._pipeline_process_dict[pipeline_id]
 
+        pipeline_stage = p_info.get_pipeline_stage()
+        if pipeline_stage is not None:
+            ret["pipeline_stage"] = []
+            while pipeline_stage is not None:
+                ret["pipeline_stage"].append(pipeline_stage)
+                pipeline_stage = p_info.get_pipeline_stage()
+
+        training_status = p_info.get_training_status()
+        if training_status is not None:
+            ret["training_status"] = []
+            while training_status is not None:
+                ret["training_status"].append(training_status)
+                training_status = p_info.get_training_status()
+
+        eval_status = p_info.get_eval_status()
+        if eval_status is not None:
+            ret["eval_status"] = []
+            while eval_status is not None:
+                ret["eval_status"].append(eval_status)
+                eval_status = p_info.get_eval_status()
+
         if p_info.process_handler.is_alive():
             ret["status"] = "running"
-
-            pipeline_stage = p_info.get_pipeline_stage()
-            if pipeline_stage is not None:
-                ret["pipeline_stage"] = []
-                while pipeline_stage is not None:
-                    ret["pipeline_stage"].append(pipeline_stage)
-                    pipeline_stage = p_info.get_pipeline_stage()
-
-            training_status = p_info.get_training_status()
-            if training_status is not None:
-                ret["training_status"] = []
-                while training_status is not None:
-                    ret["training_status"].append(training_status)
-                    training_status = p_info.get_training_status()
-
-            eval_status = p_info.get_eval_status()
-            if eval_status is not None:
-                ret["eval_status"] = []
-                while eval_status is not None:
-                    ret["eval_status"].append(eval_status)
-                    eval_status = p_info.get_eval_status()
         else:
-            # TODO(#317): get remaining messages in queues
             ret["status"] = "exit"
 
             msg: dict[str, Any] = {
@@ -356,6 +355,6 @@ class Supervisor:
             if exception_msg is not None:
                 msg["exit_msg"]["exception"] = exception_msg
 
-            ret["pipeline_stage"] = [msg]
+            ret["pipeline_stage"].append(msg)
 
         return ret

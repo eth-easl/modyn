@@ -293,7 +293,6 @@ class PipelineExecutor:
             self._persist_pipeline_log()
 
             self._run_training(trigger_id)  # Blocks until training is done.
-            # TODO(#317): ??? what is it ???
             self.pipeline_status_queue.put(
                 {
                     "stage": "handle triggers within batch",

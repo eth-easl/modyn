@@ -6,7 +6,6 @@ from typing import Optional
 import grpc
 from google.protobuf.json_format import MessageToDict
 
-# TODO(#317 client): share with modyn or make a copy?
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
