@@ -34,7 +34,7 @@ CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.ya
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
-NEW_DATASET_TIMEOUT = 15
+NEW_DATASET_TIMEOUT = 60
 
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
