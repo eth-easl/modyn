@@ -1,13 +1,13 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class PipelineStatus(str, Enum):
+class PipelineStatus(StrEnum):
     RUNNING = "running"
     EXIT = "exit"
     NOTFOUND = "not found"
 
 
-class PipelineStage(str, Enum):
+class PipelineStage(StrEnum):
     INIT = "Initialize pipeline executor"
     INIT_CLUSTER_CONNECTION = "Initialize cluster connection"
     GET_SELECTOR_BATCH_SIZE = "Get selector batch size"
@@ -32,7 +32,7 @@ class PipelineStage(str, Enum):
     EXIT = "Exit"
 
 
-class MsgType(str, Enum):
+class MsgType(StrEnum):
     GENERAL = "general_msg"
     DATASET = "dataset_msg"
     COUNTER = "counter_msg"
@@ -40,12 +40,12 @@ class MsgType(str, Enum):
     EXIT = "exit_msg"
 
 
-class IdType(str, Enum):
+class IdType(StrEnum):
     TRIGGER = "trigger"
     TRAINING = "training"
 
 
-class CounterAction(str, Enum):
+class CounterAction(StrEnum):
     CREATE = "create"
     UPDATE = "update"
     CLOSE = "close"

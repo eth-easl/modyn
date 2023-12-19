@@ -4,7 +4,7 @@ from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType,
 
 
 def pipeline_res_msg(pipeline_id: int = -1, exception: Optional[str] = None) -> dict[str, Any]:
-    ret = {"pipeline_id": pipeline_id}
+    ret: dict[str, Any] = {"pipeline_id": pipeline_id}
     if exception is not None:
         ret["exception"] = exception
     return ret

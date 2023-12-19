@@ -316,7 +316,7 @@ class Supervisor:
         ret: dict[str, Any] = {}
 
         if pipeline_id not in self._pipeline_process_dict:
-            ret["status"] = PipelineStatus.NOTFOUND
+            ret["status"] = str(PipelineStatus.NOTFOUND)
             return ret
 
         p_info = self._pipeline_process_dict[pipeline_id]
@@ -326,9 +326,9 @@ class Supervisor:
         ret["eval_status"] = p_info.get_all_msgs_from_queue("eval_status_queue")
 
         if p_info.process_handler.is_alive():
-            ret["status"] = PipelineStatus.RUNNING
+            ret["status"] = str(PipelineStatus.RUNNING)
         else:
-            ret["status"] = PipelineStatus.EXIT
+            ret["status"] = str(PipelineStatus.EXIT)
 
             msg: dict[str, Any] = pipeline_stage_msg(
                 stage=PipelineStage.EXIT,
