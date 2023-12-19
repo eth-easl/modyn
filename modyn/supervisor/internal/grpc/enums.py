@@ -1,4 +1,4 @@
-from enum import StrEnum # type: ignore # noqa: F401
+from enum import StrEnum  # type: ignore # noqa: F401
 
 
 class PipelineStatus(StrEnum):
