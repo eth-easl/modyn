@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
 from modyn.supervisor.internal.utils import PipelineInfo

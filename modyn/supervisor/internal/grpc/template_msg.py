@@ -28,9 +28,7 @@ def id_submsg(id_type: IdType, id_num: int) -> dict[str, Any]:
     return {"id_type": str(id_type), "id": id_num}
 
 
-def counter_submsg(
-    action: CounterAction, params: Optional[dict[str, Any]] = None
-) -> dict[str, Any]:
+def counter_submsg(action: CounterAction, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
     ret: dict[str, Any] = {"action": str(action)}
     if params is not None:
         ret[f"{action}_params"] = params

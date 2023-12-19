@@ -1,8 +1,3 @@
-project:
-  name: "Dynamic Datasets DSL Project"
-  description: "Instance of Dynamic Datasets DSL Project"
-  version: "0.0.1"
-
 supervisor:
   ip: 127.0.0.1
   port: "3000"
