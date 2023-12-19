@@ -28,15 +28,17 @@ def id_submsg(id_type: IdType, id_num: int) -> dict[str, Any]:
     return {"id_type": str(id_type), "id": id_num}
 
 
-def counter_submsg(action: CounterAction, params: Optional[dict[str, Any]] = None):
-    ret = {"action": str(action)}
+def counter_submsg(
+    action: CounterAction, params: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
+    ret: dict[str, Any] = {"action": str(action)}
     if params is not None:
         ret[f"{action}_params"] = params
     return ret
 
 
-def exit_submsg(exitcode: int, exception: Optional[str] = None):
-    ret = {"exitcode": exitcode}
+def exit_submsg(exitcode: int, exception: Optional[str] = None) -> dict[str, Any]:
+    ret: dict[str, Any] = {"exitcode": exitcode}
     if exception is not None:
         ret["exception"] = exception
     return ret
