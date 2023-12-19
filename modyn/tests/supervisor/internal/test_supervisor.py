@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
+from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
@@ -411,7 +412,7 @@ def test_get_pipeline_status_running(
 
     res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
     msg = sup.get_pipeline_status(res["pipeline_id"])
-    assert msg["status"] == "running"
+    assert msg["status"] == PipelineStatus.RUNNING
 
 
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
@@ -437,7 +438,7 @@ def test_get_pipeline_status_exit(
     res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
     time.sleep(1)
     msg = sup.get_pipeline_status(res["pipeline_id"])
-    assert msg["status"] == "exit"
+    assert msg["status"] == PipelineStatus.EXIT
 
 
 @patch.object(GRPCHandler, "dataset_available", return_value=True)
@@ -452,4 +453,4 @@ def test_get_pipeline_status_not_found(
 ) -> None:
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
     msg = sup.get_pipeline_status(PIPELINE_ID)
-    assert msg["status"] == "not found"
+    assert msg["status"] == PipelineStatus.NOTFOUND
