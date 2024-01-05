@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+    name: exp5_current_day_only
+    description: DLRM/Criteo Training. New model each day, on the day only.
     version: 1.0.0
 model:
   id: DLRM
@@ -50,7 +50,7 @@ training:
   dataloader_workers: 16
   num_prefetched_partitions: 4
   parallel_prefetch_requests: 2
-  use_previous_model: True
+  use_previous_model: False
   initial_model: random
   initial_pass:
     activated: False

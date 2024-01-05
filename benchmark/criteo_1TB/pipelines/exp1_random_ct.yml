@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+    name: exp1_random_ct
+    description: DLRM/Criteo Training. do not reset model, train on random 25% of new data
     version: 1.0.0
 model:
   id: DLRM
@@ -92,12 +92,15 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
+    name: CoresetStrategy
     maximum_keys_in_memory: 10000000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+      presampling_config:
+        strategy: RandomPresamplingStrategy
+        ratio: 25
 data:
   dataset_id: criteo
   bytes_parser_function: |

@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+    name: exp7_retrain_keeping
+    description: DLRM/Criteo Training. Retraining on entire dataset, on a fresh model each time.
     version: 1.0.0
 model:
   id: DLRM
@@ -50,7 +50,7 @@ training:
   dataloader_workers: 16
   num_prefetched_partitions: 4
   parallel_prefetch_requests: 2
-  use_previous_model: True
+  use_previous_model: False # Same amount of computation (retraining on all data), but on different starting weights
   initial_model: random
   initial_pass:
     activated: False
@@ -97,7 +97,7 @@ training:
     config:
       storage_backend: "database"
       limit: -1
-      reset_after_trigger: True
+      reset_after_trigger: False
 data:
   dataset_id: criteo
   bytes_parser_function: |
