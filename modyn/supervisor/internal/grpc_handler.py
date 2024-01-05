@@ -522,7 +522,12 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(
-        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None, device: Optional[str] = None
+        self,
+        model_id: int,
+        pipeline_config: dict,
+        pipeline_id: Optional[int] = None,
+        trigger_id: Optional[int] = None,
+        device: Optional[str] = None,
     ) -> dict[int, EvaluationStatusTracker]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
@@ -718,9 +723,7 @@ class GRPCHandler:
             return False, True
 
         if res.blocked:
-            logger.warning(
-                "Evaluator returned blocked response"
-            )
+            logger.warning("Evaluator returned blocked response")
             return True, False
         else:
             if res.HasField("exception") and res.exception is not None:
@@ -738,7 +741,6 @@ class GRPCHandler:
                 logger.warning("Evaluator is not blocked and is running, but no state is available.")
 
         return True, False
-
 
     def store_evaluation_results(
         self,

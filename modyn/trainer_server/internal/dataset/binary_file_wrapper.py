@@ -1,6 +1,7 @@
 """Binary file wrapper."""
 import os
 
+
 class BinaryFileWrapper:
     """Binary file wrapper.
 
@@ -11,13 +12,7 @@ class BinaryFileWrapper:
     offsetting the required number of bytes.
     """
 
-    def __init__(
-        self,
-        file_path: str,
-        byteorder: str,
-        record_size: int,
-        label_size: int
-    ):
+    def __init__(self, file_path: str, byteorder: str, record_size: int, label_size: int):
         """Init binary file wrapper.
 
         Args:
@@ -42,7 +37,6 @@ class BinaryFileWrapper:
         if self.file_size % self.record_size != 0:
             raise ValueError("File does not contain exact number of records of size " + str(self.record_size))
 
-
     def get_number_of_samples(self) -> int:
         """Get number of samples in file.
 
@@ -51,11 +45,10 @@ class BinaryFileWrapper:
         """
         return int(self.file_size / self.record_size)
 
-
     def get_all_labels(self) -> list[int]:
         with open(self.file_path, "rb") as file:
             data = file.read()
-        
+
         num_samples = self.get_number_of_samples()
         labels = [
             int.from_bytes(
@@ -86,7 +79,6 @@ class BinaryFileWrapper:
     def get_samples_from_indices(self, indices: list) -> list[bytes]:
         with open(self.file_path, "rb") as file:
             data = file.read()
-            
+
         samples = [data[(idx * self.record_size) + self.label_size : (idx + 1) * self.record_size] for idx in indices]
         return samples
-

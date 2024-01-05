@@ -181,9 +181,8 @@ class PytorchEvaluator:
                 if isinstance(metric, AbstractHolisticMetric):
                     metric.evaluate_dataset(y_true, y_score, self._num_samples)
 
-        for metric in self._metrics:
-            self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
-            
+                self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+
         self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
 
 

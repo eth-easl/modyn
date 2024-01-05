@@ -1,5 +1,5 @@
-
 from typing import Any
+
 from modyn.evaluator.internal.metrics.f1_score import F1Score
 
 

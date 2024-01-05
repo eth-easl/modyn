@@ -52,7 +52,7 @@ class Supervisor:
         matrix_pipeline: int = -1,
         matrix_gpus: list[str] = [""],
         matrix_dop: int = 0,
-        noeval: bool = False
+        noeval: bool = False,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -559,7 +559,7 @@ class Supervisor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     def build_evaluation_matrix(self) -> None:
-        # 1. Get all triggers for pipeline 
+        # 1. Get all triggers for pipeline
         pipeline = self.matrix_pipeline if self.matrix_pipeline > -1 else self.pipeline_id
 
         with MetadataDatabaseConnection(self.modyn_config) as database:
@@ -576,7 +576,7 @@ class Supervisor:
         # Round robin between GPUs, when one finishes, start the next
         self.pipeline_log["evaluation_matrix"] = {}
         device_idx = 0
-        
+
         running_evals = []
         eval_id_to_trigger = {}
         eval_id_to_model = {}
@@ -599,7 +599,7 @@ class Supervisor:
                     one_eval_done = False
                     while not one_eval_done:
                         sleep(5)
-                        for eval_id, tracker in list(running_evals): # iterate over copy to modify on the fly
+                        for eval_id, tracker in list(running_evals):  # iterate over copy to modify on the fly
                             eval_running, eval_exception = self.grpc.is_evaluation_running(eval_id)
                             done_trigger_id = eval_id_to_trigger[eval_id]
                             done_model_id = eval_id_to_model[eval_id]
@@ -611,8 +611,12 @@ class Supervisor:
                                 device = self.matrix_gpus[device_idx]
                                 device_idx = (device_idx + 1) % len(self.matrix_gpus)
 
-                                running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id] # remove from running evals
-                                evaluations = self.grpc.start_evaluation(done_model_id, self.pipeline_config, pipeline, done_trigger_id, device)
+                                running_evals = [
+                                    (eid, tracker) for (eid, tracker) in running_evals if eid != eval_id
+                                ]  # remove from running evals
+                                evaluations = self.grpc.start_evaluation(
+                                    done_model_id, self.pipeline_config, pipeline, done_trigger_id, device
+                                )
                                 assert len(evaluations) == 1
                                 eval_id = next(iter(evaluations))
                                 running_evals.append((eval_id, evaluations[eval_id]))
@@ -622,12 +626,16 @@ class Supervisor:
                                 continue
 
                             if not eval_running:
-                                logger.info(f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done.")
+                                logger.info(
+                                    f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done."
+                                )
                                 one_eval_done = True
                                 running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id]
                                 eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
                                 self.grpc.store_evaluation_results([eval_result_writer], {eval_id: tracker})
-                                self.pipeline_log["evaluation_matrix"][done_model_id][done_trigger_id] = eval_result_writer.results
+                                self.pipeline_log["evaluation_matrix"][done_model_id][
+                                    done_trigger_id
+                                ] = eval_result_writer.results
                                 self._persist_pipeline_log()
 
                     logger.info("At least evaluation finished, continuing.")
@@ -637,7 +645,7 @@ class Supervisor:
             one_eval_done = False
             while not one_eval_done:
                 sleep(5)
-                for eval_id, tracker in list(running_evals): # iterate over copy to modify on the fly
+                for eval_id, tracker in list(running_evals):  # iterate over copy to modify on the fly
                     eval_running, eval_exception = self.grpc.is_evaluation_running(eval_id)
                     done_trigger_id = eval_id_to_trigger[eval_id]
                     done_model_id = eval_id_to_model[eval_id]
@@ -649,8 +657,12 @@ class Supervisor:
                         device = self.matrix_gpus[device_idx]
                         device_idx = (device_idx + 1) % len(self.matrix_gpus)
 
-                        running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id] # remove from running evals
-                        evaluations = self.grpc.start_evaluation(done_model_id, self.pipeline_config, pipeline, done_trigger_id, device)
+                        running_evals = [
+                            (eid, tracker) for (eid, tracker) in running_evals if eid != eval_id
+                        ]  # remove from running evals
+                        evaluations = self.grpc.start_evaluation(
+                            done_model_id, self.pipeline_config, pipeline, done_trigger_id, device
+                        )
                         assert len(evaluations) == 1
                         eval_id = next(iter(evaluations))
                         running_evals.append((eval_id, evaluations[eval_id]))
@@ -660,15 +672,18 @@ class Supervisor:
                         continue
 
                     if not eval_running:
-                        logger.info(f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done.")
+                        logger.info(
+                            f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done."
+                        )
                         one_eval_done = True
                         running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id]
                         eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
                         self.grpc.store_evaluation_results([eval_result_writer], {eval_id: tracker})
-                        self.pipeline_log["evaluation_matrix"][done_model_id][done_trigger_id] = eval_result_writer.results
+                        self.pipeline_log["evaluation_matrix"][done_model_id][
+                            done_trigger_id
+                        ] = eval_result_writer.results
                         self._persist_pipeline_log()
 
-                
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
         self.pipeline_id = self.grpc.register_pipeline_at_selector(self.pipeline_config)

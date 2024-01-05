@@ -1,16 +1,16 @@
+import io
 import json
 import logging
 import os
 import pathlib
 import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple
-from PIL import Image
-import io
-from modyn.common.benchmark.stopwatch import Stopwatch
 
+from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
+from PIL import Image
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
-from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +60,16 @@ class ClocLocalDataset(IterableDataset):
 
     @staticmethod
     def bytes_parser_function(data: memoryview) -> Image:
-      return Image.open(io.BytesIO(data)).convert("RGB")
-    
+        return Image.open(io.BytesIO(data)).convert("RGB")
+
     def _setup_composed_transform(self) -> None:
-        self._transform_list = [ClocLocalDataset.bytes_parser_function, transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
+        self._transform_list = [
+            ClocLocalDataset.bytes_parser_function,
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ]
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
@@ -79,7 +85,6 @@ class ClocLocalDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-
     def _get_transformed_data_tuple(
         self, key: int, sample: memoryview, label: int, weight: Optional[float]
     ) -> Optional[Tuple]:
@@ -88,7 +93,6 @@ class ClocLocalDataset(IterableDataset):
         tranformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
         return key, tranformed_sample, label
-
 
     def _persist_log(self, worker_id: int) -> None:
         if self._log_path is None:
@@ -109,26 +113,27 @@ class ClocLocalDataset(IterableDataset):
             with open(log_file, "w", encoding="utf-8") as logfile:
                 json.dump(self._log, logfile)
 
-
-    def cloc_generator(self, worker_id: int, num_workers: int) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
+    def cloc_generator(
+        self, worker_id: int, num_workers: int
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         self._info("Globbing paths", worker_id)
 
-        pathlist = sorted(pathlib.Path(self._cloc_path).glob('*.jpg'))
+        pathlist = sorted(pathlib.Path(self._cloc_path).glob("*.jpg"))
         self._info("Paths globbed", worker_id)
 
         def split(a, n):
             k, m = divmod(len(a), n)
-            return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
+            return (a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n))
 
         pathgen = split(pathlist, num_workers)
-        worker_paths = next(x for i,x in enumerate(pathgen) if i==worker_id)
+        worker_paths = next(x for i, x in enumerate(pathgen) if i == worker_id)
         self._info(f"Got {len(worker_paths)} paths.", worker_id)
 
         sample_idx = 0
         for path in worker_paths:
             path = pathlib.Path(path)
             label_path = path.with_suffix(".label")
-            
+
             with open(path, "rb") as file:
                 data = file.read()
             with open(label_path, "rb") as file:

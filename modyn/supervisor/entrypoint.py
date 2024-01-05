@@ -77,9 +77,9 @@ def setup_argparser() -> argparse.ArgumentParser:
         "--matrix-gpus",
         type=str,
         action="store",
-        nargs='*',
+        nargs="*",
         help="gpus to do matrix evaluation on.",
-        default=['cuda:0'],
+        default=["cuda:0"],
     )
 
     parser_.add_argument(
@@ -142,7 +142,7 @@ def main() -> None:
         args.matrix_pipeline,
         args.matrix_gpus,
         args.matrix_dop,
-        args.noeval
+        args.noeval,
     )
     logger.info("Starting pipeline.")
     supervisor.pipeline()

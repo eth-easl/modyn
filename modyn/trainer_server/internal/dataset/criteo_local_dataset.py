@@ -3,15 +3,14 @@ import logging
 import os
 import pathlib
 import threading
-from typing import Any, Callable, Generator, Iterator, Optional, Tuple
-import torch
 from pathlib import Path
+from typing import Any, Callable, Generator, Iterator, Optional, Tuple
 
+import torch
 from modyn.common.benchmark.stopwatch import Stopwatch
-
+from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
-from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +62,9 @@ class CriteoLocalDataset(IterableDataset):
     def bytes_parser_function(x: memoryview) -> dict:
         return {
             "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
-            "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long()
+            "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long(),
         }
-    
+
     def _setup_composed_transform(self) -> None:
         self._transform_list = [CriteoLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
@@ -83,7 +82,6 @@ class CriteoLocalDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-
     def _get_transformed_data_tuple(
         self, key: int, sample: memoryview, label: int, weight: Optional[float]
     ) -> Optional[Tuple]:
@@ -92,7 +90,6 @@ class CriteoLocalDataset(IterableDataset):
         tranformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
         return key, tranformed_sample, label
-
 
     def _persist_log(self, worker_id: int) -> None:
         if self._log_path is None:
@@ -113,22 +110,23 @@ class CriteoLocalDataset(IterableDataset):
             with open(log_file, "w", encoding="utf-8") as logfile:
                 json.dump(self._log, logfile)
 
-
-    def criteo_generator(self, worker_id: int, num_workers: int) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
+    def criteo_generator(
+        self, worker_id: int, num_workers: int
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         record_size = 160
         label_size = 4
         byte_order = "little"
         self._info("Globbing paths", worker_id)
 
-        pathlist = sorted(Path(self._criteo_path).glob('**/*.bin'))
+        pathlist = sorted(Path(self._criteo_path).glob("**/*.bin"))
         self._info("Paths globbed", worker_id)
 
         def split(a, n):
             k, m = divmod(len(a), n)
-            return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
+            return (a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n))
 
         pathgen = split(pathlist, num_workers)
-        worker_paths = next(x for i,x in enumerate(pathgen) if i==worker_id)
+        worker_paths = next(x for i, x in enumerate(pathgen) if i == worker_id)
         sample_idx = 0
         self._info(f"Got {len(worker_paths)} paths.", worker_id)
         for path in worker_paths:
@@ -141,7 +139,6 @@ class CriteoLocalDataset(IterableDataset):
                 yield sample_idx, memoryview(sample), labels[idx], None
 
                 sample_idx = sample_idx + 1
-
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()

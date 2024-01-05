@@ -1,8 +1,8 @@
 import contextlib
+import gc
 import json
 import logging
 import os
-import gc
 import pathlib
 import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple
@@ -329,7 +329,9 @@ class OnlineDataset(IterableDataset):
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):
-            yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container["weights"][idx]
+            yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
+                "weights"
+            ][idx]
 
     def _is_partition_fetched(self, partition_id: int) -> bool:
         if partition_id not in self._partition_locks or partition_id not in self._partition_valid:
@@ -346,9 +348,9 @@ class OnlineDataset(IterableDataset):
         self, last_idx: int, max_idx: int, partition_id: int
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         for idx in range(last_idx + 1, max_idx + 1):
-            yield self._thread_data_container[partition_id]["keys"][idx], memoryview(self._thread_data_container[partition_id][
-                "data"
-            ][idx]), self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
+            yield self._thread_data_container[partition_id]["keys"][idx], memoryview(
+                self._thread_data_container[partition_id]["data"][idx]
+            ), self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
                 "weights"
             ][
                 idx
@@ -379,7 +381,6 @@ class OnlineDataset(IterableDataset):
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
         self._info(f"Clearing partition {partition_id}", worker_id)
         self._clear_partition(partition_id)
-        
 
     def start_prefetching(self, worker_id: int) -> None:
         if self._num_prefetched_partitions < 1:
