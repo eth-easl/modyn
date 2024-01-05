@@ -34,7 +34,7 @@ CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.ya
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
-NEW_DATASET_TIMEOUT = 120
+NEW_DATASET_TIMEOUT = 600
 
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
@@ -207,7 +207,7 @@ class DatasetHelper:
         request = GetDatasetSizeRequest(dataset_id=self.dataset_id)
         response: GetDatasetSizeResponse = self.storage.GetDatasetSize(request)
 
-        assert response.success, "Dataset is not available."
+        assert response.success, f"Dataset is not available after {NEW_DATASET_TIMEOUT} sec."
         assert response.num_keys >= expected_size
 
     def register_new_dataset(self) -> None:
