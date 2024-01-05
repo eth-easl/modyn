@@ -1,9 +1,12 @@
+import logging
 from typing import Any, Optional
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
@@ -51,6 +54,10 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.index_sampleid_map += sample_ids
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
+        if len(self.probabilities) == 0:
+            logger.warning("Empty probabilities, cannot select any points.")
+            return [], torch.Tensor([])
+
         # select always at least 1 point
         target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
 
