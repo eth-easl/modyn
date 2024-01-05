@@ -1,7 +1,7 @@
+import logging
 from typing import Any, Optional
 
 import torch
-import logging
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
