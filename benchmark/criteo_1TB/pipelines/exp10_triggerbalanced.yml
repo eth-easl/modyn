@@ -1,6 +1,6 @@
 pipeline:
-    name: exp0_finetune
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+    name: exp10_triggerbalanced_full
+    description: DLRM/Criteo Training. Retraining on triggerbalanced on entire dataset, with the old model weights.
     version: 1.0.0
 model:
   id: DLRM
@@ -92,12 +92,15 @@ training:
   checkpointing:
     activated: False
   selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 10000000
+    name: CoresetStrategy
+    maximum_keys_in_memory: 2000000
     config:
       storage_backend: "database"
       limit: -1
-      reset_after_trigger: True
+      reset_after_trigger: False
+      presampling_config:
+        strategy: TriggerBalancedPresamplingStrategy
+        ratio: 25
 data:
   dataset_id: criteo
   bytes_parser_function: |

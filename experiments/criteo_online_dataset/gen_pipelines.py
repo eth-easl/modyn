@@ -1,6 +1,9 @@
+import pathlib
+
+PIPELINE_BLANK = """
 pipeline:
-    name: exp0_finetune
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+    name: criteo_{0}_{1}_{2}_{3}
+    description: DLRM/Criteo Training.
     version: 1.0.0
 model:
   id: DLRM
@@ -47,9 +50,9 @@ training:
   gpus: 1
   device: "cuda:0"
   amp: True
-  dataloader_workers: 16
-  num_prefetched_partitions: 4
-  parallel_prefetch_requests: 2
+  dataloader_workers: {0}
+  num_prefetched_partitions: {1}
+  parallel_prefetch_requests: {2}
   use_previous_model: True
   initial_model: random
   initial_pass:
@@ -93,20 +96,20 @@ training:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 10000000
+    maximum_keys_in_memory: {3}
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
 data:
-  dataset_id: criteo
+  dataset_id: criteo_tiny
   bytes_parser_function: |
     import torch
     def bytes_parser_function(x: memoryview) -> dict:
-      return {
-        "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
-        "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long()
-      }
+      return {{
+        \"numerical_input\": torch.frombuffer(x, dtype=torch.float32, count=13),
+        \"categorical_input\": torch.frombuffer(x, dtype=torch.int32, offset=52).long()
+      }}
   label_transformer_function: |
     import torch
     # we need to convert our integer-type labels to floats,
@@ -114,37 +117,35 @@ data:
     def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
       return x.to(torch.float32)
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    trigger_every: "1d"
-evaluation:
-  device: "cuda:0"
-  result_writers: ["json"]
-  datasets:
-    - dataset_id: criteo
-      bytes_parser_function: |
-        import torch
-        def bytes_parser_function(x: memoryview) -> dict:
-          return {
-            "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
-            "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long()
-          }
-      label_transformer_function: |
-        import torch
-        # we need to convert our integer-type labels to floats,
-        # since the BCEWithLogitsLoss function does not work with integers.
-        def label_transformer_function(x: torch.Tensor) -> torch.Tensor:
-          return x.to(torch.float32)
-      batch_size: 65536
-      dataloader_workers: 16
-      metrics:
-        - name: "Accuracy"
-          evaluation_transformer_function: |
-            import torch
-            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
-              return torch.ge(torch.sigmoid(model_output).float(), 0.5)
-        - name: "ROC-AUC"
-          evaluation_transformer_function: |
-            import torch
-            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
-              return torch.sigmoid(model_output).float()
+    data_points_for_trigger: 30000000
+"""
+
+def main():
+    curr_dir = pathlib.Path(__file__).resolve().parent
+    for num_dataloader_workers in [16,1,4,8]:
+        for partition_size in [10000, 100000, 2500000, 5000000]:
+            for num_prefetched_partitions in [0,1,2,6]:
+                for parallel_pref in [1,2,4,8]:
+                    if num_prefetched_partitions == 0 and parallel_pref > 1:
+                        continue
+
+                    if num_prefetched_partitions > 0 and parallel_pref > num_prefetched_partitions:
+                        continue
+                    
+                    if partition_size == 10000:
+                        if num_dataloader_workers not in [1,16]:
+                            continue
+                        
+                        if num_prefetched_partitions in [2]:
+                            continue
+                    
+                    pipeline = PIPELINE_BLANK.format(num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size)
+                    
+                    with open(f"{curr_dir}/pipelines/criteo_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml", "w") as pfile:
+                        pfile.write(pipeline)
+
+
+if __name__ == "__main__":
+    main()
