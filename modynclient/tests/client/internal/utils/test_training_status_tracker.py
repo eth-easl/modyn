@@ -1,5 +1,5 @@
 import enlighten
-from modyn.supervisor.internal.utils.training_status_tracker import CurrentEvent, TrainingStatusTracker
+from modynclient.client.internal.utils.training_status_tracker import CurrentEvent, TrainingStatusTracker
 
 
 def test_counter_training_one_epoch():

@@ -1,7 +1,9 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import multiprocessing as mp
 import os
 import pathlib
 import shutil
+import time
 from typing import Optional
 from unittest import mock
 from unittest.mock import patch
@@ -9,8 +11,10 @@ from unittest.mock import patch
 import pytest
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
+from modyn.supervisor.internal.utils import PipelineInfo
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -80,8 +84,11 @@ def noop_pipeline_executor_constructor_mock(
     pipeline_id: int,
     modyn_config: dict,
     pipeline_config: dict,
-    eval_directory: pathlib.Path,
+    eval_directory: str,
     supervisor_supported_eval_result_writers: dict,
+    pipeline_status_queue: mp.Queue,
+    training_status_queue: mp.Queue,
+    eval_status_queue: mp.Queue,
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
@@ -347,14 +354,16 @@ def test_start_pipeline(
     mock_start = mock.Mock()
     mock_start.side_effect = noop
     with patch("multiprocessing.Process.start", mock_start):
-        pipeline_id = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
-        assert pipeline_id == PIPELINE_ID
+        res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
+        assert res["pipeline_id"] == PIPELINE_ID
+        assert isinstance(sup._pipeline_process_dict[res["pipeline_id"]], PipelineInfo)
 
 
 def test_start_pipeline_throws_on_invalid_pipeline_config() -> None:
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-    with pytest.raises(ValueError, match="Invalid pipeline configuration"):
-        sup.start_pipeline({}, EVALUATION_DIRECTORY)
+    res = sup.start_pipeline({}, EVALUATION_DIRECTORY)
+    assert res["pipeline_id"] == -1
+    assert "exception" in res and res["exception"] == "Invalid pipeline configuration"
 
 
 @patch.object(GRPCHandler, "init_selector", return_value=None)
@@ -376,5 +385,72 @@ def test_start_pipeline_throws_on_invalid_system_config(
 ) -> None:
     sup = Supervisor({})
     sup.init_cluster_connection()
-    with pytest.raises(ValueError, match="Invalid system configuration"):
-        sup.start_pipeline(get_minimal_pipeline_config(), EVALUATION_DIRECTORY)
+    res = sup.start_pipeline(get_minimal_pipeline_config(), EVALUATION_DIRECTORY)
+    assert res["pipeline_id"] == -1
+    assert "exception" in res and res["exception"] == "Invalid system configuration"
+
+
+@patch.object(GRPCHandler, "dataset_available", return_value=True)
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
+@patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
+@patch("modyn.supervisor.internal.pipeline_executor", "execute_pipeline", time.sleep(1))
+@patch.object(PipelineInfo, "get_msg_from_queue", return_value=None)
+def test_get_pipeline_status_running(
+    test_get_msg_from_queue,
+    test_register_pipeline,
+    test_get_time_at_storage,
+    test_trainer_server_available,
+    test_dataset_availabale,
+) -> None:
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    pipeline_config = get_minimal_pipeline_config()
+
+    # mock_start = mock.Mock()
+    # mock_start.side_effect = noop
+    # with patch("multiprocessing.Process.start", mock_start):
+
+    res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
+    msg = sup.get_pipeline_status(res["pipeline_id"])
+    assert msg["status"] == PipelineStatus.RUNNING
+
+
+@patch.object(GRPCHandler, "dataset_available", return_value=True)
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
+@patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
+@patch("modyn.supervisor.internal.pipeline_executor", "execute_pipeline", noop)
+@patch.object(PipelineInfo, "get_msg_from_queue", return_value=None)
+def test_get_pipeline_status_exit(
+    test_get_msg_from_queue,
+    test_register_pipeline,
+    test_get_time_at_storage,
+    test_trainer_server_available,
+    test_dataset_availabale,
+) -> None:
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    pipeline_config = get_minimal_pipeline_config()
+
+    # mock_start = mock.Mock()
+    # mock_start.side_effect = noop
+    # with patch("multiprocessing.Process.start", mock_start):
+
+    res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
+    time.sleep(1)
+    msg = sup.get_pipeline_status(res["pipeline_id"])
+    assert msg["status"] == PipelineStatus.EXIT
+
+
+@patch.object(GRPCHandler, "dataset_available", return_value=True)
+@patch.object(GRPCHandler, "trainer_server_available", return_value=True)
+@patch.object(GRPCHandler, "get_time_at_storage", return_value=START_TIMESTAMP)
+@patch.object(Supervisor, "register_pipeline", return_value=PIPELINE_ID)
+def test_get_pipeline_status_not_found(
+    test_register_pipeline,
+    test_get_time_at_storage,
+    test_trainer_server_available,
+    test_dataset_availabale,
+) -> None:
+    sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
+    msg = sup.get_pipeline_status(PIPELINE_ID)
+    assert msg["status"] == PipelineStatus.NOTFOUND

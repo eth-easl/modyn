@@ -1,92 +1,147 @@
 import json
 import time
 
-import yaml
-from integrationtests.utils import SCRIPT_PATH, DatasetHelper, connect_to_server, get_minimal_pipeline_config
+from google.protobuf.json_format import MessageToDict
+from google.protobuf.message import Message
+from integrationtests.utils import (
+    DUMMY_CONFIG_FILE,
+    MNIST_CONFIG_FILE,
+    TinyDatasetHelper,
+    connect_to_server,
+    load_config_from_file,
+)
+from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 
-TIMEOUT = 15
+POLL_TIMEOUT = 1
+
+
+def wait_for_pipeline(pipeline_id: int) -> str:
+    req = GetPipelineStatusRequest(pipeline_id=pipeline_id)
+
+    res = supervisor.get_pipeline_status(req)
+    while res.status == PipelineStatus.RUNNING:
+        time.sleep(POLL_TIMEOUT)
+        res = supervisor.get_pipeline_status(req)
+
+    return res
+
+
+def parse_grpc_res(msg: Message) -> dict:
+    return MessageToDict(msg, preserving_proto_field_name=True, including_default_value_fields=True)
+
+
+def assert_pipeline_exit_without_error(res: dict) -> None:
+    assert res["status"] == PipelineStatus.EXIT
+
+    exit_msg = {}
+    for msg in res["pipeline_stage"]:
+        if msg["stage"] == PipelineStage.EXIT:
+            exit_msg = msg
+
+    assert exit_msg
+    assert exit_msg["exit_msg"]["exitcode"] == 0
 
 
 def test_mnist() -> None:
-    supervisor_channel = connect_to_server("supervisor")
-    supervisor = SupervisorStub(supervisor_channel)
-
-    mnist_config_path = SCRIPT_PATH.parent.parent / "benchmark" / "mnist" / "mnist.yaml"
-    with open(mnist_config_path, "r", encoding="utf-8") as config_file:
-        pipeline_config = yaml.safe_load(config_file)
+    pipeline_config = load_config_from_file(MNIST_CONFIG_FILE)
     print(pipeline_config)
 
-    pipeline_id = supervisor.start_pipeline(
-        StartPipelineRequest(
-            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-            eval_directory=".",
-            start_replay_at=0,
-            maximum_triggers=3,
+    res = parse_grpc_res(
+        supervisor.start_pipeline(
+            StartPipelineRequest(
+                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+                eval_directory=".",
+                start_replay_at=0,
+                maximum_triggers=1,
+            )
         )
-    ).pipeline_id
+    )
+    pipeline_id = res["pipeline_id"]
 
-    print(f"pipeline id: {pipeline_id}")
+    print(f"start pipeline: {res}")
     assert pipeline_id >= 0
 
+    get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
+    print(get_pipeline_status_res)
+    assert_pipeline_exit_without_error(get_pipeline_status_res)
 
-def test_start_one_experiment_pipeline() -> None:
-    supervisor_channel = connect_to_server("supervisor")
-    supervisor = SupervisorStub(supervisor_channel)
 
-    pipeline_config = get_minimal_pipeline_config()
+def test_one_experiment_pipeline() -> None:
+    pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
 
-    pipeline_id = supervisor.start_pipeline(
-        StartPipelineRequest(
-            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-            eval_directory=".",
-            start_replay_at=0,
+    res = parse_grpc_res(
+        supervisor.start_pipeline(
+            StartPipelineRequest(
+                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+                eval_directory=".",
+                start_replay_at=0,
+                maximum_triggers=1,
+            )
         )
-    ).pipeline_id
+    )
+    pipeline_id = res["pipeline_id"]
 
-    print(f"pipeline id: {pipeline_id}")
+    print(f"start pipeline: {res}")
     assert pipeline_id >= 0
 
+    get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
+    print(get_pipeline_status_res)
+    assert_pipeline_exit_without_error(get_pipeline_status_res)
 
-def test_start_two_experiment_pipelines() -> None:
-    supervisor_channel = connect_to_server("supervisor")
-    supervisor = SupervisorStub(supervisor_channel)
 
-    pipeline1_config = get_minimal_pipeline_config()
-    pipeline2_config = get_minimal_pipeline_config(2)
+def test_two_experiment_pipelines() -> None:
+    pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
 
-    pipeline1_id = supervisor.start_pipeline(
-        StartPipelineRequest(
-            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline1_config)),
-            eval_directory=".",
-            start_replay_at=0,
+    res1 = parse_grpc_res(
+        supervisor.start_pipeline(
+            StartPipelineRequest(
+                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+                eval_directory=".",
+                start_replay_at=0,
+                maximum_triggers=1,
+            )
         )
-    ).pipeline_id
+    )
+    pipeline1_id = res1["pipeline_id"]
 
-    pipeline2_id = supervisor.start_pipeline(
-        StartPipelineRequest(
-            pipeline_config=SupervisorJsonString(value=json.dumps(pipeline2_config)),
-            eval_directory=".",
-            start_replay_at=0,
-            stop_replay_at=50,
-            maximum_triggers=10,
+    res2 = parse_grpc_res(
+        supervisor.start_pipeline(
+            StartPipelineRequest(
+                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+                eval_directory=".",
+                start_replay_at=0,
+                stop_replay_at=100000,
+                maximum_triggers=1,
+            )
         )
-    ).pipeline_id
+    )
+    pipeline2_id = res2["pipeline_id"]
 
-    print(f"pipeline ids: {pipeline1_id}, {pipeline2_id}")
+    print(f"start pipeline1: {res1}")
+    print(f"start pipeline2: {res2}")
     assert pipeline1_id >= 0 and pipeline2_id >= 0
+
+    get_pipeline_status_res1 = parse_grpc_res(wait_for_pipeline(pipeline1_id))
+    print(pipeline1_id, get_pipeline_status_res1)
+    get_pipeline_status_res2 = parse_grpc_res(wait_for_pipeline(pipeline2_id))
+    print(pipeline2_id, get_pipeline_status_res2)
+
+    assert_pipeline_exit_without_error(get_pipeline_status_res1)
+    assert_pipeline_exit_without_error(get_pipeline_status_res2)
 
 
 if __name__ == "__main__":
-    dataset_helper = DatasetHelper()
+    dataset_helper = TinyDatasetHelper()
     try:
         dataset_helper.setup_dataset()
-        test_start_one_experiment_pipeline()
-        test_start_two_experiment_pipelines()
-        time.sleep(TIMEOUT)
-        # TODO(#317): implement get_status proto. check for pipeline execution success.
+        supervisor_channel = connect_to_server("supervisor")
+        supervisor = SupervisorStub(supervisor_channel)
+        test_one_experiment_pipeline()
+        test_two_experiment_pipelines()
     finally:
         dataset_helper.cleanup_dataset_dir()
         dataset_helper.cleanup_storage_database()

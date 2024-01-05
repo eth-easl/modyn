@@ -3,8 +3,6 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
-import threading
-import time
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
@@ -15,36 +13,14 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
+from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
 
 logger = logging.getLogger(__name__)
-PIPELINE_MONITOR_INTERVAL = 5
-
-
-def pipeline_monitor(pipeline_process_dict: dict[int, PipelineInfo]) -> None:
-    logger.info(f"[{os.getpid()}][pipeline_monitor] start")
-    while True:
-        num_pipelines = len(pipeline_process_dict)
-        if num_pipelines > 0:
-            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_pipelines} pipelines registered")
-
-        num_active_pipeline_processes = 0
-        for p_id, p_info in pipeline_process_dict.items():
-            if p_info.process_handler.is_alive():
-                num_active_pipeline_processes += 1
-                logger.info(f"[{os.getpid()}][pipeline_monitor] pipeline {p_id} still running")
-            else:
-                # TODO(#317): unregister pipeline when process terminates
-                logger.info(
-                    f"""[{os.getpid()}][pipeline_monitor] pipeline {p_id},
-                    exit code {p_info.process_handler.exitcode}"""
-                )
-        if num_active_pipeline_processes > 0:
-            logger.info(f"[{os.getpid()}][pipeline_monitor] {num_active_pipeline_processes} pipeline processes running")
-        time.sleep(PIPELINE_MONITOR_INTERVAL)
 
 
 class Supervisor:
@@ -64,14 +40,13 @@ class Supervisor:
         self,
         modyn_config: dict,
     ) -> None:
-        # TODO(#317): redesign tensorboard. ignore it for now
+        # TODO(#317): redesign tensorboard in the future
         # TODO(#325): validate modyn_config
         self.modyn_config = modyn_config
         self._pipeline_process_dict: dict[int, PipelineInfo] = {}
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
         self.grpc = GRPCHandler(self.modyn_config)
-        self.pipeline_monitor_thread: Optional[threading.Thread] = None
         self.init_metadata_db()
 
     def __getstate__(self) -> dict:
@@ -90,14 +65,9 @@ class Supervisor:
         logging.info("Setting up connections to cluster components.")
         self.grpc.init_cluster_connection()
 
-        # TODO(#317): seed per pipeline instead of per system
+        # TODO(#317): seed per pipeline instead of per system in the future
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])
-
-    def monitor_pipelines(self) -> None:
-        logging.info("Starting pipeline monitor thread.")
-        self.pipeline_monitor_thread = threading.Thread(target=pipeline_monitor, args=(self._pipeline_process_dict,))
-        self.pipeline_monitor_thread.start()
 
     def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
         schema_path = (
@@ -216,7 +186,10 @@ class Supervisor:
         return available
 
     def validate_system(self, pipeline_config: dict) -> bool:
-        return self.dataset_available(pipeline_config) and self.grpc.trainer_server_available()
+        dataset_available = self.dataset_available(pipeline_config)
+        trainer_server_available = self.grpc.trainer_server_available()
+        logger.debug(f"Validate system: dataset {dataset_available}, trainer server {trainer_server_available}")
+        return dataset_available and trainer_server_available
 
     def register_pipeline(self, pipeline_config: dict) -> int:
         """
@@ -290,47 +263,79 @@ class Supervisor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-    ) -> int:
+    ) -> dict:
         if not self.validate_pipeline_config(pipeline_config):
-            raise ValueError("Invalid pipeline configuration")
+            return pipeline_res_msg(exception="Invalid pipeline configuration")
 
         if not is_directory_writable(pathlib.Path(eval_directory)):
-            raise ValueError("No permission to write to the evaluation results directory.")
+            return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
 
         if not self.validate_system(pipeline_config):
-            raise ValueError("Invalid system configuration")
+            return pipeline_res_msg(exception="Invalid system configuration")
 
-        exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+        try:
+            exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            pipeline_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            training_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
+            eval_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
-        start_timestamp = self.grpc.get_time_at_storage()
-        pipeline_id = self.register_pipeline(pipeline_config)
-        logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+            start_timestamp = self.grpc.get_time_at_storage()
+            pipeline_id = self.register_pipeline(pipeline_config)
+            logger.info(f"Pipeline {pipeline_id} registered, start executing.")
+        except Exception:  # pylint: disable=broad-except
+            return pipeline_res_msg(exception="Failed to register pipeline")
 
-        process = Process(
-            target=execute_pipeline,
-            args=(
-                start_timestamp,
-                pipeline_id,
-                self.modyn_config,
-                pipeline_config,
-                eval_directory,
-                self.supported_evaluation_result_writers,
-                exception_queue,
-                status_query_queue,
-                status_response_queue,
-                start_replay_at,
-                stop_replay_at,
-                maximum_triggers,
-            ),
-        )
-        process.start()
-        self._pipeline_process_dict[pipeline_id] = PipelineInfo(
-            process,
-            exception_queue,
-            status_query_queue,
-            status_response_queue,
-        )
+        try:
+            process = Process(
+                target=execute_pipeline,
+                args=(
+                    start_timestamp,
+                    pipeline_id,
+                    self.modyn_config,
+                    pipeline_config,
+                    eval_directory,
+                    self.supported_evaluation_result_writers,
+                    exception_queue,
+                    pipeline_status_queue,
+                    training_status_queue,
+                    eval_status_queue,
+                    start_replay_at,
+                    stop_replay_at,
+                    maximum_triggers,
+                ),
+            )
+            process.start()
+            self._pipeline_process_dict[pipeline_id] = PipelineInfo(
+                process, exception_queue, pipeline_status_queue, training_status_queue, eval_status_queue
+            )
+            return pipeline_res_msg(pipeline_id=pipeline_id)
+        except Exception:  # pylint: disable=broad-except
+            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
-        return pipeline_id
+    def get_pipeline_status(self, pipeline_id: int) -> dict[str, Any]:
+        ret: dict[str, Any] = {}
+
+        if pipeline_id not in self._pipeline_process_dict:
+            ret["status"] = str(PipelineStatus.NOTFOUND)
+            return ret
+
+        p_info = self._pipeline_process_dict[pipeline_id]
+
+        ret["pipeline_stage"] = p_info.get_all_msgs_from_queue("pipeline_status_queue")
+        ret["training_status"] = p_info.get_all_msgs_from_queue("training_status_queue")
+        ret["eval_status"] = p_info.get_all_msgs_from_queue("eval_status_queue")
+
+        if p_info.process_handler.is_alive():
+            ret["status"] = str(PipelineStatus.RUNNING)
+        else:
+            ret["status"] = str(PipelineStatus.EXIT)
+
+            msg: dict[str, Any] = pipeline_stage_msg(
+                stage=PipelineStage.EXIT,
+                msg_type=MsgType.EXIT,
+                submsg=exit_submsg(p_info.process_handler.exitcode, p_info.check_for_exception()),
+            )
+
+            ret["pipeline_stage"].append(msg)
+
+        return ret

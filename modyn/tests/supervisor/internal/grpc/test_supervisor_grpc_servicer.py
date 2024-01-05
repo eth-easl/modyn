@@ -5,6 +5,8 @@ import pathlib
 from unittest.mock import MagicMock, patch
 
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (  # noqa: E402, E501, E611;
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
     JsonString,
     PipelineResponse,
     StartPipelineRequest,
@@ -70,7 +72,6 @@ def noop_init_metadata_db(self) -> None:
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-@patch.object(Supervisor, "monitor_pipelines", noop)
 def test_init():
     modyn_config = get_minimal_modyn_config()
     sup = Supervisor(modyn_config)
@@ -81,8 +82,7 @@ def test_init():
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-@patch.object(Supervisor, "monitor_pipelines", noop)
-@patch.object(Supervisor, "start_pipeline")
+@patch.object(Supervisor, "start_pipeline", return_value={"pipeline_id": 1})
 def test_start_pipeline(test_start_pipeline: MagicMock):
     modyn_config = get_minimal_modyn_config()
     sup = Supervisor(modyn_config)
@@ -96,9 +96,32 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
         stop_replay_at=1,
         maximum_triggers=2,
     )
-    test_start_pipeline.return_value = 1
 
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
     test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2)
+
+
+@patch.object(GRPCHandler, "__init__", noop_constructor_mock)
+@patch.object(GRPCHandler, "init_cluster_connection", noop)
+@patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
+@patch.object(
+    Supervisor,
+    "get_pipeline_status",
+    return_value={
+        "status": "running",
+        "pipeline_stage": [{"stage": "test", "msg_type": "test", "log": False}],
+    },
+)
+def test_get_pipeline_status(test_get_pipeline_status: MagicMock):
+    modyn_config = get_minimal_modyn_config()
+    sup = Supervisor(modyn_config)
+    servicer = SupervisorGRPCServicer(sup, modyn_config)
+
+    request = GetPipelineStatusRequest(pipeline_id=42)
+
+    response: GetPipelineStatusResponse = servicer.get_pipeline_status(request, None)
+    assert response.status == "running"
+
+    test_get_pipeline_status.assert_called_once_with(42)

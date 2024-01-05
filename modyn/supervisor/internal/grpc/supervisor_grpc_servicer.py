@@ -7,7 +7,13 @@ import threading
 from typing import Optional
 
 import grpc
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
+from google.protobuf.json_format import ParseDict
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
+    PipelineResponse,
+    StartPipelineRequest,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorServicer  # noqa: E402, E501
 from modyn.supervisor.internal.supervisor import Supervisor
 
@@ -21,13 +27,12 @@ class SupervisorGRPCServicer(SupervisorServicer):
         self.modyn_config = modyn_config
         self._supervisor = supervisor
         self._supervisor.init_cluster_connection()
-        self._supervisor.monitor_pipelines()
 
     def start_pipeline(self, request: StartPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         tid = threading.get_native_id()
         pid = os.getpid()
 
-        logger.info(f"[{pid}][{tid}]: Starting pipeline with request - {str(request)}")
+        logger.info(f"[{pid}][{tid}]: Starting pipeline with request - {request}")
 
         start_replay_at: Optional[int] = None
         if request.HasField("start_replay_at"):
@@ -39,12 +44,18 @@ class SupervisorGRPCServicer(SupervisorServicer):
         if request.HasField("maximum_triggers"):
             maximum_triggers = request.maximum_triggers
 
-        pipeline_id = self._supervisor.start_pipeline(
-            json.loads(request.pipeline_config.value),
+        pipeline_config = json.loads(request.pipeline_config.value)
+        msg = self._supervisor.start_pipeline(
+            pipeline_config,
             request.eval_directory,
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
         )
+        return ParseDict(msg, PipelineResponse())
 
-        return PipelineResponse(pipeline_id=pipeline_id)
+    def get_pipeline_status(
+        self, request: GetPipelineStatusRequest, context: grpc.ServicerContext
+    ) -> GetPipelineStatusResponse:
+        msg = self._supervisor.get_pipeline_status(request.pipeline_id)
+        return ParseDict(msg, GetPipelineStatusResponse())

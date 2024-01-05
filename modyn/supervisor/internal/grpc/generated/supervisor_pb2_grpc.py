@@ -18,12 +18,23 @@ class SupervisorStub(object):
                 request_serializer=supervisor__pb2.StartPipelineRequest.SerializeToString,
                 response_deserializer=supervisor__pb2.PipelineResponse.FromString,
                 )
+        self.get_pipeline_status = channel.unary_unary(
+                '/supervisor.Supervisor/get_pipeline_status',
+                request_serializer=supervisor__pb2.GetPipelineStatusRequest.SerializeToString,
+                response_deserializer=supervisor__pb2.GetPipelineStatusResponse.FromString,
+                )
 
 
 class SupervisorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def start_pipeline(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def get_pipeline_status(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -36,6 +47,11 @@ def add_SupervisorServicer_to_server(servicer, server):
                     servicer.start_pipeline,
                     request_deserializer=supervisor__pb2.StartPipelineRequest.FromString,
                     response_serializer=supervisor__pb2.PipelineResponse.SerializeToString,
+            ),
+            'get_pipeline_status': grpc.unary_unary_rpc_method_handler(
+                    servicer.get_pipeline_status,
+                    request_deserializer=supervisor__pb2.GetPipelineStatusRequest.FromString,
+                    response_serializer=supervisor__pb2.GetPipelineStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -61,5 +77,22 @@ class Supervisor(object):
         return grpc.experimental.unary_unary(request, target, '/supervisor.Supervisor/start_pipeline',
             supervisor__pb2.StartPipelineRequest.SerializeToString,
             supervisor__pb2.PipelineResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def get_pipeline_status(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/supervisor.Supervisor/get_pipeline_status',
+            supervisor__pb2.GetPipelineStatusRequest.SerializeToString,
+            supervisor__pb2.GetPipelineStatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
