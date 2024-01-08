@@ -149,7 +149,6 @@ class OnlineDataset(IterableDataset):
             stopw.start("ResponseTime", overwrite=True)
 
     # pylint: disable=too-many-locals
-
     def _get_data(
         self,
         data_container: dict,
