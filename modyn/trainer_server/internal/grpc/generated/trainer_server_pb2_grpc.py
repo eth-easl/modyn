@@ -195,3 +195,4 @@ class TrainerServer(object):
             trainer__server__pb2.GetLatestModelResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+    
