@@ -16,8 +16,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
 from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
-    MAX_MESSAGE_SIZE,
     deserialize_function,
+    grpc_common_config,
     grpc_connection_established,
     instantiate_class,
 )
@@ -61,6 +61,7 @@ class OnlineDataset(IterableDataset):
         self._transform_list: list[Callable] = []
         self._transform: Optional[Callable] = None
         self._storagestub: StorageStub = None
+        self._storage_channel: Optional[Any] = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
         # the default key source is the Selector. Then it can be changed using change_key_source
@@ -115,16 +116,10 @@ class OnlineDataset(IterableDataset):
         self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
-        storage_channel = grpc.insecure_channel(
-            self._storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
-        if not grpc_connection_established(storage_channel):
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        if not grpc_connection_established(self._storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
-        self._storagestub = StorageStub(storage_channel)
+        self._storagestub = StorageStub(self._storage_channel)
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
@@ -137,7 +132,7 @@ class OnlineDataset(IterableDataset):
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def _get_data_from_storage(
-        self, selector_keys: list[int]
+        self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
         stopw = Stopwatch()
@@ -146,6 +141,9 @@ class OnlineDataset(IterableDataset):
         stopw.start("ResponseTime", overwrite=True)
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
+            if not grpc_connection_established(self._storage_channel):
+                self._info("gRPC connection lost, trying to reconnect!", worker_id)
+                self._init_grpc()
             stopw.start("ResponseTime", overwrite=True)
 
     # pylint: disable=too-many-locals
@@ -172,7 +170,7 @@ class OnlineDataset(IterableDataset):
 
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
-        for data_tuple in self._get_data_from_storage(keys):
+        for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)

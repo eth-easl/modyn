@@ -593,7 +593,7 @@ def test_init_transforms(
         tv_ds.assert_called_once()
 
 
-def iter_multi_partition_data_side_effect(keys):
+def iter_multi_partition_data_side_effect(keys, worker_id=None):
     yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), 0)
 
 
