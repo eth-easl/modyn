@@ -14,7 +14,7 @@ class Pipeline(MetadataBase):
     num_workers = Column("num_workers", Integer, nullable=False)
     selection_strategy = Column("selection_strategy", Text, nullable=False)
     model_class_name = Column("model_class_name", String(length=50), nullable=False)
-    model_config = Column("model_config", String(length=500), nullable=False)
+    model_config = Column("model_config", String(length=2000), nullable=False)
     amp = Column("amp", Boolean, nullable=False)
     full_model_strategy_name = Column("full_model_strategy_name", String(length=50), nullable=False)
     full_model_strategy_zip = Column("full_model_strategy_zip", Boolean, default=False)
