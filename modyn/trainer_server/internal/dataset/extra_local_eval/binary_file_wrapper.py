@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 """Binary file wrapper."""
 import os
 

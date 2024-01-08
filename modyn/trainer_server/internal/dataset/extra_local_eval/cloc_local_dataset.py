@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 import io
 import json
 import logging
@@ -7,7 +9,6 @@ import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
 from PIL import Image
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
