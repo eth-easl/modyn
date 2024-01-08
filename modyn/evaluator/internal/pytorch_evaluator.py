@@ -111,7 +111,7 @@ class PytorchEvaluator:
 
         self._info(f"Loading model state from {path}")
         with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()))
+            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
         self._model.model.load_state_dict(checkpoint["model"])
@@ -172,15 +172,17 @@ class PytorchEvaluator:
 
                 self._num_samples += batch_size
 
-        if self._contains_holistic_metric:
-            y_true = torch.cat(y_true)
-            y_score = torch.cat(y_score)
+        if len(y_true) > 0:
+            if self._contains_holistic_metric:
+                y_true = torch.cat(y_true)
+                y_score = torch.cat(y_score)
 
-        for metric in self._metrics:
-            if isinstance(metric, AbstractHolisticMetric):
-                metric.evaluate_dataset(y_true, y_score, self._num_samples)
+            for metric in self._metrics:
+                if isinstance(metric, AbstractHolisticMetric):
+                    metric.evaluate_dataset(y_true, y_score, self._num_samples)
 
-            self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+                self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+
         self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
 
 
@@ -210,3 +212,7 @@ def evaluate(
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)
         exception_queue.put(exception_msg)
+
+        if evaluation_info.model_path.exists():
+            logger.error("Deleting downloaded model after exception")
+            evaluation_info.model_path.unlink()
