@@ -1,0 +1,1 @@
+These files are used in our arXiv submission (https://arxiv.org/abs/2312.06254). If you replace the OnlineDataset with the CLOC or Criteo dataset, you can load data from your local machine. These files are a bit hacky and you should not touch them unless you are diving into evaluating Modyn.
