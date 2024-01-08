@@ -33,7 +33,7 @@ def download_file(
         bool: whether the file was successfully downloaded.
     """
     ftp = FTP()
-    ftp.connect(hostname, port, timeout=3)
+    ftp.connect(hostname, port, timeout=5 * 60)
 
     ftp.login(user, password)
     ftp.sendcmd("TYPE i")  # Switch to binary mode
@@ -79,7 +79,7 @@ def upload_file(
 
     """
     ftp = FTP()
-    ftp.connect(hostname, port, timeout=3)
+    ftp.connect(hostname, port, timeout=5 * 60)
     ftp.login(user, password)
     ftp.sendcmd("TYPE i")  # Switch to binary mode
 
@@ -140,28 +140,61 @@ def download_trained_model(
 ) -> Optional[pathlib.Path]:
     model_path = base_directory / f"trained_model_{identifier}.modyn"
 
-    success = download_file(
-        hostname=model_storage_config["hostname"],
-        port=int(model_storage_config["ftp_port"]),
-        user="modyn",
-        password="modyn",
-        remote_file_path=remote_path,
-        local_file_path=model_path,
-        callback=get_pretrained_model_callback(logger),
-        checksum=checksum,
-    )
+    tries = 3
+
+    for num_try in range(tries):
+        try:
+            success = download_file(
+                hostname=model_storage_config["hostname"],
+                port=int(model_storage_config["ftp_port"]),
+                user="modyn",
+                password="modyn",
+                remote_file_path=remote_path,
+                local_file_path=model_path,
+                callback=get_pretrained_model_callback(logger),
+                checksum=checksum,
+            )
+
+            if not success and num_try < tries - 1:
+                logger.error("Download finished without exception but checksums did not match, retrying")
+                continue
+        # Retry mechanism requires generic exception
+        except Exception as ex:  # pylint: disable=broad-exception-caught
+            logger.error("Caught exception while downloading file.")
+            logger.error(ex)
+            if num_try < tries - 1:
+                logger.warning("Trying again")
+                continue
+
+            logger.error("Tried enough times.")
+            raise
+
+        break
 
     if not success:
         logger.error("Checksums did not match, evaluation cannot be started.")
         return None
 
-    delete_file(
-        hostname=model_storage_config["hostname"],
-        port=int(model_storage_config["ftp_port"]),
-        user="modyn",
-        password="modyn",
-        remote_file_path=pathlib.Path(remote_path),
-    )
+    for num_try in range(tries):
+        try:
+            delete_file(
+                hostname=model_storage_config["hostname"],
+                port=int(model_storage_config["ftp_port"]),
+                user="modyn",
+                password="modyn",
+                remote_file_path=pathlib.Path(remote_path),
+            )
+        except Exception as ex:  # pylint: disable=broad-exception-caught
+            logger.error("Caught exception while deleting file.")
+            logger.error(ex)
+            if num_try < tries - 1:
+                logger.warning("Trying again")
+                continue
+
+            logger.error("Tried enough times.")
+            raise
+
+        break
 
     logger.info(f"Successfully downloaded trained model to {model_path}.")
 
