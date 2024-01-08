@@ -119,7 +119,7 @@ class TrainerServerGRPCServicer:
             with self._lock:
                 training_id = self._next_training_id
                 self._next_training_id += 1
-                
+
             pretrained_model_path = download_trained_model(
                 logger=logger,
                 model_storage_config=self._config["model_storage"],
