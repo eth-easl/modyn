@@ -246,7 +246,8 @@ class OnlineDataset(IterableDataset):
             self._partition_valid_until[partition_id] = -1
             del self._thread_data_container[partition_id]
 
-        gc.collect()
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            gc.collect()
 
     def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
         assert self._start_prefetch_lock is not None
