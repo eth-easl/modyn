@@ -173,15 +173,17 @@ class PytorchEvaluator:
                 self._num_samples += batch_size
 
         if len(y_true) > 0:
-            if self._contains_holistic_metric:
-                y_true = torch.cat(y_true)
-                y_score = torch.cat(y_score)
+            assert self._contains_holistic_metric  # We only track y_true in case of holistic metrics
+            y_true = torch.cat(y_true)
+            y_score = torch.cat(y_score)
 
             for metric in self._metrics:
                 if isinstance(metric, AbstractHolisticMetric):
                     metric.evaluate_dataset(y_true, y_score, self._num_samples)
 
-                self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+        # We do this since we might also have just non-holistic metrics, in which case len(y_true) always is 0
+        for metric in self._metrics:
+            self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
 
         self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
 
