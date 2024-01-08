@@ -3,6 +3,7 @@ import hashlib
 import importlib
 import importlib.util
 import inspect
+import json
 import logging
 import math
 import os
@@ -101,6 +102,34 @@ def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> 
         return True
     except grpc.FutureTimeoutError:
         return False
+
+
+def grpc_common_config() -> list[Any]:
+    return [
+        ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+        ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+        (
+            "grpc.service_config",
+            json.dumps(
+                {
+                    "methodConfig": [
+                        {
+                            "name": [{}],
+                            "retryPolicy": {
+                                "maxAttempts": 5,
+                                "initialBackoff": "0.5s",
+                                "maxBackoff": "10s",
+                                "backoffMultiplier": 2,
+                                "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE_EXCEEDED"],
+                            },
+                        }
+                    ]
+                }
+            ),
+        ),
+        ("grpc.keepalive_permit_without_calls", True),
+        ("grpc.keepalive_time_ms", 2 * 60 * 60 * 1000),
+    ]
 
 
 def validate_timestr(timestr: str) -> bool:
