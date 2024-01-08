@@ -123,9 +123,9 @@ class CriteoLocalDataset(IterableDataset):
         pathlist = sorted(Path(self._criteo_path).glob("**/*.bin"))
         self._info("Paths globbed", worker_id)
 
-        def split(a, n):
-            k, m = divmod(len(a), n)
-            return (a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n))
+        def split(list_to_split: list, split_every: int) -> Any:
+            k, m = divmod(len(list_to_split), split_every)
+            return (list_to_split[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(split_every))
 
         pathgen = split(pathlist, num_workers)
         worker_paths = next(x for i, x in enumerate(pathgen) if i == worker_id)

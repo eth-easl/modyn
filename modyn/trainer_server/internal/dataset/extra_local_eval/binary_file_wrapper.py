@@ -2,6 +2,7 @@
 
 """Binary file wrapper."""
 import os
+from typing import Literal
 
 
 class BinaryFileWrapper:
@@ -14,7 +15,7 @@ class BinaryFileWrapper:
     offsetting the required number of bytes.
     """
 
-    def __init__(self, file_path: str, byteorder: str, record_size: int, label_size: int):
+    def __init__(self, file_path: str, byteorder: Literal["little", "big"], record_size: int, label_size: int):
         """Init binary file wrapper.
 
         Args:
