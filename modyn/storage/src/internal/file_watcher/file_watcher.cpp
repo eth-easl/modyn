@@ -242,7 +242,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 
     if (ignore_last_timestamp == 0) {
       files_for_insertion.reserve(unknown_files.size());
-      auto logger = spdlog::default_logger(); // we cannot use SPDLOG_ERROR inside the lambda below
+      auto logger = spdlog::default_logger();  // we cannot use SPDLOG_ERROR inside the lambda below
 
       std::copy_if(unknown_files.begin(), unknown_files.end(), std::back_inserter(files_for_insertion),
                    [&filesystem_wrapper, &timestamp, &logger](const std::string& file_path) {
