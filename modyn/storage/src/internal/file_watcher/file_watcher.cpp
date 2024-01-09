@@ -211,7 +211,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     // 1. Batch files into chunks
 
     const int64_t num_paths = file_paths_end - file_paths_begin;
-    const int64_t num_chunks = num_paths / sample_dbinsertion_batchsize;
+    int64_t num_chunks = num_paths / sample_dbinsertion_batchsize;
 
     if (num_paths % sample_dbinsertion_batchsize != 0) {
       ++num_chunks;
@@ -221,7 +221,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 
     for (int64_t i = 0; i < num_chunks; ++i) {
       SPDLOG_INFO("Handling chunk {}/{}", i + 1, num_chunks);
-      auto start_it = file_paths_begin + i * static_cast<uint64_t>(sample_dbinsertion_batchsize);
+      auto start_it = file_paths_begin + i * sample_dbinsertion_batchsize;
       auto end_it = i < num_chunks - 1 ? start_it + sample_dbinsertion_batchsize : file_paths_end;
       std::vector<std::string> chunk_paths(start_it, end_it);
       const std::string known_files_query = fmt::format(
