@@ -27,6 +27,7 @@ fi
 
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE --build-arg MODYN_DEP_BUILDTYPE=$DEPBUILDTYPE .
 docker build -t modynbase -f docker/Base/Dockerfile .
+# APEX docker build -t modynapex -f docker/Apex/Dockerfile .
 docker compose up --build tests --abort-on-container-exit --exit-code-from tests
 
 exitcode=$?
