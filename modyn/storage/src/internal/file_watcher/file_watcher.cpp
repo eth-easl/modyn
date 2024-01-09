@@ -242,14 +242,15 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 
     if (ignore_last_timestamp == 0) {
       files_for_insertion.reserve(unknown_files.size());
+      auto logger = spdlog::default_logger(); // we cannot use SPDLOG_ERROR inside the lambda below
 
       std::copy_if(unknown_files.begin(), unknown_files.end(), std::back_inserter(files_for_insertion),
-                   [&filesystem_wrapper, &timestamp](const std::string& file_path) {
+                   [&filesystem_wrapper, &timestamp, &logger](const std::string& file_path) {
                      try {
                        const int64_t& modified_time = filesystem_wrapper->get_modified_time(file_path);
                        return modified_time >= timestamp || timestamp == 0;
                      } catch (const std::exception& mod_e) {
-                       SPDLOG_ERROR(
+                       logger->error(
                            fmt::format("Error while checking modified time of file {}. It could be that a deletion "
                                        "request is currently running: {}",
                                        file_path, mod_e.what()));
