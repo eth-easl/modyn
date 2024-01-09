@@ -443,6 +443,7 @@ class Supervisor:
                 self._run_training(trigger_id)  # Blocks until training is done.
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
+
             self.status_bar.update(demo="Handling triggers")
 
             # If no other trigger is coming in this batch,
