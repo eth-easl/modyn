@@ -1,4 +1,8 @@
-FROM modynbase:latest
+# FROM modynapex:latest as apex-image
+
+FROM modynbase:latest AS modelstorageimage 
+
+# COPY --from=apex-image /opt/mamba/envs/modyn /opt/mamba/envs/modyn
 
 RUN chmod a+x /src/modyn/model_storage/modyn-model-storage
 RUN mkdir -p /tmp/models

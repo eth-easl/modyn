@@ -1,15 +1,8 @@
-FROM modyndependencies:latest as apex-image
-# We rely on modyndependencies so we only need to re-install apex when the dependencies change, not when the source code of Modyn changes
-# Uncomment the following lines to install apex
-
-# TODO(#104): Make this easily configurable here
-# RUN mamba run -n modyn pip install packaging ninja
-# RUN git clone https://github.com/NVIDIA/apex ./apex
-# RUN mamba run -v -n modyn pip install -v --no-build-isolation --no-cache-dir --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./apex
+# FROM modynapex:latest as apex-image
 
 FROM modynbase:latest AS trainerserver-image
 
-COPY --from=apex-image /opt/mamba/envs/modyn /opt/mamba/envs/modyn
+# COPY --from=apex-image /opt/mamba/envs/modyn /opt/mamba/envs/modyn
 RUN chmod a+x /src/modyn/trainer_server/modyn-trainer-server
 RUN mkdir -p /tmp/offline_dataset
 RUN chown appuser /tmp/offline_dataset

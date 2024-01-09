@@ -7,6 +7,7 @@ pushd $PARENT_DIR
 docker compose down
 docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
 docker build -t modynbase -f docker/Base/Dockerfile .
+# APEX docker build -t modynapex -f docker/Apex/Dockerfile .
 docker compose up -d --build supervisor
 
 popd
