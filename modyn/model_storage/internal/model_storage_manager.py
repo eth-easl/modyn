@@ -1,3 +1,4 @@
+import gc
 import json
 import logging
 import pathlib
@@ -51,24 +52,33 @@ class ModelStorageManager:
         # split the model (stored under the "model" key) from metadata.
         assert "model" in checkpoint
         state_dict = checkpoint["model"]
+
         local_model_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.model"
         model_path = self._storage_dir / local_model_filename
 
         # handle the new model according to the model storage policy. If it is stored incrementally, we receive
         # the model id of the parent.
         parent_id = self._handle_new_model(pipeline_id, trigger_id, state_dict, model_path, policy)
-        checkpoint.pop("model")
+        del state_dict
+        del checkpoint["model"]
 
         # now checkpoint only contains optimizer state and metadata.
         local_metadata_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.metadata.zip"
         metadata_path = self._storage_dir / local_metadata_filename
         torch.save(checkpoint, metadata_path)
+        del checkpoint
+        self._clear_cuda_mem()
 
         # add the new model to the database.
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return database.add_trained_model(
                 pipeline_id, trigger_id, local_model_filename, local_metadata_filename, parent_id
             )
+
+    def _clear_cuda_mem(self) -> None:
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     def _handle_new_model(
         self,
@@ -90,7 +100,6 @@ class ModelStorageManager:
         Returns:
             int: if the model is stored incrementally, the parent model id is returned.
         """
-
         # check whether we must apply the incremental storage strategy or the full model strategy.
         if policy.incremental_model_strategy and (
             policy.full_model_interval is None or trigger_id % policy.full_model_interval != 0
@@ -103,11 +112,18 @@ class ModelStorageManager:
                 # finally store the model delta.
                 policy.incremental_model_strategy.store_model(state_dict, parent_model_state, model_path)
 
+                del parent_model_state
+                del state_dict
+                self._clear_cuda_mem()
+
                 return parent_model_id
             logger.warning("Previous model is not available! Storing full model...")
 
         # store the model in its entirety.
         policy.full_model_strategy.store_model(state_dict, model_path)
+
+        del state_dict
+        self._clear_cuda_mem()
         return None
 
     def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
@@ -129,10 +145,13 @@ class ModelStorageManager:
         if not model.parent_model:
             # base case: we can load a fully stored model.
             model_state = self._get_base_model_state(model.pipeline_id)
+            self._clear_cuda_mem()
             return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
         # recursive step: we recurse to load the model state of the parent model.
         model_state = self._reconstruct_model_state(model.parent_model, policy)
+
+        self._clear_cuda_mem()
 
         # we apply the incremental strategy to load our model state.
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
@@ -153,7 +172,9 @@ class ModelStorageManager:
         assert hasattr(model_module, model_class_name), f"Model {model_class_name} not available."
 
         model_handler = getattr(model_module, model_class_name)
-        return model_handler(json.loads(model_config), "cpu", amp).model.state_dict()
+        # TODO(create issue): remove cuda and fix GPU loading for DLRM (also apex for model storage)
+        device = "cuda:1" if torch.cuda.is_available() else "cpu"
+        return model_handler(json.loads(model_config), device, amp).model.state_dict()
 
     def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
         """
@@ -209,6 +230,8 @@ class ModelStorageManager:
         if metadata:
             metadata_dict = torch.load(self._storage_dir / model.metadata_path)
             model_dict.update(metadata_dict)
+            del metadata_dict
+            self._clear_cuda_mem()
 
         return model_dict
 
