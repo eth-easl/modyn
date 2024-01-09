@@ -114,7 +114,16 @@ if [ "$IS_MAC" != true ]; then
 
     use_apex () {
         cp $PARENT_DIR/docker/Trainer_Server/Dockerfile $PARENT_DIR/docker/Trainer_Server/Dockerfile.original
-        sed -i 's/# RUN/RUN/' $PARENT_DIR/docker/Trainer_Server/Dockerfile # Enable build of Apex
+        # Enable apex in Dockerfiles
+        sed -i 's/# FROM/FROM/' $PARENT_DIR/docker/Evaluator/Dockerfile # Evaluator
+        sed -i 's/# COPY/COPY/' $PARENT_DIR/docker/Evaluator/Dockerfile # Evaluator
+        sed -i 's/# FROM/FROM/' $PARENT_DIR/docker/Trainer_Server/Dockerfile # Trainer Server
+        sed -i 's/# COPY/COPY/' $PARENT_DIR/docker/Trainer_Server/Dockerfile # Trainer Server
+        sed -i 's/# FROM/FROM/' $PARENT_DIR/docker/Model_Storage/Dockerfile # Model Storage
+        sed -i 's/# COPY/COPY/' $PARENT_DIR/docker/Model_Storage/Dockerfile # Model Storage
+
+        sed -i 's/# APEX//' $PARENT_DIR/scripts/run_integrationtests.sh
+        sed -i 's/# APEX//' $PARENT_DIR/scripts/run_modyn.sh
 
         runtime=$(docker info | grep "Default Runtime")
         if [[ $runtime != *"nvidia"* ]]; then
