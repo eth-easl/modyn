@@ -522,11 +522,7 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(
-        self,
-        model_id: int,
-        pipeline_config: dict,
-        pipeline_id: Optional[int] = None,
-        trigger_id: Optional[int] = None,
+        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None
     ) -> dict[int, EvaluationStatusTracker]:
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
