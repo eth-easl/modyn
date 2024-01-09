@@ -210,8 +210,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 
     // 1. Batch files into chunks
 
-    uint64_t num_paths = file_paths_end - file_paths_begin;
-    uint64_t num_chunks = num_paths / sample_dbinsertion_batchsize;
+    const int64_t num_paths = file_paths_end - file_paths_begin;
+    const int64_t num_chunks = num_paths / sample_dbinsertion_batchsize;
 
     if (num_paths % sample_dbinsertion_batchsize != 0) {
       ++num_chunks;
@@ -219,12 +219,12 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 
     std::vector<std::string> unknown_files;
 
-    for (uint64_t i = 0; i < num_chunks; ++i) {
+    for (int64_t i = 0; i < num_chunks; ++i) {
       SPDLOG_INFO("Handling chunk {}/{}", i + 1, num_chunks);
       auto start_it = file_paths_begin + i * static_cast<uint64_t>(sample_dbinsertion_batchsize);
       auto end_it = i < num_chunks - 1 ? start_it + sample_dbinsertion_batchsize : file_paths_end;
       std::vector<std::string> chunk_paths(start_it, end_it);
-      std::string known_files_query = fmt::format(
+      const std::string known_files_query = fmt::format(
           "SELECT path FROM files WHERE path IN ('{}') AND dataset_id = :dataset_id", fmt::join(chunk_paths, "','"));
       std::vector<std::string> known_paths(sample_dbinsertion_batchsize);
       SPDLOG_INFO("Chunk: {}/{} prepared query", i + 1, num_chunks);
@@ -240,7 +240,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     SPDLOG_INFO("Found {} unknwon files!", unknown_files.size());
     std::vector<std::string> files_for_insertion;
 
-    if (!ignore_last_timestamp) {
+    if (ignore_last_timestamp == 0) {
       files_for_insertion.reserve(unknown_files.size());
 
       std::copy_if(unknown_files.begin(), unknown_files.end(), std::back_inserter(files_for_insertion),

@@ -233,7 +233,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       return;
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
-    bool force_no_mt = true;
+    const bool force_no_mt = true;
+    // TODO (MaxiBoether): create issue / think about it
     SPDLOG_ERROR("Multithreaded retrieval of new samples is currently broken, disabling...");
 
     if (force_no_mt || disable_multithreading_) {
@@ -272,15 +273,15 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
 
-    uint64_t num_paths = end - begin;
+    const int64_t num_paths = end - begin;
     // TODO(MaxiBoether): use sample_dbinsertion_batchsize or sth instead of 1 mio
-    uint64_t chunk_size = static_cast<uint64_t>(1000000);
-    uint64_t num_chunks = num_paths / chunk_size;
+    const auto chunk_size = static_cast<int64_t>(1000000);
+    int64_t num_chunks = num_paths / chunk_size;
     if (num_paths % chunk_size != 0) {
       ++num_chunks;
     }
 
-    for (uint64_t i = 0; i < num_chunks; ++i) {
+    for (int64_t i = 0; i < num_chunks; ++i) {
       auto start_it = begin + i * chunk_size;
       auto end_it = i < num_chunks - 1 ? start_it + chunk_size : end;
 
@@ -324,8 +325,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             response.add_timestamps(record.column_2);
           }
 
-          /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}", response.keys_size(),
-                      response.labels_size(), records.size()); */
+          /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}",
+             response.keys_size(), response.labels_size(), records.size()); */
 
           records.clear();
 
@@ -357,7 +358,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             // Now, delete first sample_batch_size elements from vector as we are sending them
             record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size);
 
-            //SPDLOG_INFO("New record_buf size = {}", record_buf.size());
+            // SPDLOG_INFO("New record_buf size = {}", record_buf.size());
 
             ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size,
                    "The record buffer should never have more than 2*sample_batch_size elements!");
@@ -383,8 +384,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           response.add_labels(record.column_1);
           response.add_timestamps(record.column_2);
         }
-        /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}", response.keys_size(),
-                    response.labels_size(), record_buf.size()); */
+        /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, record_buf.size = {}",
+           response.keys_size(), response.labels_size(), record_buf.size()); */
         record_buf.clear();
         {
           const std::lock_guard<std::mutex> lock(*writer_mutex);
