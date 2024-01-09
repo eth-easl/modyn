@@ -9,9 +9,9 @@ if [[ -f "${CONFIGURED_FILE}" ]]; then
     exit 0
 fi
 
-CUDA_VERSION=11.7
+CUDA_VERSION=12.1
 # Make sure to use devel image!
-CUDA_CONTAINER=nvidia/cuda:11.7.1-devel-ubuntu22.04
+CUDA_CONTAINER=nvidia/cuda:12.1.1-devel-ubuntu22.04
 # container used in CI - cannot use cuda because it is too big.
 CI_CONTAINER=python:3.10-slim
 
@@ -71,8 +71,11 @@ if [ "$IS_MAC" != true ]; then
         USING_CUDA=true
         # Fix environment.yml
         sed -i '/cpuonly/d' $PARENT_DIR/environment.yml # Delete cpuonly
-        sed -i "/nvidia::cudatoolkit/c\  - nvidia::cudatoolkit=$CUDA_VERSION" $PARENT_DIR/environment.yml # Enable cudatoolkit
         sed -i "/pytorch-cuda/c\  - pytorch::pytorch-cuda=$CUDA_VERSION" $PARENT_DIR/environment.yml # Enable pytorch-cuda
+        sed -i "/nvidia::cuda-libraries-dev/c\  - nvidia::cuda-libraries-dev=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
+        sed -i "/nvidia::cuda-nvcc/c\  - nvidia::cuda-nvcc=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
+        sed -i "/nvidia::cuda-nvtx/c\  - nvidia::cuda-nvtx=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
+        sed -i "/nvidia::cuda-cupti/c\  - nvidia::cuda-cupti=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
 
         # Fix $PARENT_DIR/docker-compose.yml
         startLine="$(grep -n "CUDASTART" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
