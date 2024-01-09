@@ -7,8 +7,6 @@ from typing import Any, Optional
 
 import enlighten
 from modyn.common.benchmark import Stopwatch
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models.triggers import Trigger as MetadataDBTrigger
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -49,10 +47,6 @@ class Supervisor:
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
         evaluation_matrix: bool = False,
-        matrix_pipeline: int = -1,
-        matrix_gpus: list[str] = [""],
-        matrix_dop: int = 0,
-        noeval: bool = False,
     ) -> None:
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -63,10 +57,6 @@ class Supervisor:
         self.pipeline_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
         self.evaluation_matrix = evaluation_matrix
-        self.matrix_pipeline = matrix_pipeline if matrix_pipeline is not None else -1
-        self.matrix_gpus = matrix_gpus
-        self.matrix_dop = matrix_dop
-        self.noeval = noeval
         self.trained_models: list[int] = []
         self.triggers: list[int] = []
 
@@ -506,7 +496,7 @@ class Supervisor:
         self.triggers.append(trigger_id)
 
         # Start evaluation
-        if "evaluation" in self.pipeline_config and not self.evaluation_matrix and not self.noeval:
+        if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
             # TODO(#300) Add evaluator to pipeline log
             evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
             self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
@@ -559,130 +549,16 @@ class Supervisor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     def build_evaluation_matrix(self) -> None:
-        # 1. Get all triggers for pipeline
-        pipeline = self.matrix_pipeline if self.matrix_pipeline > -1 else self.pipeline_id
-
-        with MetadataDatabaseConnection(self.modyn_config) as database:
-            db_triggers = (
-                database.session.query(
-                    MetadataDBTrigger.trigger_id,
-                )
-                .filter(MetadataDBTrigger.pipeline_id == pipeline)
-                .all()
-            )
-            triggers = [el[0] for el in db_triggers]
-        logger.info(f"Got {len(triggers)} triggers for evaluation pipeline {pipeline}")
-        # 2. For all models, evaluate on all triggers
-        # Round robin between GPUs, when one finishes, start the next
         self.pipeline_log["evaluation_matrix"] = {}
-        device_idx = 0
-
-        running_evals = []
-        eval_id_to_trigger = {}
-        eval_id_to_model = {}
-
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
-            for trigger in triggers:
-                device = self.matrix_gpus[device_idx]
-                device_idx = (device_idx + 1) % len(self.matrix_gpus)
+            for trigger in self.triggers:
                 logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
-                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, pipeline, trigger, device)
-                assert len(evaluations) == 1
-                eval_id = next(iter(evaluations))
-                running_evals.append((eval_id, evaluations[eval_id]))
-                eval_id_to_trigger[eval_id] = trigger
-                eval_id_to_model[eval_id] = model
-
-                if len(running_evals) >= self.matrix_dop:
-                    # Wait for one eval to finish before starting the next one
-                    one_eval_done = False
-                    while not one_eval_done:
-                        sleep(5)
-                        for eval_id, tracker in list(running_evals):  # iterate over copy to modify on the fly
-                            eval_running, eval_exception = self.grpc.is_evaluation_running(eval_id)
-                            done_trigger_id = eval_id_to_trigger[eval_id]
-                            done_model_id = eval_id_to_model[eval_id]
-
-                            if eval_exception:
-                                logger.info("Exception for evaluation {eval_id}, restarting")
-                                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix (AGAIN)")
-
-                                device = self.matrix_gpus[device_idx]
-                                device_idx = (device_idx + 1) % len(self.matrix_gpus)
-
-                                running_evals = [
-                                    (eid, tracker) for (eid, tracker) in running_evals if eid != eval_id
-                                ]  # remove from running evals
-                                evaluations = self.grpc.start_evaluation(
-                                    done_model_id, self.pipeline_config, pipeline, done_trigger_id, device
-                                )
-                                assert len(evaluations) == 1
-                                eval_id = next(iter(evaluations))
-                                running_evals.append((eval_id, evaluations[eval_id]))
-                                eval_id_to_trigger[eval_id] = trigger
-                                eval_id_to_model[eval_id] = model
-
-                                continue
-
-                            if not eval_running:
-                                logger.info(
-                                    f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done."
-                                )
-                                one_eval_done = True
-                                running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id]
-                                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
-                                self.grpc.store_evaluation_results([eval_result_writer], {eval_id: tracker})
-                                self.pipeline_log["evaluation_matrix"][done_model_id][
-                                    done_trigger_id
-                                ] = eval_result_writer.results
-                                self._persist_pipeline_log()
-
-                    logger.info("At least evaluation finished, continuing.")
-
-        # all copy this deadline induced copy pasta is horrible and needs to be cleaned up with a separate eval matrix PR
-        while len(list(running_evals)) > 0:
-            one_eval_done = False
-            while not one_eval_done:
-                sleep(5)
-                for eval_id, tracker in list(running_evals):  # iterate over copy to modify on the fly
-                    eval_running, eval_exception = self.grpc.is_evaluation_running(eval_id)
-                    done_trigger_id = eval_id_to_trigger[eval_id]
-                    done_model_id = eval_id_to_model[eval_id]
-
-                    if eval_exception:
-                        logger.info("Exception for evaluation {eval_id}, restarting")
-                        logger.info(f"Evaluating model {model} on trigger {trigger} for matrix (AGAIN)")
-
-                        device = self.matrix_gpus[device_idx]
-                        device_idx = (device_idx + 1) % len(self.matrix_gpus)
-
-                        running_evals = [
-                            (eid, tracker) for (eid, tracker) in running_evals if eid != eval_id
-                        ]  # remove from running evals
-                        evaluations = self.grpc.start_evaluation(
-                            done_model_id, self.pipeline_config, pipeline, done_trigger_id, device
-                        )
-                        assert len(evaluations) == 1
-                        eval_id = next(iter(evaluations))
-                        running_evals.append((eval_id, evaluations[eval_id]))
-                        eval_id_to_trigger[eval_id] = trigger
-                        eval_id_to_model[eval_id] = model
-
-                        continue
-
-                    if not eval_running:
-                        logger.info(
-                            f"Evaluation {eval_id} on trigger {done_trigger_id} and model {done_model_id} done."
-                        )
-                        one_eval_done = True
-                        running_evals = [(eid, tracker) for (eid, tracker) in running_evals if eid != eval_id]
-                        eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
-                        self.grpc.store_evaluation_results([eval_result_writer], {eval_id: tracker})
-                        self.pipeline_log["evaluation_matrix"][done_model_id][
-                            done_trigger_id
-                        ] = eval_result_writer.results
-                        self._persist_pipeline_log()
+                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
+                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
+                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
     def pipeline(self) -> None:
         start_timestamp = self.grpc.get_time_at_storage()
@@ -696,7 +572,7 @@ class Supervisor:
         if self.experiment_mode:
             self.replay_data()
 
-            if self.evaluation_matrix and not self.noeval:
+            if self.evaluation_matrix:
                 self.build_evaluation_matrix()
         else:
             self.wait_for_new_data(start_timestamp)
