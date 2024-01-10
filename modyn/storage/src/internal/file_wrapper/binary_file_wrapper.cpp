@@ -38,10 +38,10 @@ int64_t BinaryFileWrapper::get_label(uint64_t index) {
 
   const uint64_t label_start = index * record_size_;
 
-  get_stream()->seekg(label_start, std::ios::beg);
+  get_stream()->seekg(static_cast<int64_t>(label_start), std::ios::beg);
 
   std::vector<unsigned char> label_vec(label_size_);
-  get_stream()->read(reinterpret_cast<char*>(label_vec.data()), label_size_);
+  get_stream()->read(reinterpret_cast<char*>(label_vec.data()), static_cast<int64_t>(label_size_));
 
   return int_from_bytes(label_vec.data(), label_vec.data() + label_size_);
 }
@@ -62,10 +62,10 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
   labels.reserve(num_samples);
 
   for (uint64_t i = 0; i < num_samples; ++i) {
-    get_stream()->seekg(i * record_size_, std::ios::beg);
+    get_stream()->seekg(static_cast<int64_t>(i * record_size_), std::ios::beg);
 
     std::vector<unsigned char> label_vec(label_size_);
-    get_stream()->read(reinterpret_cast<char*>(label_vec.data()), label_size_);
+    get_stream()->read(reinterpret_cast<char*>(label_vec.data()), static_cast<int64_t>(label_size_));
 
     labels.push_back(int_from_bytes(label_vec.data(), label_vec.data() + label_size_));
   }
@@ -77,7 +77,7 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
  * Offset calculation to retrieve the data of a sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t start, uint64_t end) {
-  ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
+  ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   const uint64_t num_samples = end - start + 1;
 
@@ -85,10 +85,10 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t 
   uint64_t record_start;
   for (uint64_t index = 0; index < num_samples; ++index) {
     record_start = (start + index) * record_size_;
-    get_stream()->seekg(record_start + label_size_, std::ios::beg);
+    get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
+    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));
 
     samples[index] = sample_vec;
   }
@@ -104,10 +104,10 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(uint64_t index) {
 
   const uint64_t record_start = index * record_size_;
 
-  get_stream()->seekg(record_start + label_size_, std::ios::beg);
+  get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
 
   std::vector<unsigned char> sample_vec(sample_size_);
-  get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
+  get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));
 
   return sample_vec;
 }
@@ -123,14 +123,14 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   std::vector<std::vector<unsigned char>> samples;
   samples.reserve(indices.size());
 
-  int64_t record_start = 0;
+  uint64_t record_start = 0;
   for (const uint64_t index : indices) {
     record_start = index * record_size_;
 
-    get_stream()->seekg(record_start + label_size_, std::ios::beg);
+    get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
-    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), sample_size_);
+    get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));
 
     samples.push_back(sample_vec);
   }
