@@ -225,7 +225,7 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
                           sample_placeholders);
         session << sql, soci::into(samples_to_delete), soci::use(file_id);
 
-        std::vector<int64_t> sample_ids_to_delete_ids(samples_to_delete + 1);
+        std::vector<uint64_t> sample_ids_to_delete_ids(samples_to_delete + 1);
         sql = fmt::format("SELECT sample_id FROM samples WHERE file_id = :file_id AND sample_id IN {}",
                           sample_placeholders);
         session << sql, soci::into(sample_ids_to_delete_ids), soci::use(file_id);

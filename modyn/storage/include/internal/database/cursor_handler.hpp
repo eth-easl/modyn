@@ -16,6 +16,10 @@ struct SampleRecord {
   int64_t column_2;
 };
 
+/*
+Implements a server-side cursor on Postgres and emulates it for sqlite.
+For a given query, results are returned (using the yield_per function) buffered, to avoid filling up memory.
+*/
 class CursorHandler {
  public:
   CursorHandler(soci::session& session, DatabaseDriver driver, const std::string& query, std::string cursor_name,
@@ -25,6 +29,13 @@ class CursorHandler {
         query_{query},
         cursor_name_{std::move(cursor_name)},
         number_of_columns_{number_of_columns} {
+    // ncol = 0 or = 1 means that we only return the first column in the result of the query (typically, the ID)
+    // ncol = 2 returns the second column as well (typically what you want if you want an id + some property)
+    // ncol = 3 returns the third as well
+    // This could be generalized but currently is hardcoded.
+    // A SampleRecord is populated and (as can be seen above) only has three properties per row.
+    ASSERT(number_of_columns <= 3 && number_of_columns >= 0, "We currently only support 0 - 3 columns.");
+
     switch (driver_) {
       case DatabaseDriver::POSTGRESQL: {
         auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session_.get_backend());

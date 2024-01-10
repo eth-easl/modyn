@@ -186,7 +186,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  std::vector<int64_t> label_indices{0, 1, 2, 3};
+  std::vector<uint64_t> label_indices{0, 1, 2, 3};
   std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(label_indices);
   ASSERT_EQ(samples.size(), 4);
   ASSERT_EQ((samples)[0][0], 12);
@@ -229,7 +229,7 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
 
-  const std::vector<int64_t> label_indices{0, 1, 2, 3};
+  const std::vector<uint64_t> label_indices{0, 1, 2, 3};
 
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
 }

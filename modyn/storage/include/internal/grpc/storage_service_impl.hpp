@@ -409,7 +409,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     try {
       const uint64_t num_keys = sample_keys.size();
       std::vector<int64_t> sample_labels(num_keys);
-      std::vector<int64_t> sample_indices(num_keys);
+      std::vector<uint64_t> sample_indices(num_keys);
       std::vector<int64_t> sample_fileids(num_keys);
       const std::string sample_query = fmt::format(
           "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER "
@@ -441,8 +441,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
         if (sample_fileid != current_file_id) {
           // 1. Prepare response
-          const std::vector<int64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
-                                                  sample_indices.begin() + static_cast<int64_t>(sample_idx));
+          const std::vector<uint64_t> file_indexes(
+              sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+              sample_indices.begin() + static_cast<int64_t>(sample_idx));
           std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
 
           // Protobuf expects the data as std::string...
@@ -478,7 +479,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
 
       // Send leftovers
-      const std::vector<int64_t> file_indexes(sample_indices.begin() + current_file_start_idx, sample_indices.end());
+      const std::vector<uint64_t> file_indexes(sample_indices.begin() + current_file_start_idx, sample_indices.end());
       const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
       // Protobuf expects the data as std::string...
       std::vector<std::string> stringified_data;

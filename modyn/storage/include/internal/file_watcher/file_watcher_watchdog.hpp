@@ -22,15 +22,12 @@ class FileWatcherWatchdog {
         stop_file_watcher_watchdog_{stop_file_watcher_watchdog},
         request_storage_shutdown_{request_storage_shutdown},
         storage_database_connection_{StorageDatabaseConnection(config_)} {
-    if (stop_file_watcher_watchdog_ == nullptr) {
-      FAIL("stop_file_watcher_watchdog_ is nullptr.");
-    }
+    ASSERT(stop_file_watcher_watchdog_ != nullptr, "stop_file_watcher_watchdog_ is nullptr.");
+    ASSERT(config_["storage"]["insertion_threads"], "Config does not contain insertion_threads");
 
     if (config_["storage"]["file_watcher_watchdog_sleep_time_s"]) {
       file_watcher_watchdog_sleep_time_s_ = config_["storage"]["file_watcher_watchdog_sleep_time_s"].as<int64_t>();
     }
-
-    ASSERT(config_["storage"]["insertion_threads"], "Config does not contain insertion_threads");
   }
   void watch_file_watcher_threads();
   void start_file_watcher_thread(int64_t dataset_id);

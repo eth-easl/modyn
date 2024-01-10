@@ -34,10 +34,7 @@ class FileWatcher {
         insertion_threads_{insertion_threads},
         disable_multithreading_{insertion_threads <= 1},
         storage_database_connection_{StorageDatabaseConnection(config)} {
-    if (stop_file_watcher == nullptr) {
-      FAIL("stop_file_watcher_ is nullptr.");
-    }
-
+    ASSERT(stop_file_watcher != nullptr, "stop_file_watcher_ is nullptr.");
     SPDLOG_INFO("Initializing file watcher for dataset {}.", dataset_id_);
 
     if (config_["storage"]["sample_dbinsertion_batchsize"]) {

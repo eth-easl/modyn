@@ -21,7 +21,7 @@ int64_t BinaryFileWrapper::int_from_bytes(const unsigned char* begin, const unsi
   return value;
 }
 
-int64_t BinaryFileWrapper::get_number_of_samples() { return file_size_ / record_size_; }
+uint64_t BinaryFileWrapper::get_number_of_samples() { return file_size_ / record_size_; }
 
 void BinaryFileWrapper::validate_file_extension() {
   const std::string extension = file_path_.substr(file_path_.find_last_of('.') + 1);
@@ -33,10 +33,10 @@ void BinaryFileWrapper::validate_file_extension() {
 /*
  * Offset calculation to retrieve the label of a sample.
  */
-int64_t BinaryFileWrapper::get_label(int64_t index) {
-  ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
+int64_t BinaryFileWrapper::get_label(uint64_t index) {
+  ASSERT(index < get_number_of_samples(), "Invalid index");
 
-  const int64_t label_start = index * record_size_;
+  const uint64_t label_start = index * record_size_;
 
   get_stream()->seekg(label_start, std::ios::beg);
 
@@ -57,11 +57,11 @@ std::ifstream* BinaryFileWrapper::get_stream() {
  * Offset calculation to retrieve all the labels of a sample.
  */
 std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
-  const int64_t num_samples = get_number_of_samples();
+  const uint64_t num_samples = get_number_of_samples();
   std::vector<int64_t> labels = std::vector<int64_t>();
   labels.reserve(num_samples);
 
-  for (int64_t i = 0; i < num_samples; i++) {
+  for (uint64_t i = 0; i < num_samples; ++i) {
     get_stream()->seekg(i * record_size_, std::ios::beg);
 
     std::vector<unsigned char> label_vec(label_size_);
@@ -76,14 +76,14 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
 /*
  * Offset calculation to retrieve the data of a sample interval.
  */
-std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t start, int64_t end) {
+std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t start, uint64_t end) {
   ASSERT(start >= 0 && end >= start && end <= get_number_of_samples(), "Invalid indices");
 
-  const int64_t num_samples = end - start + 1;
+  const uint64_t num_samples = end - start + 1;
 
   std::vector<std::vector<unsigned char>> samples(num_samples);
-  int64_t record_start;
-  for (int64_t index = 0; index < num_samples; index++) {
+  uint64_t record_start;
+  for (uint64_t index = 0; index < num_samples; ++index) {
     record_start = (start + index) * record_size_;
     get_stream()->seekg(record_start + label_size_, std::ios::beg);
 
@@ -99,10 +99,10 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(int64_t s
 /*
  * Offset calculation to retrieve the data of a sample.
  */
-std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
-  ASSERT(index >= 0 && index < get_number_of_samples(), "Invalid index");
+std::vector<unsigned char> BinaryFileWrapper::get_sample(uint64_t index) {
+  ASSERT(index < get_number_of_samples(), "Invalid index");
 
-  const int64_t record_start = index * record_size_;
+  const uint64_t record_start = index * record_size_;
 
   get_stream()->seekg(record_start + label_size_, std::ios::beg);
 
@@ -116,16 +116,15 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(int64_t index) {
  * Offset calculation to retrieve the data of a sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<int64_t>& indices) {
-  ASSERT(std::all_of(indices.begin(), indices.end(),
-                     [&](int64_t index) { return index >= 0 && index < get_number_of_samples(); }),
+    const std::vector<uint64_t>& indices) {
+  ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;
   samples.reserve(indices.size());
 
   int64_t record_start = 0;
-  for (const int64_t index : indices) {
+  for (const uint64_t index : indices) {
     record_start = index * record_size_;
 
     get_stream()->seekg(record_start + label_size_, std::ios::beg);
@@ -148,18 +147,15 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
  *
  * See DeleteData in the storage grpc servicer for more details.
  */
-void BinaryFileWrapper::delete_samples(const std::vector<int64_t>& /*indices*/) {}
+void BinaryFileWrapper::delete_samples(const std::vector<uint64_t>& /*indices*/) {}
 
 /*
  * Set the file path of the file wrapper.
  */
 void BinaryFileWrapper::set_file_path(const std::string& path) {
   file_path_ = path;
-  file_size_ = static_cast<int64_t>(filesystem_wrapper_->get_file_size(path));
-
-  if (file_size_ % record_size_ != 0) {
-    FAIL("File size must be a multiple of the record size.");
-  }
+  file_size_ = filesystem_wrapper_->get_file_size(path);
+  ASSERT(file_size_ % record_size_ == 0, "File size must be a multiple of the record size.");
 
   if (stream_->is_open()) {
     stream_->close();

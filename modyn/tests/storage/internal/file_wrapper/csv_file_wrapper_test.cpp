@@ -132,7 +132,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
-  const std::vector<int64_t> indices = {0, 2};
+  const std::vector<uint64_t> indices = {0, 2};
   const std::vector<std::vector<unsigned char>> expected_samples = {
       {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5'},
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n', ',', '3', '5'},
@@ -150,7 +150,7 @@ TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
-  const std::vector<int64_t> indices = {0, 1};
+  const std::vector<uint64_t> indices = {0, 1};
 
   file_wrapper.delete_samples(indices);
 
