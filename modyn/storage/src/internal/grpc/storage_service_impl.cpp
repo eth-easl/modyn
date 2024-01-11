@@ -516,7 +516,7 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, co
                                                       const int64_t start_timestamp, const int64_t end_timestamp) {
   // TODO(#362): We are almost excecuting the same query twice since we first count and then get the data
 
-  const int64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
+  const uint64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
   if (number_of_files == 0) {
     return {};
   }
@@ -559,8 +559,7 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci
                                                                             const int64_t dataset_id,
                                                                             const int64_t start_timestamp,
                                                                             const int64_t end_timestamp,
-                                                                            const int64_t number_of_files) {
-  ASSERT(number_of_files >= 0, "This function should only be called for a non-negative number of files");
+                                                                            const uint64_t number_of_files) {
   std::vector<int64_t> file_ids(number_of_files + 1);
 
   try {

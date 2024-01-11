@@ -70,7 +70,7 @@ class CursorHandler {
   CursorHandler& operator=(const CursorHandler&) = delete;
   CursorHandler(CursorHandler&&) = delete;
   CursorHandler& operator=(CursorHandler&&) = delete;
-  std::vector<SampleRecord> yield_per(int64_t number_of_rows_to_fetch);
+  std::vector<SampleRecord> yield_per(uint64_t number_of_rows_to_fetch);
   void close_cursor();
 
  private:

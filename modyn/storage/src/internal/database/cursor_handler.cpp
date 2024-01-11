@@ -8,7 +8,7 @@
 
 using namespace modyn::storage;
 
-std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_to_fetch) {
+std::vector<SampleRecord> CursorHandler::yield_per(const uint64_t number_of_rows_to_fetch) {
   std::vector<SampleRecord> records;
   check_cursor_initialized();
 

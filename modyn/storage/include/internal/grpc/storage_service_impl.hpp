@@ -528,7 +528,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                  int64_t end_timestamp);
   static std::vector<int64_t> get_file_ids_given_number_of_files(soci::session& session, int64_t dataset_id,
                                                                  int64_t start_timestamp, int64_t end_timestamp,
-                                                                 int64_t number_of_files);
+                                                                 uint64_t number_of_files);
   static int64_t get_dataset_id(soci::session& session, const std::string& dataset_name);
   static std::vector<int64_t> get_file_ids_for_samples(const std::vector<int64_t>& request_keys, int64_t dataset_id,
                                                        soci::session& session);

@@ -43,6 +43,20 @@ In case you want to build extensions or components on your own, you need to crea
 By default, we only build the extensions to avoid downloading the huge gRPC library.
 In case you want to build the storage C++ component, enable `-DMODYN_BUILD_STORAGE=On` when running CMake.
 
+Furthermore, by default, we enable the `-DMODYN_TRY_LOCAL_GRPC` flag.
+This flag checks whether gRPC is available locally on your system and uses this installation for rapid development, instead of rebuilding gRPC from source everytime like in CI.
+In order to install gRPC on your system, you can either use your system's package manager or run the following instructions:
+
+```
+git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
+    cd grpc && mkdir -p cmake/build && cd cmake/build && \
+    cmake -DgRPC_PROTOBUF_PROVIDER=module -DABSL_ENABLE_INSTALL=On -DgRPC_BUILD_CSHARP_EXT=Off -DABSL_BUILD_TESTING=Off -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_DEP_BUILDTYPE} ../.. && \
+    make -j8 && make install && cd ../../
+```
+
+Please adjust the version as required. 
+If you run into problems with the system gRPC installation, set `-DMODYN_TRY_LOCAL_GRPC=Off`.
+
 ### Docker-Compose Setup
 We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup and includes comments explaining it.
