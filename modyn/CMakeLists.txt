@@ -3,9 +3,10 @@
 add_subdirectory("common")
 
 ##### MODYN STORAGE BINARY #####
-# TODO(MaxiBoether): add while merging storage PR
-#add_executable(modyn-storage storage/src/main.cpp)
-#target_link_libraries(modyn-storage PRIVATE modyn)
+if (${MODYN_BUILD_STORAGE})
+  message(STATUS "Storage is included in this build.")
+  add_subdirectory(storage)
+endif ()
 
 ##### PLAYGROUND #####
 if (${MODYN_BUILD_PLAYGROUND})

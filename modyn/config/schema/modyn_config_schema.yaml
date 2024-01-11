@@ -2,8 +2,7 @@
 ---
 $schema: "http://json-schema.org/draft-04/schema"
 id: "http://stsci.edu/schemas/yaml-schema/draft-01"
-title:
-  Modyn Configuration
+title: Modyn Configuration
 description: |
   This is the configuration file for the Modyn.
   It contains the configuration for the system, adapt as required.
@@ -38,7 +37,7 @@ properties:
         type: number
         description: |
           The size of a batch when requesting new samples from storage. All new samples are returned, however, to reduce 
-          the size of a single answer the keys are batched in sizes of `sample_batch_size`.
+          the size of a single answer the keys are batched in sizes of `sample_batch_size`. Defaults to 10000.
       sample_dbinsertion_batchsize:
         type: number
         description: |
@@ -47,6 +46,10 @@ properties:
         type: number
         description: |
           The number of threads used to insert samples into the storage DB. If set to <= 0, multithreaded inserts are disabled.
+      retrieval_threads:
+        type: number
+        description: |
+          The number of threads used to get samples from the storage DB. If set to <= 1, multithreaded gets are disabled.
       sample_table_unlogged:
         type: boolean
         description: |
@@ -56,7 +59,11 @@ properties:
       force_fallback_insert:
         type: boolean
         description: |
-          When enabled, always use SQLAlchemy insert functionality instead of potentially optimized techniques.
+          When enabled, always use fallback insert functionality instead of potentially optimized techniques.
+      file_watcher_watchdog_sleep_time_s:
+        type: number
+        description: |
+          The time in seconds the file watcher watchdog sleeps between checking if the file watchers are still alive. Defaults to 3.
       datasets:
         type: array
         items:

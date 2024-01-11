@@ -19,6 +19,14 @@
   }                               \
   static_assert(true, "End call of macro with a semicolon")
 
+#ifdef NDEBUG
+#define DEBUG_ASSERT(expr, msg) \
+  do {                          \
+  } while (0)
+#else
+#define DEBUG_ASSERT(expr, msg) ASSERT((expr), (msg))
+#endif
+
 namespace modyn::utils {
 
 bool is_power_of_two(uint64_t value);

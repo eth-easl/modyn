@@ -1,5 +1,6 @@
 import io
 import json
+import math
 import os
 import pathlib
 import random
@@ -12,6 +13,7 @@ import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
+    DeleteDataRequest,
     GetDataInIntervalRequest,
     GetDataInIntervalResponse,
     GetDataPerWorkerRequest,
@@ -25,6 +27,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
+from modyn.utils.utils import flatten
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
@@ -164,7 +167,7 @@ def cleanup_storage_database() -> None:
 
 def add_image_to_dataset(image: Image, name: str) -> None:
     image.save(DATASET_PATH / name)
-    IMAGE_UPDATED_TIME_STAMPS.append(int(round(os.path.getmtime(DATASET_PATH / name) * 1000)))
+    IMAGE_UPDATED_TIME_STAMPS.append(int(math.floor(os.path.getmtime(DATASET_PATH / name))))
 
 
 def create_random_image() -> Image:
@@ -233,6 +236,7 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
         keys=keys,
     )
 
+    i = -1
     for i, response in enumerate(storage.Get(request)):
         if len(response.samples) == 0:
             assert False, f"Could not get image with key {keys[i]}."
@@ -245,54 +249,90 @@ def check_data(keys: list[str], expected_images: list[bytes]) -> None:
     assert i == len(keys) - 1, f"Could not get all images. Images missing: keys: {keys} i: {i}"
 
 
+def check_delete_data(keys_to_delete: list[int]) -> None:
+    storage_channel = connect_to_storage()
+
+    storage = StorageStub(storage_channel)
+
+    request = DeleteDataRequest(
+        dataset_id="test_dataset",
+        keys=keys_to_delete,
+    )
+
+    responses = storage.DeleteData(request)
+
+    assert responses.success, "Could not delete data."
+
+
 def test_storage() -> None:
     check_get_current_timestamp()  # Check if the storage service is available.
     create_dataset_dir()
-    add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
     register_new_dataset()
     check_dataset_availability()  # Check if the dataset is available.
+    check_dataset_size(0)  # Check if the dataset is empty.
+
     check_dataset_size_invalid()
+
+    add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
     response = None
     for i in range(20):
+        keys = []
+        labels = []
         responses = list(get_new_data_since(0))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 10:
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            labels = flatten([list(response.keys) for response in responses])
+            if len(keys) == 10:
+                assert (label in [f"{i}" for i in range(0, 10)] for label in labels)
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
-    assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert len(responses) > 0, "Did not get any response from Storage"
+    assert len(keys) == 10, f"Not all images were returned."
 
-    check_data(response.keys, FIRST_ADDED_IMAGES)
+    first_image_keys = keys
+
+    check_data(keys, FIRST_ADDED_IMAGES)
     check_dataset_size(10)
+
+    # Otherwise, if the test runs too quick, the timestamps of the new data equals the timestamps of the old data, and then we have a problem
+    print("Sleeping for 2 seconds before adding more images to the dataset...")
+    time.sleep(2)
+    print("Continuing test.")
 
     add_images_to_dataset(10, 20, SECOND_ADDED_IMAGES)  # Add more images to the dataset.
 
     for i in range(60):
+        keys = []
+        labels = []
         responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[9] + 1))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            if len(response.keys) == 10:
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            labels = flatten([list(response.keys) for response in responses])
+            if len(keys) == 10:
+                assert (label in [f"{i}" for i in range(10, 20)] for label in labels)
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
-    assert len(response.keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert len(responses) > 0, "Did not get any response from Storage"
+    assert len(keys) == 10, f"Not all images were returned. Images returned = {keys}"
 
-    check_data(response.keys, SECOND_ADDED_IMAGES)
+    check_data(keys, SECOND_ADDED_IMAGES)
     check_dataset_size(20)
 
     responses = list(get_data_in_interval(0, IMAGE_UPDATED_TIME_STAMPS[9]))
-    assert len(responses) == 1, f"Received batched/no response, shouldn't happen: {responses}"
-    response = responses[0]
 
-    check_data(response.keys, FIRST_ADDED_IMAGES)
+    assert len(responses) > 0, f"Received no response, shouldn't happen: {responses}"
+    keys = flatten([list(response.keys) for response in responses])
+
+    check_data(keys, FIRST_ADDED_IMAGES)
 
     check_data_per_worker()
+
+    check_delete_data(first_image_keys)
+
+    check_dataset_size(10)
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 
@@ -301,8 +341,8 @@ def main() -> None:
     try:
         test_storage()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
+        cleanup_dataset_dir()
 
 
 if __name__ == "__main__":

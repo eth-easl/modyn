@@ -1,11 +1,10 @@
-"""Storage module.
+"""
+Storage module.
 
-The storage module contains all classes and functions related to the storage and retrieval of data.
+The storage module contains all classes and functions related the evaluation of models.
 """
 
 import os
-
-from .storage import Storage  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

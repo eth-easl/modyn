@@ -8,6 +8,14 @@ docker compose down
 
 BUILDTYPE=${1:-Release}
 echo "Using build type ${BUILDTYPE} for integrationtests."
+if [[ "$BUILDTYPE" == "Release" ]]; then
+    DEPBUILDTYPE="Release"
+else
+    # Since Asan/Tsan are not necessarily targets of dependencies, we switch to debug mode in all other cases.
+    DEPBUILDTYPE="Debug"
+fi
+
+echo "Inferred dependency buildtype ${DEPBUILDTYPE}."
 
 # When on Github CI, we use the default postgres config to not go OOM
 if [[ ! -z "$CI" ]]; then
@@ -17,11 +25,25 @@ if [[ ! -z "$CI" ]]; then
     cp conf/default_postgresql.conf conf/storage_postgresql.conf
 fi
 
-docker build -t modyndependencies -f docker/Dependencies/Dockerfile .
-docker build -t modynbase -f docker/Base/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE .
+docker build -t modyndependencies -f docker/Dependencies/Dockerfile --build-arg MODYN_BUILDTYPE=$BUILDTYPE --build-arg MODYN_DEP_BUILDTYPE=$DEPBUILDTYPE .
+docker build -t modynbase -f docker/Base/Dockerfile .
 # APEX docker build -t modynapex -f docker/Apex/Dockerfile .
 docker compose up --build tests --abort-on-container-exit --exit-code-from tests
+
 exitcode=$?
+
+echo "LOGS START"
+echo "METADATADB"
+docker logs $(docker compose ps -q metadata-db)
+echo "STORAGEDB"
+docker logs $(docker compose ps -q storage-db)
+echo "STORAGE"
+docker logs $(docker compose ps -q storage)
+echo "SELECTOR"
+docker logs $(docker compose ps -q selector)
+echo "TRAINERSERVER"
+docker logs $(docker compose ps -q trainer_server)
+echo "LOGS END"
 
 # Cleanup
 docker compose down

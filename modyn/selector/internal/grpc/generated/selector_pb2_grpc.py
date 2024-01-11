@@ -14,25 +14,25 @@ class SelectorStub(object):
             channel: A grpc.Channel.
         """
         self.register_pipeline = channel.unary_unary(
-                '/selector.Selector/register_pipeline',
-                request_serializer=selector__pb2.RegisterPipelineRequest.SerializeToString,
-                response_deserializer=selector__pb2.PipelineResponse.FromString,
-                )
+            '/selector.Selector/register_pipeline',
+            request_serializer=selector__pb2.RegisterPipelineRequest.SerializeToString,
+            response_deserializer=selector__pb2.PipelineResponse.FromString,
+        )
         self.get_sample_keys_and_weights = channel.unary_stream(
-                '/selector.Selector/get_sample_keys_and_weights',
-                request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
-                response_deserializer=selector__pb2.SamplesResponse.FromString,
-                )
+            '/selector.Selector/get_sample_keys_and_weights',
+            request_serializer=selector__pb2.GetSamplesRequest.SerializeToString,
+            response_deserializer=selector__pb2.SamplesResponse.FromString,
+        )
         self.inform_data = channel.unary_unary(
                 '/selector.Selector/inform_data',
                 request_serializer=selector__pb2.DataInformRequest.SerializeToString,
                 response_deserializer=selector__pb2.DataInformResponse.FromString,
                 )
         self.inform_data_and_trigger = channel.unary_unary(
-                '/selector.Selector/inform_data_and_trigger',
-                request_serializer=selector__pb2.DataInformRequest.SerializeToString,
-                response_deserializer=selector__pb2.TriggerResponse.FromString,
-                )
+            '/selector.Selector/inform_data_and_trigger',
+            request_serializer=selector__pb2.DataInformRequest.SerializeToString,
+            response_deserializer=selector__pb2.TriggerResponse.FromString,
+        )
         self.get_number_of_samples = channel.unary_unary(
                 '/selector.Selector/get_number_of_samples',
                 request_serializer=selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
@@ -199,59 +199,60 @@ def add_SelectorServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'selector.Selector', rpc_method_handlers)
+        'selector.Selector', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
-
  # This class is part of an EXPERIMENTAL API.
+
+
 class Selector(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
     def register_pipeline(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                          target,
+                          options=(),
+                          channel_credentials=None,
+                          call_credentials=None,
+                          insecure=False,
+                          compression=None,
+                          wait_for_ready=None,
+                          timeout=None,
+                          metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/register_pipeline',
-            selector__pb2.RegisterPipelineRequest.SerializeToString,
-            selector__pb2.PipelineResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             selector__pb2.RegisterPipelineRequest.SerializeToString,
+                                             selector__pb2.PipelineResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def get_sample_keys_and_weights(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                                    target,
+                                    options=(),
+                                    channel_credentials=None,
+                                    call_credentials=None,
+                                    insecure=False,
+                                    compression=None,
+                                    wait_for_ready=None,
+                                    timeout=None,
+                                    metadata=None):
         return grpc.experimental.unary_stream(request, target, '/selector.Selector/get_sample_keys_and_weights',
-            selector__pb2.GetSamplesRequest.SerializeToString,
-            selector__pb2.SamplesResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                              selector__pb2.GetSamplesRequest.SerializeToString,
+                                              selector__pb2.SamplesResponse.FromString,
+                                              options, channel_credentials,
+                                              insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def inform_data(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                    target,
+                    options=(),
+                    channel_credentials=None,
+                    call_credentials=None,
+                    insecure=False,
+                    compression=None,
+                    wait_for_ready=None,
+                    timeout=None,
+                    metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/inform_data',
             selector__pb2.DataInformRequest.SerializeToString,
             selector__pb2.DataInformResponse.FromString,
@@ -260,37 +261,37 @@ class Selector(object):
 
     @staticmethod
     def inform_data_and_trigger(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                                target,
+                                options=(),
+                                channel_credentials=None,
+                                call_credentials=None,
+                                insecure=False,
+                                compression=None,
+                                wait_for_ready=None,
+                                timeout=None,
+                                metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/inform_data_and_trigger',
-            selector__pb2.DataInformRequest.SerializeToString,
-            selector__pb2.TriggerResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             selector__pb2.DataInformRequest.SerializeToString,
+                                             selector__pb2.TriggerResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def get_number_of_samples(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                              target,
+                              options=(),
+                              channel_credentials=None,
+                              call_credentials=None,
+                              insecure=False,
+                              compression=None,
+                              wait_for_ready=None,
+                              timeout=None,
+                              metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_samples',
-            selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
-            selector__pb2.NumberOfSamplesResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             selector__pb2.GetNumberOfSamplesRequest.SerializeToString,
+                                             selector__pb2.NumberOfSamplesResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def get_status_bar_scale(request,
@@ -311,20 +312,20 @@ class Selector(object):
 
     @staticmethod
     def get_number_of_partitions(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                                 target,
+                                 options=(),
+                                 channel_credentials=None,
+                                 call_credentials=None,
+                                 insecure=False,
+                                 compression=None,
+                                 wait_for_ready=None,
+                                 timeout=None,
+                                 metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_number_of_partitions',
-            selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
-            selector__pb2.NumberOfPartitionsResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+                                             selector__pb2.GetNumberOfPartitionsRequest.SerializeToString,
+                                             selector__pb2.NumberOfPartitionsResponse.FromString,
+                                             options, channel_credentials,
+                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
     def get_available_labels(request,
@@ -345,15 +346,15 @@ class Selector(object):
 
     @staticmethod
     def get_selection_strategy(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+                               target,
+                               options=(),
+                               channel_credentials=None,
+                               call_credentials=None,
+                               insecure=False,
+                               compression=None,
+                               wait_for_ready=None,
+                               timeout=None,
+                               metadata=None):
         return grpc.experimental.unary_unary(request, target, '/selector.Selector/get_selection_strategy',
             selector__pb2.GetSelectionStrategyRequest.SerializeToString,
             selector__pb2.SelectionStrategyResponse.FromString,

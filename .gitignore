@@ -55,6 +55,12 @@ report.html
 # Pytest creates files that have the name of the local desktop included, so we need to wildcard here
 .coverage.*
 
+# storage c++ specific
+!modyn/storage/lib
+!modyn/storage/lib/googletest
+
+# Unity build files
+cmake-build-debug 
 # File that stores whether Modyn has been configured + backup environment
 .modyn_configured
 environment.yml.original

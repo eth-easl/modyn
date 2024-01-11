@@ -25,6 +25,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.utils import grpc_connection_established
+from modyn.utils.utils import flatten
 from PIL import Image
 from torchvision import transforms
 
@@ -234,20 +235,18 @@ def get_new_data_since(timestamp: int) -> Iterable[GetNewDataSinceResponse]:
 
 
 def get_data_keys() -> list[int]:
-    response = None
     keys = []
     for i in range(60):
         responses = list(get_new_data_since(0))
-        assert len(responses) < 2, f"Received batched response, shouldn't happen: {responses}"
-        if len(responses) == 1:
-            response = responses[0]
-            keys = list(response.keys)
+        keys = []
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
             if len(keys) == 10:
                 break
         time.sleep(1)
 
-    assert response is not None, "Did not get any response from Storage"
-    assert len(keys) == 10, f"Not all images were returned. Images returned: {response.keys}"
+    assert len(responses) > 0, "Did not get any response from Storage"
+    assert len(keys) == 10, f"Not all images were returned. Images returned: {keys}"
 
     return keys
 
@@ -378,8 +377,8 @@ def main() -> None:
     try:
         test_dataset()
     finally:
-        cleanup_dataset_dir()
         cleanup_storage_database()
+        cleanup_dataset_dir()
 
 
 if __name__ == "__main__":

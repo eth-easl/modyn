@@ -17,18 +17,18 @@ class TimeTrigger(Trigger):
         if not validate_timestr(timestr):
             raise ValueError(f"Invalid time string: {timestr}\nValid format is <number>[s|m|h|d|w].")
 
-        self.trigger_every_ms: int = convert_timestr_to_seconds(trigger_config["trigger_every"]) * 1000
+        self.trigger_every_s: int = convert_timestr_to_seconds(trigger_config["trigger_every"])
         self.next_trigger_at: Optional[int] = None
 
-        if self.trigger_every_ms < 1:
-            raise ValueError(f"trigger_every must be > 0, but is {self.trigger_every_ms}")
+        if self.trigger_every_s < 1:
+            raise ValueError(f"trigger_every must be > 0, but is {self.trigger_every_s}")
 
         super().__init__(trigger_config)
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> list[int]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
-                self.next_trigger_at = new_data[0][1] + self.trigger_every_ms  # new_data is sorted
+                self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted
             else:
                 return []
 
@@ -44,9 +44,9 @@ class TimeTrigger(Trigger):
             # This means that there was a trigger before the first item that we got informed about
             # However, there might have been multiple triggers, e.g., if there is one trigger every second
             # and 5 seconds have passed since the last item came through
-            # This is caught by our while loop which increases step by step for `trigger_every_ms`.
+            # This is caught by our while loop which increases step by step for `trigger_every_s`.
 
             triggering_indices.append(idx - 1)
-            self.next_trigger_at += self.trigger_every_ms
+            self.next_trigger_at += self.trigger_every_s
 
         return triggering_indices
