@@ -49,8 +49,8 @@ TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
-  const int64_t expected_number_of_samples = 3;
-  const int64_t actual_number_of_samples = file_wrapper.get_number_of_samples();
+  const uint64_t expected_number_of_samples = 3;
+  const uint64_t actual_number_of_samples = file_wrapper.get_number_of_samples();
 
   ASSERT_EQ(actual_number_of_samples, expected_number_of_samples);
 }

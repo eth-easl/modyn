@@ -224,7 +224,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   void send_file_ids_and_labels(WriterT* writer, const int64_t dataset_id, const int64_t start_timestamp = -1,
                                 int64_t end_timestamp = -1) {
     soci::session session = storage_database_connection_.get_session();
-    // TODO(create issue): We might want to have a cursor for this as well and iterate over it, since that can also
+    // TODO(#359): We might want to have a cursor for this as well and iterate over it, since that can also
     // return millions of files
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     session.close();
@@ -234,7 +234,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
     const bool force_no_mt = true;
-    // TODO (MaxiBoether): create issue / think about it
+    // TODO(#360): Fix multithreaded sample retrieval here
     SPDLOG_ERROR("Multithreaded retrieval of new samples is currently broken, disabling...");
 
     if (force_no_mt || disable_multithreading_) {
@@ -274,7 +274,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     soci::session session = storage_database_connection.get_session();
 
     const int64_t num_paths = end - begin;
-    // TODO(MaxiBoether): use sample_dbinsertion_batchsize or sth instead of 1 mio
+    // TODO(#361): Do not hardcode this number
     const auto chunk_size = static_cast<int64_t>(1000000);
     int64_t num_chunks = num_paths / chunk_size;
     if (num_paths % chunk_size != 0) {
@@ -291,7 +291,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<SampleRecord> record_buf;
       record_buf.reserve(sample_batch_size);
 
-      // TODO(create issue): Figure out multithreaded retrieval of this!
       const std::string query = fmt::format(
           "SELECT samples.sample_id, samples.label, files.updated_at "
           "FROM samples INNER JOIN files "
@@ -525,8 +524,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   static std::vector<int64_t> get_file_ids(soci::session& session, int64_t dataset_id, int64_t start_timestamp = -1,
                                            int64_t end_timestamp = -1);
-  static int64_t get_file_count(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
-                                int64_t end_timestamp);
+  static uint64_t get_file_count(soci::session& session, int64_t dataset_id, int64_t start_timestamp,
+                                 int64_t end_timestamp);
   static std::vector<int64_t> get_file_ids_given_number_of_files(soci::session& session, int64_t dataset_id,
                                                                  int64_t start_timestamp, int64_t end_timestamp,
                                                                  int64_t number_of_files);

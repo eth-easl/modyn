@@ -514,6 +514,8 @@ int64_t StorageServiceImpl::get_dataset_id(soci::session& session, const std::st
 
 std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, const int64_t dataset_id,
                                                       const int64_t start_timestamp, const int64_t end_timestamp) {
+  // TODO(#362): We are almost excecuting the same query twice since we first count and then get the data
+
   const int64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
   if (number_of_files == 0) {
     return {};
@@ -527,11 +529,9 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, co
   return get_file_ids_given_number_of_files(session, dataset_id, start_timestamp, end_timestamp, number_of_files);
 }
 
-int64_t StorageServiceImpl::get_file_count(soci::session& session, const int64_t dataset_id,
-                                           const int64_t start_timestamp, const int64_t end_timestamp) {
-  // TODO(MaxiBoether): DOesn'T this slow down because we are almost excecuting the same query twice? Can we get all
-  // files into a vector without knowing how many?
-  int64_t number_of_files = -1;
+uint64_t StorageServiceImpl::get_file_count(soci::session& session, const int64_t dataset_id,
+                                            const int64_t start_timestamp, const int64_t end_timestamp) {
+  uint64_t number_of_files = -1;
   try {
     if (start_timestamp >= 0 && end_timestamp == -1) {
       session << "SELECT COUNT(*) FROM files WHERE dataset_id = :dataset_id AND updated_at >= :start_timestamp",

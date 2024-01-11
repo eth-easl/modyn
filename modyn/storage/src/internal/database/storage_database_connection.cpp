@@ -127,7 +127,9 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
   }
 
   // Create partition table for samples
-  add_sample_dataset_partition(name);
+  if (!add_sample_dataset_partition(name)) {
+    FAIL("Partition creation failed.");
+  }
   session.close();
 
   return true;
@@ -144,9 +146,8 @@ int64_t StorageDatabaseConnection::get_dataset_id(const std::string& name) const
 }
 
 DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& config) {
-  if (!config["storage"]["database"]) {
-    FAIL("No database configuration found");
-  }
+  ASSERT(config["storage"]["database"], "No database configuration found");
+
   const auto drivername = config["storage"]["database"]["drivername"].as<std::string>();
   if (drivername == "postgresql") {
     return DatabaseDriver::POSTGRESQL;
@@ -154,6 +155,7 @@ DatabaseDriver StorageDatabaseConnection::get_drivername(const YAML::Node& confi
   if (drivername == "sqlite3") {
     return DatabaseDriver::SQLITE3;
   }
+
   FAIL("Unsupported database driver: " + drivername);
 }
 
@@ -189,12 +191,12 @@ bool StorageDatabaseConnection::delete_dataset(const std::string& name, const in
   return true;
 }
 
-void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
+bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& dataset_name) const {
   soci::session session = get_session();
   int64_t dataset_id = get_dataset_id(dataset_name);
   if (dataset_id == -1) {
     SPDLOG_ERROR("Dataset {} not found", dataset_name);
-    return;
+    return false;
   }
   switch (drivername_) {
     case DatabaseDriver::POSTGRESQL: {
@@ -207,8 +209,8 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
             "PARTITION BY HASH (sample_id)",
             dataset_partition_table_name, dataset_id);
       } catch (const soci::soci_error& e) {
-        // TODO(MaxiBoether): In this case, return failure!
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
+        return false;
       }
 
       try {
@@ -221,8 +223,8 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
               hash_partition_name, dataset_partition_table_name, hash_partition_modulus_, i);
         }
       } catch (const soci::soci_error& e) {
-        // TODO(MaxiBoether): In this case, return failure!
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
+        return false;
       }
       break;
     }
@@ -238,4 +240,6 @@ void StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
   }
 
   session.close();
+
+  return true;
 }

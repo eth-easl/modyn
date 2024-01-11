@@ -227,17 +227,16 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
       const std::string known_files_query = fmt::format(
           "SELECT path FROM files WHERE path IN ('{}') AND dataset_id = :dataset_id", fmt::join(chunk_paths, "','"));
       std::vector<std::string> known_paths(sample_dbinsertion_batchsize);
-      SPDLOG_INFO("Chunk: {}/{} prepared query", i + 1, num_chunks);
-
+      // SPDLOG_INFO("Chunk: {}/{} prepared query", i + 1, num_chunks);
       session << known_files_query, soci::into(known_paths), soci::use(dataset_id);
-      SPDLOG_INFO("Chunk: {}/{} executed query", i + 1, num_chunks);
+      // SPDLOG_INFO("Chunk: {}/{} executed query", i + 1, num_chunks);
       std::unordered_set<std::string> known_paths_set(known_paths.begin(), known_paths.end());
-      SPDLOG_INFO("Chunk: {}/{} prepared hashtable", i + 1, num_chunks);
+      // SPDLOG_INFO("Chunk: {}/{} prepared hashtable", i + 1, num_chunks);
 
       std::copy_if(chunk_paths.begin(), chunk_paths.end(), std::back_inserter(unknown_files),
                    [&known_paths_set](const std::string& file_path) { return !known_paths_set.contains(file_path); });
     }
-    SPDLOG_INFO("Found {} unknwon files!", unknown_files.size());
+    SPDLOG_INFO("Found {} unknown files!", unknown_files.size());
     std::vector<std::string> files_for_insertion;
 
     if (ignore_last_timestamp == 0) {
@@ -264,10 +263,8 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     unknown_files.clear();
     unknown_files.shrink_to_fit();
 
-    // TODO(MaxiBoether) move back into if
-    SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
-
     if (!files_for_insertion.empty()) {
+      SPDLOG_INFO("Found {} files for insertion!", files_for_insertion.size());
       DatabaseDriver database_driver = storage_database_connection.get_drivername();
       handle_files_for_insertion(files_for_insertion, file_wrapper_type, dataset_id, *file_wrapper_config,
                                  sample_dbinsertion_batchsize, force_fallback, session, database_driver,
@@ -378,18 +375,16 @@ void FileWatcher::insert_file_samples(const std::vector<FileFrame>& file_samples
                                       const bool force_fallback, soci::session& session,
                                       DatabaseDriver& database_driver) {
   if (force_fallback) {
-    fallback_insertion(file_samples, dataset_id, session);
-  } else {
-    switch (database_driver) {
-      case DatabaseDriver::POSTGRESQL:
-        postgres_copy_insertion(file_samples, dataset_id, session);
-        break;
-      case DatabaseDriver::SQLITE3:
-        fallback_insertion(file_samples, dataset_id, session);
-        break;
-      default:
-        FAIL("Unsupported database driver");
-    }
+    return fallback_insertion(file_samples, dataset_id, session);
+  }
+
+  switch (database_driver) {
+    case DatabaseDriver::POSTGRESQL:
+      return postgres_copy_insertion(file_samples, dataset_id, session);
+    case DatabaseDriver::SQLITE3:
+      return fallback_insertion(file_samples, dataset_id, session);
+    default:
+      FAIL("Unsupported database driver");
   }
 }
 

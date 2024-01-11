@@ -48,7 +48,7 @@ std::vector<SampleRecord> CursorHandler::yield_per(const int64_t number_of_rows_
       break;
     }
     case DatabaseDriver::SQLITE3: {
-      int64_t retrieved_rows = 0;
+      uint64_t retrieved_rows = 0;
       records.reserve(number_of_rows_to_fetch);
       for (auto& row : *rs_) {
         SampleRecord record{};
