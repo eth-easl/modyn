@@ -517,12 +517,8 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, co
   // TODO(#362): We are almost excecuting the same query twice since we first count and then get the data
 
   const uint64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
-  if (number_of_files == 0) {
-    return {};
-  }
 
-  if (number_of_files < 0) {
-    SPDLOG_ERROR(fmt::format("Number of files for dataset {} is below zero: {}", dataset_id, number_of_files));
+  if (number_of_files == 0) {
     return {};
   }
 
