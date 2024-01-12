@@ -1,20 +1,29 @@
 from typing import Optional
 
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
 )
+from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
+from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
 from sqlalchemy import Select, asc, func, select
+from sqlalchemy.orm.session import Session
 
 
 class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
-    def __init__(self, presampling_config: dict, modyn_config: dict, pipeline_id: int):
-        super().__init__(presampling_config, modyn_config, pipeline_id)
+    def __init__(
+        self, presampling_config: dict, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
+    ):
+        super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
         self.requires_trigger_dataset_size = True
 
         # a complete_trigger is the last time when all the datapoints (in the db at that time) have been seen
         self.last_complete_trigger = 0
+
+        # TODO(#324): Support local backend on RandomNoReplacementPresamplingStrategy
+        assert isinstance(
+            self._storage_backend, DatabaseStorageBackend
+        ), "RandomNoReplacementPresamplingStrategy currently only supports the DatabaseStorageBackend"
 
     def get_presampling_query(
         self,
@@ -75,20 +84,24 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
         return subq
 
     def _update_last_used_in_trigger(self, next_trigger_id: int, subq: Select) -> None:
-        with MetadataDatabaseConnection(self.modyn_config) as database:
-            database.session.query(SelectorStateMetadata).filter(
+        def _session_callback(session: Session) -> None:
+            session.query(SelectorStateMetadata).filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.sample_key.in_(subq),
             ).update({"last_used_in_trigger": next_trigger_id})
-            database.session.commit()
+            session.commit()
+
+        self._storage_backend._execute_on_session(_session_callback)
 
     def _count_number_of_sampled_points(self, next_trigger_id: int) -> int:
-        with MetadataDatabaseConnection(self.modyn_config) as database:
+        def _session_callback(session: Session) -> None:
             return (
-                database.session.query(SelectorStateMetadata.sample_key)
+                session.query(SelectorStateMetadata.sample_key)
                 .filter(
                     SelectorStateMetadata.pipeline_id == self.pipeline_id,
                     SelectorStateMetadata.last_used_in_trigger == next_trigger_id,
                 )
                 .count()
             )
+
+        return self._storage_backend._execute_on_session(_session_callback)

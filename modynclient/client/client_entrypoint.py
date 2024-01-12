@@ -59,6 +59,13 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Optional parameter to limit the maximum number of triggers that we consider before exiting.",
     )
 
+    parser_.add_argument(
+        "--evaluation-matrix",
+        action="store_true",
+        help="Whether to build an evaluation matrix of all models/triggers at the end. Currently just for "
+        "experiments, does not overlap training and evaluation.",
+    )
+
     return parser_
 
 
@@ -72,6 +79,9 @@ def validate_args(args: Any) -> None:
 
     if args.maximum_triggers is not None and args.maximum_triggers < 1:
         raise ValueError(f"maximum_triggers is {args.maximum_triggers}, needs to be >= 1")
+    
+    if args.evaluation_matrix and args.start_replay_at is None:
+        raise ValueError("--evaluation-matrix can only be used in experiment mode currently.")
 
 
 def main() -> None:
@@ -94,7 +104,13 @@ def main() -> None:
     logger.info("Initializing client.")
     logger.info(f"{client_config}")
     client = Client(
-        client_config, pipeline_config, args.eval_dir, args.start_replay_at, args.stop_replay_at, args.maximum_triggers
+        client_config,
+        pipeline_config,
+        args.eval_dir,
+        args.start_replay_at,
+        args.stop_replay_at,
+        args.maximum_triggers,
+        args.evaluation_matrix
     )
 
     logger.info("Starting pipeline.")

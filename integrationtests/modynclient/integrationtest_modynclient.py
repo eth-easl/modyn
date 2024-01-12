@@ -16,6 +16,7 @@ if __name__ == "__main__":
                 "0",
                 "--maximum-triggers",
                 "2",
+                "--evaluation-matrix",
             ]
         )
         assert rc == 0

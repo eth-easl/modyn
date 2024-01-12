@@ -210,9 +210,18 @@ class SelectorManager:
 
     def cleanup_trigger_samples(self) -> None:
         if (
-            "cleanup_trigger_samples_after_shutdown" in self._modyn_config["selector"]
+            "cleanup_storage_directories_after_shutdown" in self._modyn_config["selector"]
             and "trigger_sample_directory" in self._modyn_config["selector"]
         ):
             shutil.rmtree(self._modyn_config["selector"]["trigger_sample_directory"])
             Path(self._modyn_config["selector"]["trigger_sample_directory"]).mkdir(parents=True, exist_ok=True)
             logger.info("Deleted the trigger sample directory.")
+
+    def cleanup_local_storage(self) -> None:
+        if (
+            "cleanup_storage_directories_after_shutdown" in self._modyn_config["selector"]
+            and "local_storage_directory" in self._modyn_config["selector"]
+        ):
+            shutil.rmtree(self._modyn_config["selector"]["local_storage_directory"])
+            Path(self._modyn_config["selector"]["local_storage_directory"]).mkdir(parents=True, exist_ok=True)
+            logger.info("Deleted the local storage directory.")

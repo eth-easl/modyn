@@ -20,6 +20,8 @@ services:
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/pg_hba.conf:/tmp/pg_hba.conf
+      - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -38,6 +40,8 @@ services:
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/pg_hba.conf:/tmp/pg_hba.conf
+      - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -115,7 +119,9 @@ services:
       context: .
       dockerfile: docker/Selector/Dockerfile
     volumes:
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
+       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
+       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
+#      - /mnt/ssd/local_storage:/tmp/local_storage
 #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
 #      - .:/modyn_host
 #    shm_size: 4gb
@@ -165,5 +171,6 @@ services:
 volumes:
   storage-data:
   selector-data:
+  selector-localstorage-data:
   downsampling-data:
   model_storage-data:

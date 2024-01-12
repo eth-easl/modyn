@@ -35,13 +35,6 @@ def test_f1_score_invalid():
 
     assert f1_score.get_evaluation_result() == 0
 
-    f1_score = F1Score(evaluation_transform_func="", config={"num_classes": 3, "average": "weighted"})
-    y_true = torch.from_numpy(np.array([0, 0, 0, 2]))
-    y_pred = torch.from_numpy(np.array([0, 0, 0, 0]))
-
-    f1_score.evaluate_batch(y_true, y_pred, 4)
-    assert f1_score.get_evaluation_result() == 0
-
 
 def test_f1_score():
     y_true = torch.from_numpy(np.array([0, 2, 2, 2, 2, 0, 1, 2, 0, 2]))

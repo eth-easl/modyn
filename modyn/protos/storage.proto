@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
-
 package modyn.storage;
 
 service Storage {
@@ -18,7 +16,7 @@ service Storage {
       returns (DatasetAvailableResponse) {}
   rpc RegisterNewDataset(RegisterNewDatasetRequest)
       returns (RegisterNewDatasetResponse) {}
-  rpc GetCurrentTimestamp(google.protobuf.Empty)
+  rpc GetCurrentTimestamp(GetCurrentTimestampRequest)
       returns (GetCurrentTimestampResponse) {}
   rpc DeleteDataset(DatasetAvailableRequest) returns (DeleteDatasetResponse) {}
   rpc DeleteData(DeleteDataRequest) returns (DeleteDataResponse) {}
@@ -34,6 +32,9 @@ message GetResponse {
   repeated int64 keys = 2;
   repeated int64 labels = 3;
 }
+
+// https://github.com/grpc/grpc/issues/15937
+message GetCurrentTimestampRequest {}
 
 message GetNewDataSinceRequest {
   string dataset_id = 1;

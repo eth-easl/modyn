@@ -20,6 +20,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import TriggerTrainingSetInfo
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -60,7 +61,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusResponse,
 )
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
-from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
+from modyn.utils import grpc_common_config, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +105,7 @@ class GRPCHandler:
     def init_storage(self) -> None:
         assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
-        self.storage_channel = grpc.insecure_channel(
-            storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
+        self.storage_channel = grpc.insecure_channel(storage_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at {storage_address}.")
@@ -122,13 +117,7 @@ class GRPCHandler:
     def init_selector(self) -> None:
         assert self.config is not None
         selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
-        self.selector_channel = grpc.insecure_channel(
-            selector_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
+        self.selector_channel = grpc.insecure_channel(selector_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.selector_channel):
             raise ConnectionError(f"Could not establish gRPC connection to selector at {selector_address}.")
@@ -140,7 +129,7 @@ class GRPCHandler:
     def init_trainer_server(self) -> None:
         assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address)
+        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.trainer_server_channel):
             raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
@@ -152,7 +141,7 @@ class GRPCHandler:
     def init_evaluator(self) -> None:
         assert self.config is not None
         evaluator_address = f"{self.config['evaluator']['hostname']}:{self.config['evaluator']['port']}"
-        self.evaluator_channel = grpc.insecure_channel(evaluator_address)
+        self.evaluator_channel = grpc.insecure_channel(evaluator_address, options=grpc_common_config())
 
         if not grpc_connection_established(self.evaluator_channel):
             raise ConnectionError(f"Could not establish gRPC connection to evaluator at {evaluator_address}.")
@@ -528,36 +517,82 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
+    def start_evaluation(
+        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None
+    ) -> dict[int, EvaluationStatusReporter]:
         assert self.eval_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
-
         device = pipeline_config["evaluation"]["device"]
 
         evaluations: dict[int, EvaluationStatusReporter] = {}
 
-        for dataset in pipeline_config["evaluation"]["datasets"]:
-            dataset_id = dataset["dataset_id"]
+        if pipeline_id is None:
+            # In this case, we evaluate on fixed datasets
+            for dataset in pipeline_config["evaluation"]["datasets"]:
+                dataset_id = dataset["dataset_id"]
 
-            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
-            response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
+                req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
+                fixed_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
-            if not response.evaluation_started:
-                logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
-            else:
-                evaluation_id = response.evaluation_id
-                logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.eval_status_queue, evaluation_id, dataset_id, response.dataset_size
+                if not fixed_eval_response.evaluation_started:
+                    logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {fixed_eval_response}.")
+                else:
+                    evaluation_id = fixed_eval_response.evaluation_id
+                    logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
+                    evaluations[evaluation_id] = EvaluationStatusReporter(
+                    self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
                 )
-                evaluations[evaluation_id].create_tracker()
+
+            return evaluations
+
+        # In case we want to evaluate on trigger training set
+        dataset_id = pipeline_config["data"]["dataset_id"]
+        num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
+        parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
+
+        train_eval_dataset = None
+        for dataset in pipeline_config["evaluation"]["datasets"]:
+            if dataset["dataset_id"] == dataset_id:
+                train_eval_dataset = dataset
+                break
+
+        assert train_eval_dataset is not None  # validated this in the supervisor
+
+        req = GRPCHandler._prepare_evaluation_request(
+            train_eval_dataset,
+            model_id,
+            device,
+            pipeline_id,
+            trigger_id,
+            num_prefetched_partitions,
+            parallel_prefetch_requests,
+        )
+        trigger_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
+
+        if not trigger_eval_response.evaluation_started:
+            logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {trigger_eval_response}.")
+        else:
+            evaluation_id = trigger_eval_response.evaluation_id
+            logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
+            evaluations[evaluation_id] = EvaluationStatusReporter(
+                    self.eval_status_queue, evaluation_id, dataset_id, trigger_eval_response.dataset_size
+                )
+            evaluations[evaluation_id].create_tracker()
 
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(
+        dataset_config: dict,
+        model_id: int,
+        device: str,
+        pipeline_id: Optional[int] = None,
+        trigger_id: Optional[int] = None,
+        num_prefetched_partitions: Optional[int] = None,
+        parallel_prefetch_requests: Optional[int] = None,
+    ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -604,6 +639,18 @@ class GRPCHandler:
             "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
+
+        if pipeline_id is not None:
+            assert trigger_id is not None
+            assert num_prefetched_partitions is not None
+            assert parallel_prefetch_requests is not None
+            ttsi = TriggerTrainingSetInfo(
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                num_prefetched_partitions=num_prefetched_partitions,
+                parallel_prefetch_requests=parallel_prefetch_requests,
+            )
+            start_evaluation_kwargs["trigger_training_set_info"] = ttsi
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 

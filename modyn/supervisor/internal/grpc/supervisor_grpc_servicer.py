@@ -43,6 +43,7 @@ class SupervisorGRPCServicer(SupervisorServicer):
         maximum_triggers: Optional[int] = None
         if request.HasField("maximum_triggers"):
             maximum_triggers = request.maximum_triggers
+        evaluation_matrix = request.evaluation_matrix
 
         pipeline_config = json.loads(request.pipeline_config.value)
         msg = self._supervisor.start_pipeline(
@@ -51,6 +52,7 @@ class SupervisorGRPCServicer(SupervisorServicer):
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
+            evaluation_matrix,
         )
         return ParseDict(msg, PipelineResponse())
 

@@ -11,10 +11,6 @@ set(
   utils/test_utils.hpp
 )
 
-add_library(modyn-test-utils-objs OBJECT ${MODYN_TEST_UTILS_SOURCES})
-target_include_directories(modyn-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/utils)
-target_link_libraries(modyn-test-utils-objs PUBLIC gtest gmock spdlog fmt modyn example_extension)
-
 #################################################t
 # UNIT TESTS
 ##################################################
@@ -23,9 +19,49 @@ set(
 
   common/cpp/utils/test_utils.cpp
   common/example_extension/test_example_extension.cpp
+  common/trigger_sample/test_trigger_sample_storage.cpp
 )
 
-# TODO(MaxiBoether): When merging into storage, only add tests for storage when MODYN_BUILD_STORAGE is enabled
+#################################################t
+# STORAGE TESTS
+##################################################
+if (${MODYN_BUILD_STORAGE})
+  message(STATUS "Storage is included in this test build.")
+  list(
+    APPEND MODYN_TEST_UTILS_SOURCES
+  
+    storage/storage_test_utils.cpp
+    storage/storage_test_utils.hpp
+  )
+
+  list(
+    APPEND MODYN_TEST_SOURCES
+  
+    storage/internal/file_watcher/file_watcher_test.cpp
+    storage/internal/file_watcher/file_watcher_watchdog_test.cpp
+    storage/internal/database/storage_database_connection_test.cpp
+    storage/internal/database/cursor_handler_test.cpp
+    storage/internal/file_wrapper/single_sample_file_wrapper_test.cpp
+    storage/internal/file_wrapper/mock_file_wrapper.hpp
+    storage/internal/file_wrapper/binary_file_wrapper_test.cpp
+    storage/internal/file_wrapper/csv_file_wrapper_test.cpp
+    storage/internal/file_wrapper/file_wrapper_utils_test.cpp
+    storage/internal/filesystem_wrapper/local_filesystem_wrapper_test.cpp
+    storage/internal/filesystem_wrapper/mock_filesystem_wrapper.hpp
+    storage/internal/filesystem_wrapper/filesystem_wrapper_utils_test.cpp
+    storage/internal/grpc/storage_service_impl_test.cpp
+  )
+
+endif ()
+
+add_library(modyn-test-utils-objs OBJECT ${MODYN_TEST_UTILS_SOURCES})
+target_include_directories(modyn-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+target_link_libraries(modyn-test-utils-objs PUBLIC gtest gmock spdlog fmt yaml-cpp modyn example_extension trigger_sample_storage)
+
+if (${MODYN_BUILD_STORAGE})
+  target_link_libraries(modyn-test-utils-objs PUBLIC modyn-storage-library)
+  target_include_directories(modyn-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/storage)
+endif ()
 
 add_library(modyn-test-objs OBJECT ${MODYN_TEST_SOURCES})
 target_link_libraries(modyn-test-objs PRIVATE modyn-test-utils-objs)

@@ -4,7 +4,7 @@ from modyn.supervisor.internal.triggers import TimeTrigger
 
 def test_initialization() -> None:
     trigger = TimeTrigger({"trigger_every": "2s"})
-    assert trigger.trigger_every_ms == 2000
+    assert trigger.trigger_every_s == 2
     assert trigger.next_trigger_at is None
 
 
@@ -17,7 +17,7 @@ def test_init_fails_if_invalid() -> None:
 
 
 def test_inform() -> None:
-    trigger = TimeTrigger({"trigger_every": "1s"})
+    trigger = TimeTrigger({"trigger_every": "1000s"})
     LABEL = 2  # pylint: disable=invalid-name
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert trigger.inform([]) == []

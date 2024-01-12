@@ -13,23 +13,24 @@ function run_build() {
     echo "Running cmake build..."
     set -x
 
-    # TODO(MaxiBoether): add this when merging into storage PR
-    #mkdir -p "${BUILD_DIR}"
-    #cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
-    #    -DCMAKE_BUILD_TYPE=Debug \
-    #    -DCMAKE_UNITY_BUILD=OFF
+    mkdir -p "${BUILD_DIR}"
+    cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_UNITY_BUILD=OFF \
+        -DMODYN_BUILD_STORAGE=ON
 
-    #pushd ${BUILD_DIR}
-    #make -j8 modynstorage-proto
-    #popd
+    pushd ${BUILD_DIR}
+    make -j8 modyn-storage-proto
+    popd
 
     cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
-        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0
+        -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 \
+        -DMODYN_BUILD_STORAGE=ON
 
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:
-    # ln -fs "${SCRIPT_DIR}"/../modyn/tests/.clang-tidy "${BUILD_DIR}"/modyn/tests/
+    ln -fs "${SCRIPT_DIR}"/../modyn/tests/.clang-tidy "${BUILD_DIR}"/modyn/tests/
 
     set +x
 }
@@ -46,12 +47,13 @@ function run_tidy() {
       echo "Will also automatically fix everything that we can..."
     fi
 
+    # For storage, we explicitly include src and include to avoid matching files in the generated directory, containing auto-generated gRPC headers
     ${RUN_CLANG_TIDY} -p "${BUILD_DIR}" \
         -clang-tidy-binary="${CLANG_TIDY}" \
         -config-file="${SCRIPT_DIR}/../.clang-tidy" \
         -quiet \
         -checks='-bugprone-suspicious-include,-google-global-names-in-headers' \
-        -header-filter='(.*modyn/storage/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)|(.*modyn/tests.*)' \
+        -header-filter='(.*modyn/storage/src/.*)|(.*modyn/storage/include/.*)|(.*modyn/common/.*)|(.*modyn/playground/.*)|(.*modyn/selector/.*)|(.*modyn/tests.*)' \
         ${additional_args} \
         "${BUILD_DIR}"/modyn/*/Unity/*.cxx \
         "${BUILD_DIR}"/modyn/*/*/Unity/*.cxx \

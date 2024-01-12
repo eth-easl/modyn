@@ -64,6 +64,7 @@ def noop_constructor_mock(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
+    evaluation_matrix: bool = False,
 ) -> None:
     pass
 
@@ -102,7 +103,7 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     started = client.start_pipeline()
 
     test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None
+        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None, False
     )
     assert started is True
     assert client.pipeline_id == PIPELINE_ID
@@ -114,7 +115,7 @@ def test_start_pipeline_failed(test_start_pipeline: MagicMock):
     started = client.start_pipeline()
 
     test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None
+        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None, False
     )
     assert started is False
     assert client.pipeline_id is None

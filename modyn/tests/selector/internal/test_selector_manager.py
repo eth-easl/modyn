@@ -46,6 +46,9 @@ class MockStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:  # pylint: disable=unused-argument
         pass
 
+    def get_available_labels(self) -> list[int]:
+        return []
+
 
 class MockDatabaseConnection:
     def __init__(self, modyn_config: dict):  # pylint: disable=super-init-not-called,unused-argument

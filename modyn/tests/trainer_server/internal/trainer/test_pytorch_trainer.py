@@ -585,10 +585,7 @@ def test_send_status_to_server():
     assert response["num_samples"] == 0
 
 
-@patch(
-    "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
-    mock_get_dataloaders,
-)
+@patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_train_invalid_query_message(test_weight_handling):
     query_status_queue = mp.Queue()
@@ -619,10 +616,7 @@ def test_train_invalid_query_message(test_weight_handling):
 # # pylint: disable=too-many-locals
 
 
-@patch(
-    "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
-    mock_get_dataloaders,
-)
+@patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(BaseCallback, "on_train_begin", return_value=None)
 @patch.object(BaseCallback, "on_train_end", return_value=None)
 @patch.object(BaseCallback, "on_batch_begin", return_value=None)
@@ -764,10 +758,7 @@ def test_train(
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 @patch("modyn.trainer_server.internal.utils.training_info.dynamic_module_import")
-@patch(
-    "modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders",
-    mock_get_dataloaders,
-)
+@patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
@@ -783,18 +774,7 @@ def test_create_trainer_with_exception(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     exception_queue = mp.Queue()
-    training_info = get_training_info(
-        0,
-        False,
-        False,
-        None,
-        "",
-        "",
-        1,
-        "",
-        False,
-        "/tmp/offline_dataset",
-    )
+    training_info = get_training_info(0, False, False, None, "", "", 1, "", False, "/tmp/offline_dataset")
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0

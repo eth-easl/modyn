@@ -53,8 +53,8 @@ class F1Score(AbstractDecomposableMetric):
         self.classification_matrix = np.zeros((3, self.num_classes))
 
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
-        y_true = y_true.numpy()
-        y_pred = y_pred.numpy()
+        y_true = y_true.detach().cpu().numpy()
+        y_pred = y_pred.detach().cpu().numpy()
 
         correct_mask = np.equal(y_true, y_pred)
         wrong_mask = np.invert(correct_mask)
@@ -86,11 +86,11 @@ class F1Score(AbstractDecomposableMetric):
         false_negatives = self.classification_matrix[2]
 
         denominator = 2 * true_positives + false_positives + false_negatives
-        if not np.all(denominator):
-            self.warning("Observed denominator for F1-scores to be zero.")
-            return 0
-
-        f1_scores = 2 * true_positives / denominator
+        numerator = 2 * true_positives
+        # For whichever class the denominator is zero, we output a F1 score for this class of zero
+        f1_scores = np.divide(
+            numerator, denominator, out=np.zeros(numerator.shape, dtype=float), where=denominator != 0
+        )
 
         if self.average == F1ScoreTypes.BINARY:
             return f1_scores[self.pos_label]

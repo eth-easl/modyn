@@ -34,6 +34,7 @@ training:
     name: NewDataStrategy
     maximum_keys_in_memory: 1000
     config:
+      storage_backend: "database"
       limit: -1
       reset_after_trigger: True
 data:

@@ -347,7 +347,7 @@ def test_dataset_iter_with_parsing(
         pipeline_id=1,
         trigger_id=1,
         dataset_id="MNIST",
-        bytes_parser="def bytes_parser_function(x):\n\treturn x.decode('utf-8')",
+        bytes_parser="def bytes_parser_function(x: memoryview):\n\treturn x.tobytes().decode('utf-8')",
         serialized_transforms=[],
         storage_address="localhost:1234",
         selector_address="localhost:1234",
@@ -593,7 +593,7 @@ def test_init_transforms(
         tv_ds.assert_called_once()
 
 
-def iter_multi_partition_data_side_effect(keys):
+def iter_multi_partition_data_side_effect(keys, worker_id=None):
     yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), 0)
 
 

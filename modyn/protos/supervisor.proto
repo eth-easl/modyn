@@ -15,6 +15,7 @@ message StartPipelineRequest {
     optional int32 start_replay_at = 3;
     optional int32 stop_replay_at = 4;
     optional int32 maximum_triggers = 5;
+    bool evaluation_matrix = 6;
 }
 
 message PipelineResponse { 

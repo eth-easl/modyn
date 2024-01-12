@@ -57,6 +57,7 @@ def test_mnist() -> None:
                 eval_directory=".",
                 start_replay_at=0,
                 maximum_triggers=1,
+                evaluation_matrix=False,
             )
         )
     )
@@ -80,6 +81,7 @@ def test_one_experiment_pipeline() -> None:
                 eval_directory=".",
                 start_replay_at=0,
                 maximum_triggers=1,
+                evaluation_matrix=True,
             )
         )
     )
@@ -103,6 +105,7 @@ def test_two_experiment_pipelines() -> None:
                 eval_directory=".",
                 start_replay_at=0,
                 maximum_triggers=1,
+                evaluation_matrix=False,
             )
         )
     )
@@ -116,6 +119,7 @@ def test_two_experiment_pipelines() -> None:
                 start_replay_at=0,
                 stop_replay_at=100000,
                 maximum_triggers=1,
+                evaluation_matrix=False,
             )
         )
     )

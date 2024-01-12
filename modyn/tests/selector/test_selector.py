@@ -1,6 +1,7 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
@@ -19,6 +20,9 @@ class MockStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:
         pass
 
+    def get_available_labels(self) -> list[int]:
+        return []
+
 
 def test_init():
     selec = Selector(MockStrategy(), 42, 2, {})
@@ -26,17 +30,17 @@ def test_init():
     assert selec._num_workers == 2
 
 
-def test_get_sample_keys_and_weight_cached():
+def test_get_sample_keys_and_weights_cached():
     selector = Selector(MockStrategy(), 42, 3, {})
     selector._trigger_cache[42] = [[(10, 1.0), (11, 1.0)], [(12, 1.0), (13, 1.0)]]
     selector._trigger_partition_cache[42] = 2
     selector._trigger_size_cache[42] = 4
 
     result = selector.get_sample_keys_and_weights(42, 0, 0)
-    assert result == [(10, 1.0)]
+    assert result == np.array([(10, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
 
     result = selector.get_sample_keys_and_weights(42, 0, 1)
-    assert result == [(12, 1.0)]
+    assert result == np.array([(12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
 
     with pytest.raises(ValueError):
         selector.get_sample_keys_and_weights(42, 1337, 0)

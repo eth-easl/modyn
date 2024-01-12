@@ -95,12 +95,13 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
         start_replay_at=0,
         stop_replay_at=1,
         maximum_triggers=2,
+        evaluation_matrix=False,
     )
 
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2)
+    test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2, False)
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)

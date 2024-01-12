@@ -159,6 +159,10 @@ properties:
                 type: number
                 description: |
                   This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.
+              storage_backend:
+                type: string
+                description: |
+                  Defines the storage backend to use. Most strategies currently support `database`, and the NewDataStrategy supports `local` as well.
               uses_weights:
                 type: boolean
                 description: |

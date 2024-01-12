@@ -115,11 +115,12 @@ def test_start_pipeline(test_grpc_connection_established):
     req_minimal = StartPipelineRequest(
         pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
         eval_directory=str(EVAL_DIR),
+        evaluation_matrix=False,
     )
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
         mock.return_value = START_PIPELINE_RES
-        ret_minimal = handler.start_pipeline(pipeline_config, EVAL_DIR)
+        ret_minimal = handler.start_pipeline(pipeline_config, EVAL_DIR, evaluation_matrix=False)
 
         assert ret_minimal["pipeline_id"] == 42
         assert "exception" not in ret_minimal
@@ -134,13 +135,19 @@ def test_start_pipeline(test_grpc_connection_established):
         eval_directory=str(EVAL_DIR),
         start_replay_at=start_replay_at,
         stop_replay_at=stop_replay_at,
-        maximum_triggers=maximum_triggers
+        maximum_triggers=maximum_triggers,
+        evaluation_matrix=True,
     )
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
         mock.return_value = START_PIPELINE_RES
         ret_full = handler.start_pipeline(
-            pipeline_config, EVAL_DIR, start_replay_at, stop_replay_at, maximum_triggers
+            pipeline_config,
+            EVAL_DIR,
+            start_replay_at,
+            stop_replay_at,
+            maximum_triggers,
+            evaluation_matrix=True,
         )
 
         assert ret_full["pipeline_id"] == 42

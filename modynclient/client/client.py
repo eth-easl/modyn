@@ -23,6 +23,7 @@ class Client:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
+        evaluation_matrix: bool = False,
     ) -> None:
         self.client_config = client_config
         self.pipeline_config = pipeline_config
@@ -30,6 +31,7 @@ class Client:
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
+        self.evaluation_matrix = evaluation_matrix
 
         self.grpc = GRPCHandler(client_config)
         self.pipeline_id: Optional[int] = None
@@ -55,7 +57,8 @@ class Client:
             self.eval_directory,
             self.start_replay_at,
             self.stop_replay_at,
-            self.maximum_triggers
+            self.maximum_triggers,
+            self.evaluation_matrix,
         )
         if "exception" in res:
             logger.info(f"Pipeline <{res['pipeline_id']}> failed with error {res['exception']}.")

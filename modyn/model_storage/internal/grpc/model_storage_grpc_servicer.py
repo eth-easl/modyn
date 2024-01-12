@@ -104,6 +104,9 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         model_file_path = self.ftp_dir / f"{current_time_millis()}_{request.model_id}.modyn"
         torch.save(model_dict, model_file_path)
 
+        del model_dict
+        self.model_storage_manager._clear_cuda_mem()
+
         logger.info(f"Trained model {request.model_id} has local path {model_file_path}")
         return FetchModelResponse(
             success=True,

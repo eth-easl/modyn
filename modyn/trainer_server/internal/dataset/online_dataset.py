@@ -1,4 +1,5 @@
 import contextlib
+import gc
 import json
 import logging
 import os
@@ -16,8 +17,8 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
 from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
-    MAX_MESSAGE_SIZE,
     deserialize_function,
+    grpc_common_config,
     grpc_connection_established,
     instantiate_class,
 )
@@ -61,6 +62,7 @@ class OnlineDataset(IterableDataset):
         self._transform_list: list[Callable] = []
         self._transform: Optional[Callable] = None
         self._storagestub: StorageStub = None
+        self._storage_channel: Optional[Any] = None
         self._bytes_parser_function: Optional[Callable] = None
         self._num_partitions = 0
         # the default key source is the Selector. Then it can be changed using change_key_source
@@ -68,6 +70,7 @@ class OnlineDataset(IterableDataset):
         self._uses_weights = None
         self._log_path = log_path
         self._log: dict[str, Any] = {"partitions": {}}
+        self._log_lock: Optional[threading.Lock] = None
         self._sw = Stopwatch()
 
         self._data_threads: dict[int, threading.Thread] = {}
@@ -115,16 +118,10 @@ class OnlineDataset(IterableDataset):
         self._setup_composed_transform()
 
     def _init_grpc(self) -> None:
-        storage_channel = grpc.insecure_channel(
-            self._storage_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
-        if not grpc_connection_established(storage_channel):
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        if not grpc_connection_established(self._storage_channel):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
-        self._storagestub = StorageStub(storage_channel)
+        self._storagestub = StorageStub(self._storage_channel)
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
@@ -137,7 +134,7 @@ class OnlineDataset(IterableDataset):
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def _get_data_from_storage(
-        self, selector_keys: list[int]
+        self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
         req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
         stopw = Stopwatch()
@@ -146,6 +143,9 @@ class OnlineDataset(IterableDataset):
         stopw.start("ResponseTime", overwrite=True)
         for _, response in enumerate(self._storagestub.Get(req)):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
+            if not grpc_connection_established(self._storage_channel):
+                self._info("gRPC connection lost, trying to reconnect!", worker_id)
+                self._init_grpc()
             stopw.start("ResponseTime", overwrite=True)
 
     # pylint: disable=too-many-locals
@@ -172,7 +172,7 @@ class OnlineDataset(IterableDataset):
 
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
-        for data_tuple in self._get_data_from_storage(keys):
+        for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)
@@ -194,7 +194,10 @@ class OnlineDataset(IterableDataset):
 
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
-        self._log["partitions"][str(partition_id)] = get_data_log
+        assert self._log_lock is not None
+
+        with self._log_lock:
+            self._log["partitions"][str(partition_id)] = get_data_log
 
         if partition_locks is not None and partition_valid is not None:
             with partition_locks[partition_id]:
@@ -204,7 +207,7 @@ class OnlineDataset(IterableDataset):
             callback()
 
     def _get_transformed_data_tuple(
-        self, key: int, sample: bytes, label: int, weight: Optional[float]
+        self, key: int, sample: memoryview, label: int, weight: Optional[float]
     ) -> Optional[Tuple]:
         assert self._uses_weights is not None
         self._sw.start("transform", resume=True)
@@ -222,17 +225,29 @@ class OnlineDataset(IterableDataset):
         if self._log_path is None:
             return
 
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            json.dumps(self._log)  # Enforce serialization to catch issues
-            return  # But don't actually store in tests
+        assert self._log_lock is not None
 
-        log_file = f"{self._log_path / str(worker_id)}.log"
-        self._log["transform"] = self._sw.measurements.get("transform", 0)
-        self._log["wait_for_later_partitions"] = self._sw.measurements.get("wait_for_later_partitions", 0)
-        self._log["wait_for_initial_partition"] = self._sw.measurements.get("wait_for_initial_partition", 0)
+        with self._log_lock:
+            if "PYTEST_CURRENT_TEST" in os.environ:
+                json.dumps(self._log)  # Enforce serialization to catch issues
+                return  # But don't actually store in tests
 
-        with open(log_file, "w", encoding="utf-8") as logfile:
-            json.dump(self._log, logfile)
+            log_file = f"{self._log_path / str(worker_id)}.log"
+            self._log["transform"] = self._sw.measurements.get("transform", 0)
+            self._log["wait_for_later_partitions"] = self._sw.measurements.get("wait_for_later_partitions", 0)
+            self._log["wait_for_initial_partition"] = self._sw.measurements.get("wait_for_initial_partition", 0)
+
+            with open(log_file, "w", encoding="utf-8") as logfile:
+                json.dump(self._log, logfile)
+
+    def _clear_partition(self, partition_id: int) -> None:
+        with self._partition_locks[partition_id] if self._partition_locks is not None else contextlib.suppress():
+            self._partition_valid[partition_id] = False
+            self._partition_valid_until[partition_id] = -1
+            del self._thread_data_container[partition_id]
+
+        if "PYTEST_CURRENT_TEST" not in os.environ:
+            gc.collect()
 
     def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
         assert self._start_prefetch_lock is not None
@@ -307,14 +322,16 @@ class OnlineDataset(IterableDataset):
 
     def _fetch_partition_noprefetch(
         self, worker_id: int, partition_id: int
-    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
         self._get_data(container, worker_id, partition_id, None, None, None, None, None)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):
-            yield container["keys"][idx], container["data"][idx], container["labels"][idx], container["weights"][idx]
+            yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
+                "weights"
+            ][idx]
 
     def _is_partition_fetched(self, partition_id: int) -> bool:
         if partition_id not in self._partition_locks or partition_id not in self._partition_valid:
@@ -329,11 +346,11 @@ class OnlineDataset(IterableDataset):
 
     def _get_partition_data(
         self, last_idx: int, max_idx: int, partition_id: int
-    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         for idx in range(last_idx + 1, max_idx + 1):
-            yield self._thread_data_container[partition_id]["keys"][idx], self._thread_data_container[partition_id][
-                "data"
-            ][idx], self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
+            yield self._thread_data_container[partition_id]["keys"][idx], memoryview(
+                self._thread_data_container[partition_id]["data"][idx]
+            ), self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
                 "weights"
             ][
                 idx
@@ -345,7 +362,7 @@ class OnlineDataset(IterableDataset):
 
     def prefetched_partition_generator(
         self, worker_id: int, partition_id: int
-    ) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         last_idx = -1
 
         while not self._is_partition_fetched(partition_id):
@@ -362,6 +379,8 @@ class OnlineDataset(IterableDataset):
         self._info(f"Thread for partition {partition_id} joined", worker_id)
         max_idx = self._partition_max_index(partition_id)
         yield from self._get_partition_data(last_idx, max_idx, partition_id)
+        self._info(f"Clearing partition {partition_id}", worker_id)
+        self._clear_partition(partition_id)
 
     def start_prefetching(self, worker_id: int) -> None:
         if self._num_prefetched_partitions < 1:
@@ -379,7 +398,7 @@ class OnlineDataset(IterableDataset):
         for _ in range(self._parallel_prefetch_requests):
             self._prefetch_partition(worker_id, True)
 
-    def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, bytes, int, Optional[float]]]:
+    def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         self.start_prefetching(worker_id)
 
         for partition_id in range(self._num_partitions):
@@ -419,6 +438,7 @@ class OnlineDataset(IterableDataset):
             self._log = {"partitions": {}}
             self._sw = Stopwatch()
             self._start_prefetch_lock = threading.Lock()
+            self._log_lock = threading.Lock()
 
         # Always reinitialize these structures for prefetching (for multiple epochs)
         self._data_threads = {}
@@ -438,7 +458,9 @@ class OnlineDataset(IterableDataset):
             + f"Num prefetched partitions = {self._num_prefetched_partitions}",
             worker_id,
         )
-        self._log["num_partitions"] = self._num_partitions
+        assert self._log_lock is not None
+        with self._log_lock:
+            self._log["num_partitions"] = self._num_partitions
         self._num_prefetched_partitions = min(self._num_prefetched_partitions, self._num_partitions)
 
         for data_tuple in self.all_partition_generator(worker_id):
