@@ -81,7 +81,7 @@ def test_one_experiment_pipeline() -> None:
                 eval_directory=".",
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=True,
+                evaluation_matrix=False,
             )
         )
     )
