@@ -252,50 +252,52 @@ def test__validate_evaluation_options():
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config_content():
     sup = Supervisor(get_minimal_system_config())
+    evaluation_matrix = False
 
     # Check that our minimal pipeline config gets accepted
     pipeline_config = get_minimal_pipeline_config()
-    assert sup.validate_pipeline_config_content(pipeline_config)
+    assert sup.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
     # Check that an empty pipeline config throws an exception
     # because there is no model defined
     with pytest.raises(KeyError):
         pipeline_config = {}
-        assert not sup.validate_pipeline_config_content(pipeline_config)
+        assert not sup.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
     # Check that an unknown model gets rejected
     pipeline_config = get_minimal_pipeline_config()
     pipeline_config["model"]["id"] = "UnknownModel"
-    assert not sup.validate_pipeline_config_content(pipeline_config)
+    assert not sup.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
     # Check that an unknown trigger gets rejected
     pipeline_config = get_minimal_pipeline_config()
     pipeline_config["trigger"]["id"] = "UnknownTrigger"
-    assert not sup.validate_pipeline_config_content(pipeline_config)
+    assert not sup.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
     # Check that training without GPUs gets rejected
     # (testing that _validate_training_options gets called)
     pipeline_config = get_minimal_pipeline_config()
     pipeline_config["training"]["gpus"] = 0
-    assert not sup.validate_pipeline_config_content(pipeline_config)
+    assert not sup.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
 def test_validate_pipeline_config():
     sup = Supervisor(get_minimal_system_config())
+    evaluation_matrix = False
 
     # Check that our minimal pipeline config gets accepted
     pipeline_config = get_minimal_pipeline_config()
-    assert sup.validate_pipeline_config(pipeline_config)
+    assert sup.validate_pipeline_config(pipeline_config, evaluation_matrix)
 
     # Check that an empty pipeline config gets rejected
     pipeline_config = {}
-    assert not sup.validate_pipeline_config(pipeline_config)
+    assert not sup.validate_pipeline_config(pipeline_config, evaluation_matrix)
 
     # Check that an unknown model gets rejected
     pipeline_config = get_minimal_pipeline_config()
     pipeline_config["model"]["id"] = "UnknownModel"
-    assert not sup.validate_pipeline_config(pipeline_config)
+    assert not sup.validate_pipeline_config(pipeline_config, evaluation_matrix)
 
 
 @patch.object(GRPCHandler, "dataset_available", lambda self, did: did == "existing")

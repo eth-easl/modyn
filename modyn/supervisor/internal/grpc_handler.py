@@ -542,8 +542,8 @@ class GRPCHandler:
                     evaluation_id = fixed_eval_response.evaluation_id
                     logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
                     evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
-                )
+                        self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
+                    )
 
             return evaluations
 
@@ -577,8 +577,8 @@ class GRPCHandler:
             evaluation_id = trigger_eval_response.evaluation_id
             logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
             evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.eval_status_queue, evaluation_id, dataset_id, trigger_eval_response.dataset_size
-                )
+                self.eval_status_queue, evaluation_id, dataset_id, trigger_eval_response.dataset_size
+            )
             evaluations[evaluation_id].create_tracker()
 
         return evaluations

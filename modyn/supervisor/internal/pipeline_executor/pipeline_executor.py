@@ -123,7 +123,7 @@ class PipelineExecutor:
 
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
-        
+
     def build_evaluation_matrix(self) -> None:
         self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
@@ -242,7 +242,7 @@ class PipelineExecutor:
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = model_id
-        
+
         self.trained_models.append(model_id)
         self.triggers.append(trigger_id)
 
@@ -420,6 +420,7 @@ class PipelineExecutor:
         self._persist_pipeline_log()
 
 
+# pylint: disable=too-many-locals
 def execute_pipeline(
     start_timestamp: int,
     pipeline_id: int,

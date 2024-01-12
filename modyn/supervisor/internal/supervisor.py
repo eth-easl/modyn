@@ -168,7 +168,7 @@ class Supervisor:
 
         if "evaluation" in pipeline_config:
             is_valid = is_valid and self._validate_evaluation_options(pipeline_config["evaluation"])
-        
+
         if evaluation_matrix:
             if "evaluation" not in pipeline_config:
                 logger.error("Can only create evaluation matrix with evaluation section.")
@@ -176,8 +176,7 @@ class Supervisor:
             else:
                 train_dataset_id = pipeline_config["data"]["dataset_id"]
                 train_dataset_in_eval = any(
-                    dataset["dataset_id"] == train_dataset_id
-                    for dataset in pipeline_config["evaluation"]["datasets"]
+                    dataset["dataset_id"] == train_dataset_id for dataset in pipeline_config["evaluation"]["datasets"]
                 )
                 if not train_dataset_in_eval:
                     # TODO(#335): Fix this. Clean up in general.
