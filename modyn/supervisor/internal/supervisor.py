@@ -12,7 +12,11 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import (
+    JsonResultWriter,
+    LogResultWriter,
+    TensorboardResultWriter,
+)
 from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
 from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -34,7 +38,11 @@ class Supervisor:
         "CoresetStrategy",
     ]
 
-    supported_evaluation_result_writers: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
+    supported_evaluation_result_writers: dict = {
+        "json": JsonResultWriter,
+        "tensorboard": TensorboardResultWriter,
+        "log": LogResultWriter,
+    }
 
     def __init__(
         self,
