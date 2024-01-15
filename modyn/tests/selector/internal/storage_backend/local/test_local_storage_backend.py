@@ -74,10 +74,10 @@ def test_get_all_data():
 
 
 def test_get_many_data():
-    backend = LocalStorageBackend(42, get_minimal_modyn_config(), N)
+    division_count = 10000
+    backend = LocalStorageBackend(42, get_minimal_modyn_config(), division_count)
 
     sample_count = 1500000
-    division_count = 10000
     samples = list(range(sample_count))
     backend.persist_samples(0, samples, [0] * sample_count, [10] * sample_count)
 

@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
 
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.common.local_storage_backend import LocalStorageBackend as LocalStorageBackendCPP
@@ -13,7 +13,7 @@ MAX_SAMPLES_IN_FILE = 1000000
 
 
 class LocalStorageBackend(AbstractStorageBackend):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument
         super().__init__(*args, **kwargs)
         self._cpp = LocalStorageBackendCPP(self._modyn_config["selector"]["local_storage_directory"])
 

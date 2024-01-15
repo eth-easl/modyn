@@ -37,7 +37,7 @@ class LocalStorageBackend:
         if not path.exists():
             raise RuntimeError(f"Cannot find LocalStorageBackend library at {path}")
 
-    def __init__(self, local_storage_directory) -> None:
+    def __init__(self, local_storage_directory: typing.Union[str, Path]) -> None:
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
