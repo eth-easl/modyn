@@ -549,24 +549,8 @@ class GRPCHandler:
 
         # In case we want to evaluate on trigger training set
         dataset_id = pipeline_config["data"]["dataset_id"]
-        if "num_prefetched_partitions" in pipeline_config["training"]:
-            num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
-        else:
-            if "prefetched_partitions" in pipeline_config["training"]:
-                raise ValueError(
-                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
-                    + " Please rename/remove that configuration"
-                )
-            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
-            num_prefetched_partitions = 1
-
-        if "parallel_prefetch_requests" in pipeline_config["training"]:
-            parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
-        else:
-            logger.warning(
-                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
-            )
-            parallel_prefetch_requests = 1
+        num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
+        parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
 
         train_eval_dataset = None
         for dataset in pipeline_config["evaluation"]["datasets"]:
