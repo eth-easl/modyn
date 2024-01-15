@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import shutil
 import tempfile
@@ -53,7 +52,6 @@ def test_get_trigger_data():
     trigger_one_data = [keys for keys, _ in backend.get_trigger_data(1)]
     trigger_three_data = [keys for keys, _ in backend.get_trigger_data(3)]
 
-    # TODO: change tests to set equality as order does not matter
     assert len(trigger_zero_data) == 2  # Validate partitioning
     assert set(flatten(trigger_zero_data)) == set([10, 11, 12])  # Validate content
 
@@ -76,16 +74,16 @@ def test_get_all_data():
 
 
 def test_get_many_data():
-    N = 10000
     backend = LocalStorageBackend(42, get_minimal_modyn_config(), N)
 
     sample_count = 1500000
+    division_count = 10000
     samples = list(range(sample_count))
     backend.persist_samples(0, samples, [0] * sample_count, [10] * sample_count)
 
     all_data = [keys for keys, _ in backend.get_all_data()]
 
-    assert len(all_data) == sample_count // N  # Validate partitioning
+    assert len(all_data) == sample_count // division_count  # Validate partitioning
     assert set(flatten(all_data)) == set(samples)  # Validate content
 
 

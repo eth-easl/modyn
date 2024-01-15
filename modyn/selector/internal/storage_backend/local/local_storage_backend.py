@@ -13,9 +13,9 @@ MAX_SAMPLES_IN_FILE = 1000000
 
 
 class LocalStorageBackend(AbstractStorageBackend):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self._cpp = LocalStorageBackendCPP()
+        self._cpp = LocalStorageBackendCPP(self._modyn_config["selector"]["local_storage_directory"])
 
     def _get_data(
         self, smallest_included_trigger_id: int, single_trigger: bool
@@ -69,11 +69,11 @@ class LocalStorageBackend(AbstractStorageBackend):
             read_blocks.append((filenames, data_lengths, data_offsets))
 
         for filenames, data_lengths, data_offsets in read_blocks:
-            yield self._cpp._parse_files(filenames, data_lengths, data_offsets), dict()
+            yield self._cpp._parse_files(filenames, data_lengths, data_offsets), {}
 
     def persist_samples(
         self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> dict[str, Any]:
+    ) -> None:
         root = self._modyn_config["selector"]["local_storage_directory"]
         trigger_folder = Path(root) / str(self._pipeline_id) / str(seen_in_trigger_id)
         Path(trigger_folder).mkdir(parents=True, exist_ok=True)
@@ -84,7 +84,7 @@ class LocalStorageBackend(AbstractStorageBackend):
         (trigger_folder / "labels").mkdir(parents=True, exist_ok=True)
 
         for label in labels_array:
-            with open(trigger_folder / "labels" / str(label), "w"):
+            with open(trigger_folder / "labels" / str(label), "w", encoding="utf-8"):
                 continue
 
         existing_count = len(list(trigger_folder.glob("*")))

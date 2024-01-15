@@ -1,13 +1,11 @@
 import ctypes
 import logging
-import os
 import sys
 import typing
 from pathlib import Path
 from sys import platform
 
 import numpy as np
-from modyn.utils import get_partition_for_worker
 from numpy.ctypeslib import ndpointer
 
 logger = logging.getLogger(__name__)
@@ -15,48 +13,12 @@ logger = logging.getLogger(__name__)
 NUMPY_HEADER_SIZE = 128
 
 
-class ArrayWrapper:
-    def __init__(self, array: np.ndarray, f_release: typing.Callable) -> None:
-        self.array = array
-        self.f_release = f_release
-
-    def __len__(self) -> int:
-        return self.array.size
-
-    def __getitem__(self, key: typing.Any) -> typing.Any:
-        return self.array.__getitem__(key)
-
-    def __str__(self) -> str:
-        return self.array.__str__()
-
-    def __del__(self) -> None:
-        self.f_release(self.array)
-
-    def __eq__(self, other: typing.Any) -> typing.Any:
-        return self.array == other
-
-    def __ne__(self, other: typing.Any) -> typing.Any:
-        return self.array == other
-
-    @property
-    def dtype(self) -> np.dtype:
-        return self.array.dtype
-
-    @property
-    def shape(self) -> tuple:
-        return self.array.shape
-
-
 class LocalStorageBackend:
     """
-    A trigger sample is a tuple of (sample_id, sample_weight) that is used to select a sample for a trigger.
-
-    The sample_id is the id of the sample in the database. The sample_weight is the weight of the sample in the trigger.
-
-    This class is used to store and retrieve trigger samples from the local file system. The trigger samples are stored
-    in the directory specified in the modyn config file. The file name is the concatenation of the pipeline id, the
-    trigger id and the partition id. The file contains one line per sample. Each line contains the sample id and the
-    sample weight separated by a comma.
+    This class is used to store and retrieve samples from the local file system. The samples are stored
+    in the directory specified in the modyn config file. This class is only used for directly writing
+    and reading the data by wrapping around CPP, the actual logic behind this backend is found in
+    the storage backend folder.
     """
 
     def _get_library_path(self) -> Path:
@@ -73,16 +35,16 @@ class LocalStorageBackend:
     def _ensure_library_present(self) -> None:
         path = self._get_library_path()
         if not path.exists():
-            raise RuntimeError(f"Cannot find TriggerSampleStorage library at {path}")
+            raise RuntimeError(f"Cannot find LocalStorageBackend library at {path}")
 
-    def __init__(self, trigger_sample_directory="test_sample_storage") -> None:
+    def __init__(self, local_storage_directory) -> None:
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
-        self.trigger_sample_directory = trigger_sample_directory
-        if not Path(self.trigger_sample_directory).exists():
-            Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
-            logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
+        self.local_storage_directory = local_storage_directory
+        if not Path(self.local_storage_directory).exists():
+            Path(self.local_storage_directory).mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created the local storage backend directory {self.local_storage_directory}.")
         if sys.maxsize < 2**63 - 1:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
@@ -106,12 +68,12 @@ class LocalStorageBackend:
         self._parse_files_impl.restype = None
 
     def _parse_files(self, file_paths: list, data_lengths: list, data_offsets: list) -> None:
-        """Read the trigger samples to multiple files.
+        """Read data from multiple files. Reading supports offset and length per file.
 
         Args:
-            file_path (str): File path to write to.
-            trigger_samples (np.ndarray): List of trigger samples.
-            data_lengths (list): List of
+            file_paths (list): File paths to write to.
+            data_lengths (list): Lengths of data to read from files.
+            data_offsets (list): Offsets of data to read from files.
         """
 
         files = [ctypes.c_char_p(str(file_path.with_suffix(".nnpy")).encode("utf-8")) for file_path in file_paths]
@@ -132,21 +94,20 @@ class LocalStorageBackend:
         self._parse_files_impl(files_p, data, data_lengths_p, data_offsets_p, len(file_paths))
         return data
 
-    def _write_files(self, file_paths: list, trigger_samples: np.ndarray, data_lengths: list) -> None:
-        """Write the trigger samples to multiple files.
+    def _write_files(self, file_paths: list, samples: np.ndarray, data_lengths: list) -> None:
+        """Write data to multiple files.
 
         Args:
-            file_path (str): File path to write to.
-            trigger_samples (np.ndarray): List of trigger samples.
-            data_lengths (list): List of
+            file_paths (list): File paths to write to.
+            samples (np.ndarray): Array of samples to write.
+            data_lengths (list): Lengths of data to write to files.
         """
 
-        data = np.asanyarray(trigger_samples)
+        data = np.asanyarray(samples)
 
         files = [ctypes.c_char_p(str(file_path.with_suffix(".nnpy")).encode("utf-8")) for file_path in file_paths]
 
         files_p = (ctypes.c_char_p * len(files))()
-        headers_p = (ctypes.c_char_p * len(files))()
         data_lengths_p = (ctypes.c_int64 * len(data_lengths))()
 
         for i, _ in enumerate(files):
