@@ -30,7 +30,7 @@ class LocalStorageBackend:
         return self._get_build_path() / library_filename
 
     def _get_build_path(self) -> Path:
-        return Path(__file__).parent.parent.parent.parent
+        return Path(__file__).parent.parent.parent.parent / "libbuild"
 
     def _ensure_library_present(self) -> None:
         path = self._get_library_path()

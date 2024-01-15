@@ -13,7 +13,7 @@ MAX_SAMPLES_IN_FILE = 1000000
 
 
 class LocalStorageBackend(AbstractStorageBackend):
-    def __init__(self, *args, **kwargs) -> None:  # pylint: disable=unused-argument
+    def __init__(self, *args, **kwargs):  # pylint: disable=unused-argument
         super().__init__(*args, **kwargs)
         self._cpp = LocalStorageBackendCPP(self._modyn_config["selector"]["local_storage_directory"])
 
