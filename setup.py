@@ -144,7 +144,11 @@ setup(
     include_package_data=True,
     license="MIT",
     keywords=KEYWORDS,
-    ext_modules=[CMakeExtension("example_extension"), CMakeExtension("trigger_sample_storage")],
+    ext_modules=[
+        CMakeExtension("example_extension"),
+        CMakeExtension("trigger_sample_storage"),
+        CMakeExtension("local_storage_backend"),
+    ],
     cmdclass={"build_ext": CMakeBuild},
     classifiers=[
         # Trove classifiers
