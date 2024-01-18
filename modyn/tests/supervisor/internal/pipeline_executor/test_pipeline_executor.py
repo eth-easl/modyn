@@ -310,8 +310,12 @@ def test__handle_new_data_batch_no_triggers(test_inform_selector: MagicMock):
 @patch.object(PipelineExecutor, "_run_training")
 @patch.object(GRPCHandler, "inform_selector_and_trigger")
 @patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
 def test__handle_triggers_within_batch(
-    test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
@@ -320,6 +324,7 @@ def test__handle_triggers_within_batch(
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
+    test_get_number_of_samples.return_value = len(batch)
 
     pe._handle_triggers_within_batch(batch, triggering_indices)
 
@@ -342,8 +347,12 @@ def test__handle_triggers_within_batch(
 @patch.object(PipelineExecutor, "_run_training")
 @patch.object(GRPCHandler, "inform_selector_and_trigger")
 @patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
 def test__handle_triggers_within_batch_empty_triggers(
-    test_inform_selector: MagicMock, test_inform_selector_and_trigger: MagicMock, test__run_training: MagicMock
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
@@ -352,6 +361,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
+    test_get_number_of_samples.return_value = len(batch)
 
     pe._handle_triggers_within_batch(batch, triggering_indices)
 
