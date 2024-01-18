@@ -4,21 +4,16 @@ import tempfile
 from typing import Iterable
 from unittest.mock import MagicMock, patch
 
-from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611
+from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611;
     DataInformRequest,
     GetNumberOfPartitionsRequest,
     GetNumberOfSamplesRequest,
     GetSamplesRequest,
     GetSelectionStrategyRequest,
-    JsonString,
-    ModelStoragePolicyInfo,
     NumberOfPartitionsResponse,
     NumberOfSamplesResponse,
-    PipelineResponse,
-    RegisterPipelineRequest,
     SamplesResponse,
     SelectionStrategyResponse,
-    StrategyConfig,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.selector_grpc_servicer import SelectorGRPCServicer
@@ -29,7 +24,7 @@ def get_minimal_modyn_config():
     return {"selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"}}
 
 
-def noop_init_metadata_db(self):
+def noop_init_metadata_db(self) -> None:
     pass
 
 
@@ -41,42 +36,6 @@ def test_init():
         mgr = SelectorManager(config)
         servicer = SelectorGRPCServicer(mgr, 8096)
         assert servicer.selector_manager == mgr
-
-
-@patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)
-@patch.object(SelectorManager, "register_pipeline")
-def test_register_pipeline(test_register_pipeline: MagicMock):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        config = get_minimal_modyn_config()
-        config["selector"]["trigger_sample_directory"] = tmp_dir
-        mgr = SelectorManager(config)
-        servicer = SelectorGRPCServicer(mgr, 8096)
-        policy = ModelStoragePolicyInfo(full_model_strategy_config=StrategyConfig(name="PyTorchFullModel"))
-        request = RegisterPipelineRequest(
-            num_workers=2,
-            selection_strategy=JsonString(value="strat"),
-            model_class_name="ResNet18",
-            model_configuration=JsonString(value="{}"),
-            amp=True,
-            model_storage_policy=policy,
-        )
-        test_register_pipeline.return_value = 42
-
-        response: PipelineResponse = servicer.register_pipeline(request, None)
-
-        assert response.pipeline_id == 42
-        test_register_pipeline.assert_called_once()
-
-        arguments = test_register_pipeline.call_args[0]
-        assert arguments[0] == 2
-        assert arguments[1] == "strat"
-        assert arguments[2] == "ResNet18"
-        assert arguments[3] == "{}"
-        assert arguments[4]
-        assert arguments[5].name == "PyTorchFullModel"
-        assert not arguments[5].zip
-        assert arguments[6] is None
-        assert arguments[7] is None
 
 
 @patch.object(SelectorManager, "init_metadata_db", noop_init_metadata_db)

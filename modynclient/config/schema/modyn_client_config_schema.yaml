@@ -1,0 +1,42 @@
+%YAML 1.1
+---
+$schema: "http://json-schema.org/draft-04/schema"
+id: "http://stsci.edu/schemas/yaml-schema/draft-01"
+title:
+  Modyn Client Configuration
+description: |
+  This is the configuration file for the Modyn Client.
+  It contains the configuration for the Client to connect to Modyn Supervisor, adapt as required.
+properties:
+  project:
+    type: object
+    properties:
+      name:
+        type: string
+        description: |
+          The name of the project.
+      description:
+        type: string
+        description: |
+          The description of the project.
+      version:
+        type: string
+        description: |
+          The version of the project.
+  supervisor:
+    type: object
+    properties:
+      ip:
+        type: string
+        description: |
+          The ip address on which modyn supervisor is run.
+      port:
+        type: string
+        description: |
+          The port on which modyn supervisor is run.
+    required:
+      - ip
+      - port
+required:
+  - project
+  - supervisor

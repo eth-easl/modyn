@@ -11,7 +11,6 @@ from typing import Any, Optional
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.pipelines import Pipeline
-from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 from modyn.utils.utils import dynamic_module_import, is_directory_writable
@@ -25,7 +24,6 @@ class SelectorManager:
         self._manager = Manager()
         self._selectors: dict[int, Selector] = {}
         self._selector_locks: DictProxy[int, Any] = self._manager.dict()
-        self._next_pipeline_lock = self._manager.Lock()
         self._selector_cache_size = self._modyn_config["selector"]["keys_in_selector_cache"]
 
         # TODO(309): currently we have to prepare N locks and then share.
@@ -95,45 +93,6 @@ class SelectorManager:
         selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
         selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
         self._selectors[pipeline_id] = selector
-
-    def register_pipeline(
-        self,
-        num_workers: int,
-        selection_strategy: str,
-        model_class_name: str,
-        model_config: str,
-        amp: bool,
-        full_model_strategy: ModelStorageStrategyConfig,
-        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
-        full_model_interval: Optional[int] = None,
-    ) -> int:
-        """
-        Registers a new pipeline at the Selector.
-        Returns:
-            The id of the newly created training object
-        Throws:
-            ValueError if num_workers is not positive.
-        """
-        if num_workers < 0:
-            raise ValueError(f"Tried to register training with {num_workers} workers.")
-
-        with self._next_pipeline_lock:
-            with MetadataDatabaseConnection(self._modyn_config) as database:
-                pipeline_id = database.register_pipeline(
-                    num_workers,
-                    model_class_name,
-                    model_config,
-                    amp,
-                    selection_strategy,
-                    full_model_strategy,
-                    incremental_model_strategy,
-                    full_model_interval,
-                )
-
-        self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
-        self._instantiate_selector(pipeline_id, num_workers, selection_strategy)
-
-        return pipeline_id
 
     def get_sample_keys_and_weights(
         self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int
