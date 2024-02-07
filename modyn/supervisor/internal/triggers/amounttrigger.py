@@ -1,4 +1,7 @@
 from modyn.supervisor.internal.triggers.trigger import Trigger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataAmountTrigger(Trigger):

@@ -7,6 +7,7 @@ import sys
 import traceback
 from time import sleep
 from typing import Any, Optional
+from collections.abc import Generator
 
 from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
@@ -113,6 +114,10 @@ class PipelineExecutor:
 
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
+        
+        if trigger_id == "DataDriftTrigger":
+            self.trigger.inform_dataloader_info(self.pipeline_id, self.pipeline_config, self.modyn_config)
+            self.trigger.inform_previous_trigger_and_model(None, self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
@@ -189,25 +194,23 @@ class PipelineExecutor:
 
     def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         self._sw.start("trigger_inform", overwrite=True)
-        triggering_indices = self.trigger.inform(batch)
-        num_triggers = len(triggering_indices)
-        self.pipeline_log["supervisor"]["num_triggers"] += len(triggering_indices)
+        triggering_indices: Generator[int] = self.trigger.inform(batch)
+        num_triggers = self._handle_triggers_within_batch(batch, triggering_indices)
+
+        logger.info(f"There are {num_triggers} triggers in this batch.")
+        self.pipeline_log["supervisor"]["num_triggers"] += num_triggers
         self.pipeline_log["supervisor"]["trigger_batch_times"].append(
             {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
         )
 
-        if num_triggers > 0:
-            logger.info(f"There are {num_triggers} triggers in this batch.")
-            self._handle_triggers_within_batch(batch, triggering_indices)
-            return True
+        if num_triggers == 0:
+            self._sw.start("selector_inform", overwrite=True)
+            selector_log = self.grpc.inform_selector(self.pipeline_id, batch)
+            self.pipeline_log["supervisor"]["selector_informs"].append(
+                {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
+            )
 
-        self._sw.start("selector_inform", overwrite=True)
-        selector_log = self.grpc.inform_selector(self.pipeline_id, batch)
-        self.pipeline_log["supervisor"]["selector_informs"].append(
-            {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
-        )
-
-        return False
+        return num_triggers > 0
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
@@ -261,42 +264,54 @@ class PipelineExecutor:
             writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
-
-    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
+        
+    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int]) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
+        num_triggers = 0
 
-        for i, triggering_idx in enumerate(triggering_indices):
-            self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
-            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
-            previous_trigger_idx = triggering_idx + 1
+        while True:
+            try:
+                triggering_idx = next(triggering_indices)
+                logger.info(f"[Trigger in this batch] {triggering_idx}")
+                num_triggers += 1
 
-            # This call informs the selector about the data until (and including)
-            # the data point that caused the trigger and then also notifies it about the triggering.
-            # This means the next training call on trigger_id will guarantee
-            # that all data until that point has been processed by the selector.
-            self._sw.start("selector_inform", overwrite=True)
-            trigger_id, selector_log = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
-            self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
-                "total_selector_time": self._sw.stop(),
-                "selector_log": selector_log,
-            }
-            self._persist_pipeline_log()
+                self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
+                triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
+                previous_trigger_idx = triggering_idx + 1
 
-            num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
-            if num_samples_in_trigger > 0:
-                self._run_training(trigger_id)  # Blocks until training is done.
-                self._update_pipeline_stage_and_enqueue_msg(
-                    PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                )
-            else:
-                logger.info(f"Skipping training on empty trigger {trigger_id}]")
+                # This call informs the selector about the data until (and including)
+                # the data point that caused the trigger and then also notifies it about the triggering.
+                # This means the next training call on trigger_id will guarantee
+                # that all data until that point has been processed by the selector.
+                self._sw.start("selector_inform", overwrite=True)
+                trigger_id, selector_log = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+                if self.pipeline_config["trigger"]["id"] == "DataDriftTrigger":
+                    self.trigger.inform_previous_trigger_and_model(trigger_id, None)
+                self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
+                    "total_selector_time": self._sw.stop(),
+                    "selector_log": selector_log,
+                }
+                self._persist_pipeline_log()
 
-            # If no other trigger is coming in this batch,
-            # we have to inform the Selector about the remaining data in this batch.
-            if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1 :]
+                num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
+                if num_samples_in_trigger > 0:
+                    self._run_training(trigger_id)  # Blocks until training is done.
+                    self._update_pipeline_stage_and_enqueue_msg(
+                        PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                    )
+                else:
+                    logger.info(f"Skipping training on empty trigger {trigger_id}]")
+                self._persist_pipeline_log()
+
+                self.num_triggers = self.num_triggers + 1
+                if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
+                    return num_triggers
+            except StopIteration:
+                # If no other trigger is coming in this batch,
+                # we have to inform the Selector about the remaining data in this batch.
+                remaining_data = batch[previous_trigger_idx :]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
@@ -311,12 +326,8 @@ class PipelineExecutor:
                     self.pipeline_log["supervisor"]["selector_informs"].append(
                         {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
                     )
-
-            self._persist_pipeline_log()
-
-            self.num_triggers = self.num_triggers + 1
-            if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
-                break
+                    self._persist_pipeline_log()
+                return num_triggers     
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
