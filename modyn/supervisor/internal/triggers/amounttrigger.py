@@ -1,4 +1,6 @@
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from collections.abc import Generator
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,7 @@ class DataAmountTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> list[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
 
         first_idx = self.data_points_for_trigger - self.remaining_data_points - 1
@@ -25,4 +27,5 @@ class DataAmountTrigger(Trigger):
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
-        return triggering_indices
+        for idx in triggering_indices:
+            yield idx 

@@ -116,7 +116,8 @@ class PipelineExecutor:
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
         
         if trigger_id == "DataDriftTrigger":
-            self.trigger.inform_dataloader_info(self.pipeline_id, self.pipeline_config, self.modyn_config)
+            self.trigger.init_dataloader_info(self.pipeline_id, self.pipeline_config, self.modyn_config)
+            self.trigger.init_model_wrapper(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
             self.trigger.inform_previous_trigger_and_model(None, self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
@@ -240,6 +241,8 @@ class PipelineExecutor:
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
+        if self.pipeline_config["trigger"]["id"] == "DataDriftTrigger":
+            self.trigger.inform_previous_trigger_and_model(trigger_id, model_id)
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
@@ -270,6 +273,7 @@ class PipelineExecutor:
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
         num_triggers = 0
+        last_trigger_id: Optional[int] = None
 
         while True:
             try:
@@ -287,6 +291,7 @@ class PipelineExecutor:
                 # that all data until that point has been processed by the selector.
                 self._sw.start("selector_inform", overwrite=True)
                 trigger_id, selector_log = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
+                last_trigger_id = trigger_id
                 if self.pipeline_config["trigger"]["id"] == "DataDriftTrigger":
                     self.trigger.inform_previous_trigger_and_model(trigger_id, None)
                 self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
@@ -298,6 +303,8 @@ class PipelineExecutor:
                 num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
                 if num_samples_in_trigger > 0:
                     self._run_training(trigger_id)  # Blocks until training is done.
+                    if self.pipeline_config["trigger"]["id"] == "DataDriftTrigger":
+                        self.trigger.inform_previous_trigger_data_points(trigger_id, num_samples_in_trigger)
                     self._update_pipeline_stage_and_enqueue_msg(
                         PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                     )
@@ -314,12 +321,12 @@ class PipelineExecutor:
                 remaining_data = batch[previous_trigger_idx :]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
-                if len(remaining_data) > 0:
+                if len(remaining_data) > 0 and last_trigger_id is not None:
                     # These data points will be included in the next trigger
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
                     self._update_pipeline_stage_and_enqueue_msg(
-                        PipelineStage.INFORM_SELECTOR_REMAINING_DATA, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                        PipelineStage.INFORM_SELECTOR_REMAINING_DATA, MsgType.ID, id_submsg(IdType.TRIGGER, last_trigger_id)
                     )
                     self._sw.start("selector_inform", overwrite=True)
                     selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)

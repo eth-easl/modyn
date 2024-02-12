@@ -1,4 +1,5 @@
 from typing import Optional
+from collections.abc import Generator
 
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.utils import convert_timestr_to_seconds, validate_timestr
@@ -25,7 +26,7 @@ class TimeTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> list[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
                 self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted
@@ -49,4 +50,5 @@ class TimeTrigger(Trigger):
             triggering_indices.append(idx - 1)
             self.next_trigger_at += self.trigger_every_s
 
-        return triggering_indices
+        for idx in triggering_indices:
+            yield idx
