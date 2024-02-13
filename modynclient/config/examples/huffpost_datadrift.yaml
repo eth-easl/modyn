@@ -1,0 +1,50 @@
+pipeline:
+  name: Huffpost dataset Test Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: ArticleNet
+  config:
+    num_classes: 55
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  device: "cpu"
+  dataloader_workers: 2
+  use_previous_model: True
+  initial_model: random
+  batch_size: 64
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.00002
+            momentum: 0.9
+            weight_decay: 0.01
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    maximum_keys_in_memory: 1000
+    config:
+      storage_backend: "database"
+      limit: -1
+      reset_after_trigger: True
+data:
+  dataset_id: huffpost
+  bytes_parser_function: |
+    def bytes_parser_function(data: bytes) -> str:
+      return data.decode("utf-8")
+  tokenizer: DistilBertTokenizerTransform
+
+trigger:
+  id: DataDriftTrigger
+  trigger_config:
+    data_points_for_detection: 128

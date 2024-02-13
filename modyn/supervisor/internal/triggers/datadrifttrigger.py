@@ -26,10 +26,11 @@ import pathlib
 import torch
 import io
 
+import evidently
 from evidently import ColumnMapping
 from evidently.report import Report
 from evidently.metrics import EmbeddingsDriftMetric
-from evidently.metrics.data_drift.embedding_drift_methods import model, distance, ratio, mmd
+from evidently.metrics.data_drift.embedding_drift_methods import model
 # import PIL
 
 import logging
@@ -147,7 +148,7 @@ class ModelWrapper:
 
         return all_embeddings
 
-    def get_embeddings_evidently_form(self, dataloader) -> pd.DataFrame:
+    def get_embeddings_evidently_format(self, dataloader) -> pd.DataFrame:
         embeddings = self.get_embeddings(dataloader)
         embeddings_df = pd.concat(embeddings, axis=0)
         embeddings_df.columns = ['col_' + str(x) for x in embeddings_df.columns]
@@ -194,10 +195,10 @@ class DataDriftTrigger(Trigger):
             self.detection_data_points = trigger_config["data_points_for_detection"]
         assert self.detection_data_points > 0, "data_points_for_trigger needs to be at least 1"
 
-        self.retrain_threshold: float = 0.5
-        if "retrain_drift_threshold" in trigger_config.keys():
-            self.retrain_threshold = trigger_config["retrain_drift_threshold"]
-        assert self.retrain_threshold >= 0 and self.retrain_threshold <= 1, "retrain_drift_threshold range [0,1]"
+        self.drift_threshold: float = 0.5
+        if "drift_threshold" in trigger_config.keys():
+            self.drift_threshold = trigger_config["drift_threshold"]
+        assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
 
         self.sample_size: int = 100
         if "sample_size" in trigger_config.keys():
@@ -263,8 +264,8 @@ class DataDriftTrigger(Trigger):
         self.model_wrapper.download(self.previous_model_id)
 
         # Compute embeddings
-        reference_embeddings_df = self.model_wrapper.get_embeddings_evidently_form(reference_dataloader)
-        current_embeddings_df = self.model_wrapper.get_embeddings_evidently_form(current_dataloader)
+        reference_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(reference_dataloader)
+        current_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(current_dataloader)
         
         # Run Evidently detection
         column_mapping = ColumnMapping(
@@ -274,7 +275,7 @@ class DataDriftTrigger(Trigger):
         report = Report(metrics=[
             EmbeddingsDriftMetric('small_subset',
                                 drift_method = model(
-                                    threshold = 0.55,
+                                    threshold = self.drift_threshold,
                                     bootstrap = None,
                                     quantile_probability = 0.95,
                                     pca_components = None,
@@ -285,7 +286,6 @@ class DataDriftTrigger(Trigger):
                 column_mapping = column_mapping)
         result = report.as_dict()
         logger.info(f"[DRIFT] {result}")
-        #  >= self.retrain_threshold
         return result["metrics"][0]["result"]["drift_detected"]
 
 
