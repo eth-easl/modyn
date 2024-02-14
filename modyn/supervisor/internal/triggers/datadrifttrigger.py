@@ -13,7 +13,6 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchM
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 
 from modyn.utils.utils import (
-    BYTES_PARSER_FUNC_NAME,
     grpc_common_config,
     grpc_connection_established,
 )
@@ -200,7 +199,7 @@ class DataDriftTrigger(Trigger):
             self.drift_threshold = trigger_config["drift_threshold"]
         assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
 
-        self.sample_size: int = 100
+        self.sample_size: int = 500
         if "sample_size" in trigger_config.keys():
             self.sample_size = trigger_config["sample_size"]
         assert self.sample_size > 0, "sample_size needs to be at least 1"
@@ -212,9 +211,7 @@ class DataDriftTrigger(Trigger):
         self.dataloader_info: Optional[DataLoaderInfo] = None
         
         self.data_cache = []
-        self.cached_data_points = 0
-        self.remaining_data_points = 0
-        self.trigger_data_points = 0
+        self.untriggered_detection_data_points = 0
 
         super().__init__(trigger_config)
         
@@ -246,7 +243,13 @@ class DataDriftTrigger(Trigger):
         )
 
         # get new data
-        current_keys, _, _ = zip(*self.data_cache[idx_start : idx_end])  # type: ignore
+        current_keys, timestamps, _ = zip(*self.data_cache[idx_start : idx_end])  # type: ignore
+        num_per_t = {}
+        for t in timestamps:
+            num_per_t[t] = num_per_t.get(t, 0) + 1
+        logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+                        + f"[Detect Timestamps] {len(num_per_t)}:{num_per_t}")
+
         current_dataloader = prepare_trigger_dataloader_given_keys(
             self.dataloader_info.dataset_id,
             self.dataloader_info.num_dataloaders,
@@ -287,23 +290,28 @@ class DataDriftTrigger(Trigger):
         report.run(reference_data = reference_embeddings_df, current_data = current_embeddings_df,
                 column_mapping = column_mapping)
         result = report.as_dict()
-        logger.info(f"[DRIFT] {result}")
+        logger.info(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+                    + f"[Result (threshold {self.drift_threshold})] {result}")
         return result["metrics"][0]["result"]["drift_detected"]
 
 
     # the supervisor informs the Trigger about the previous trigger before it calls next()
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
+        logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+            + f"[Cached data] {len(self.data_cache)}, [New data] {len(new_data)}")
+
         # add new data to data_cache
         self.data_cache.extend(new_data)
         
-        self.cached_data_points = len(self.data_cache)
+        cached_data_points = len(self.data_cache)
         total_data_for_detection = len(self.data_cache)
         detection_data_idx_start = 0
         detection_data_idx_end = 0
         while total_data_for_detection >= self.detection_data_points:
             total_data_for_detection -= self.detection_data_points
-            self.trigger_data_points += self.detection_data_points
             detection_data_idx_end += self.detection_data_points
+            if detection_data_idx_end <= self.untriggered_detection_data_points:
+                continue
 
             # trigger id doesn't always start from 0, but always increments by 1
             if self.previous_trigger_id is None:
@@ -311,23 +319,32 @@ class DataDriftTrigger(Trigger):
                 triggered = True
             else:
                 # if exist previous model, detect drift
-                # new_data_idx = max(detection_data_idx_start, self.remaining_data_points)
                 triggered = self.detect_drift(detection_data_idx_start, detection_data_idx_end)
             
             if triggered:
-                trigger_idx = len(new_data) - (self.cached_data_points - self.trigger_data_points) - 1
-                logger.info(f">>>>>>>>>>>>>>>>> [Trigger index] {trigger_idx}")
-                logger.info(f">>>>>>>>>>>>>>>>> [Trigger data points] {self.trigger_data_points}")
+                trigger_data_points = detection_data_idx_end - detection_data_idx_start
+                logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}] new{len(new_data)} cache{cached_data_points} trigger{trigger_data_points}")
+                trigger_idx = len(new_data) - (cached_data_points - trigger_data_points) - 1
+
+
+                logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+                            + f"[Trigger data points] {trigger_data_points}, [Trigger index] {trigger_idx}")
+                _, timestamps, _ = zip(*self.data_cache[detection_data_idx_start : detection_data_idx_end])  # type: ignore
+                num_per_t = {}
+                for t in timestamps:
+                    num_per_t[t] = num_per_t.get(t, 0) + 1
+                logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+                             + f"[Trigger Timestamps] {len(num_per_t)}:{num_per_t}")
+
                 # update bookkeeping and pointers
-                self.cached_data_points -= self.trigger_data_points
-                self.trigger_data_points = 0
+                cached_data_points -= trigger_data_points
                 detection_data_idx_start = detection_data_idx_end
-                yield trigger_idx      
+                yield trigger_idx
 
         # remove triggered data
         self.data_cache = self.data_cache[detection_data_idx_start:]
-        self.cached_data_points = len(self.data_cache)
-        self.remaining_data_points = len(self.data_cache)
+        self.untriggered_detection_data_points = detection_data_idx_end - detection_data_idx_start
+
 
     def init_dataloader_info(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict) -> None:
         if "num_prefetched_partitions" in pipeline_config["training"]:

@@ -1,32 +1,20 @@
-import contextlib
-import gc
-import json
 import logging
-import os
-import pathlib
-import threading
 import random
-from typing import Any, Callable, Generator, Iterator, Optional, Tuple, Iterable
+from typing import Callable, Generator, Optional, Iterable
 
 import grpc
-from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
-    GetDataPerWorkerRequest,
-    GetDataPerWorkerResponse,
     GetRequest,
     GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
 from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
     MAX_MESSAGE_SIZE,
     deserialize_function,
-    grpc_common_config,
     grpc_connection_established,
     instantiate_class,
 )
-import torch
 from torch.utils.data import IterableDataset, get_worker_info, DataLoader
 from torchvision import transforms
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
