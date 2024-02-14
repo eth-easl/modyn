@@ -26,7 +26,6 @@ import pathlib
 import torch
 import io
 
-import evidently
 from evidently import ColumnMapping
 from evidently.report import Report
 from evidently.metrics import EmbeddingsDriftMetric
@@ -117,9 +116,9 @@ class ModelWrapper:
         )
         self._load_state(trained_model_path)
     
-    def get_embeddings(self, dataloader) -> list[pd.DataFrame]:
+    def get_embeddings(self, dataloader) -> torch.Tensor:
         assert self._model is not None
-        all_embeddings = []
+        all_embeddings: Optional[torch.Tensor] = None
 
         self._model.model.eval()
         self._model.model.embedding_recorder.start_recording()
@@ -140,19 +139,18 @@ class ModelWrapper:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     output = self._model.model(data)
                     embeddings = self._model.model.embedding_recorder.embedding
-                    if self._device == "cpu":
-                        embeddings_data = embeddings.detach().numpy()
+                    if all_embeddings is None:
+                        all_embeddings = embeddings
                     else:
-                        embeddings_data = embeddings.detach().cpu().numpy()
-                    all_embeddings.append(pd.DataFrame(embeddings_data).astype("float"))
+                        all_embeddings = torch.cat((all_embeddings, embeddings), 0)
 
         self._model.model.embedding_recorder.end_recording()
 
         return all_embeddings
 
     def get_embeddings_evidently_format(self, dataloader) -> pd.DataFrame:
-        embeddings = self.get_embeddings(dataloader)
-        embeddings_df = pd.concat(embeddings, axis=0)
+        embeddings_numpy = self.get_embeddings(dataloader).cpu().detach().numpy()
+        embeddings_df = pd.DataFrame(embeddings_numpy).astype("float")
         embeddings_df.columns = ['col_' + str(x) for x in embeddings_df.columns]
         logger.debug(f"[EMBEDDINGS SHAPE] {embeddings_df.shape}")
         # logger.debug(embeddings_df[:3])
@@ -275,6 +273,7 @@ class DataDriftTrigger(Trigger):
             embeddings={'small_subset': reference_embeddings_df.columns}
         )
 
+        # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
         report = Report(metrics=[
             EmbeddingsDriftMetric('small_subset',
                                 drift_method = model(
