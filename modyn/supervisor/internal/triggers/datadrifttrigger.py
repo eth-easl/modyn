@@ -133,6 +133,8 @@ class ModelWrapper:
                     data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
                     for name, tensor in batch[1].items():
                         data[name] = tensor.to(self._device)
+                else:
+                    raise ValueError(f"data type {type(batch[1])} not supported")
 
                 # batch_size = target.shape[0]
                 with torch.autocast(self._device_type, enabled=self._amp):
@@ -195,7 +197,7 @@ class DataDriftTrigger(Trigger):
             self.detection_data_points = trigger_config["data_points_for_detection"]
         assert self.detection_data_points > 0, "data_points_for_trigger needs to be at least 1"
 
-        self.drift_threshold: float = 0.5
+        self.drift_threshold: float = 0.55
         if "drift_threshold" in trigger_config.keys():
             self.drift_threshold = trigger_config["drift_threshold"]
         assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
@@ -256,7 +258,8 @@ class DataDriftTrigger(Trigger):
             self.dataloader_info.storage_address,
             self.previous_trigger_id + 1,
             current_keys,
-            self.sample_size,
+            tokenizer=self.dataloader_info.tokenizer,
+            sample_size=self.sample_size,
         )
 
         # Fetch model used for embedding

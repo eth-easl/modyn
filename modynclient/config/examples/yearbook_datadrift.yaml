@@ -12,7 +12,7 @@ model_storage:
     name: "PyTorchFullModel"
 training:
   gpus: 1
-  device: "cpu"
+  device: "cuda:0"
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
