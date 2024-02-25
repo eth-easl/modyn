@@ -544,13 +544,30 @@ class GRPCHandler:
                     evaluations[evaluation_id] = EvaluationStatusReporter(
                         self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
                     )
+                    evaluations[evaluation_id].create_tracker()
 
             return evaluations
 
         # In case we want to evaluate on trigger training set
         dataset_id = pipeline_config["data"]["dataset_id"]
-        num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
-        parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
+        if "num_prefetched_partitions" in pipeline_config["training"]:
+            num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
+        else:
+            if "prefetched_partitions" in pipeline_config["training"]:
+                raise ValueError(
+                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
+                    + " Please rename/remove that configuration"
+                )
+            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
+            num_prefetched_partitions = 1
+
+        if "parallel_prefetch_requests" in pipeline_config["training"]:
+            parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
+        else:
+            logger.warning(
+                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
+            )
+            parallel_prefetch_requests = 1
 
         train_eval_dataset = None
         for dataset in pipeline_config["evaluation"]["datasets"]:
@@ -639,6 +656,10 @@ class GRPCHandler:
             "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
+
+        if "tokenizer" in dataset_config:
+            tokenizer = dataset_config["tokenizer"]
+            start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
 
         if pipeline_id is not None:
             assert trigger_id is not None
