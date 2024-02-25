@@ -10,7 +10,7 @@ from typing import Any, Optional
 from collections.abc import Generator
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter, JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -116,8 +116,7 @@ class PipelineExecutor:
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
         
         if trigger_id == "DataDriftTrigger":
-            self.trigger.init_dataloader_info(self.pipeline_id, self.pipeline_config, self.modyn_config)
-            self.trigger.init_model_wrapper(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
+            self.trigger.init_data_drift_trigger(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
             self.trigger.inform_previous_trigger_and_model(None, self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
@@ -162,6 +161,12 @@ class PipelineExecutor:
         we inform the selector about all data points including that data point.
         Otherwise, the selector is informed
         """
+        _, timestamps, _ = zip(*new_data)  # type: ignore
+        num_per_t = {}
+        for t in timestamps:
+            num_per_t[t] = num_per_t.get(t, 0) + 1
+        logger.debug(f"[Pipeline {self.pipeline_id}][Unique Timestamps in New Data] {len(num_per_t)}\n{num_per_t}")
+
         logger.info(f"Received {len(new_data)} new data points. Handling batches.")
         new_data.sort(key=lambda tup: tup[1])
         any_training_triggered = False
@@ -278,7 +283,7 @@ class PipelineExecutor:
         while True:
             try:
                 triggering_idx = next(triggering_indices)
-                logger.info(f"[Trigger in this batch] {triggering_idx}")
+                logger.info(f"[Trigger idx in this batch] {triggering_idx} / {len(batch)}")
                 num_triggers += 1
 
                 self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
