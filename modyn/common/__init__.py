@@ -1,6 +1,7 @@
 """
 This module contains classes shared among several components.
 """
+
 # TODO(#243): extend package with additional classes and functions
 
 import os

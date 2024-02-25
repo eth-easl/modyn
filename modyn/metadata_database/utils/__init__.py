@@ -3,6 +3,7 @@
 The models are used to abstract the database operations.
 This allows the storage module to be used with different databases.
 """
+
 import os
 
 from .model_storage_strategy_config import ModelStorageStrategyConfig  # noqa: F401

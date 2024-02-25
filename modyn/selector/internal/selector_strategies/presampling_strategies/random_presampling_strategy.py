@@ -32,9 +32,11 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
-                if tail_triggers is not None
-                else True,
+                (
+                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+                    if tail_triggers is not None
+                    else True
+                ),
             )
             .order_by(func.random())  # pylint: disable=E1102
             .limit(target_size)

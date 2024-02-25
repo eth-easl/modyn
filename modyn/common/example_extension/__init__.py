@@ -1,6 +1,7 @@
 """
 This module contains classes shared among several components.
 """
+
 import os
 
 files = os.listdir(os.path.dirname(__file__))

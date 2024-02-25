@@ -1,6 +1,7 @@
 """Supervisor module. The supervisor initiates a pipeline and coordinates all components.
 
 """
+
 import os
 
 files = os.listdir(os.path.dirname(__file__))

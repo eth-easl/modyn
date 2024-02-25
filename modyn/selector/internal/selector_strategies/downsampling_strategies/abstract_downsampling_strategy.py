@@ -4,7 +4,6 @@ from modyn.utils import DownsamplingMode
 
 
 class AbstractDownsamplingStrategy(ABC):
-
     """
     This abstract strategy is used to represent the common behaviour of downsampling strategies
     like loss-based, importance downsampling (distribution-based methods) and craig&adacore (greedy-based methods).

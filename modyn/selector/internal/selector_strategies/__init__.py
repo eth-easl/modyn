@@ -2,6 +2,7 @@
 This submodule contains extensions of the Selector class that implement
 concrete selection strategies.
 """
+
 import os
 
 from .abstract_selection_strategy import AbstractSelectionStrategy  # noqa: F401

@@ -1,6 +1,7 @@
 """Supervisor module. The supervisor initiates a pipeline and coordinates all components.
 
 """
+
 import os
 
 from .pipeline_executor import PipelineExecutor, execute_pipeline  # noqa: F401

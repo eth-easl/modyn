@@ -1,4 +1,5 @@
 """Trained models downloaded from trainer server"""
+
 from datetime import datetime
 
 from modyn.metadata_database.metadata_base import MetadataBase

@@ -1,6 +1,7 @@
 """
 This submodule implements necessary functions to persist a calculated trigger training set to disk.
 """
+
 import os
 
 from .trigger_sample_storage import ArrayWrapper, TriggerSampleStorage  # noqa: F401

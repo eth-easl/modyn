@@ -112,9 +112,11 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         if self.has_limit:
             # TODO(#179): this assumes limit < len(samples)
             for samples in self._get_all_unused_data():
-                yield random.sample(samples, self.training_set_size_limit) if self.training_set_size_limit < len(
-                    samples
-                ) else samples
+                yield (
+                    random.sample(samples, self.training_set_size_limit)
+                    if self.training_set_size_limit < len(samples)
+                    else samples
+                )
         else:
             yield from self._get_all_unused_data()
 

@@ -13,3 +13,4 @@ grpcio-tools
 grpcio # Linux
 mypy-protobuf
 pystack
+evidently

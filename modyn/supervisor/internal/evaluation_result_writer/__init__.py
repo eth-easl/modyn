@@ -1,6 +1,7 @@
 """Supervisor module. The supervisor initiates a pipeline and coordinates all components.
 
 """
+
 import os
 
 from .abstract_evaluation_result_writer import AbstractEvaluationResultWriter  # noqa: F401

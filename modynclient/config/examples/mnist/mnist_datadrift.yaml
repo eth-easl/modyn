@@ -1,0 +1,51 @@
+pipeline:
+  name: MNIST Test Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: ResNet18
+  config:
+    num_classes: 10
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  device: "cuda:0"
+  dataloader_workers: 2
+  use_previous_model: True
+  initial_model: random
+  batch_size: 64
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    maximum_keys_in_memory: 1000
+    config:
+      storage_backend: "database"
+      limit: -1
+      reset_after_trigger: True
+data:
+  dataset_id: mnist
+  transformations: ["transforms.ToTensor()",
+                    "transforms.Normalize((0.1307,), (0.3081,))"]
+  bytes_parser_function: |
+    from PIL import Image
+    import io
+    def bytes_parser_function(data: bytes) -> Image:
+      return Image.open(io.BytesIO(data)).convert("RGB")
+trigger:
+  id: DataDriftTrigger
+  trigger_config:
+    data_points_for_detection: 100

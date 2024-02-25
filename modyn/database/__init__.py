@@ -1,6 +1,7 @@
 """
 Abstract database connection class.
 """
+
 import os
 
 from .partition_by_meta import PartitionByMeta  # noqa: F401

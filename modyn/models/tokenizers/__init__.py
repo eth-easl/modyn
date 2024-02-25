@@ -1,6 +1,7 @@
 """
 Bert Tokenizer for NLP tasks
 """
+
 import os
 
 from .distill_bert_tokenizer import DistilBertTokenizerTransform  # noqa: F401
