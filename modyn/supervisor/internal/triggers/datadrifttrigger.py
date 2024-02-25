@@ -12,8 +12,8 @@ from evidently.report import Report
 # pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.triggers.model_wrappers import ModynModelWrapper
 from modyn.supervisor.internal.triggers.trigger import Trigger
-from modyn.supervisor.internal.triggers.trigger_datasets import (
-    DataLoaderInfo,
+from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
+from modyn.supervisor.internal.triggers.utils import (
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_given_keys,
 )
