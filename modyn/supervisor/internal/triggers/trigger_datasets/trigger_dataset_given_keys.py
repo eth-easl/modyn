@@ -1,5 +1,4 @@
 import logging
-import random
 from typing import Callable, Generator, Optional, Iterable
 
 import grpc
@@ -15,59 +14,10 @@ from modyn.utils import (
     grpc_connection_established,
     instantiate_class,
 )
-from torch.utils.data import IterableDataset, get_worker_info, DataLoader
+from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
-from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
-from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
-
 
 logger = logging.getLogger(__name__)
-
-
-# TODO(#275): inherit common abstraction of dataset
-class TriggerDataset(IterableDataset):
-    # pylint: disable=too-many-instance-attributes, abstract-method
-    def __init__(
-        self,
-        pipeline_id: int,
-        trigger_id: int,
-        dataset_id: str,
-        bytes_parser: str,
-        serialized_transforms: list[str],
-        storage_address: str,
-        selector_address: str,
-        training_id: int,
-        num_prefetched_partitions: int,
-        parallel_prefetch_requests: int,
-        tokenizer: Optional[str] = None,
-        sample_prob: Optional[float] = None,
-    ):
-        self.online_dataset = OnlineDataset(
-            pipeline_id,
-            trigger_id,
-            dataset_id,
-            bytes_parser,
-            serialized_transforms,
-            storage_address,
-            selector_address,
-            training_id,
-            num_prefetched_partitions,
-            parallel_prefetch_requests,
-            tokenizer,
-            None
-        )
-        self._sample_prob = sample_prob
-
-    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
-
-    def __iter__(self) -> Generator:
-        for transformed_tuple in self.online_dataset:
-            if self._sample_prob is not None:
-                prob = random.random()
-                if prob < self._sample_prob:
-                    yield transformed_tuple
-            else:
-                yield transformed_tuple
 
 
 # TODO(#275): inherit common abstraction of dataset
@@ -179,70 +129,3 @@ class TriggerDatasetGivenKeys(IterableDataset):
         for data in self._get_data_from_storage(self._keys):
             for key, sample, label in data:
                 yield key, self._transform(sample), label
-
-
-def prepare_trigger_dataloader_by_trigger(
-    pipeline_id: int,
-    trigger_id: int,
-    dataset_id: str,
-    num_dataloaders: int,
-    batch_size: int,
-    bytes_parser: str,
-    transform: list[str],
-    storage_address: str,
-    selector_address: str,
-    training_id: int,
-    num_prefetched_partitions: int,
-    parallel_prefetch_requests: int,
-    tokenizer: Optional[str] = None,
-    data_points_in_trigger: Optional[int] = None,
-    sample_size: Optional[int] = None,
-) -> DataLoader:
-    sample_prob: Optional[float] = None
-    if data_points_in_trigger is not None and sample_size is not None:
-        sample_prob = sample_size / data_points_in_trigger
-
-    train_set = TriggerDataset(
-        pipeline_id,
-        trigger_id,
-        dataset_id,
-        bytes_parser,
-        transform,
-        storage_address,
-        selector_address,
-        training_id,
-        num_prefetched_partitions,
-        parallel_prefetch_requests,
-        tokenizer,
-        sample_prob,
-    )
-    logger.debug("Creating DataLoader.")
-    return DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)
-
-
-def prepare_trigger_dataloader_given_keys(
-    dataset_id: str,
-    num_dataloaders: int,
-    batch_size: int,
-    bytes_parser: str,
-    transform: list[str],
-    storage_address: str,
-    trigger_id: int,
-    keys: list[int],
-    tokenizer: Optional[str] = None,
-    sample_size: Optional[int] = None,
-) -> DataLoader:
-    if sample_size is not None:
-        keys = random.sample(keys, min(len(keys), sample_size))
-
-    train_set = TriggerDatasetGivenKeys(
-        dataset_id,
-        bytes_parser,
-        transform,
-        storage_address,
-        trigger_id,
-        keys,
-        tokenizer,
-    )
-    logger.debug("Creating DataLoader.")
-    return DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)

@@ -1,34 +1,26 @@
 from modyn.supervisor.internal.triggers.trigger import Trigger
-from modyn.supervisor.internal.triggers.trigger_dataset import prepare_trigger_dataloader_given_keys, prepare_trigger_dataloader_by_trigger
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.models.coreset_methods_support import CoresetSupportingModule
-from modyn.metadata_database.models import TrainedModel
-from modyn.utils import dynamic_module_import
-from modyn.common.ftp import download_trained_model
+from modyn.supervisor.internal.triggers.model_wrappers import ModynModelWrapper
+from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, prepare_trigger_dataloader_given_keys, prepare_trigger_dataloader_by_trigger
 
 import grpc
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
-from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 
 from modyn.utils.utils import (
     grpc_common_config,
     grpc_connection_established,
 )
 
-import pandas as pd
 from collections.abc import Generator
-from typing import Optional, Union
-import json
+from typing import Optional
 import pathlib
-import torch
-import io
+import json
+import os
 
 from evidently import ColumnMapping
 from evidently.report import Report
 from evidently.metrics import EmbeddingsDriftMetric
-from evidently.metrics.data_drift.embedding_drift_methods import model
+from evidently.metrics.data_drift.embedding_drift_methods import model, ratio, distance, mmd
 # import PIL
 
 import logging
@@ -36,159 +28,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ModelWrapper:
-    def __init__(
-        self,
-        modyn_config: dict,
-        pipeline_id: int,
-        device: str,
-        base_dir: pathlib.Path,
-        model_storage_address: str,
-    ):
-        self.modyn_config = modyn_config
-        self.pipeline_id = pipeline_id
-        self._device = device
-        self._device_type = "cuda" if "cuda" in self._device else "cpu"
-        self.base_dir = base_dir
-        assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
-        self._model_storage_stub = self.connect_to_model_storage(model_storage_address)
-        self._amp: Optional[bool] = None
-        self._model = None
-    
-    @staticmethod
-    def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
-        model_storage_channel = grpc.insecure_channel(model_storage_address)
-        assert model_storage_channel is not None
-        if not grpc_connection_established(model_storage_channel):
-            raise ConnectionError(
-                f"Could not establish gRPC connection to model storage at address {model_storage_address}."
-            )
-        return ModelStorageStub(model_storage_channel)
-    
-    def _load_state(self, path: pathlib.Path) -> None:
-        assert path.exists(), "Cannot load state from non-existing file"
-
-        # self._info(f"Loading model state from {path}")
-        with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
-
-        assert "model" in checkpoint
-        self._model.model.load_state_dict(checkpoint["model"])
-
-        # delete trained model from disk
-        path.unlink()
-    
-    def configure(self, model_id: int):
-        with MetadataDatabaseConnection(self.modyn_config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
-            if not trained_model:
-                logger.error(f"Trained model {model_id} does not exist!")
-                return
-            model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
-        self._amp = amp
-        model_module = dynamic_module_import("modyn.models")
-        self.model_handler = getattr(model_module, model_class_name)
-        self.model_configuration_dict = json.loads(model_config)
-        self._model = self.model_handler(
-            self.model_configuration_dict, self._device, amp
-        )
-        assert isinstance(self._model.model, CoresetSupportingModule)
-    
-    def download(self, model_id: int):
-        self.configure(model_id)
-
-        fetch_request = FetchModelRequest(model_id=model_id, load_metadata=False)
-        fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
-
-        if not fetch_resp.success:
-            logger.error(
-                f"Trained model {model_id} cannot be fetched from model storage. "
-            )
-            raise Exception
-        trained_model_path = download_trained_model(
-            logger=logger,
-            model_storage_config=self.modyn_config["model_storage"],
-            remote_path=pathlib.Path(fetch_resp.model_path),
-            checksum=fetch_resp.checksum,
-            identifier=self.pipeline_id,
-            base_directory=self.base_dir,
-        )
-        self._load_state(trained_model_path)
-    
-    def get_embeddings(self, dataloader) -> torch.Tensor:
-        assert self._model is not None
-        all_embeddings: Optional[torch.Tensor] = None
-
-        self._model.model.eval()
-        self._model.model.embedding_recorder.start_recording()
-
-        with torch.no_grad():
-            for batch in dataloader:
-                data: Union[torch.Tensor, dict]
-                if isinstance(batch[1], torch.Tensor):
-                    data = batch[1].to(self._device)
-                elif isinstance(batch[1], dict):
-                    data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-                    for name, tensor in batch[1].items():
-                        data[name] = tensor.to(self._device)
-                else:
-                    raise ValueError(f"data type {type(batch[1])} not supported")
-
-                # batch_size = target.shape[0]
-                with torch.autocast(self._device_type, enabled=self._amp):
-                    output = self._model.model(data)
-                    embeddings = self._model.model.embedding_recorder.embedding
-                    if all_embeddings is None:
-                        all_embeddings = embeddings
-                    else:
-                        all_embeddings = torch.cat((all_embeddings, embeddings), 0)
-
-        self._model.model.embedding_recorder.end_recording()
-
-        return all_embeddings
-
-    def get_embeddings_evidently_format(self, dataloader) -> pd.DataFrame:
-        embeddings_numpy = self.get_embeddings(dataloader).cpu().detach().numpy()
-        embeddings_df = pd.DataFrame(embeddings_numpy).astype("float")
-        embeddings_df.columns = ['col_' + str(x) for x in embeddings_df.columns]
-        logger.debug(f"[EMBEDDINGS SHAPE] {embeddings_df.shape}")
-        # logger.debug(embeddings_df[:3])
-        return embeddings_df
-
-
-class DataLoaderInfo:
-    def __init__(
-        self,
-        pipeline_id: int,
-        dataset_id: str,
-        num_dataloaders,
-        batch_size,
-        bytes_parser,
-        transform_list: list[str],
-        storage_address,
-        selector_address,
-        num_prefetched_partitions,
-        parallel_prefetch_requests,
-        tokenizer
-    ):
-        self.pipeline_id = pipeline_id
-        self.dataset_id = dataset_id
-        self.num_dataloaders = num_dataloaders
-        self.batch_size = batch_size
-        self.bytes_parser = bytes_parser
-        self.transform_list = transform_list
-        self.storage_address = storage_address
-        self.selector_address = selector_address
-        self.num_prefetched_partitions = num_prefetched_partitions
-        self.parallel_prefetch_requests = parallel_prefetch_requests
-        self.tokenizer = tokenizer
-        self.training_id = -1
-
-
 class DataDriftTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, trigger_config: dict):
+        self.pipeline_id: Optional[int] = None
+        self.pipeline_config: Optional[dict] = None
+        self.modyn_config: Optional[dict] = None
+        self.base_dir: Optional[pathlib.Path] = None
+        self.model_wrapper: Optional[ModynModelWrapper] = None
+        self.dataloader_info: Optional[DataLoaderInfo] = None
+
+        self.previous_trigger_id: Optional[int] = None
+        self.previous_data_points: Optional[int] = None
+        self.previous_model_id: Optional[int] = None
+        self.model_updated: bool = False
+
         self.detection_data_points: int = 2
         if "data_points_for_detection" in trigger_config.keys():
             self.detection_data_points = trigger_config["data_points_for_detection"]
@@ -199,22 +54,52 @@ class DataDriftTrigger(Trigger):
             self.drift_threshold = trigger_config["drift_threshold"]
         assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
 
-        self.sample_size: int = 500
+        self.sample_size: Optional[int] = None
         if "sample_size" in trigger_config.keys():
             self.sample_size = trigger_config["sample_size"]
-        assert self.sample_size > 0, "sample_size needs to be at least 1"
+        assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
 
-        self.previous_trigger_id: Optional[int] = None
-        self.previous_data_points: Optional[int] = None
-        self.previous_model_id: Optional[int] = None
-        self.model_wrapper: Optional[ModelWrapper] = None
-        self.dataloader_info: Optional[DataLoaderInfo] = None
-        
+        self.metrics = [
+            EmbeddingsDriftMetric('data',
+                                drift_method = model(
+                                    threshold = self.drift_threshold,
+                                    bootstrap = None,
+                                    quantile_probability = 0.95,
+                                    pca_components = None,
+                                )
+                            ),
+            EmbeddingsDriftMetric('data',
+                                drift_method = ratio(
+                                    component_stattest = 'wasserstein',
+                                    component_stattest_threshold = 0.1,
+                                    threshold = 0.2,
+                                    pca_components = None,
+                                )
+                            ),
+            EmbeddingsDriftMetric('data',
+                                drift_method = distance(
+                                    dist = 'euclidean', #"euclidean", "cosine", "cityblock" or "chebyshev"
+                                    threshold = 0.2,
+                                    bootstrap = None,
+                                    quantile_probability = 0.05,
+                                    pca_components = None,
+                                )
+                            ),
+            EmbeddingsDriftMetric('data',
+                                drift_method = mmd(
+                                    threshold = 0.015,
+                                    bootstrap = None,
+                                    quantile_probability = 0.05,
+                                    pca_components = None,
+                                )
+                            )
+        ]
+
         self.data_cache = []
         self.untriggered_detection_data_points = 0
 
         super().__init__(trigger_config)
-        
+
 
     def detect_drift(self, idx_start, idx_end) -> bool:
         assert self.previous_trigger_id is not None
@@ -225,19 +110,8 @@ class DataDriftTrigger(Trigger):
         # get training data keys of previous trigger from storage
         logger.info(f"[Prev Trigger {self.previous_trigger_id}][Prev Model {self.previous_model_id}] Start drift detection")
         reference_dataloader = prepare_trigger_dataloader_by_trigger(
-            self.dataloader_info.pipeline_id,
             self.previous_trigger_id,
-            self.dataloader_info.dataset_id,
-            self.dataloader_info.num_dataloaders,
-            self.dataloader_info.batch_size,
-            self.dataloader_info.bytes_parser,
-            self.dataloader_info.transform_list,
-            self.dataloader_info.storage_address,
-            self.dataloader_info.selector_address,
-            self.dataloader_info.training_id,
-            self.dataloader_info.num_prefetched_partitions,
-            self.dataloader_info.parallel_prefetch_requests,
-            tokenizer=self.dataloader_info.tokenizer,
+            self.dataloader_info,
             data_points_in_trigger=self.previous_data_points,
             sample_size=self.sample_size,
         )
@@ -249,56 +123,53 @@ class DataDriftTrigger(Trigger):
             num_per_t[t] = num_per_t.get(t, 0) + 1
         logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
                         + f"[Detect Timestamps] {len(num_per_t)}:{num_per_t}")
-
         current_dataloader = prepare_trigger_dataloader_given_keys(
-            self.dataloader_info.dataset_id,
-            self.dataloader_info.num_dataloaders,
-            self.dataloader_info.batch_size,
-            self.dataloader_info.bytes_parser,
-            self.dataloader_info.transform_list,
-            self.dataloader_info.storage_address,
             self.previous_trigger_id + 1,
+            self.dataloader_info,
             current_keys,
-            tokenizer=self.dataloader_info.tokenizer,
             sample_size=self.sample_size,
         )
 
         # Fetch model used for embedding
         # TODO(JZ): custom embedding???
-        self.model_wrapper.download(self.previous_model_id)
+        if self.model_updated:
+            self.model_wrapper.download(self.previous_model_id)
+            self.model_updated = False
 
         # Compute embeddings
         reference_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(reference_dataloader)
         current_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(current_dataloader)
+        # reference_embeddings_df.to_csv(f"{self.debug_dir}/{self.pipeline_id}_ref.csv", index=False)
+        # current_embeddings_df.to_csv(f"{self.debug_dir}/{self.pipeline_id}_cur.csv", index=False)
         
         # Run Evidently detection
         column_mapping = ColumnMapping(
-            embeddings={'small_subset': reference_embeddings_df.columns}
+            embeddings={'data': reference_embeddings_df.columns}
         )
 
         # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
-        report = Report(metrics=[
-            EmbeddingsDriftMetric('small_subset',
-                                drift_method = model(
-                                    threshold = self.drift_threshold,
-                                    bootstrap = None,
-                                    quantile_probability = 0.95,
-                                    pca_components = None,
-                                    )
-                                )
-        ])
+        report = Report(metrics=self.metrics)
         report.run(reference_data = reference_embeddings_df, current_data = current_embeddings_df,
                 column_mapping = column_mapping)
         result = report.as_dict()
+        result_print = [(x["result"]["drift_score"], x["result"]["method_name"]) for x in result["metrics"]]
         logger.info(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
-                    + f"[Result (threshold {self.drift_threshold})] {result}")
-        return result["metrics"][0]["result"]["drift_detected"]
+                    + f"[Result] {result_print}")
+        
+        with open(self.drift_dir / f"{self.previous_trigger_id}.json", 'w') as f:
+            json.dump(result, f)
+        
+        true_count = 0
+        for metric in result["metrics"]:
+            true_count += int(metric["result"]["drift_detected"])
+        return true_count * 2 > len(result["metrics"])
+        # return True
 
 
     # the supervisor informs the Trigger about the previous trigger before it calls next()
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
-        logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
-            + f"[Cached data] {len(self.data_cache)}, [New data] {len(new_data)}")
+        # logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+        #     + f"[Cached data] {len(self.data_cache)}, [New data] {len(new_data)}")
 
         # add new data to data_cache
         self.data_cache.extend(new_data)
@@ -323,9 +194,8 @@ class DataDriftTrigger(Trigger):
             
             if triggered:
                 trigger_data_points = detection_data_idx_end - detection_data_idx_start
-                logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}] new{len(new_data)} cache{cached_data_points} trigger{trigger_data_points}")
+                # logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}] new{len(new_data)} cache{cached_data_points} trigger{trigger_data_points}")
                 trigger_idx = len(new_data) - (cached_data_points - trigger_data_points) - 1
-
 
                 logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
                             + f"[Trigger data points] {trigger_data_points}, [Trigger index] {trigger_idx}")
@@ -346,11 +216,19 @@ class DataDriftTrigger(Trigger):
         self.untriggered_detection_data_points = detection_data_idx_end - detection_data_idx_start
 
 
-    def init_dataloader_info(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict) -> None:
-        if "num_prefetched_partitions" in pipeline_config["training"]:
-            num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
+    def _init_dataloader_info(self) -> None:
+        assert self.pipeline_id is not None
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+        assert self.base_dir is not None
+
+        training_config = self.pipeline_config["training"]
+        data_config = self.pipeline_config["data"]
+
+        if "num_prefetched_partitions" in training_config:
+            num_prefetched_partitions = training_config["num_prefetched_partitions"]
         else:
-            if "prefetched_partitions" in pipeline_config["training"]:
+            if "prefetched_partitions" in training_config:
                 raise ValueError(
                     "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
                     + " Please rename/remove that configuration"
@@ -358,33 +236,33 @@ class DataDriftTrigger(Trigger):
             logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
             num_prefetched_partitions = 1
 
-        if "parallel_prefetch_requests" in pipeline_config["training"]:
-            parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
+        if "parallel_prefetch_requests" in training_config:
+            parallel_prefetch_requests = training_config["parallel_prefetch_requests"]
         else:
             logger.warning(
                 "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
             )
             parallel_prefetch_requests = 1
 
-        if "tokenizer" in pipeline_config["data"]:
-            tokenizer = pipeline_config["data"]["tokenizer"]
+        if "tokenizer" in data_config:
+            tokenizer = data_config["tokenizer"]
         else:
             tokenizer = None
 
-        if "transformations" in pipeline_config["data"]:
-            transform_list = pipeline_config["data"]["transformations"]
+        if "transformations" in data_config:
+            transform_list = data_config["transformations"]
         else:
             transform_list = []
 
         self.dataloader_info = DataLoaderInfo(
-            pipeline_id,
-            dataset_id=pipeline_config["data"]["dataset_id"],
-            num_dataloaders=pipeline_config["training"]["dataloader_workers"],
-            batch_size=pipeline_config["training"]["batch_size"],
-            bytes_parser=pipeline_config["data"]["bytes_parser_function"],
+            self.pipeline_id,
+            dataset_id=data_config["dataset_id"],
+            num_dataloaders=training_config["dataloader_workers"],
+            batch_size=training_config["batch_size"],
+            bytes_parser=data_config["bytes_parser_function"],
             transform_list=transform_list,
-            storage_address=f"{modyn_config['storage']['hostname']}:{modyn_config['storage']['port']}",
-            selector_address=f"{modyn_config['selector']['hostname']}:{modyn_config['selector']['port']}",
+            storage_address=f"{self.modyn_config['storage']['hostname']}:{self.modyn_config['storage']['port']}",
+            selector_address=f"{self.modyn_config['selector']['hostname']}:{self.modyn_config['selector']['port']}",
             num_prefetched_partitions=num_prefetched_partitions,
             parallel_prefetch_requests=parallel_prefetch_requests,
             tokenizer=tokenizer
@@ -395,19 +273,47 @@ class DataDriftTrigger(Trigger):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(self._storage_channel)
         
-    def init_model_wrapper(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path):
-        self.model_wrapper = ModelWrapper(
-            modyn_config,
-            pipeline_id, 
-            pipeline_config["training"]["device"], 
-            base_dir,
-            f"{modyn_config['model_storage']['hostname']}:{modyn_config['model_storage']['port']}"
+    def _init_model_wrapper(self):
+        assert self.pipeline_id is not None
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+        assert self.base_dir is not None
+
+        self.model_wrapper = ModynModelWrapper(
+            self.modyn_config,
+            self.pipeline_id, 
+            self.pipeline_config["training"]["device"], 
+            self.base_dir,
+            f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}"
         )
+    
+    def _create_dirs(self):
+        assert self.pipeline_id is not None
+        assert self.base_dir is not None
+
+        self.exp_output_dir = self.base_dir / f"{self.dataloader_info.dataset_id}_{self.pipeline_id}"
+        self.drift_dir = self.exp_output_dir / "drift"
+        os.makedirs(self.drift_dir, exist_ok=True)
+        self.debug_dir = self.exp_output_dir / f"debug"
+        os.makedirs(self.debug_dir, exist_ok=True)
+
+    def init_data_drift_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path):
+        self.pipeline_id = pipeline_id
+        self.pipeline_config = pipeline_config
+        self.modyn_config = modyn_config
+        self.base_dir = base_dir
         
+        self._init_dataloader_info()
+        self._init_model_wrapper()
+        self._create_dirs()
+            
     def inform_previous_trigger_and_model(self, previous_trigger_id: Optional[int], previous_model_id: Optional[int]) -> None:
         self.previous_trigger_id = previous_trigger_id
         self.previous_model_id = previous_model_id
+        if previous_model_id is not None:
+            self.model_updated = True
     
     def inform_previous_trigger_data_points(self, previous_trigger_id: int, data_points: int) -> None:
         assert self.previous_trigger_id == previous_trigger_id
         self.previous_data_points = data_points
+        
