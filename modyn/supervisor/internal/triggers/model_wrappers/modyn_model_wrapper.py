@@ -1,27 +1,23 @@
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.models.coreset_methods_support import CoresetSupportingModule
-from modyn.metadata_database.models import TrainedModel
-from modyn.utils import dynamic_module_import
-from modyn.common.ftp import download_trained_model
-from modyn.supervisor.internal.triggers.model_wrappers import AbstractModelWrapper
-
-from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
-from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
+import io
+import json
+import logging
+import pathlib
+from typing import Optional, Union
 
 import grpc
-from modyn.utils.utils import (
-    grpc_connection_established,
-)
-
-
 import pandas as pd
-from typing import Optional, Union
-import json
-import pathlib
 import torch
-import io
+from modyn.common.ftp import download_trained_model
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import TrainedModel
 
-import logging
+# pylint: disable-next=no-name-in-module
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
+from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
+from modyn.models.coreset_methods_support import CoresetSupportingModule
+from modyn.supervisor.internal.triggers.model_wrappers import AbstractModelWrapper
+from modyn.utils import dynamic_module_import
+from modyn.utils.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +38,12 @@ class ModynModelWrapper(AbstractModelWrapper):
         self.base_dir = base_dir
         assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
         self._model_storage_stub = self.connect_to_model_storage(model_storage_address)
+
+        self.model_configuration_dict = None
+        self.model_handler = None
         self._amp: Optional[bool] = None
         self._model = None
-    
+
     @staticmethod
     def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
         model_storage_channel = grpc.insecure_channel(model_storage_address)
@@ -54,7 +53,7 @@ class ModynModelWrapper(AbstractModelWrapper):
                 f"Could not establish gRPC connection to model storage at address {model_storage_address}."
             )
         return ModelStorageStub(model_storage_channel)
-    
+
     def _load_state(self, path: pathlib.Path) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
 
@@ -67,8 +66,8 @@ class ModynModelWrapper(AbstractModelWrapper):
 
         # delete trained model from disk
         path.unlink()
-    
-    def configure(self, model_id: int):
+
+    def configure(self, model_id: int) -> None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
             if not trained_model:
@@ -79,22 +78,18 @@ class ModynModelWrapper(AbstractModelWrapper):
         model_module = dynamic_module_import("modyn.models")
         self.model_handler = getattr(model_module, model_class_name)
         self.model_configuration_dict = json.loads(model_config)
-        self._model = self.model_handler(
-            self.model_configuration_dict, self._device, amp
-        )
+        self._model = self.model_handler(self.model_configuration_dict, self._device, amp)
         assert isinstance(self._model.model, CoresetSupportingModule)
-    
-    def download(self, model_id: int):
+
+    def download(self, model_id: int) -> None:
         self.configure(model_id)
 
         fetch_request = FetchModelRequest(model_id=model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
         if not fetch_resp.success:
-            logger.error(
-                f"Trained model {model_id} cannot be fetched from model storage. "
-            )
-            raise Exception
+            logger.error(f"Trained model {model_id} cannot be fetched from model storage. ")
+            raise Exception("Failed to fetch trained model")  # pylint: disable=broad-exception-raised
         trained_model_path = download_trained_model(
             logger=logger,
             model_storage_config=self.modyn_config["model_storage"],
@@ -104,8 +99,8 @@ class ModynModelWrapper(AbstractModelWrapper):
             base_directory=self.base_dir,
         )
         self._load_state(trained_model_path)
-    
-    def get_embeddings(self, dataloader) -> torch.Tensor:
+
+    def get_embeddings(self, dataloader: torch.utils.data.DataLoader) -> torch.Tensor:
         assert self._model is not None
         all_embeddings: Optional[torch.Tensor] = None
 
@@ -126,7 +121,7 @@ class ModynModelWrapper(AbstractModelWrapper):
 
                 # batch_size = target.shape[0]
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    output = self._model.model(data)
+                    self._model.model(data)
                     embeddings = self._model.model.embedding_recorder.embedding
                     if all_embeddings is None:
                         all_embeddings = embeddings
@@ -137,11 +132,10 @@ class ModynModelWrapper(AbstractModelWrapper):
 
         return all_embeddings
 
-    def get_embeddings_evidently_format(self, dataloader) -> pd.DataFrame:
+    def get_embeddings_evidently_format(self, dataloader: torch.utils.data.DataLoader) -> pd.DataFrame:
         embeddings_numpy = self.get_embeddings(dataloader).cpu().detach().numpy()
         embeddings_df = pd.DataFrame(embeddings_numpy).astype("float64")
-        embeddings_df.columns = ['col_' + str(x) for x in embeddings_df.columns]
+        embeddings_df.columns = ["col_" + str(x) for x in embeddings_df.columns]
         logger.debug(f"[EMBEDDINGS SHAPE] {embeddings_df.shape}")
         # logger.debug(embeddings_df[:3])
         return embeddings_df
-

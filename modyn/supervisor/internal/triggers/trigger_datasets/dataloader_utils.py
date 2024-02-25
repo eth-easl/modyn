@@ -1,11 +1,16 @@
-
 import logging
 import random
 from typing import Optional
+
+from modyn.supervisor.internal.triggers.trigger_datasets import (
+    DataLoaderInfo,
+    OnlineTriggerDataset,
+    TriggerDatasetGivenKeys,
+)
 from torch.utils.data import DataLoader
-from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, OnlineTriggerDataset, TriggerDatasetGivenKeys
 
 logger = logging.getLogger(__name__)
+
 
 def prepare_trigger_dataloader_by_trigger(
     trigger_id: int,
@@ -44,7 +49,7 @@ def prepare_trigger_dataloader_by_trigger(
 
 def prepare_trigger_dataloader_given_keys(
     trigger_id: int,
-    dataloader_info: DataLoaderInfo, 
+    dataloader_info: DataLoaderInfo,
     keys: list[int],
     sample_size: Optional[int] = None,
 ) -> DataLoader:

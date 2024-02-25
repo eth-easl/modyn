@@ -59,7 +59,7 @@ class EvaluationDataset(IterableDataset):
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
-    
+
     def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
 

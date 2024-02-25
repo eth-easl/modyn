@@ -5,12 +5,12 @@ import os
 import pathlib
 import sys
 import traceback
+from collections.abc import Generator
 from time import sleep
 from typing import Any, Optional
-from collections.abc import Generator
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter, JsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -114,9 +114,11 @@ class PipelineExecutor:
 
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
-        
+
         if trigger_id == "DataDriftTrigger":
-            self.trigger.init_data_drift_trigger(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
+            self.trigger.init_data_drift_trigger(
+                self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory
+            )
             self.trigger.inform_previous_trigger_and_model(None, self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
@@ -272,8 +274,10 @@ class PipelineExecutor:
             writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
-        
-    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int]) -> int:
+
+    def _handle_triggers_within_batch(
+        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int]
+    ) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
@@ -323,7 +327,7 @@ class PipelineExecutor:
             except StopIteration:
                 # If no other trigger is coming in this batch,
                 # we have to inform the Selector about the remaining data in this batch.
-                remaining_data = batch[previous_trigger_idx :]
+                remaining_data = batch[previous_trigger_idx:]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0 and last_trigger_id is not None:
@@ -331,7 +335,9 @@ class PipelineExecutor:
                     # because we inform the Selector about them,
                     # just like other batches with no trigger at all are included.
                     self._update_pipeline_stage_and_enqueue_msg(
-                        PipelineStage.INFORM_SELECTOR_REMAINING_DATA, MsgType.ID, id_submsg(IdType.TRIGGER, last_trigger_id)
+                        PipelineStage.INFORM_SELECTOR_REMAINING_DATA,
+                        MsgType.ID,
+                        id_submsg(IdType.TRIGGER, last_trigger_id),
                     )
                     self._sw.start("selector_inform", overwrite=True)
                     selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
@@ -339,7 +345,7 @@ class PipelineExecutor:
                         {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
                     )
                     self._persist_pipeline_log()
-                return num_triggers     
+                return num_triggers
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)

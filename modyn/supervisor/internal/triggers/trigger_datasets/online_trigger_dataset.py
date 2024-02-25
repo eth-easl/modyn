@@ -1,10 +1,9 @@
 import logging
 import random
-from typing import Callable, Generator, Optional, Iterable
+from typing import Generator, Optional
 
-import logging
-from torch.utils.data import IterableDataset
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
+from torch.utils.data import IterableDataset
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class OnlineTriggerDataset(IterableDataset):
             num_prefetched_partitions,
             parallel_prefetch_requests,
             tokenizer,
-            None
+            None,
         )
         self._sample_prob = sample_prob
 

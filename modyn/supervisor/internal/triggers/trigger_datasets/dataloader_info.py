@@ -1,5 +1,6 @@
 from typing import Optional
 
+
 class DataLoaderInfo:
     def __init__(
         self,

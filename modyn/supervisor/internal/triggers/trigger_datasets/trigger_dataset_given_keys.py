@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, Generator, Optional, Iterable
+from typing import Callable, Generator, Iterable, Optional
 
 import grpc
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
@@ -59,7 +59,7 @@ class TriggerDatasetGivenKeys(IterableDataset):
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
-    
+
     def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
 
@@ -108,10 +108,8 @@ class TriggerDatasetGivenKeys(IterableDataset):
         if worker_info is None:
             # Non-multi-threaded data loading. We use worker_id 0.
             worker_id = 0
-            total_workers = 1
         else:
             worker_id = worker_info.id
-            total_workers = worker_info.num_workers
 
         if self._first_call:
             self._first_call = False

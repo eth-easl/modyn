@@ -60,7 +60,7 @@ class EvaluationInfo:
         self.num_prefetched_partitions = num_prefetched_partitions
         self.parallel_prefetch_requests = parallel_prefetch_requests
         self.selector_address = selector_address
-        
+
         if (
             pipeline_id is not None
             or trigger_id is not None
