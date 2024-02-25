@@ -47,6 +47,9 @@ class EvaluationInfo:
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
+        self.tokenizer: Optional[str] = None
+        if request.HasField("tokenizer"):
+            self.tokenizer = request.tokenizer.value
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
@@ -57,7 +60,7 @@ class EvaluationInfo:
         self.num_prefetched_partitions = num_prefetched_partitions
         self.parallel_prefetch_requests = parallel_prefetch_requests
         self.selector_address = selector_address
-
+        
         if (
             pipeline_id is not None
             or trigger_id is not None
