@@ -1,4 +1,5 @@
 """Processor strategy type and exception."""
+
 from enum import Enum
 
 

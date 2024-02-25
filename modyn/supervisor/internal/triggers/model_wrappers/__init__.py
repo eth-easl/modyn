@@ -1,6 +1,7 @@
 """Supervisor module. The supervisor initiates a pipeline and coordinates all components.
 
 """
+
 import os
 
 from .abstract_model_wrapper import AbstractModelWrapper  # noqa: F401

@@ -139,9 +139,11 @@ class DatabaseStorageBackend(AbstractStorageBackend):
                 .filter(
                     SelectorStateMetadata.pipeline_id == self._pipeline_id,
                     SelectorStateMetadata.seen_in_trigger_id < next_trigger_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers - 1
-                    if tail_triggers is not None
-                    else True,
+                    (
+                        SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers - 1
+                        if tail_triggers is not None
+                        else True
+                    ),
                 )
                 .distinct()
                 .all()

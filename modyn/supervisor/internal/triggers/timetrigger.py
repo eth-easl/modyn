@@ -53,5 +53,4 @@ class TimeTrigger(Trigger):
             triggering_indices.append(idx - 1)
             self.next_trigger_at += self.trigger_every_s
 
-        for idx in triggering_indices:
-            yield idx
+        yield from triggering_indices

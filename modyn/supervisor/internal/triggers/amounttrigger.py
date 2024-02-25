@@ -27,5 +27,4 @@ class DataAmountTrigger(Trigger):
 
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
-        for idx in triggering_indices:
-            yield idx
+        yield from triggering_indices
