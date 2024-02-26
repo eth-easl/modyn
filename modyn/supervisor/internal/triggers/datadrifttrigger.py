@@ -1,4 +1,6 @@
 import logging
+import os
+import json
 import pathlib
 from collections.abc import Generator
 from typing import Optional
@@ -17,7 +19,6 @@ from modyn.supervisor.internal.triggers.utils import (
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_given_keys,
 )
-
 # import PIL
 
 
@@ -116,8 +117,8 @@ class DataDriftTrigger(Trigger):
             + f"[Result] {result_print}"
         )
 
-        # with open(self.drift_dir / f"{self.previous_trigger_id}.json", "w") as f:
-        #     json.dump(result, f)
+        with open(self.drift_dir / f"{self.previous_trigger_id}.json", "w") as f:
+            json.dump(result, f)
 
         true_count = 0
         for metric in result["metrics"]:
@@ -174,7 +175,7 @@ class DataDriftTrigger(Trigger):
 
     # the supervisor informs the Trigger about the previous trigger before it calls next()
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         # logger.debug(f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}]"
         #     + f"[Dataset {self.dataloader_info.dataset_id}]"
         #     + f"[Cached data] {len(self.data_cache)}, [New data] {len(new_data)}")
@@ -284,7 +285,7 @@ class DataDriftTrigger(Trigger):
             tokenizer=tokenizer,
         )
 
-    def _init_model_wrapper(self):
+    def _init_model_wrapper(self) -> None:
         assert self.pipeline_id is not None
         assert self.pipeline_config is not None
         assert self.modyn_config is not None
@@ -298,19 +299,19 @@ class DataDriftTrigger(Trigger):
             f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
         )
 
-    def _create_dirs(self):
+    def _create_dirs(self) -> None:
         assert self.pipeline_id is not None
         assert self.base_dir is not None
 
-        # self.exp_output_dir = self.base_dir / f"{self.dataloader_info.dataset_id}_{self.pipeline_id}"
-        # self.drift_dir = self.exp_output_dir / "drift"
-        # os.makedirs(self.drift_dir, exist_ok=True)
-        # self.debug_dir = self.exp_output_dir / "debug"
-        # os.makedirs(self.debug_dir, exist_ok=True)
+        self.exp_output_dir = self.base_dir / f"{self.dataloader_info.dataset_id}_{self.pipeline_id}"
+        self.drift_dir = self.exp_output_dir / "drift"
+        os.makedirs(self.drift_dir, exist_ok=True)
+        self.debug_dir = self.exp_output_dir / "debug"
+        os.makedirs(self.debug_dir, exist_ok=True)
 
     def init_data_drift_trigger(
         self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
-    ):
+    ) -> None:
         self.pipeline_id = pipeline_id
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config

@@ -19,7 +19,7 @@ class DataAmountTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
 
         first_idx = self.data_points_for_trigger - self.remaining_data_points - 1

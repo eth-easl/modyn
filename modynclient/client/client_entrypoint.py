@@ -32,7 +32,7 @@ def setup_argparser() -> argparse.ArgumentParser:
         "eval_dir",
         type=pathlib.Path,
         action="store",
-        help="Folder to store the evaluation results",
+        help="Supervisor folder to store the evaluation results.",
     )
 
     parser_.add_argument(
@@ -60,6 +60,14 @@ def setup_argparser() -> argparse.ArgumentParser:
     )
 
     parser_.add_argument(
+        "--log-directory",
+        type=pathlib.Path,
+        action="store",
+        help="Local folder to store the evaluation results.",
+        default=pathlib.Path(".")
+    )
+
+    parser_.add_argument(
         "--evaluation-matrix",
         action="store_true",
         help="Whether to build an evaluation matrix of all models/triggers at the end. Currently just for "
@@ -72,6 +80,7 @@ def setup_argparser() -> argparse.ArgumentParser:
 def validate_args(args: Any) -> None:
     assert args.pipeline.is_file(), f"File does not exist: {args.pipeline}"
     assert args.config.is_file(), f"File does not exist: {args.config}"
+    assert args.log_directory.is_dir(), f"Directory does not exist: {args.log_directory}"
 
     if args.start_replay_at is None and args.stop_replay_at is not None:
         raise ValueError("--stop-replay-at was provided, but --start-replay-at was not.")
@@ -109,6 +118,7 @@ def main() -> None:
         args.start_replay_at,
         args.stop_replay_at,
         args.maximum_triggers,
+        args.log_directory,
         args.evaluation_matrix
     )
 

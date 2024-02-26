@@ -26,7 +26,7 @@ class TimeTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int]:
+    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
                 self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted

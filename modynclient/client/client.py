@@ -1,7 +1,9 @@
-import json
 import logging
+import os
+import json
 import pathlib
 import time
+import subprocess
 from typing import Optional
 
 import enlighten
@@ -23,6 +25,7 @@ class Client:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
+        log_directory: Optional[pathlib.Path] = None,
         evaluation_matrix: bool = False,
     ) -> None:
         self.client_config = client_config
@@ -31,6 +34,7 @@ class Client:
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
+        self.log_directory = log_directory
         self.evaluation_matrix = evaluation_matrix
 
         self.grpc = GRPCHandler(client_config)
@@ -49,6 +53,11 @@ class Client:
         self.pbar: Optional[enlighten.Counter] = None
         self.evaluations: dict[int, EvaluationStatusTracker] = {}
         self.eval_err_count: int = 0
+
+    def _download_logs(self) -> None:
+        local_eval_dir = self.log_directory / f"{self.pipeline_id}"
+        os.makedirs(local_eval_dir, exist_ok=True)
+        subprocess.run(["docker", "cp", f"supervisor:{self.eval_directory}", local_eval_dir])
 
     def start_pipeline(self) -> bool:
         logger.info(f"model id: {self.pipeline_config['model']['id']}, maximum_triggers: {self.maximum_triggers}")
@@ -175,6 +184,7 @@ class Client:
 
         if res["status"] == PipelineStatus.EXIT:
             self._process_msgs(res)
+            self._download_logs()
         elif res["status"] == PipelineStatus.NOTFOUND:
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
         else:
