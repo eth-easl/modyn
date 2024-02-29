@@ -42,7 +42,9 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
 
         if self.unused_data_ratio < 1 or self.unused_data_ratio > 99:
             raise ValueError(
-                f"Invalid unused data ratio: {self.unused_data_ratio}. We need at least 1% fresh data (otherwise we would always train on the data from first trigger) and at maximum 99% fresh data (otherwise please use NewDataStrategy+reset)."
+                f"Invalid unused data ratio: {self.unused_data_ratio}."
+                + "We need at least 1% fresh data (otherwise we would always train on the data from first trigger) and"
+                + " at maximum 99% fresh data (otherwise please use NewDataStrategy+reset)."
             )
 
         if self.reset_after_trigger:
@@ -112,9 +114,11 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         if self.has_limit:
             # TODO(#179): this assumes limit < len(samples)
             for samples in self._get_all_unused_data():
-                yield random.sample(samples, self.training_set_size_limit) if self.training_set_size_limit < len(
-                    samples
-                ) else samples
+                yield (
+                    random.sample(samples, self.training_set_size_limit)
+                    if self.training_set_size_limit < len(samples)
+                    else samples
+                )
         else:
             yield from self._get_all_unused_data()
 
