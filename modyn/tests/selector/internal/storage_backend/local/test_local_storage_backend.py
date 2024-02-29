@@ -1,6 +1,6 @@
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 
 import pytest
 from modyn.selector.internal.storage_backend.local import LocalStorageBackend
