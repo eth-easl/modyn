@@ -26,13 +26,18 @@ This is required for some trainings, e.g., for Criteo training, as you run into 
 Optionally, you can uncomment the `.:/modyn_host` mount for all services to enable faster development cycles.
 This is not required if you do not iterate.
 
-### Starting the containers and the pipeline
+### Starting the containers
 Next, run `./scripts/run_modyn.sh` to build the containers and start them. 
 This may take several minutes for the first time.
 After building the containers, run `tmuxp load tmuxp.yaml` to have access to all container shells and logs.
-Switch to the supervisor pane (using regular tmux bindings).
-There, you can now submit a pipeline using the `modyn-supervisor` command.
-For example, you can run `modyn-supervisor --start-replay-at 0 benchmark/mnist/mnist.yaml modyn/config/examples/modyn_config.yaml`.
+ 
+### Starting the pipeline
+You can now submit a pipeline to the supervisor container using the `modyn-client` command in `modynclient/client/`.\
+For example, you can run `modyn-client --start-replay-at 0 --maximum-triggers 1 <pipeline config file> <modyn client config file> .`\
+pipeline config file example: modynclient/config/examples/mnist.yaml\
+modyn client config file example:
+- on your local machine: modynclient/config/examples/modyn_client_config.yaml
+- in one of the containers: modynclient/config/examples/modyn_client_config_container.yaml
 
 ### Iterating (for development)
 Since we copy the Modyn sources into the containers, if we change something locally outside of the containers, this does not get reflected in the containers.

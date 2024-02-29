@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package supervisor;
+
+service Supervisor {
+  rpc start_pipeline(StartPipelineRequest) returns (PipelineResponse) {}
+  rpc get_pipeline_status(GetPipelineStatusRequest) returns (GetPipelineStatusResponse) {}
+}
+
+message JsonString { string value = 1; }
+
+message StartPipelineRequest {
+    JsonString pipeline_config = 1;
+    string eval_directory = 2;
+    optional int32 start_replay_at = 3;
+    optional int32 stop_replay_at = 4;
+    optional int32 maximum_triggers = 5;
+    bool evaluation_matrix = 6;
+}
+
+message PipelineResponse { 
+    int32 pipeline_id = 1;
+    optional string exception = 2;
+}
+
+message GetPipelineStatusRequest { int32 pipeline_id = 1; }
+
+message PipelineStageIdMsg {
+    string id_type = 1;
+    int32 id = 2;
+}
+
+message PipelineStageDatasetMsg {
+    string id = 1;  
+}
+
+message PipelineStageCounterCreateParams {
+    int32 new_data_len = 1;
+}
+
+message PipelineStageCounterUpdateParams {
+    int32 batch_size = 1;
+}
+
+message PipelineStageCounterMsg {
+    string action = 1;
+    oneof params {
+        PipelineStageCounterCreateParams create_params = 2;
+        PipelineStageCounterUpdateParams update_params = 3;
+    }
+}
+
+message PipelineStageExitMsg {
+    int32 exitcode = 1;
+    optional string exception = 2;
+}
+
+message PipelineStage {
+    string stage = 1;
+    string msg_type = 2;
+    bool log = 3;
+    oneof msg {
+        PipelineStageIdMsg id_msg = 4;
+        PipelineStageDatasetMsg dataset_msg = 5;
+        PipelineStageCounterMsg counter_msg = 6;
+        PipelineStageExitMsg exit_msg = 7;
+    }
+}
+
+message TrainingStatusCreateTrackerParams {
+    int32 total_samples = 1;
+    int32 status_bar_scale = 2;
+}
+
+message TrainingStatusProgressCounterParams {
+    int32 samples_seen = 1;
+    int32 downsampling_samples_seen = 2;
+    bool is_training = 3;
+}
+
+message TrainingStatus {
+    string stage = 1;
+    string action = 2;
+    int32 id = 3;
+    oneof params {
+        TrainingStatusCreateTrackerParams training_create_tracker_params = 4;
+        TrainingStatusProgressCounterParams training_progress_counter_params = 5;
+    }
+}
+
+message EvalStatusCreateTrackerParams {
+    string dataset_id = 1;
+    int32 dataset_size = 2;
+} 
+
+message EvalStatusCreateCounterParams {
+    int32 training_id = 1;
+}
+
+message EvalStatusProgressCounterParams {
+    int32 total_samples_seen = 1;
+}
+
+message EvalStatusEndCounterParams {
+    bool error = 1;
+    optional string exception_msg = 2;
+}
+
+message EvalStatus {
+    string stage = 1;
+    string action = 2;
+    int32 id = 3;
+    oneof params {
+        EvalStatusCreateTrackerParams eval_create_tracker_params = 4;
+        EvalStatusCreateCounterParams eval_create_counter_params = 5;
+        EvalStatusProgressCounterParams eval_progress_counter_params = 6;
+        EvalStatusEndCounterParams eval_end_counter_params = 7;
+    }
+}
+
+message GetPipelineStatusResponse {
+    string status = 1;
+    repeated PipelineStage pipeline_stage = 2;
+    repeated TrainingStatus training_status = 3;
+    repeated EvalStatus eval_status = 4;
+}

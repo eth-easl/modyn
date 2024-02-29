@@ -12,7 +12,8 @@ import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import torch
 import yaml
-from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest, JsonString, RegisterPipelineRequest
+from integrationtests.utils import get_minimal_pipeline_config, init_metadata_db, register_pipeline
+from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
@@ -202,11 +203,9 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
         "config": {"limit": -1, "reset_after_trigger": True, "storage_backend": "database"},
     }
 
-    pipeline_id = selector.register_pipeline(
-        RegisterPipelineRequest(
-            num_workers=max(num_dataworkers, 1), selection_strategy=JsonString(value=json.dumps(strategy_config))
-        )
-    ).pipeline_id
+    pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config)
+    init_metadata_db(get_modyn_config())
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     trigger_id = selector.inform_data_and_trigger(
         DataInformRequest(

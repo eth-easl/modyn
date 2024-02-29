@@ -126,6 +126,7 @@ services:
 #      - .:/modyn_host
 #    shm_size: 4gb
   supervisor:
+    restart: on-failure
     depends_on:
     - storage
     - metadata-db
@@ -144,6 +145,8 @@ services:
       - 3000:50062
   tests:
     depends_on:
+      supervisor:
+        condition: service_started
       storage:
         condition: service_started
       selector:

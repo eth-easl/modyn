@@ -52,8 +52,6 @@ training:
   parallel_prefetch_requests: 2
   use_previous_model: False # Same amount of computation (retraining on all data), but on different starting weights
   initial_model: random
-  initial_pass:
-    activated: False
   batch_size: 65536
   optimizers:
     - name: "mlp"

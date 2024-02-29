@@ -4,7 +4,7 @@ runs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install prerequisites for pystack
         run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
@@ -16,7 +16,7 @@ runs:
       
       # increase to reset cache manually
       - name: Set cache number
-        run: echo "CACHE_NUMBER=1" >> $GITHUB_ENV 
+        run: echo "CACHE_NUMBER=2" >> $GITHUB_ENV 
         shell: bash
 
       - name: Setup micromamba

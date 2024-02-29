@@ -1,10 +1,10 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
 import json
+import multiprocessing as mp
 import pathlib
 import tempfile
 from unittest.mock import patch
 
-import enlighten
 import grpc
 import pytest
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -21,8 +21,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfSamplesRequest,
     JsonString,
     NumberOfSamplesResponse,
-    PipelineResponse,
-    RegisterPipelineRequest,
     TriggerResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -36,7 +34,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.utils import EvaluationStatusTracker
+from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     StartTrainingResponse,
@@ -71,7 +69,6 @@ def get_minimal_pipeline_config() -> dict:
             "amp": False,
             "dataloader_workers": 1,
             "initial_model": "random",
-            "initial_pass": {"activated": False},
             "batch_size": 42,
             "optimizers": [
                 {"name": "default", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
@@ -104,11 +101,13 @@ def get_minimal_pipeline_config() -> dict:
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-    return GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
+    return handler
+
+
+def test_init():
+    GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
 
 
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
@@ -117,12 +116,9 @@ def get_non_connecting_handler(insecure_channel, init) -> GRPCHandler:
 @patch.object(EvaluatorStub, "__init__", noop_constructor_mock)
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
-def test_init(test_insecure_channel, test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+def test_init_cluster_connection(test_insecure_channel, test_connection_established):
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     assert handler.connected_to_storage
     assert handler.connected_to_trainer_server
@@ -137,13 +133,9 @@ def test_init(test_insecure_channel, test_connection_established):
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage(test_insecure_channel, test_connection_established):
     handler = None
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    with patch.object(GRPCHandler, "init_storage", return_value=None):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(
+        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+    )  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -162,16 +154,9 @@ def test_init_storage(test_insecure_channel, test_connection_established):
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_storage_throws(test_insecure_channel, test_connection_established):
     handler = None
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    with patch.object(GRPCHandler, "init_storage", return_value=None):
-        with patch.object(GRPCHandler, "init_trainer_server", return_value=None):
-            with patch.object(GRPCHandler, "init_selector", return_value=None):
-                with patch.object(GRPCHandler, "init_evaluator", return_value=None):
-                    handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(
+        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+    )  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_storage
@@ -188,13 +173,9 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_selector(test_insecure_channel, test_connection_established):
     handler = None
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    with patch.object(GRPCHandler, "init_selector", return_value=None):
-        handler = GRPCHandler(get_simple_config(), mgr, pbar)  # don't call init storage in constructor
+    handler = GRPCHandler(
+        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+    )  # don't call init storage in constructor
 
     assert handler is not None
     assert not handler.connected_to_selector
@@ -207,12 +188,8 @@ def test_init_selector(test_insecure_channel, test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_dataset_available(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     assert handler.storage is not None
 
@@ -238,12 +215,8 @@ def test_get_new_data_since_throws():
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_new_data_since(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [GetNewDataSinceResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
@@ -256,12 +229,8 @@ def test_get_new_data_since(test_grpc_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_new_data_since_batched(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
         mock.return_value = [
@@ -284,12 +253,8 @@ def test_get_data_in_interval_throws():
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_data_in_interval(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [GetDataInIntervalResponse(keys=[0, 1], timestamps=[41, 42], labels=[0, 1])]
@@ -304,12 +269,8 @@ def test_get_data_in_interval(test_grpc_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_data_in_interval_batched(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
         mock.return_value = [
@@ -326,71 +287,9 @@ def test_get_data_in_interval_batched(test_grpc_connection_established):
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_register_pipeline_at_selector(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
-
-    with patch.object(handler.selector, "register_pipeline") as mock:
-        mock.return_value = PipelineResponse(pipeline_id=42)
-
-        result = handler.register_pipeline_at_selector(
-            {
-                "pipeline": {"name": "test"},
-                "training": {"dataloader_workers": 2, "selection_strategy": {}, "amp": True},
-                "model": {"id": "ResNet18"},
-                "model_storage": {
-                    "full_model_strategy": {"name": "PyTorchFullModel", "zip": True, "zip_algorithm": "ZIP_DEFLATED"},
-                    "incremental_model_strategy": {
-                        "name": "WeightsDifference",
-                        "config": {"operator": "sub"},
-                        "full_model_interval": 10,
-                    },
-                },
-            }
-        )
-
-        assert result == 42
-        mock.assert_called_once()
-
-        request: RegisterPipelineRequest = mock.call_args.args[0]
-        assert request.num_workers == 2
-        assert request.selection_strategy.value == "{}"
-        assert request.model_class_name == "ResNet18"
-        assert request.model_configuration.value == "{}"
-        assert request.amp
-        assert request.model_storage_policy.full_model_strategy_config.name == "PyTorchFullModel"
-        assert request.model_storage_policy.full_model_strategy_config.zip
-        assert request.model_storage_policy.full_model_strategy_config.zip_algorithm == "ZIP_DEFLATED"
-        assert not request.model_storage_policy.full_model_strategy_config.HasField("config")
-        assert request.model_storage_policy.incremental_model_strategy_config.name == "WeightsDifference"
-        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip")
-        assert not request.model_storage_policy.incremental_model_strategy_config.HasField("zip_algorithm")
-        assert (
-            json.loads(request.model_storage_policy.incremental_model_strategy_config.config.value)["operator"] == "sub"
-        )
-        assert request.model_storage_policy.full_model_interval == 10
-
-
-def test_unregister_pipeline_at_selector():
-    handler = get_non_connecting_handler()
-    pipeline_id = 42
-
-    # TODO(#64,#124): implement a real test when func is implemented.
-    handler.unregister_pipeline_at_selector(pipeline_id)
-
-
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_inform_selector(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.selector, "inform_data") as mock:
         mock.return_value = DataInformResponse(log=JsonString(value='{"1": 2}'))
@@ -406,12 +305,8 @@ def test_inform_selector(test_grpc_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_inform_selector_and_trigger(test_grpc_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
 
     with patch.object(handler.selector, "inform_data_and_trigger") as mock:
         mock.return_value = TriggerResponse(trigger_id=12, log=JsonString(value='{"1": 2}'))
@@ -436,12 +331,8 @@ def test_inform_selector_and_trigger(test_grpc_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_trainer_server_available(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     with patch.object(
@@ -453,12 +344,8 @@ def test_trainer_server_available(test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_get_number_of_samples(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.selector is not None
 
     with patch.object(
@@ -478,12 +365,8 @@ def test_stop_training_at_trainer_server():
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_start_training(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     pipeline_id = 42
@@ -502,14 +385,10 @@ def test_start_training(test_connection_established):
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_wait_for_training_completion(test_connection_established):
     # This test primarily checks whether we terminate.
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
     with patch.object(GRPCHandler, "get_number_of_samples", return_value=22):
         with patch.object(GRPCHandler, "get_status_bar_scale", return_value=100):
-            handler = GRPCHandler(get_simple_config(), mgr, pbar)
+            handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+            handler.init_cluster_connection()
             assert handler.trainer_server is not None
 
             with patch.object(
@@ -531,12 +410,8 @@ def test_wait_for_training_completion(test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_store_trained_model(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.trainer_server is not None
 
     res = StoreFinalModelResponse(valid_state=True, model_id=42)
@@ -549,12 +424,8 @@ def test_store_trained_model(test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_start_evaluation(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     model_id = 10
@@ -588,18 +459,20 @@ def test__prepare_evaluation_request():
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_wait_for_evaluation_completion(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     evaluations = {
-        1: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000),
-        2: EvaluationStatusTracker(dataset_id="MNIST_big", dataset_size=5000),
-        3: EvaluationStatusTracker(dataset_id="MNIST_large", dataset_size=10000),
+        1: EvaluationStatusReporter(
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=1, eval_status_queue=handler.eval_status_queue
+        ),
+        2: EvaluationStatusReporter(
+            dataset_id="MNIST_big", dataset_size=5000, evaluation_id=2, eval_status_queue=handler.eval_status_queue
+        ),
+        3: EvaluationStatusReporter(
+            dataset_id="MNIST_large", dataset_size=10000, evaluation_id=3, eval_status_queue=handler.eval_status_queue
+        ),
     }
 
     with patch.object(handler.evaluator, "get_evaluation_status") as status_method:
@@ -622,12 +495,8 @@ def test_wait_for_evaluation_completion(test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_store_evaluation_results(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     res = EvaluationResultResponse(
@@ -636,8 +505,12 @@ def test_store_evaluation_results(test_connection_established):
     )
 
     evaluations = {
-        10: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000),
-        15: EvaluationStatusTracker(dataset_id="MNIST_large", dataset_size=5000),
+        10: EvaluationStatusReporter(
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=handler.eval_status_queue
+        ),
+        15: EvaluationStatusReporter(
+            dataset_id="MNIST_large", dataset_size=5000, evaluation_id=15, eval_status_queue=handler.eval_status_queue
+        ),
     }
 
     with tempfile.TemporaryDirectory() as path:
@@ -694,17 +567,17 @@ def test_store_evaluation_results(test_connection_established):
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 def test_store_evaluation_results_invalid(test_connection_established):
-    mgr = enlighten.get_manager()
-    pbar = mgr.status_bar(
-        status_format="Test",
-    )
-
-    handler = GRPCHandler(get_simple_config(), mgr, pbar)
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
     assert handler.evaluator is not None
 
     res = EvaluationResultResponse(valid=False)
 
-    evaluations = {10: EvaluationStatusTracker(dataset_id="MNIST_small", dataset_size=1000)}
+    evaluations = {
+        10: EvaluationStatusReporter(
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=handler.eval_status_queue
+        )
+    }
 
     with tempfile.TemporaryDirectory() as path:
         with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
