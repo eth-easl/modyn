@@ -56,7 +56,7 @@ endif ()
 
 add_library(modyn-test-utils-objs OBJECT ${MODYN_TEST_UTILS_SOURCES})
 target_include_directories(modyn-test-utils-objs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/utils)
-target_link_libraries(modyn-test-utils-objs PUBLIC gtest gmock spdlog fmt yaml-cpp modyn example_extension trigger_sample_storage)
+target_link_libraries(modyn-test-utils-objs PUBLIC gtest gmock spdlog fmt yaml-cpp modyn example_extension trigger_sample_storage local_storage_backend)
 
 if (${MODYN_BUILD_STORAGE})
   target_link_libraries(modyn-test-utils-objs PUBLIC modyn-storage-library)
