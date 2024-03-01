@@ -72,9 +72,11 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
-                if tail_triggers is not None
-                else True,
+                (
+                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+                    if tail_triggers is not None
+                    else True
+                ),
                 # just consider points that have not been used since the last complete trigger
                 SelectorStateMetadata.last_used_in_trigger < self.last_complete_trigger,
             )
