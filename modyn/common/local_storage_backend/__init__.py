@@ -1,6 +1,7 @@
 """
 This module contains classes shared among several components.
 """
+
 import os
 
 from .local_storage_backend import LocalStorageBackend  # noqa: F401
