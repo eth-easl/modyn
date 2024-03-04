@@ -2,6 +2,7 @@
 This module containes extensions of the MetadataProcessorStrategy class that
 implement custom processing strategies.
 """
+
 import os
 
 files = os.listdir(os.path.dirname(__file__))

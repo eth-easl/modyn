@@ -72,9 +72,11 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
             .label("row_num"),
         ).filter(
             SelectorStateMetadata.pipeline_id == self.pipeline_id,
-            SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
-            if tail_triggers is not None
-            else True,
+            (
+                SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+                if tail_triggers is not None
+                else True
+            ),
         )
 
         if self.force_required_target_size:
@@ -139,9 +141,11 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
                 session.query(self.balanced_column, func.count())  # pylint: disable=not-callable
                 .filter(
                     SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                    SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
-                    if tail_triggers is not None
-                    else True,
+                    (
+                        SelectorStateMetadata.seen_in_trigger_id >= next_trigger_id - tail_triggers
+                        if tail_triggers is not None
+                        else True
+                    ),
                 )
                 .group_by(self.balanced_column)
             )
