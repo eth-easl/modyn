@@ -5,7 +5,6 @@ import os
 import pathlib
 import platform
 import tempfile
-import errno
 from time import sleep
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -172,18 +171,6 @@ def test_init(test_connect_to_model_storage, test_connect_to_selector, test_conn
         assert evaluator_server._storage_address == "storage:50052"
         test_connect_to_model_storage.assert_called_with("localhost:50051")
         test_connect_to_storage.assert_called_with("storage:50052")
-
-
-def is_writable(path):
-    try:
-        testfile = tempfile.TemporaryFile(dir=path)
-        testfile.close()
-    except OSError as e:
-        if e.errno == errno.EACCES:  # 13
-            return False
-        e.filename = path
-        raise
-    return True
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
