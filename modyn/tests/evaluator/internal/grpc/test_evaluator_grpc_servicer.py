@@ -47,8 +47,8 @@ def get_modyn_config():
         },
     }
 
-
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
@@ -67,8 +67,7 @@ def setup():
         database.add_trained_model(1, 10, "trained_model.modyn", "trained_model.metadata")
         database.add_trained_model(1, 11, "trained_model2.modyn", "trained_model.metadata")
 
-
-def teardown():
+    yield
     DATABASE.unlink()
 
 
@@ -193,8 +192,6 @@ def test_evaluate_model_invalid_model_id(
     test_has_attribute, test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
-        raise ValueError(f"is_writable = {isWritable(modyn_temp)}")
-
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         response = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not response.evaluation_started

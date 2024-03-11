@@ -64,8 +64,8 @@ modyn_config = {
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
-
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(modyn_config) as database:
@@ -81,9 +81,8 @@ def setup():
             incremental_model_strategy=None,
             full_model_interval=None,
         )
-
-
-def teardown():
+    yield
+    
     DATABASE.unlink()
 
 
