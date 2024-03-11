@@ -172,6 +172,18 @@ def test_init(test_connect_to_model_storage, test_connect_to_selector, test_conn
         test_connect_to_model_storage.assert_called_with("localhost:50051")
         test_connect_to_storage.assert_called_with("storage:50052")
 
+import errno
+def isWritable(path):
+    try:
+        testfile = tempfile.TemporaryFile(dir = path)
+        testfile.close()
+    except OSError as e:
+        if e.errno == errno.EACCES:  # 13
+            return False
+        e.filename = path
+        raise
+    return True
+
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
@@ -181,6 +193,8 @@ def test_evaluate_model_invalid_model_id(
     test_has_attribute, test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
+        raise ValueError(f"is_writable = {isWritable(modyn_temp)}")
+
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         response = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not response.evaluation_started
