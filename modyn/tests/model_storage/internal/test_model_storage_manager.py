@@ -33,6 +33,7 @@ def get_modyn_config():
         },
     }
 
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     DATABASE.unlink(True)

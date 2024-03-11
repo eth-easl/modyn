@@ -104,6 +104,7 @@ def noop() -> None:
 def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     if EVALUATION_DIRECTORY.is_dir():
@@ -111,7 +112,6 @@ def setup_and_teardown():
     EVALUATION_DIRECTORY.mkdir(0o777)
 
     yield
-    
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 

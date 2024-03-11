@@ -65,6 +65,7 @@ modyn_config = {
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     DATABASE.unlink(True)

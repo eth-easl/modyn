@@ -5,6 +5,7 @@ import os
 import pathlib
 import platform
 import tempfile
+import errno
 from time import sleep
 from unittest import mock
 from unittest.mock import MagicMock, patch
@@ -46,6 +47,7 @@ def get_modyn_config():
             "database": f"{DATABASE}",
         },
     }
+
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
@@ -171,10 +173,10 @@ def test_init(test_connect_to_model_storage, test_connect_to_selector, test_conn
         test_connect_to_model_storage.assert_called_with("localhost:50051")
         test_connect_to_storage.assert_called_with("storage:50052")
 
-import errno
-def isWritable(path):
+
+def is_writable(path):
     try:
-        testfile = tempfile.TemporaryFile(dir = path)
+        testfile = tempfile.TemporaryFile(dir=path)
         testfile.close()
     except OSError as e:
         if e.errno == errno.EACCES:  # 13
