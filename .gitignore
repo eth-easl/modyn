@@ -35,6 +35,9 @@ var/
 .eggs/
 *.egg-info
 
+# JetBrains IDE files
+.idea/
+
 # postgresql
 postgres-data/
 storage-postgres-data/

@@ -48,7 +48,8 @@ def get_modyn_config():
     }
 
 
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
@@ -67,8 +68,7 @@ def setup():
         database.add_trained_model(1, 10, "trained_model.modyn", "trained_model.metadata")
         database.add_trained_model(1, 11, "trained_model2.modyn", "trained_model.metadata")
 
-
-def teardown():
+    yield
     DATABASE.unlink()
 
 

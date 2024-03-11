@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 from zipfile import ZIP_DEFLATED
 
 import torch
+import pytest
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -33,7 +34,8 @@ def get_modyn_config():
     }
 
 
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
@@ -46,9 +48,8 @@ def setup():
         database.register_pipeline(
             1, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy, inc_model_strategy, 5
         )
+    yield
 
-
-def teardown():
     DATABASE.unlink()
 
 

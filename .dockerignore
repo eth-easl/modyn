@@ -1,0 +1,14 @@
+libbuild/
+
+*.egg-info/
+
+# postgresql
+postgres-data/
+storage-postgres-data/
+metadata-postgres-data/
+
+# JetBrains IDE files
+.idea/
+
+
+.DS_Store
