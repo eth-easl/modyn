@@ -5,6 +5,7 @@ import os
 import pathlib
 import platform
 import tempfile
+import pytest
 from io import BytesIO
 from time import sleep
 from unittest import mock
@@ -64,8 +65,8 @@ modyn_config = {
     "model_storage": {"hostname": "model_storage", "port": "5004"},
 }
 
-
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     DATABASE.unlink(True)
 
     with MetadataDatabaseConnection(modyn_config) as database:
@@ -81,9 +82,8 @@ def setup():
             incremental_model_strategy=None,
             full_model_interval=None,
         )
+    yield
 
-
-def teardown():
     DATABASE.unlink()
 
 
