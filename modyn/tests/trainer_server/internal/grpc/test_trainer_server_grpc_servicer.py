@@ -5,6 +5,7 @@ import os
 import pathlib
 import platform
 import tempfile
+import pytest
 from io import BytesIO
 from time import sleep
 from unittest import mock
@@ -82,7 +83,7 @@ def setup_and_teardown():
             full_model_interval=None,
         )
     yield
-    
+
     DATABASE.unlink()
 
 
