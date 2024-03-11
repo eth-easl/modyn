@@ -95,7 +95,8 @@ jobs:
   unittests:
     timeout-minutes: 25
     runs-on: ubuntu-latest
-
+    permissions:
+      pull-requests: write
     steps:
       - name: Check out code
         uses: actions/checkout@v3
