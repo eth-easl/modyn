@@ -4,9 +4,8 @@ FROM modyndependencies
 COPY modyn /src/modyn
 COPY cmake /src/cmake
 COPY modynclient /src/modynclient
-COPY setup.py /src
-COPY CMakeLists.txt /src
-COPY dev-requirements.txt /src
+COPY integrationtests /src/integrationtests
+COPY setup.py setup.cfg CMakeLists.txt dev-requirements.txt /src/
 
 RUN mamba run -n modyn pip install -e /src
 WORKDIR /src
