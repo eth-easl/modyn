@@ -6,6 +6,7 @@ COPY cmake /src/cmake
 COPY modynclient /src/modynclient
 COPY setup.py /src
 COPY CMakeLists.txt /src
+COPY dev-requirements.txt /src
 
 RUN mamba run -n modyn pip install -e /src
 WORKDIR /src
