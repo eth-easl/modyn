@@ -142,7 +142,7 @@ services:
 #      - .:/modyn_host
     container_name: supervisor
     ports:
-      - 3000:50062
+      - "3000:50063"
   tests:
     depends_on:
       supervisor:

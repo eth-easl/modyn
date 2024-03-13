@@ -1,7 +1,11 @@
 FROM modyndependencies
 
 # Copy source code into container
-COPY . /src
+COPY modyn /src/modyn
+COPY cmake /src/cmake
+COPY modynclient /src/modynclient
+COPY integrationtests /src/integrationtests
+COPY setup.py setup.cfg CMakeLists.txt dev-requirements.txt /src/
 
 RUN mamba run -n modyn pip install -e /src
 WORKDIR /src
