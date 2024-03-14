@@ -294,9 +294,6 @@ class Supervisor:
         if not self.validate_pipeline_config(pipeline_config, evaluation_matrix):
             return pipeline_res_msg(exception="Invalid pipeline configuration")
 
-        if not is_directory_writable(pathlib.Path(eval_directory)):
-            return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
-
         if not self.validate_system(pipeline_config):
             return pipeline_res_msg(exception="Invalid system configuration")
 
@@ -320,7 +317,7 @@ class Supervisor:
                     pipeline_id,
                     self.modyn_config,
                     pipeline_config,
-                    eval_directory,
+                    self.modyn_config["supervisor"]["evaluation_directory"],
                     self.supported_evaluation_result_writers,
                     exception_queue,
                     pipeline_status_queue,
