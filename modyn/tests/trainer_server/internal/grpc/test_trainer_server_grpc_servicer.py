@@ -5,12 +5,12 @@ import os
 import pathlib
 import platform
 import tempfile
-import pytest
 from io import BytesIO
 from time import sleep
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import pytest
 import torch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig

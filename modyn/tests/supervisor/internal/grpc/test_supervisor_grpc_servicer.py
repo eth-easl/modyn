@@ -19,7 +19,11 @@ EVALUATION_DIRECTORY: str = str(pathlib.Path(os.path.realpath(__file__)).parent 
 
 
 def get_minimal_modyn_config():
-    return {}
+    return {
+        "supervisor": {
+            "eval_base_path": "/evaluation_results",
+        }
+    }
 
 
 def noop_constructor_mock(self, modyn_config: dict) -> None:
@@ -101,7 +105,8 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2, False)
+    absolute_eval_dir = os.path.join(modyn_config["supervisor"]["eval_base_path"], EVALUATION_DIRECTORY)
+    test_start_pipeline.assert_called_once_with(pipeline_config, absolute_eval_dir, 0, 1, 2, False)
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)

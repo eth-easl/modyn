@@ -67,7 +67,11 @@ def get_minimal_pipeline_config() -> dict:
 
 
 def get_minimal_system_config() -> dict:
-    return {}
+    return {
+        "supervisor": {
+            "eval_base_path": "/evaluation_results",
+        }
+    }
 
 
 def noop_constructor_mock(self, modyn_config: dict) -> None:

@@ -32,7 +32,8 @@ def setup_argparser() -> argparse.ArgumentParser:
         "eval_dir",
         type=pathlib.Path,
         action="store",
-        help="Folder to store the evaluation results (NOT IN USE YET)",
+        help="Folder to store the evaluation results in supervisor's container,"
+             " (relative to supervisor's base_eval_path, see modyn_config)",
     )
 
     parser_.add_argument(
