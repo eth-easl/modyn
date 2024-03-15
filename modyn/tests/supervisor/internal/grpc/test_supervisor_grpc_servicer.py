@@ -15,13 +15,13 @@ from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGR
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
 
-EVALUATION_DIRECTORY: str = str(pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir")
+EVALUATION_DIRECTORY: str = "test_eval_dir"
 
 
 def get_minimal_modyn_config():
     return {
         "supervisor": {
-            "eval_base_path": "/evaluation_results",
+            "eval_base_path": str(pathlib.Path(os.path.realpath(__file__)).parent),
         }
     }
 
