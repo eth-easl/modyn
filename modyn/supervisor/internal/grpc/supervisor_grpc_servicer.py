@@ -48,6 +48,10 @@ class SupervisorGRPCServicer(SupervisorServicer):
 
         pipeline_config = json.loads(request.pipeline_config.value)
         eval_directory = pathlib.Path(self.modyn_config["supervisor"]["eval_base_path"]) / request.eval_directory
+
+        # if eval_directory does not exist first create it
+        eval_directory.mkdir(parents=True, exist_ok=True)
+
         msg = self._supervisor.start_pipeline(
             pipeline_config,
             str(eval_directory),

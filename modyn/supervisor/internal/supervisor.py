@@ -297,11 +297,7 @@ class Supervisor:
         if not self.validate_system(pipeline_config):
             return pipeline_res_msg(exception="Invalid system configuration")
 
-        eval_directory = pathlib.Path(eval_directory)
-        # if eval_directory does not exist first create it
-        eval_directory.mkdir(parents=True, exist_ok=True)
-
-        if not is_directory_writable(eval_directory):
+        if not is_directory_writable(pathlib.Path(eval_directory)):
             return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
 
         try:
