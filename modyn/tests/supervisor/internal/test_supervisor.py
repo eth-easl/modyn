@@ -105,13 +105,13 @@ def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
 
-def setup():
+@pytest.fixture(scope="function", autouse=True)
+def setup_and_teardown():
     if EVALUATION_DIRECTORY.is_dir():
         shutil.rmtree(EVALUATION_DIRECTORY)
     EVALUATION_DIRECTORY.mkdir(0o777)
 
-
-def teardown():
+    yield
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
@@ -438,9 +438,18 @@ def test_get_pipeline_status_exit(
     # mock_start.side_effect = noop
     # with patch("multiprocessing.Process.start", mock_start):
 
+    start_time = time.time()
     res = sup.start_pipeline(pipeline_config, EVALUATION_DIRECTORY)
-    time.sleep(1)
-    msg = sup.get_pipeline_status(res["pipeline_id"])
+
+    # iteratively query the pipeline status until it is no longer running
+    while time.time() - start_time < 30:
+        msg = sup.get_pipeline_status(res["pipeline_id"])
+        if msg["status"] != PipelineStatus.RUNNING:
+            break
+        time.sleep(2)
+    else:
+        raise TimeoutError("Pipeline did not finish in time")
+
     assert msg["status"] == PipelineStatus.EXIT
 
 
