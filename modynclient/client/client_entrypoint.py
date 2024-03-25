@@ -28,12 +28,6 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store",
         help="Modyn Client configuration file",
     )
-    parser_.add_argument(
-        "eval_dir",
-        type=pathlib.Path,
-        action="store",
-        help="Not used; reserved for future to lively transfer evaluation results from supervisor via FTP",
-    )
 
     parser_.add_argument(
         "--start-replay-at",
@@ -105,7 +99,6 @@ def main() -> None:
     client = Client(
         client_config,
         pipeline_config,
-        args.eval_dir,
         args.start_replay_at,
         args.stop_replay_at,
         args.maximum_triggers,
