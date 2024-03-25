@@ -69,7 +69,7 @@ def get_minimal_pipeline_config() -> dict:
 def get_minimal_system_config() -> dict:
     return {
         "supervisor": {
-            "eval_base_path": "/evaluation_results",
+            "eval_directory": EVALUATION_DIRECTORY,
         }
     }
 

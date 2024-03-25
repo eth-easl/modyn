@@ -387,14 +387,14 @@ properties:
         type: string
         description: |
           The port to use for the supervisor.
-      eval_base_path:
+      eval_directory:
         type: string
         description: |
-          The base path to store the evaluation results.
+          The directory to store the evaluation results.
     required:
       - hostname
       - port
-      - eval_base_path
+      - eval_directory
 required:
   - project
   - storage

@@ -294,15 +294,11 @@ class Supervisor:
         if not self.validate_pipeline_config(pipeline_config, evaluation_matrix):
             return pipeline_res_msg(exception="Invalid pipeline configuration")
 
+        if not is_directory_writable(pathlib.Path(eval_directory)):
+            return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
+
         if not self.validate_system(pipeline_config):
             return pipeline_res_msg(exception="Invalid system configuration")
-
-        eval_directory_obj = pathlib.Path(eval_directory)
-        # if not exists, create the directory
-        eval_directory_obj.mkdir(parents=True, exist_ok=True)
-
-        if not is_directory_writable(eval_directory_obj):
-            return pipeline_res_msg(exception="No permission to write to the evaluation results directory.")
 
         try:
             exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -324,7 +320,7 @@ class Supervisor:
                     pipeline_id,
                     self.modyn_config,
                     pipeline_config,
-                    str(eval_directory),
+                    eval_directory,
                     self.supported_evaluation_result_writers,
                     exception_queue,
                     pipeline_status_queue,

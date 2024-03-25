@@ -11,7 +11,6 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResp
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modynclient.client.internal.grpc_handler import GRPCHandler
 
-EVAL_DIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
 START_PIPELINE_RES = PipelineResponse(pipeline_id=PIPELINE_ID)
 PIPELINE_STATUS_RES_RUNNING = GetPipelineStatusResponse(status="running")
@@ -114,13 +113,12 @@ def test_start_pipeline(test_grpc_connection_established):
 
     req_minimal = StartPipelineRequest(
         pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-        eval_directory=str(EVAL_DIR),
         evaluation_matrix=False,
     )
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
         mock.return_value = START_PIPELINE_RES
-        ret_minimal = handler.start_pipeline(pipeline_config, EVAL_DIR, evaluation_matrix=False)
+        ret_minimal = handler.start_pipeline(pipeline_config, evaluation_matrix=False)
 
         assert ret_minimal["pipeline_id"] == 42
         assert "exception" not in ret_minimal
@@ -132,7 +130,6 @@ def test_start_pipeline(test_grpc_connection_established):
 
     req_full = StartPipelineRequest(
         pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-        eval_directory=str(EVAL_DIR),
         start_replay_at=start_replay_at,
         stop_replay_at=stop_replay_at,
         maximum_triggers=maximum_triggers,
@@ -143,7 +140,6 @@ def test_start_pipeline(test_grpc_connection_established):
         mock.return_value = START_PIPELINE_RES
         ret_full = handler.start_pipeline(
             pipeline_config,
-            EVAL_DIR,
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
@@ -159,7 +155,7 @@ def test_start_pipeline_throws():
     handler = get_non_connecting_handler()
     handler.connected_to_supervisor = False
     with pytest.raises(ConnectionError):
-        handler.start_pipeline(get_minimal_pipeline_config(), EVAL_DIR)
+        handler.start_pipeline(get_minimal_pipeline_config())
 
 
 @patch("modynclient.client.internal.grpc_handler.grpc_connection_established", return_value=True)

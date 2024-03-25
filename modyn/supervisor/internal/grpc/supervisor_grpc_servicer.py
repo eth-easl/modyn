@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import pathlib
 import threading
 
 # pylint: disable=no-name-in-module
@@ -47,11 +46,10 @@ class SupervisorGRPCServicer(SupervisorServicer):
         evaluation_matrix = request.evaluation_matrix
 
         pipeline_config = json.loads(request.pipeline_config.value)
-        eval_directory = pathlib.Path(self.modyn_config["supervisor"]["eval_base_path"]) / request.eval_directory
 
         msg = self._supervisor.start_pipeline(
             pipeline_config,
-            str(eval_directory),
+            self.modyn_config["supervisor"]["eval_directory"],
             start_replay_at,
             stop_replay_at,
             maximum_triggers,

@@ -41,7 +41,6 @@ class GRPCHandler:
     def start_pipeline(
         self,
         pipeline_config: dict,
-        eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
@@ -52,7 +51,6 @@ class GRPCHandler:
 
         start_pipeline_request = StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-            eval_directory=str(eval_directory),
         )
 
         if start_replay_at is not None:

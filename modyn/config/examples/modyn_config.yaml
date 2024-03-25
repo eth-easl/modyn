@@ -204,4 +204,4 @@ tensorboard:
 supervisor:
   hostname: "supervisor"
   port: "50063"
-  eval_base_path: "/evaluation_results"
+  eval_directory: "/evaluation_results"
