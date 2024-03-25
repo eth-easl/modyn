@@ -11,7 +11,6 @@ if __name__ == "__main__":
                 CLIENT_ENTRYPOINT,
                 DUMMY_CONFIG_FILE,
                 CLIENT_CONFIG_FILE,
-                ".",
                 "--start-replay-at",
                 "0",
                 "--maximum-triggers",
