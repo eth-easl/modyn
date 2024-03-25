@@ -50,6 +50,7 @@ src/data/*
 
 # Pytest stuff
 .pytest_cache
+.mypy_cache/
 reports/
 htmlcov/
 assets/

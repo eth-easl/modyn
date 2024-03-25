@@ -15,11 +15,13 @@ from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGR
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
 
-EVALUATION_DIRECTORY: str = str(pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir")
-
 
 def get_minimal_modyn_config():
-    return {}
+    return {
+        "supervisor": {
+            "eval_directory": str(pathlib.Path(os.path.realpath(__file__)).parent),
+        }
+    }
 
 
 def noop_constructor_mock(self, modyn_config: dict) -> None:
@@ -91,7 +93,6 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     pipeline_config = get_minimal_pipeline_config()
     request = StartPipelineRequest(
         pipeline_config=JsonString(value=json.dumps(pipeline_config)),
-        eval_directory=EVALUATION_DIRECTORY,
         start_replay_at=0,
         stop_replay_at=1,
         maximum_triggers=2,
@@ -101,7 +102,9 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(pipeline_config, EVALUATION_DIRECTORY, 0, 1, 2, False)
+    test_start_pipeline.assert_called_once_with(
+        pipeline_config, modyn_config["supervisor"]["eval_directory"], 0, 1, 2, False
+    )
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)

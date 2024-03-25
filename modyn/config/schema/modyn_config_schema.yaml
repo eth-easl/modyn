@@ -376,6 +376,25 @@ properties:
           The port on which tensorboard is run.
     required:
       - port
+  supervisor:
+    type: object
+    properties:
+      hostname:
+        type: string
+        description: |
+          The hostname to use for the supervisor.
+      port:
+        type: string
+        description: |
+          The port to use for the supervisor.
+      eval_directory:
+        type: string
+        description: |
+          The directory to store the evaluation results.
+    required:
+      - hostname
+      - port
+      - eval_directory
 required:
   - project
   - storage

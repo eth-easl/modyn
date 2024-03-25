@@ -28,12 +28,6 @@ def setup_argparser() -> argparse.ArgumentParser:
         action="store",
         help="Modyn Client configuration file",
     )
-    parser_.add_argument(
-        "eval_dir",
-        type=pathlib.Path,
-        action="store",
-        help="Folder to store the evaluation results",
-    )
 
     parser_.add_argument(
         "--start-replay-at",
@@ -72,7 +66,6 @@ def setup_argparser() -> argparse.ArgumentParser:
 def validate_args(args: Any) -> None:
     assert args.pipeline.is_file(), f"File does not exist: {args.pipeline}"
     assert args.config.is_file(), f"File does not exist: {args.config}"
-    assert args.eval_dir.is_dir(), f"Directory does not exist: {args.eval_dir}"
 
     if args.start_replay_at is None and args.stop_replay_at is not None:
         raise ValueError("--stop-replay-at was provided, but --start-replay-at was not.")
@@ -106,7 +99,6 @@ def main() -> None:
     client = Client(
         client_config,
         pipeline_config,
-        args.eval_dir,
         args.start_replay_at,
         args.stop_replay_at,
         args.maximum_triggers,

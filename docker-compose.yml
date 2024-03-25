@@ -138,7 +138,8 @@ services:
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
-#    volumes:
+    volumes:
+      - supervisor-evaluation-data:/evaluation_results
 #      - .:/modyn_host
     container_name: supervisor
     ports:
@@ -174,3 +175,4 @@ volumes:
   selector-localstorage-data:
   downsampling-data:
   model_storage-data:
+  supervisor-evaluation-data:
