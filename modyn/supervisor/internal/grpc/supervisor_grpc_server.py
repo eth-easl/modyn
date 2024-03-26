@@ -25,13 +25,6 @@ class SupervisorGRPCServer(GenericGRPCServer):
             modyn_config, modyn_config["supervisor"]["port"], SupervisorGRPCServer.callback, callback_kwargs
         )
 
-    def __getstate__(self) -> dict[str, Any]:
-        state = self.__dict__.copy()
-        if "add_servicer_callback" in state:
-            del state["add_servicer_callback"]
-
-        return state
-
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
         """Exit the context manager.
 
