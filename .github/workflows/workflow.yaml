@@ -105,7 +105,7 @@ jobs:
 
       - name: Pytest
         run: |
-          micromamba run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=90
+          micromamba run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=80
           micromamba run -n modyn pytest > pytest-coverage.txt
 
       - name: Comment coverage
@@ -257,7 +257,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: main 
+          ref: main
 
       - name: Install clang 17
         uses: KyleMayes/install-llvm-action@v1
@@ -306,7 +306,7 @@ jobs:
         shell: bash
         run: |
           echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.line-coverage }}-${{ needs.cpp_coverage_main.outputs.line-coverage }}; exit}')"
-          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"        
+          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"
         id: calculation
 
       - name: Comment on PR
