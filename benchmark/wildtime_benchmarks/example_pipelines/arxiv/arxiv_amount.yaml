@@ -1,11 +1,11 @@
 pipeline:
-  name: Huffpost dataset Test Pipeline
+  name: ArXiv dataset Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
   id: ArticleNet
   config:
-    num_classes: 55
+    num_classes: 172
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
@@ -15,7 +15,7 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  batch_size: 64
+  batch_size: 96
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -32,13 +32,15 @@ training:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 1000
+    maximum_keys_in_memory: 10000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+  seed: 42
+  epochs_per_trigger: 1
 data:
-  dataset_id: huffpost
+  dataset_id: arxiv
   bytes_parser_function: |
     def bytes_parser_function(data: bytes) -> str:
       return str(data, "utf8")
@@ -47,18 +49,18 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 5000
+    data_points_for_trigger: 1000
   
 evaluation:
   device: "cuda:0"
   result_writers: ["json"]
   datasets:
-    - dataset_id: huffpost
+    - dataset_id: arxiv
       bytes_parser_function: |
         def bytes_parser_function(data: bytes) -> str:
           return str(data, "utf8")
-      tokenizer: DistilBertTokenizerTransform      
-      batch_size: 64
+      tokenizer: DistilBertTokenizerTransform
+      batch_size: 96
       dataloader_workers: 2
       metrics:
         - name: "Accuracy"

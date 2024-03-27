@@ -38,6 +38,7 @@ training:
       limit: -1
       reset_after_trigger: True
   seed: 42
+  epochs_per_trigger: 1
 data:
   dataset_id: yearbook
   transformations: []
@@ -50,7 +51,7 @@ data:
 trigger:
   id: DataDriftTrigger
   trigger_config:
-    data_points_for_detection: 1000
+    data_points_for_detection: 500
   
 evaluation:
   device: "cuda:0"

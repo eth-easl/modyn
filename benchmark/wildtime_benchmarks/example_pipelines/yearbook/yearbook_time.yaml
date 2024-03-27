@@ -38,6 +38,7 @@ training:
       limit: -1
       reset_after_trigger: True
   seed: 42
+  epochs_per_trigger: 1
 data:
   dataset_id: yearbook
   transformations: []
@@ -48,9 +49,9 @@ data:
       return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
 
 trigger:
-  id: DataAmountTrigger
+  id: TimeTrigger
   trigger_config:
-    data_points_for_trigger: 1000
+    trigger_every: "1d"
   
 evaluation:
   device: "cuda:0"

@@ -38,6 +38,7 @@ training:
       limit: -1
       reset_after_trigger: True
   seed: 42
+  epochs_per_trigger: 1
 data:
   dataset_id: arxiv
   bytes_parser_function: |
@@ -46,9 +47,9 @@ data:
   tokenizer: DistilBertTokenizerTransform
 
 trigger:
-  id: DataDriftTrigger
+  id: TimeTrigger
   trigger_config:
-    data_points_for_detection: 1000
+    trigger_every: "1d"
   
 evaluation:
   device: "cuda:0"

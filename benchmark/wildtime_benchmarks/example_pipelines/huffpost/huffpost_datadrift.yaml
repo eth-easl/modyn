@@ -37,6 +37,8 @@ training:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
+  seed: 42
+  epochs_per_trigger: 1
 data:
   dataset_id: huffpost
   bytes_parser_function: |

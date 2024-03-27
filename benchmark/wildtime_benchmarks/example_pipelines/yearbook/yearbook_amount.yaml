@@ -1,11 +1,12 @@
 pipeline:
-  name: ArXiv dataset Test Pipeline
+  name: Yearbook Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
-  id: ArticleNet
+  id: YearbookNet
   config:
-    num_classes: 172
+    num_input_channels: 1
+    num_classes: 2
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
@@ -15,7 +16,7 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  batch_size: 96
+  batch_size: 64
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -23,43 +24,46 @@ training:
       param_groups:
         - module: "model"
           config:
-            lr: 0.00002
+            lr: 0.001
             momentum: 0.9
-            weight_decay: 0.01
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 10000
+    maximum_keys_in_memory: 1000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
   seed: 42
+  epochs_per_trigger: 1
 data:
-  dataset_id: arxiv
+  dataset_id: yearbook
+  transformations: []
   bytes_parser_function: |
-    def bytes_parser_function(data: bytes) -> str:
-      return str(data, "utf8")
-  tokenizer: DistilBertTokenizerTransform
+    import torch
+    import numpy as np
+    def bytes_parser_function(data: bytes) -> torch.Tensor:
+      return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
 
 trigger:
-  id: TimeTrigger
+  id: DataAmountTrigger
   trigger_config:
-    trigger_every: "1d"
+    data_points_for_trigger: 1000
   
 evaluation:
   device: "cuda:0"
-  result_writers: ["json"]
+  result_writers: ["log"]
   datasets:
-    - dataset_id: arxiv
+    - dataset_id: yearbook
       bytes_parser_function: |
-        def bytes_parser_function(data: bytes) -> str:
-          return str(data, "utf8")
-      tokenizer: DistilBertTokenizerTransform
-      batch_size: 96
+        import torch
+        import numpy as np
+        def bytes_parser_function(data: bytes) -> torch.Tensor:
+          return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
+      batch_size: 64
       dataloader_workers: 2
       metrics:
         - name: "Accuracy"

@@ -1,12 +1,11 @@
 pipeline:
-  name: Yearbook Test Pipeline
+  name: ArXiv dataset Test Pipeline
   description: Example pipeline
   version: 1.0.0
 model:
-  id: YearbookNet
+  id: ArticleNet
   config:
-    num_input_channels: 1
-    num_classes: 2
+    num_classes: 172
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
@@ -16,7 +15,7 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  batch_size: 64
+  batch_size: 96
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -24,45 +23,44 @@ training:
       param_groups:
         - module: "model"
           config:
-            lr: 0.001
+            lr: 0.00002
             momentum: 0.9
+            weight_decay: 0.01
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
   selection_strategy:
     name: NewDataStrategy
-    maximum_keys_in_memory: 1000
+    maximum_keys_in_memory: 10000
     config:
       storage_backend: "database"
       limit: -1
       reset_after_trigger: True
   seed: 42
+  epochs_per_trigger: 1
 data:
-  dataset_id: yearbook
-  transformations: []
+  dataset_id: arxiv
   bytes_parser_function: |
-    import torch
-    import numpy as np
-    def bytes_parser_function(data: bytes) -> torch.Tensor:
-      return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
+    def bytes_parser_function(data: bytes) -> str:
+      return str(data, "utf8")
+  tokenizer: DistilBertTokenizerTransform
 
 trigger:
-  id: TimeTrigger
+  id: DataDriftTrigger
   trigger_config:
-    trigger_every: "1d"
+    data_points_for_detection: 1000
   
 evaluation:
   device: "cuda:0"
-  result_writers: ["log"]
+  result_writers: ["json"]
   datasets:
-    - dataset_id: yearbook
+    - dataset_id: arxiv
       bytes_parser_function: |
-        import torch
-        import numpy as np
-        def bytes_parser_function(data: bytes) -> torch.Tensor:
-          return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
-      batch_size: 64
+        def bytes_parser_function(data: bytes) -> str:
+          return str(data, "utf8")
+      tokenizer: DistilBertTokenizerTransform
+      batch_size: 96
       dataloader_workers: 2
       metrics:
         - name: "Accuracy"
