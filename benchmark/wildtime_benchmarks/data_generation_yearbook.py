@@ -22,7 +22,6 @@ def main():
 
 class YearbookDownloader(Dataset):
     time_steps = [i for i in range(1930, 2014)]
-    input_dim = (1, 32, 32)
     num_classes = 2
     drive_id = "1mPpxoX2y2oijOvW1ymiHEYd7oMu2vVRb"
     file_name = "yearbook.pkl"
@@ -44,7 +43,7 @@ class YearbookDownloader(Dataset):
             np.array(
                 [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
                     # Pytorch requires CHW format
-                    img.transpose(2, 0, 1)[split].reshape(*self.input_dim)
+                    img.transpose(2, 0, 1)
                     # _dataset has 3 dimensions [years][train=0,valid=1,test=2]["images"/"labels"]
                     for split in splits # just train if --all not specified, else test, train and val
                     for img in self._dataset[year][split]["images"]
