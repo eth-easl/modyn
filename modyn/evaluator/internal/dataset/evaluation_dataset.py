@@ -32,8 +32,8 @@ class EvaluationDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
-        start_timestamp: Optional[int] = None,
-        end_timestamp: Optional[int] = None,
+        start_timestamp: int = 0,
+        end_timestamp: int = 0,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id

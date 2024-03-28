@@ -63,8 +63,9 @@ message GetDataPerWorkerRequest {
   string dataset_id = 1;
   int32 worker_id = 2;
   int32 total_workers = 3;
-  optional int64 start_timestamp = 4;
-  optional int64 end_timestamp = 5;
+  // value unset or set with default value means no limit
+  int64 start_timestamp = 4;
+  int64 end_timestamp = 5;
 }
 
 message GetDataPerWorkerResponse {

@@ -8,7 +8,6 @@ import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
 import sys
-import typing
 
 if sys.version_info >= (3, 8):
     import typing as typing_extensions
@@ -179,15 +178,10 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         worker_id: builtins.int = ...,
         total_workers: builtins.int = ...,
-        start_timestamp: builtins.int | None = ...,
-        end_timestamp: builtins.int | None = ...,
+        start_timestamp: builtins.int = ...,
+        end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_end_timestamp", b"_end_timestamp"]) -> typing_extensions.Literal["end_timestamp"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_start_timestamp", b"_start_timestamp"]) -> typing_extensions.Literal["start_timestamp"] | None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
 
 global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
 
