@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 from modynclient.client import Client
 from modynclient.client.internal.grpc_handler import GRPCHandler
 
-EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
 
 
@@ -60,7 +59,6 @@ def noop_constructor_mock(
     self,
     client_config: dict,
     pipeline_config: dict,
-    eval_directory: pathlib.Path,
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
@@ -73,23 +71,13 @@ def sleep_mock(duration: int):
     raise KeyboardInterrupt
 
 
-def setup():
-    if EVALUATION_DIRECTORY.is_dir():
-        shutil.rmtree(EVALUATION_DIRECTORY)
-    EVALUATION_DIRECTORY.mkdir(0o777)
-
-
-def teardown():
-    shutil.rmtree(EVALUATION_DIRECTORY)
-
-
 @patch.object(GRPCHandler, "init_supervisor", return_value=None)
 @patch("modyn.utils.grpc_connection_established", return_value=True)
 def get_non_connecting_client(
     test_connection_established,
     test_init_supervisor,
 ) -> Client:
-    client = Client(get_minimal_system_config(), get_minimal_pipeline_config(), EVALUATION_DIRECTORY)
+    client = Client(get_minimal_system_config(), get_minimal_pipeline_config())
     return client
 
 
@@ -103,7 +91,7 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     started = client.start_pipeline()
 
     test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None, False
+        get_minimal_pipeline_config(), None, None, None, False
     )
     assert started is True
     assert client.pipeline_id == PIPELINE_ID
@@ -115,7 +103,7 @@ def test_start_pipeline_failed(test_start_pipeline: MagicMock):
     started = client.start_pipeline()
 
     test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), EVALUATION_DIRECTORY, None, None, None, False
+        get_minimal_pipeline_config(), None, None, None, False
     )
     assert started is False
     assert client.pipeline_id is None

@@ -2,8 +2,12 @@
 
 This is the modynclient module 
 
-The client can connect to the modyn supervisor at the ip and port specified in the modyn_client_config file. ML engineers start a pipeline using `modyn-client pipeline.yaml config.yaml`″.
+The client can connect to the modyn supervisor at the ip and port specified in the modyn_client_config file. ML engineers start a pipeline using `modyn-client pipeline.yaml config.yaml`.
 The first configuration file describes the pipeline setup, while the second configuration file describes the modyn system setup.
+
+The evaluation logs will be stored in supervisor's container, in path `modyn_config['supervisor']['eval_directory']`, see [the modyn config file](modyn/config/examples/modyn_config.yaml).
+Note that this is only a temporary solution. In future the logs should be lively transferred to client via, e.g., FTP.
+
 
 Optional command line flag: `--start-replay-at TIMESTAMP`.
 This mode does not trigger on new data but just replays data starting at `TIMESTAMP` and ends all training afterwards.

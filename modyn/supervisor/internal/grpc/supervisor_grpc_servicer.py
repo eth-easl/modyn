@@ -46,9 +46,10 @@ class SupervisorGRPCServicer(SupervisorServicer):
         evaluation_matrix = request.evaluation_matrix
 
         pipeline_config = json.loads(request.pipeline_config.value)
+
         msg = self._supervisor.start_pipeline(
             pipeline_config,
-            request.eval_directory,
+            self.modyn_config["supervisor"]["eval_directory"],
             start_replay_at,
             stop_replay_at,
             maximum_triggers,

@@ -19,7 +19,6 @@ class Client:
         self,
         client_config: dict,
         pipeline_config: dict,
-        eval_directory: pathlib.Path,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
@@ -27,7 +26,6 @@ class Client:
     ) -> None:
         self.client_config = client_config
         self.pipeline_config = pipeline_config
-        self.eval_directory = eval_directory
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
@@ -54,7 +52,6 @@ class Client:
         logger.info(f"model id: {self.pipeline_config['model']['id']}, maximum_triggers: {self.maximum_triggers}")
         res = self.grpc.start_pipeline(
             self.pipeline_config,
-            self.eval_directory,
             self.start_replay_at,
             self.stop_replay_at,
             self.maximum_triggers,

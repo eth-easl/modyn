@@ -33,11 +33,14 @@ After building the containers, run `tmuxp load tmuxp.yaml` to have access to all
  
 ### Starting the pipeline
 You can now submit a pipeline to the supervisor container using the `modyn-client` command in `modynclient/client/`.\
-For example, you can run `modyn-client --start-replay-at 0 --maximum-triggers 1 <pipeline config file> <modyn client config file> .`\
+For example, you can run `modyn-client --start-replay-at 0 --maximum-triggers 1 <pipeline config file> <modyn client config file>`\
 pipeline config file example: modynclient/config/examples/mnist.yaml\
 modyn client config file example:
 - on your local machine: modynclient/config/examples/modyn_client_config.yaml
 - in one of the containers: modynclient/config/examples/modyn_client_config_container.yaml
+
+The evaluation logs will be stored in supervisor's container, in path `modyn_config['supervisor']['eval_directory']`, see [the modyn config file](modyn/config/examples/modyn_config.yaml).
+Note that this is only a temporary solution. In future the logs should be lively transferred to client via, e.g., FTP.
 
 ### Iterating (for development)
 Since we copy the Modyn sources into the containers, if we change something locally outside of the containers, this does not get reflected in the containers.
