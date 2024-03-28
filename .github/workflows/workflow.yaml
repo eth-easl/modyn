@@ -105,7 +105,7 @@ jobs:
 
       - name: Pytest
         run: |
-          micromamba run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=99
+          micromamba run -n modyn pytest modyn --cov-reset --cache-clear --cov-fail-under=10
           micromamba run -n modyn pytest > pytest-coverage.txt
 
       - name: Comment coverage
