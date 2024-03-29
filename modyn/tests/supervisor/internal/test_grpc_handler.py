@@ -444,7 +444,30 @@ def test_start_evaluation(test_connection_established):
         avail_method.assert_called_once()
 
 
-def test__prepare_evaluation_request():
+@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
+@patch.object(GRPCHandler, "_prepare_evaluation_request")
+def test_start_evaluation_default_prefetch_configs(prepare_evaluation_request_mock, grpc_connection_established_mock):
+    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler.init_cluster_connection()
+
+    model_id = 10
+    pipeline_id = 11
+    trigger_id = 12
+    pipeline_config = get_minimal_pipeline_config()
+    eval_dataset = pipeline_config["evaluation"]["datasets"][0]
+    eval_dataset["dataset_id"] = pipeline_config["data"]["dataset_id"]
+    with patch.object(
+        handler.evaluator,
+        "evaluate_model",
+        return_value=EvaluateModelResponse(evaluation_started=True, evaluation_id=12, dataset_size=1000),
+    ):
+        handler.start_evaluation(model_id, pipeline_config, pipeline_id, trigger_id)
+        prepare_evaluation_request_mock.assert_called_once_with(
+            eval_dataset, model_id, "cpu", pipeline_id, trigger_id, 1, 1
+        )
+
+
+def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
     request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
 
