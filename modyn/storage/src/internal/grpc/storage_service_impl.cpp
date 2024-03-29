@@ -274,13 +274,32 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
       return {StatusCode::OK, "Dataset does not exist."};
     }
+
+    const int64_t start_timestamp = request->start_timestamp();
+    const int64_t end_timestamp = request->end_timestamp();
+
     SPDLOG_INFO(
-        fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers",
-                    request->dataset_id(), dataset_id, request->worker_id(), request->total_workers()));
+        fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers with"
+                    " start = {} and end = {}.",
+                    request->dataset_id(), dataset_id, request->worker_id(), request->total_workers(),
+                    start_timestamp, end_timestamp));
 
     int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
-        soci::into(total_keys), soci::use(dataset_id);
+    std::string timestamp_filter;
+    if (start_timestamp > 0 && end_timestamp == 0) {
+      timestamp_filter = "updated_at >= :start_timestamp";
+    } else if (start_timestamp == 0 && end_timestamp > 0) {
+      timestamp_filter = "updated_at <= :end_timestamp";
+    } else if (start_timestamp > 0 && end_timestamp > 0) {
+      timestamp_filter = "updated_at >= :start_timestamp AND updated_at <= :end_timestamp";
+    } else if (start_timestamp == 0 && end_timestamp == 0) {
+      timestamp_filter = "1 = 1";
+    } else {
+      FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
+    }
+
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " + timestamp_filter,
+            soci::into(total_keys), soci::use(dataset_id), soci::use(start_timestamp), soci::use(end_timestamp);
 
     if (total_keys > 0) {
       int64_t start_index = 0;
@@ -289,8 +308,8 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
           get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
       const std::string query =
-          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id OFFSET {} LIMIT {}",
-                      dataset_id, start_index, limit);
+          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} AND " + timestamp_filter + " ORDER BY sample_id OFFSET {} LIMIT {}",
+                  dataset_id, start_index, limit);
       const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
       CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
 
