@@ -307,9 +307,12 @@ Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-n
       std::tie(start_index, limit) =
           get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
-      const std::string query =
-          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} AND " + timestamp_filter + " ORDER BY sample_id OFFSET {} LIMIT {}",
-                  dataset_id, start_index, limit);
+      // fmt::format expects a const expression, so we need to format it in split parts
+      const std::string query_before_timestamp_filter =
+          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} AND ", dataset_id);
+        const std::string query_after_timestamp_filter =
+          fmt::format(" ORDER BY sample_id OFFSET {} LIMIT {}", start_index, limit);
+      const std::string query = query_before_timestamp_filter + timestamp_filter + query_after_timestamp_filter;
       const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
       CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
 
