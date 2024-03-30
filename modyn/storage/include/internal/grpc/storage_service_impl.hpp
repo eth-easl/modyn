@@ -223,7 +223,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
       }
 
-      session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " + timestamp_filter,
+      session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
+                     timestamp_filter,
           soci::into(total_keys), soci::use(dataset_id);
 
       if (total_keys > 0) {

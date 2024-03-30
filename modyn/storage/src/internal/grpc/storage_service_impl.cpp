@@ -267,7 +267,6 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
   }
 }
 
-
 Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
     modyn::storage::GetDatasetSizeResponse* response) {
