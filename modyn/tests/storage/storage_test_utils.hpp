@@ -34,6 +34,8 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
 
   std::vector<T> get_responses() { return responses_; }
 
+  void clear_responses() { responses_.clear(); }
+
  private:
   grpc::internal::Call* const call_ = nullptr;
   grpc::ServerContext* const ctx_ = nullptr;

@@ -378,6 +378,75 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-f
   ASSERT_EQ(responses3.size(), 0);
 }
 
+TEST_F(StorageServiceImplTest, GetDataPerWorkerOnWorkerID) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  grpc::ServerContext context;
+  grpc::internal::Call call;
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+  connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  const std::string sql_expression = fmt::format(
+  "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
+  "1)",
+  tmp_dir_);
+  session << sql_expression;
+
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
+  if (!session.get_last_insert_id("files", inserted_file_id)) {
+  FAIL("Failed to insert file into database");
+  }
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
+  soci::use(inserted_file_id);
+  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
+  -1;
+  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
+  FAIL("Failed to insert sample into database");
+  }
+
+  // We have 2 workers and 3 samples to fetch. The first worker should get 2 samples and the second worker should get 1 sample.
+  modyn::storage::GetDataPerWorkerRequest request;
+  request.set_dataset_id("test_dataset");
+  request.set_worker_id(0);
+  request.set_total_workers(2);
+  // send the request
+  modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse> writer(&call, &context);
+  grpc::Status status =
+      storage_service.
+      GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
+          &context, &request, &writer);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses = writer.get_responses();
+  ASSERT_EQ(responses.size(), 1);
+  const modyn::storage::GetDataPerWorkerResponse& response = responses[0];
+  std::vector<int64_t> keys;
+  keys.reserve(response.keys_size());
+  for (const auto& key : response.keys()) {
+    keys.push_back(key);
+  }
+  ASSERT_THAT(keys, ::testing::UnorderedElementsAre(early_sample_id_, late_sample_id_));
+
+  request.set_worker_id(1);
+  writer.clear_responses();
+  // send the request for the second worker
+  status = storage_service.
+  GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
+          &context, &request, &writer);
+  ASSERT_TRUE(status.ok());
+  const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses2 = writer.get_responses();
+  ASSERT_EQ(responses2.size(), 1);
+  const modyn::storage::GetDataPerWorkerResponse& response2 = responses2[0];
+  std::vector<int64_t> keys2;
+  keys2.reserve(response2.keys_size());
+  for (const auto& key : response2.keys()) {
+    keys2.push_back(key);
+  }
+  ASSERT_THAT(keys2, ::testing::ElementsAre(inserted_sample_id_ll));
+}
+
+
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);
