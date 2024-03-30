@@ -378,12 +378,12 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-f
   ASSERT_EQ(responses3.size(), 0);
 }
 
-TEST_F(StorageServiceImplTest, GetDataPerWorkerOnWorkerID) {
+TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;
   grpc::internal::Call call;
-
+  // first add another sample to the database to allow more test cases
   const StorageDatabaseConnection connection(config);
   soci::session session =
       connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
@@ -421,12 +421,8 @@ TEST_F(StorageServiceImplTest, GetDataPerWorkerOnWorkerID) {
   const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses = writer.get_responses();
   ASSERT_EQ(responses.size(), 1);
   const modyn::storage::GetDataPerWorkerResponse& response = responses[0];
-  std::vector<int64_t> keys;
-  keys.reserve(response.keys_size());
-  for (const auto& key : response.keys()) {
-    keys.push_back(key);
-  }
-  ASSERT_THAT(keys, ::testing::UnorderedElementsAre(early_sample_id_, late_sample_id_));
+
+  ASSERT_THAT(response.keys(), ::testing::UnorderedElementsAreArray({early_sample_id_, late_sample_id_}));
 
   request.set_worker_id(1);
   writer.clear_responses();
@@ -438,12 +434,104 @@ TEST_F(StorageServiceImplTest, GetDataPerWorkerOnWorkerID) {
   const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses2 = writer.get_responses();
   ASSERT_EQ(responses2.size(), 1);
   const modyn::storage::GetDataPerWorkerResponse& response2 = responses2[0];
-  std::vector<int64_t> keys2;
-  keys2.reserve(response2.keys_size());
-  for (const auto& key : response2.keys()) {
-    keys2.push_back(key);
+  ASSERT_THAT(response2.keys(), ::testing::ElementsAre(inserted_sample_id_ll));
+}
+
+TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  grpc::ServerContext context;
+  grpc::internal::Call call;
+
+  // in dataset "test_dataset" we already have 2 samples with timestamps 1 and 100
+  // we first add another sample with timestamp 200 to allow more test cases
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  const std::string sql_expression = fmt::format(
+      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
+      "1)",
+      tmp_dir_);
+  session << sql_expression;
+
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
+  if (!session.get_last_insert_id("files", inserted_file_id)) {
+    FAIL("Failed to insert file into database");
   }
-  ASSERT_THAT(keys2, ::testing::ElementsAre(inserted_sample_id_ll));
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
+      soci::use(inserted_file_id);
+  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
+      -1;
+  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
+    FAIL("Failed to insert sample into database");
+  }
+
+  // We have in total 3 samples, with timestamps 1, 100, 200.
+  const std::vector<std::tuple<int64_t, int>> all_keys_with_timestamps = {
+      {early_sample_id_, 1}, {late_sample_id_, 100}, {inserted_sample_id_ll, 200}};
+
+  modyn::storage::GetDataPerWorkerRequest request;
+  request.set_dataset_id("test_dataset");
+  request.set_worker_id(0);
+  request.set_total_workers(1);
+
+  const std::vector<std::tuple<int, int>> start_end_timestamps = {{-1, 50},  {50, -1},   {0, 0},    {0, 50},
+                                                                  {50, 150}, {150, 210}, {210, 210}};
+  modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse> writer(&call, &context);
+  int start_timestamp;
+  int end_timestamp;
+  for (const auto& start_end_timestamp : start_end_timestamps) {
+    std::tie(start_timestamp, end_timestamp) = start_end_timestamp;
+    request.set_start_timestamp(start_timestamp);
+    request.set_end_timestamp(end_timestamp);
+    writer.clear_responses();
+    grpc::Status status =
+        storage_service
+            .GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
+                &context, &request, &writer);
+
+    const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses = writer.get_responses();
+    if (start_timestamp == -1 || end_timestamp == -1) {
+      ASSERT_EQ(responses.size(), 0);
+      continue;
+    }
+
+    std::function<bool(std::tuple<int64_t, int>)> is_in_interval;
+
+    if (start_timestamp == 0 && end_timestamp == 0) {
+      is_in_interval = [](std::tuple<int64_t, int>) { return true; };
+    } else if (start_timestamp == 0) {
+      is_in_interval = [end_timestamp](std::tuple<int64_t, int> key_ts) {
+        return std::get<1>(key_ts) <= end_timestamp;
+      };
+    } else if (end_timestamp == 0) {
+      is_in_interval = [start_timestamp](std::tuple<int64_t, int> key_ts) {
+        return std::get<1>(key_ts) >= start_timestamp;
+      };
+    } else {
+      is_in_interval = [start_timestamp, end_timestamp](std::tuple<int64_t, int> key_ts) {
+        int ts = std::get<1>(key_ts);
+        return ts >= start_timestamp && ts <= end_timestamp;
+      };
+    }
+
+    std::vector<int64_t> expected_keys;
+    for (const auto& key_ts : all_keys_with_timestamps) {
+      if (is_in_interval(key_ts)) {
+        expected_keys.push_back(std::get<0>(key_ts));
+      }
+    }
+
+    if (expected_keys.empty()) {
+      ASSERT_EQ(responses.size(), 0);
+    } else {
+      ASSERT_EQ(responses.size(), 1);
+      const modyn::storage::GetDataPerWorkerResponse& response = responses[0];
+      const auto& actual_keys = response.keys();
+      ASSERT_THAT(actual_keys, ::testing::UnorderedElementsAreArray(expected_keys));
+    }
+  }
 }
 
 TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
@@ -473,9 +561,9 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const StorageDatabaseConnection connection(config);
   soci::session session =
       connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  session
-      << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file
-                                                                                                    // with this id
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no
+                                                                                                        // file with
+                                                                                                        // this id
   request.clear_keys();
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);

@@ -212,11 +212,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       int64_t total_keys = 0;
       std::string timestamp_filter;
       if (start_timestamp > 0 && end_timestamp == 0) {
-        timestamp_filter = "updated_at >= :start_timestamp";
+        timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
       } else if (start_timestamp == 0 && end_timestamp > 0) {
-        timestamp_filter = "updated_at <= :end_timestamp";
+        timestamp_filter = fmt::format("updated_at <= {}", end_timestamp);
       } else if (start_timestamp > 0 && end_timestamp > 0) {
-        timestamp_filter = "updated_at >= :start_timestamp AND updated_at <= :end_timestamp";
+        timestamp_filter = fmt::format("updated_at >= {} AND updated_at <= {}", start_timestamp, end_timestamp);
       } else if (start_timestamp == 0 && end_timestamp == 0) {
         timestamp_filter = "1 = 1";
       } else {
@@ -233,13 +233,20 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         std::tie(start_index, limit) =
             get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
-        // fmt::format expects a const expression, so we need to format it in split parts
-        const std::string query_before_timestamp_filter =
-            fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} AND ", dataset_id);
-        const std::string query_after_timestamp_filter =
-            fmt::format(" ORDER BY sample_id LIMIT {} OFFSET {}", limit, start_index);
-        const std::string query = query_before_timestamp_filter + timestamp_filter + query_after_timestamp_filter;
-
+        std::string query;
+        if (start_timestamp == 0 && end_timestamp == 0) {
+          query =
+              fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id LIMIT {} OFFSET {}",
+                          dataset_id, limit, start_index);
+        } else {
+          query = fmt::format(
+              "SELECT samples.sample_id "
+              "FROM samples INNER JOIN files "
+              "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
+              "WHERE samples.dataset_id = {} AND {} "
+              "ORDER BY sample_id LIMIT {} OFFSET {}",
+              dataset_id, timestamp_filter, limit, start_index);
+        }
         const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
         CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
 
