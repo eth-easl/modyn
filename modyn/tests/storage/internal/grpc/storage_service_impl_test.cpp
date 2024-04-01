@@ -108,6 +108,31 @@ class StorageServiceImplTest : public ::testing::Test {
   }
 };
 
+std::tuple<int64_t, int64_t> add_non_existing_sample(const YAML::Node& config, const std::string& database_root_dir) {
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  const std::string sql_expression = fmt::format(
+      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
+      "1)",
+      database_root_dir);
+  session << sql_expression;
+
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
+  if (!session.get_last_insert_id("files", inserted_file_id)) {
+    FAIL("Failed to insert file into database");
+  }
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
+      soci::use(inserted_file_id);
+  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
+      -1;
+  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
+    FAIL("Failed to insert sample into database");
+  }
+  return {inserted_file_id, inserted_sample_id_ll};
+}
+
 TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   ServerContext context;
 
@@ -299,27 +324,9 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-f
   grpc::internal::Call call;
   modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse> writer(&call, &context);
 
-  const StorageDatabaseConnection connection(config);
-  soci::session session =
-      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  const std::string sql_expression = fmt::format(
-      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
-      "1)",
-      tmp_dir_);
-  session << sql_expression;
-
-  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
-  if (!session.get_last_insert_id("files", inserted_file_id)) {
-    FAIL("Failed to insert file into database");
-  }
-
-  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
-      soci::use(inserted_file_id);
-  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
-      -1;
-  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
-    FAIL("Failed to insert sample into database");
-  }
+  long long inserted_file_id = -1;       // NOLINT google-runtime-int (soci needs ll)
+  long long inserted_sample_id_ll = -1;  // NOLINT google-runtime-int (soci needs ll)
+  std::tie(inserted_file_id, inserted_sample_id_ll) = add_non_existing_sample(config, tmp_dir_);
 
   auto inserted_sample_id = static_cast<uint64_t>(inserted_sample_id_ll);
 
@@ -378,33 +385,17 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-f
   ASSERT_EQ(responses3.size(), 0);
 }
 
-TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {
+TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;
   grpc::internal::Call call;
+
   // first add another sample to the database to allow more test cases
-  const StorageDatabaseConnection connection(config);
-  soci::session session =
-      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  const std::string sql_expression = fmt::format(
-      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
-      "1)",
-      tmp_dir_);
-  session << sql_expression;
 
-  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
-  if (!session.get_last_insert_id("files", inserted_file_id)) {
-    FAIL("Failed to insert file into database");
-  }
-
-  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
-      soci::use(inserted_file_id);
-  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
-      -1;
-  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
-    FAIL("Failed to insert sample into database");
-  }
+  long long inserted_file_id = -1;       // NOLINT google-runtime-int (soci needs ll)
+  long long inserted_sample_id_ll = -1;  // NOLINT google-runtime-int (soci needs ll)
+  std::tie(inserted_file_id, inserted_sample_id_ll) = add_non_existing_sample(config, tmp_dir_);
 
   // We have 2 workers and 3 samples to fetch. The first worker should get 2 samples and the second worker should get 1
   // sample.
@@ -417,7 +408,7 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {
   grpc::Status status =
       storage_service.GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
           &context, &request, &writer);
-  ASSERT_TRUE(status.ok());
+
   const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses = writer.get_responses();
   ASSERT_EQ(responses.size(), 1);
   const modyn::storage::GetDataPerWorkerResponse& response = responses[0];
@@ -437,7 +428,8 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {
   ASSERT_THAT(response2.keys(), ::testing::ElementsAre(inserted_sample_id_ll));
 }
 
-TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
+TEST_F(StorageServiceImplTest,
+       TestGetDataPerWorkerOnTimestampFilter) {  // NOLINT(readability-function-cognitive-complexity)
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;
@@ -445,27 +437,11 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
 
   // in dataset "test_dataset" we already have 2 samples with timestamps 1 and 100
   // we first add another sample with timestamp 200 to allow more test cases
-  const StorageDatabaseConnection connection(config);
-  soci::session session =
-      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  const std::string sql_expression = fmt::format(
-      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
-      "1)",
-      tmp_dir_);
-  session << sql_expression;
 
-  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
-  if (!session.get_last_insert_id("files", inserted_file_id)) {
-    FAIL("Failed to insert file into database");
-  }
-
-  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
-      soci::use(inserted_file_id);
+  long long inserted_file_id = -1;   // NOLINT google-runtime-int (soci needs ll)
   long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
       -1;
-  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
-    FAIL("Failed to insert sample into database");
-  }
+  std::tie(inserted_file_id, inserted_sample_id_ll) = add_non_existing_sample(config, tmp_dir_);
 
   // We have in total 3 samples, with timestamps 1, 100, 200.
   const std::vector<std::tuple<int64_t, int>> all_keys_with_timestamps = {
@@ -486,7 +462,7 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
     request.set_start_timestamp(start_timestamp);
     request.set_end_timestamp(end_timestamp);
     writer.clear_responses();
-    grpc::Status status =
+    const grpc::Status status =
         storage_service
             .GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
                 &context, &request, &writer);
@@ -511,7 +487,7 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
       };
     } else {
       is_in_interval = [start_timestamp, end_timestamp](std::tuple<int64_t, int> key_ts) {
-        int ts = std::get<1>(key_ts);
+        const int ts = std::get<1>(key_ts);
         return ts >= start_timestamp && ts <= end_timestamp;
       };
     }
