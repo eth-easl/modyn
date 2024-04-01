@@ -189,14 +189,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   template <typename WriterT>
   Status GetDataPerWorker_Impl(  // NOLINT (readability-identifier-naming)
       ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request, WriterT* writer) {
+    soci::session session = storage_database_connection_.get_session();
     try {
-      soci::session session = storage_database_connection_.get_session();
-
       // Check if the dataset exists
       int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
       if (dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+        session.close();
         return {StatusCode::OK, "Dataset does not exist."};
       }
 
@@ -296,7 +296,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           }
         }
         cursor_handler.close_cursor();
-        session.close();
 
         if (!record_buf.empty()) {
           ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
@@ -306,16 +305,18 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           for (const auto& record : record_buf) {
             response.add_keys(record.id);
           }
-
           writer->Write(response);
         }
       }
 
-      return {StatusCode::OK, "Data retrieved."};
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in GetDataPerWorker: {}", e.what());
+      session.close();
       return {StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
     }
+
+    session.close();
+    return {StatusCode::OK, "Data retrieved."};
   }
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>

@@ -96,6 +96,7 @@ class StorageServiceImplTest : public ::testing::Test {
     label_file2 << "2";
     label_file2.close();
     ASSERT(!label_file2.is_open(), "Could not close label file");
+    session.close();
   }
 
   void TearDown() override {
@@ -130,6 +131,7 @@ std::tuple<int64_t, int64_t> add_non_existing_sample(const YAML::Node& config, c
   if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
     FAIL("Failed to insert sample into database");
   }
+  session.close();
   return {inserted_file_id, inserted_sample_id_ll};
 }
 
@@ -200,8 +202,8 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
   dataset_exists = 0;
   session << "SELECT COUNT(*) FROM datasets WHERE name = 'test_dataset'", soci::into(dataset_exists);
-
   ASSERT_FALSE(dataset_exists);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestDeleteData) {
@@ -256,6 +258,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = 1", soci::into(number_of_samples);
 
   ASSERT_EQ(number_of_samples, 1);
+  session.close();
 }
 
 // NOLINTNEXTLINE (readability-function-cognitive-complexity)
@@ -428,8 +431,8 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {  // NOLINT(read
   ASSERT_THAT(response2.keys(), ::testing::ElementsAre(inserted_sample_id_ll));
 }
 
-TEST_F(StorageServiceImplTest,  // NOLINT(readability-function-cognitive-complexity)
-       TestGetDataPerWorkerOnTimestampFilter) {
+// NOLINT(readability-function-cognitive-complexity)
+TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;
@@ -544,6 +547,7 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);
   ASSERT_FALSE(response.success());
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetPartitionForWorker) {
@@ -590,9 +594,9 @@ TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInFile) {
       "100, 10)",
       tmp_dir_);
   session << sql_expression;
-
   ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_file(3, session, 1));
   ASSERT_EQ(result, 10);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIds) {
@@ -630,6 +634,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
   ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 2);
   ASSERT_EQ(result[1], 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileCount) {
@@ -654,6 +659,7 @@ TEST_F(StorageServiceImplTest, TestGetFileCount) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 2, -1));
   ASSERT_EQ(result, 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
@@ -685,6 +691,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, -1, 1));
   ASSERT_EQ(result.size(), 1);
   ASSERT_EQ(result[0], 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetId) {
@@ -700,6 +707,7 @@ TEST_F(StorageServiceImplTest, TestGetDatasetId) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_id(session, "non_existent_dataset"));
   ASSERT_EQ(result, -1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
@@ -743,6 +751,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
   ASSERT_EQ(result[1], 2);
   ASSERT_EQ(result[2], 3);
   ASSERT_EQ(result[3], 4);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
@@ -871,6 +880,7 @@ TEST_F(StorageServiceImplTest, TestGetSamplesCorrespondingToFiles) {
   ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 6);
   ASSERT_EQ(result[1], 7);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetData) {
@@ -895,4 +905,5 @@ TEST_F(StorageServiceImplTest, TestGetDatasetData) {
   ASSERT_EQ(result.base_path, "");
   ASSERT_EQ(result.filesystem_wrapper_type, FilesystemWrapperType::INVALID_FSW);
   ASSERT_EQ(result.file_wrapper_type, FileWrapperType::INVALID_FW);
+  session.close();
 }
