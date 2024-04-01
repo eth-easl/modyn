@@ -32,8 +32,7 @@ class EvaluationDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
-        start_timestamp: int = 0,
-        end_timestamp: int = 0,
+        start_timestamp: int = 0
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -47,7 +46,7 @@ class EvaluationDataset(IterableDataset):
         self._storagestub: StorageStub = None
         self._bytes_parser_function: Optional[Callable] = None
         self._start_timestamp = start_timestamp
-        self._end_timestamp = end_timestamp
+        self._end_timestamp = 0
         logger.debug("Initialized EvaluationDataset.")
 
     def _init_transforms(self) -> None:
