@@ -428,8 +428,8 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {  // NOLINT(read
   ASSERT_THAT(response2.keys(), ::testing::ElementsAre(inserted_sample_id_ll));
 }
 
-TEST_F(StorageServiceImplTest,
-       TestGetDataPerWorkerOnTimestampFilter) {  // NOLINT(readability-function-cognitive-complexity)
+TEST_F(StorageServiceImplTest,  // NOLINT(readability-function-cognitive-complexity)
+       TestGetDataPerWorkerOnTimestampFilter) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
   grpc::ServerContext context;
