@@ -64,6 +64,7 @@ message GetDataPerWorkerRequest {
   int32 worker_id = 2;
   int32 total_workers = 3;
   // value unset or set with default value means no limit
+  // start_timestamp is inclusive, end_timestamp is exclusive
   int64 start_timestamp = 4;
   int64 end_timestamp = 5;
 }

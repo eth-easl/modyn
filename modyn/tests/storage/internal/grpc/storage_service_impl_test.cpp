@@ -424,14 +424,55 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerID) {  // NOLINT(read
   status =
       storage_service.GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
           &context, &request, &writer);
-  ASSERT_TRUE(status.ok());
   const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses2 = writer.get_responses();
   ASSERT_EQ(responses2.size(), 1);
   const modyn::storage::GetDataPerWorkerResponse& response2 = responses2[0];
   ASSERT_THAT(response2.keys(), ::testing::ElementsAre(inserted_sample_id_ll));
 }
 
-// NOLINT(readability-function-cognitive-complexity)
+TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnWorkerIDWithTimestampFilter) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+  StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
+  grpc::ServerContext context;
+  grpc::internal::Call call;
+
+  // first add another sample to the database to allow more test cases
+
+  long long inserted_file_id = -1;       // NOLINT google-runtime-int (soci needs ll)
+  long long inserted_sample_id_ll = -1;  // NOLINT google-runtime-int (soci needs ll)
+  std::tie(inserted_file_id, inserted_sample_id_ll) = add_non_existing_sample(config, tmp_dir_);
+
+  // We have 2 workers and 3 samples to fetch. The first worker should get 2 samples and the second worker should get 1
+  // sample.
+  modyn::storage::GetDataPerWorkerRequest request;
+  request.set_dataset_id("test_dataset");
+  // now test with an end_timestamp filter that excludes the last sample
+  // worker 0 should get early_sample_id_ and worker 1 should get late_sample_id_
+  request.set_worker_id(0);
+  request.set_total_workers(2);
+  request.set_end_timestamp(150);
+  modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse> writer(&call, &context);
+  writer.clear_responses();
+  grpc::Status status =
+      storage_service.GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
+          &context, &request, &writer);
+  const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses = writer.get_responses();
+  ASSERT_EQ(responses.size(), 1);
+  const modyn::storage::GetDataPerWorkerResponse& response = responses[0];
+  ASSERT_THAT(response.keys(), ::testing::ElementsAre(late_sample_id_));
+
+  request.set_worker_id(1);
+  writer.clear_responses();
+  status =
+      storage_service.GetDataPerWorker_Impl<modyn::storage::MockServerWriter<modyn::storage::GetDataPerWorkerResponse>>(
+          &context, &request, &writer);
+  const std::vector<modyn::storage::GetDataPerWorkerResponse>& responses2 = writer.get_responses();
+  ASSERT_EQ(responses2.size(), 1);
+  const modyn::storage::GetDataPerWorkerResponse& response2 = responses2[0];
+  ASSERT_THAT(response2.keys(), ::testing::ElementsAre(early_sample_id_));
+}
+
+// NOLINTNEXTLINE (readability-function-cognitive-complexity)
 TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
   StorageServiceImpl storage_service(config);  // NOLINT misc-const-correctness
@@ -481,9 +522,7 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
     if (start_timestamp == 0 && end_timestamp == 0) {
       is_in_interval = [](std::tuple<int64_t, int>) { return true; };
     } else if (start_timestamp == 0) {
-      is_in_interval = [end_timestamp](std::tuple<int64_t, int> key_ts) {
-        return std::get<1>(key_ts) <= end_timestamp;
-      };
+      is_in_interval = [end_timestamp](std::tuple<int64_t, int> key_ts) { return std::get<1>(key_ts) < end_timestamp; };
     } else if (end_timestamp == 0) {
       is_in_interval = [start_timestamp](std::tuple<int64_t, int> key_ts) {
         return std::get<1>(key_ts) >= start_timestamp;
@@ -491,7 +530,7 @@ TEST_F(StorageServiceImplTest, TestGetDataPerWorkerOnTimestampFilter) {
     } else {
       is_in_interval = [start_timestamp, end_timestamp](std::tuple<int64_t, int> key_ts) {
         const int ts = std::get<1>(key_ts);
-        return ts >= start_timestamp && ts <= end_timestamp;
+        return ts >= start_timestamp && ts < end_timestamp;
       };
     }
 

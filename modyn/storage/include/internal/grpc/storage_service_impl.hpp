@@ -214,9 +214,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       if (start_timestamp > 0 && end_timestamp == 0) {
         timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
       } else if (start_timestamp == 0 && end_timestamp > 0) {
-        timestamp_filter = fmt::format("updated_at <= {}", end_timestamp);
+        timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
       } else if (start_timestamp > 0 && end_timestamp > 0) {
-        timestamp_filter = fmt::format("updated_at >= {} AND updated_at <= {}", start_timestamp, end_timestamp);
+        timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
       } else if (start_timestamp == 0 && end_timestamp == 0) {
         timestamp_filter = "1 = 1";
       } else {
