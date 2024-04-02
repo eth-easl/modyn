@@ -1,7 +1,7 @@
 from typing import Optional
 
 from modyn.supervisor.internal.triggers.trigger import Trigger
-from modyn.utils import convert_timestr_to_seconds, validate_timestr
+from modyn.utils import convert_timestr_to_seconds
 
 
 class TimeTrigger(Trigger):
@@ -12,10 +12,6 @@ class TimeTrigger(Trigger):
     def __init__(self, trigger_config: dict):
         if "trigger_every" not in trigger_config.keys():
             raise ValueError("Trigger config is missing `trigger_every` field")
-
-        timestr = trigger_config["trigger_every"]
-        if not validate_timestr(timestr):
-            raise ValueError(f"Invalid time string: {timestr}\nValid format is <number>[s|m|h|d|w].")
 
         self.trigger_every_s: int = convert_timestr_to_seconds(trigger_config["trigger_every"])
         self.next_trigger_at: Optional[int] = None

@@ -30,7 +30,6 @@ from .utils import (  # noqa: F401
     seed_everything,
     trigger_available,
     unzip_file,
-    validate_timestr,
     validate_yaml,
     zip_file,
 )

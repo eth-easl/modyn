@@ -9,6 +9,7 @@ import math
 import os
 import pathlib
 import random
+import re
 import sys
 import tempfile
 import time
@@ -27,7 +28,7 @@ from jsonschema.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
-SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
+SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "mo": 2592000, "y": 31536000}
 MAX_MESSAGE_SIZE = 1024 * 1024 * 128  # 128 MB
 EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 
@@ -132,18 +133,12 @@ def grpc_common_config() -> list[Any]:
     ]
 
 
-def validate_timestr(timestr: str) -> bool:
-    if timestr[-1] not in SECONDS_PER_UNIT:
-        return False
-
-    if not timestr[:-1].isdigit():
-        return False
-
-    return True
-
-
 def convert_timestr_to_seconds(timestr: str) -> int:
-    return int(timestr[:-1]) * SECONDS_PER_UNIT[timestr[-1]]
+    pattern = r"([0-9]+)([a-zA-Z]+)"
+    match = re.fullmatch(pattern, timestr)
+    if match is None or match.group(2) not in SECONDS_PER_UNIT:
+        raise ValueError(f"Invalid time string: {timestr}\nValid format is <number>[s|m|h|d|w|mo|y].")
+    return int(match.group(1)) * SECONDS_PER_UNIT[match.group(2)]
 
 
 def package_available_and_can_be_imported(package: str) -> bool:

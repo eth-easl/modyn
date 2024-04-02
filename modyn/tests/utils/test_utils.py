@@ -29,7 +29,6 @@ from modyn.utils import (
     seed_everything,
     trigger_available,
     unzip_file,
-    validate_timestr,
     validate_yaml,
     zip_file,
 )
@@ -85,21 +84,21 @@ def test_current_time_millis():
     assert current_time_millis() == 400
 
 
-def test_validate_timestr():
-    assert validate_timestr("10s")
-    assert validate_timestr("10m")
-    assert validate_timestr("10h")
-    assert validate_timestr("10d")
-    assert not validate_timestr("10")
-    assert not validate_timestr("10x")
-    assert not validate_timestr("10s10m")
-
-
 def test_convert_timestr_to_seconds():
     assert convert_timestr_to_seconds("10s") == 10
     assert convert_timestr_to_seconds("10m") == 600
     assert convert_timestr_to_seconds("10h") == 36000
     assert convert_timestr_to_seconds("10d") == 864000
+    assert convert_timestr_to_seconds("10w") == 6048000
+    assert convert_timestr_to_seconds("10mo") == 25920000
+    assert convert_timestr_to_seconds("10y") == 315360000
+
+    with pytest.raises(ValueError):
+        convert_timestr_to_seconds("10")
+    with pytest.raises(ValueError):
+        convert_timestr_to_seconds("10x")
+    with pytest.raises(ValueError):
+        convert_timestr_to_seconds("10s10m")
 
 
 def test_package_available_and_can_be_imported():
