@@ -209,23 +209,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                       request->dataset_id(), dataset_id, request->worker_id(), request->total_workers(),
                       start_timestamp, end_timestamp));
 
-      int64_t total_keys = 0;
-      std::string timestamp_filter;
-      if (start_timestamp > 0 && end_timestamp == 0) {
-        timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
-      } else if (start_timestamp == 0 && end_timestamp > 0) {
-        timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
-      } else if (start_timestamp > 0 && end_timestamp > 0) {
-        timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
-      } else if (start_timestamp == 0 && end_timestamp == 0) {
-        timestamp_filter = "1 = 1";
-      } else {
-        FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
-      }
-
-      session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
-                     timestamp_filter,
-          soci::into(total_keys), soci::use(dataset_id);
+      const int64_t total_keys =
+          get_number_of_samples_in_dataset_with_range(dataset_id, session, start_timestamp, end_timestamp);
 
       if (total_keys > 0) {
         int64_t start_index = 0;
@@ -239,6 +224,18 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
               fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id LIMIT {} OFFSET {}",
                           dataset_id, limit, start_index);
         } else {
+          std::string timestamp_filter;
+          if (start_timestamp > 0 && end_timestamp == 0) {
+            timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
+          } else if (start_timestamp == 0 && end_timestamp > 0) {
+            timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
+          } else if (start_timestamp > 0 && end_timestamp > 0) {
+            timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
+          } else if (start_timestamp == 0 && end_timestamp == 0) {
+            timestamp_filter = "1 = 1";
+          } else {
+            FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
+          }
           query = fmt::format(
               "SELECT samples.sample_id "
               "FROM samples INNER JOIN files "
@@ -649,6 +646,30 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
                                                 sample_batch_size);
     session.close();
+  }
+
+  static int64_t get_number_of_samples_in_dataset_with_range(const int64_t dataset_id, soci::session& session,
+                                                             const int64_t start_timestamp = 0,
+                                                             const int64_t end_timestamp = 0) {
+    int64_t total_keys = 0;
+    std::string timestamp_filter;
+    if (start_timestamp > 0 && end_timestamp == 0) {
+      timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
+    } else if (start_timestamp == 0 && end_timestamp > 0) {
+      timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
+    } else if (start_timestamp > 0 && end_timestamp > 0) {
+      timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
+    } else if (start_timestamp == 0 && end_timestamp == 0) {
+      timestamp_filter = "1 = 1";
+    } else {
+      FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
+    }
+
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
+                   timestamp_filter,
+        soci::into(total_keys), soci::use(dataset_id);
+
+    return total_keys;
   }
 
   static std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,

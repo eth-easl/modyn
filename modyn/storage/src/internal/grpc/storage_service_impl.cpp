@@ -270,20 +270,18 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
 Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
     modyn::storage::GetDatasetSizeResponse* response) {
+  soci::session session = storage_database_connection_.get_session();
   try {
-    soci::session session = storage_database_connection_.get_session();
-
     // Check if the dataset exists
     int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      session.close();
       return {StatusCode::OK, "Dataset does not exist."};
     }
 
-    int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
-        soci::into(total_keys), soci::use(dataset_id);
+    const int64_t total_keys = get_number_of_samples_in_dataset_with_range(dataset_id, session);
 
     session.close();
 
@@ -291,6 +289,7 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
     response->set_success(true);
     return {StatusCode::OK, "Dataset size retrieved."};
   } catch (const std::exception& e) {
+    session.close();
     SPDLOG_ERROR("Error in GetDatasetSize: {}", e.what());
     return {StatusCode::OK, fmt::format("Error in GetDatasetSize: {}", e.what())};
   }
