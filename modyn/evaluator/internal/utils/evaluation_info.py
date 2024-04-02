@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
@@ -24,11 +23,6 @@ class EvaluationInfo:
         storage_address: str,
         metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
-        pipeline_id: Optional[int] = None,
-        trigger_id: Optional[int] = None,
-        num_prefetched_partitions: Optional[int] = None,
-        parallel_prefetch_requests: Optional[int] = None,
-        selector_address: Optional[str] = None,
     ) -> None:
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
@@ -51,23 +45,3 @@ class EvaluationInfo:
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
-
-        self.pipeline_id = pipeline_id
-        self.trigger_id = trigger_id
-        self.num_prefetched_partitions = num_prefetched_partitions
-        self.parallel_prefetch_requests = parallel_prefetch_requests
-        self.selector_address = selector_address
-
-        if (
-            pipeline_id is not None
-            or trigger_id is not None
-            or num_prefetched_partitions is not None
-            or parallel_prefetch_requests is not None
-        ):
-            assert (
-                pipeline_id is not None
-                and trigger_id is not None
-                and num_prefetched_partitions is not None
-                and parallel_prefetch_requests is not None
-                and selector_address is not None
-            )

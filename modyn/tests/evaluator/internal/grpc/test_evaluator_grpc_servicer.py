@@ -36,7 +36,6 @@ def get_modyn_config():
         "evaluator": {"hostname": "localhost", "port": "50000"},
         "model_storage": {"hostname": "localhost", "port": "50051", "ftp_port": "5223"},
         "storage": {"hostname": "storage", "port": "50052"},
-        "selector": {"hostname": "selector", "port": "50053"},
         "metadata_database": {
             "drivername": "sqlite",
             "username": "",
@@ -91,10 +90,6 @@ class DummyStorageStub:
         if request.dataset_id == "MNIST":
             return GetDatasetSizeResponse(success=True, num_keys=1000)
         return GetDatasetSizeResponse(success=False)
-
-
-class DummySelectorStub:
-    pass  # TODO(#335): Add test for this.
 
 
 def get_evaluation_process_info():
@@ -161,9 +156,8 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_init(test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage):
+def test_init(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator_server = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         assert evaluator_server._model_storage_stub is not None
@@ -174,12 +168,9 @@ def test_init(test_connect_to_model_storage, test_connect_to_selector, test_conn
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.hasattr", return_value=False)
-def test_evaluate_model_invalid_model_id(
-    test_has_attribute, test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_evaluate_model_invalid_model_id(test_has_attribute, test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         response = evaluator.evaluate_model(get_evaluate_model_request(), None)
@@ -189,9 +180,8 @@ def test_evaluate_model_invalid_model_id(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage):
+def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         req = get_evaluate_model_request()
@@ -216,11 +206,8 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
     return_value=pathlib.Path("downloaded_model.modyn"),
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(
-    test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage, download_model_mock: MagicMock
-):
+def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock: MagicMock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
@@ -247,9 +234,8 @@ def test_evaluate_model_valid(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_setup_metrics(test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage):
+def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
@@ -277,11 +263,8 @@ def test_setup_metrics(test_connect_to_model_storage, test_connect_to_selector, 
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_get_evaluation_status_not_registered(
-    test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_get_evaluation_status_not_registered(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         response = evaluator.get_evaluation_status(EvaluationStatusRequest(evaluation_id=1), None)
@@ -289,7 +272,6 @@ def test_get_evaluation_status_not_registered(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(EvaluatorGRPCServicer, "_get_status", return_value=(3, 50))
@@ -299,7 +281,6 @@ def test_get_evaluation_status_alive(
     test_get_status,
     test_is_alive,
     test_connect_to_model_storage,
-    test_connect_to_selector,
     test_connect_to_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
@@ -320,7 +301,6 @@ def test_get_evaluation_status_alive(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(EvaluatorGRPCServicer, "_get_status", return_value=(None, None))
@@ -330,7 +310,6 @@ def test_get_evaluation_status_alive_blocked(
     test_get_status,
     test_is_alive,
     test_connect_to_model_storage,
-    test_connect_to_selector,
     test_connect_to_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
@@ -349,7 +328,6 @@ def test_get_evaluation_status_alive_blocked(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(EvaluatorGRPCServicer, "_check_for_evaluation_exception", return_value="exception")
@@ -359,7 +337,6 @@ def test_get_evaluation_status_finished_with_exception(
     test_check_for_evaluation_exception,
     test_is_alive,
     test_connect_to_model_storage,
-    test_connect_to_selector,
     test_connect_to_storage,
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
@@ -379,9 +356,8 @@ def test_get_evaluation_status_finished_with_exception(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_get_evaluation_status(test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage):
+def test_get_evaluation_status(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         state_dict = {"num_batches": 10, "num_samples": 100}
@@ -420,11 +396,8 @@ def test_get_evaluation_status(test_connect_to_model_storage, test_connect_to_se
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_check_for_evaluation_exception_not_found(
-    test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_check_for_evaluation_exception_not_found(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluator._evaluation_process_dict[0] = get_evaluation_process_info()
@@ -433,11 +406,8 @@ def test_check_for_evaluation_exception_not_found(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_check_for_evaluation_exception_found(
-    test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_check_for_evaluation_exception_found(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluation_process_info = get_evaluation_process_info()
@@ -451,11 +421,8 @@ def test_check_for_evaluation_exception_found(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_get_evaluation_result_model_not_registered(
-    test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_get_evaluation_result_model_not_registered(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=0), None)
@@ -463,12 +430,9 @@ def test_get_evaluation_result_model_not_registered(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
-def test_get_evaluation_result_still_running(
-    test_is_alive, test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_get_evaluation_result_still_running(test_is_alive, test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluator._evaluation_process_dict[5] = get_evaluation_process_info()
@@ -477,12 +441,9 @@ def test_get_evaluation_result_still_running(
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_evaluation_result_missing_metric(
-    test_is_alive, test_connect_to_model_storage, test_connect_to_selector, test_connect_to_storage
-):
+def test_get_evaluation_result_missing_metric(test_is_alive, test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluation_process_info = get_evaluation_process_info()
@@ -497,13 +458,11 @@ def test_get_evaluation_result_missing_metric(
 @patch.object(Accuracy, "get_evaluation_result", return_value=0.5)
 @patch.object(F1Score, "get_evaluation_result", return_value=0.75)
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_selector", return_value=DummySelectorStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 def test_get_evaluation_result(
     test_is_alive,
     test_connect_to_model_storage,
-    test_connect_to_selector,
     test_connect_to_storage,
     test_f1: MagicMock,
     test_acc: MagicMock,

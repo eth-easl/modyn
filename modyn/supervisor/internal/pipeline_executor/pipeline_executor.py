@@ -81,7 +81,6 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.trained_models: list[int] = []
-        self.triggers: list[int] = []
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -128,13 +127,14 @@ class PipelineExecutor:
         self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
-            for trigger in self.triggers:
-                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
-                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
-                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
-                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
+            raise NotImplementedError("Evaluation matrix is to be re-implemented.")
+            # for trigger in self.triggers:
+            #     logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
+            #     evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
+            #     self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+            #     eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
+            #     self.grpc.store_evaluation_results([eval_result_writer], evaluations)
+            #     self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
@@ -244,7 +244,6 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.trained_models.append(model_id)
-        self.triggers.append(trigger_id)
 
         # Start evaluation
         if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
