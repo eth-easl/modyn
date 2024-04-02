@@ -518,7 +518,6 @@ class GRPCHandler:
 
     def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
         assert self.eval_status_queue is not None
-        assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
         device = pipeline_config["evaluation"]["device"]
@@ -543,7 +542,8 @@ class GRPCHandler:
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str,
+                                    start_timestamp: int = 0, end_timestamp: int = 0) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -582,7 +582,12 @@ class GRPCHandler:
 
         start_evaluation_kwargs = {
             "model_id": model_id,
-            "dataset_info": DatasetInfo(dataset_id=dataset_id, num_dataloaders=dataloader_workers),
+            "dataset_info": DatasetInfo(
+                dataset_id=dataset_id,
+                num_dataloaders=dataloader_workers,
+                start_timestamp=start_timestamp,
+                end_timestamp=end_timestamp,
+            ),
             "device": device,
             "batch_size": batch_size,
             "metrics": metrics,
