@@ -11,14 +11,10 @@ service Evaluator {
 message DatasetInfo {
   string dataset_id = 1;
   int32 num_dataloaders = 2;
+  int64 start_timestamp = 3;
+  int64 end_timestamp = 4;
 }
 
-message TriggerTrainingSetInfo {
-  int32 pipeline_id = 1;
-  int32 trigger_id = 2;
-  int32 num_prefetched_partitions = 3;
-  int32 parallel_prefetch_requests = 4;
-}
 
 message PythonString { string value = 1; }
 
@@ -39,7 +35,6 @@ message EvaluateModelRequest {
   repeated string transform_list = 6;
   PythonString bytes_parser = 7;
   PythonString label_transformer = 8;
-  optional TriggerTrainingSetInfo trigger_training_set_info = 9;
 }
 
 message EvaluateModelResponse {

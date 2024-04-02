@@ -23,41 +23,23 @@ class DatasetInfo(google.protobuf.message.Message):
 
     DATASET_ID_FIELD_NUMBER: builtins.int
     NUM_DATALOADERS_FIELD_NUMBER: builtins.int
+    START_TIMESTAMP_FIELD_NUMBER: builtins.int
+    END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     num_dataloaders: builtins.int
+    start_timestamp: builtins.int
+    end_timestamp: builtins.int
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
         num_dataloaders: builtins.int = ...,
+        start_timestamp: builtins.int = ...,
+        end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "num_dataloaders", b"num_dataloaders", "start_timestamp", b"start_timestamp"]) -> None: ...
 
 global___DatasetInfo = DatasetInfo
-
-@typing_extensions.final
-class TriggerTrainingSetInfo(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    PIPELINE_ID_FIELD_NUMBER: builtins.int
-    TRIGGER_ID_FIELD_NUMBER: builtins.int
-    NUM_PREFETCHED_PARTITIONS_FIELD_NUMBER: builtins.int
-    PARALLEL_PREFETCH_REQUESTS_FIELD_NUMBER: builtins.int
-    pipeline_id: builtins.int
-    trigger_id: builtins.int
-    num_prefetched_partitions: builtins.int
-    parallel_prefetch_requests: builtins.int
-    def __init__(
-        self,
-        *,
-        pipeline_id: builtins.int = ...,
-        trigger_id: builtins.int = ...,
-        num_prefetched_partitions: builtins.int = ...,
-        parallel_prefetch_requests: builtins.int = ...,
-    ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["num_prefetched_partitions", b"num_prefetched_partitions", "parallel_prefetch_requests", b"parallel_prefetch_requests", "pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
-
-global___TriggerTrainingSetInfo = TriggerTrainingSetInfo
 
 @typing_extensions.final
 class PythonString(google.protobuf.message.Message):
@@ -125,7 +107,6 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     TRANSFORM_LIST_FIELD_NUMBER: builtins.int
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
-    TRIGGER_TRAINING_SET_INFO_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
@@ -139,8 +120,6 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def bytes_parser(self) -> global___PythonString: ...
     @property
     def label_transformer(self) -> global___PythonString: ...
-    @property
-    def trigger_training_set_info(self) -> global___TriggerTrainingSetInfo: ...
     def __init__(
         self,
         *,
@@ -152,11 +131,9 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
-        trigger_training_set_info: global___TriggerTrainingSetInfo | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["_trigger_training_set_info", b"_trigger_training_set_info", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "label_transformer", b"label_transformer", "trigger_training_set_info", b"trigger_training_set_info"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_trigger_training_set_info", b"_trigger_training_set_info", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "label_transformer", b"label_transformer", "metrics", b"metrics", "model_id", b"model_id", "transform_list", b"transform_list", "trigger_training_set_info", b"trigger_training_set_info"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing_extensions.Literal["_trigger_training_set_info", b"_trigger_training_set_info"]) -> typing_extensions.Literal["trigger_training_set_info"] | None: ...
+    def HasField(self, field_name: typing_extensions.Literal["bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "label_transformer", b"label_transformer"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing_extensions.Literal["batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "label_transformer", b"label_transformer", "metrics", b"metrics", "model_id", b"model_id", "transform_list", b"transform_list"]) -> None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 
