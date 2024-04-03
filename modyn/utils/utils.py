@@ -142,8 +142,8 @@ def convert_timestr_to_seconds(timestr: str) -> int:
     return int(match.group(1)) * SECONDS_PER_UNIT[match.group(2)]
 
 
-def timestamp2string(ts, format: str = "%Y-%m-%d") -> str:
-    return datetime.fromtimestamp(ts).strftime(format)
+def timestamp2string(ts: int, format_str: str = "%Y-%m-%d") -> str:
+    return datetime.fromtimestamp(ts).strftime(format_str)
 
 
 def package_available_and_can_be_imported(package: str) -> bool:

@@ -517,6 +517,7 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
+        assert self.evaluator is not None
         assert self.eval_status_queue is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")

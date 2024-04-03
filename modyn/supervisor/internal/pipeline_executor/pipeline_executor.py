@@ -17,7 +17,7 @@ from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
-from modyn.utils import dynamic_module_import, timestamp2string
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
@@ -84,6 +84,7 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.trained_models: list[int] = []
+        self.triggers: list[int] = []
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -139,7 +140,7 @@ class PipelineExecutor:
         eval_every = modyn.utils.utils.convert_timestr_to_seconds(matrix_eval_dataset_config["eval_every"])
 
         self.pipeline_log["evaluation_matrix"] = {}
-        for model in self.trained_models:
+        for pos, model in enumerate(self.trained_models):
             self.pipeline_log["evaluation_matrix"][model] = {}
             previous_split = 0 if self.stop_replay_at is None else self.stop_replay_at
             while True:
@@ -149,7 +150,6 @@ class PipelineExecutor:
                 request = GRPCHandler._prepare_evaluation_request(
                     matrix_eval_dataset_config, model, device, previous_split, current_split
                 )
-                # TODO: check impl of TimeTrigger on this logic
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
                 if not response.evaluation_started:
                     logger.error(
@@ -165,12 +165,11 @@ class PipelineExecutor:
                 )
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}
-                eval_interval_name = f"{timestamp2string(previous_split)}_{timestamp2string(current_split)}"
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                # TODO: correct the trigger id logic?
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", eval_interval_name)
+                trigger_id = self.triggers[pos]
+                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger_id)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                self.pipeline_log["evaluation_matrix"][model][eval_interval_name] = eval_result_writer.results
+                self.pipeline_log["evaluation_matrix"][model][trigger_id] = eval_result_writer.results
                 previous_split = current_split
                 if self.stop_replay_at is not None and current_split >= self.stop_replay_at:
                     logger.info("reaching the end of replay data, stop matrix evaluation.")
@@ -284,6 +283,7 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.trained_models.append(model_id)
+        self.triggers.append(trigger_id)
 
         # Start evaluation
         if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
