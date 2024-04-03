@@ -9,7 +9,6 @@ from time import sleep
 from typing import Generator
 from unittest.mock import MagicMock, patch
 
-import grpc
 import pytest
 import torch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (

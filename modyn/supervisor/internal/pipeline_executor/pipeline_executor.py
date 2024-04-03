@@ -157,25 +157,24 @@ class PipelineExecutor:
                         f"Stop evaluating on this model."
                     )
                     break
-                else:
-                    # TODO: implement the correct logic on evaluator side; if no samples are available, the evaluation should not start
-                    num_samples = response.dataset_size
-                    logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
-                    reporter = EvaluationStatusReporter(
-                        self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, num_samples
-                    )
-                    reporter.create_tracker()
-                    evaluation = {response.evaluation_id: reporter}
-                    eval_interval_name = f"{timestamp2string(previous_split)}_{timestamp2string(current_split)}"
-                    self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                    # TODO: correct the trigger id logic?
-                    eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", eval_interval_name)
-                    self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                    self.pipeline_log["evaluation_matrix"][model][eval_interval_name] = eval_result_writer.results
-                    previous_split = current_split
-                    if self.stop_replay_at is not None and current_split >= self.stop_replay_at:
-                        logger.info("reaching the end of replay data, stop matrix evaluation.")
-                        break
+
+                num_samples = response.dataset_size
+                logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
+                reporter = EvaluationStatusReporter(
+                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, num_samples
+                )
+                reporter.create_tracker()
+                evaluation = {response.evaluation_id: reporter}
+                eval_interval_name = f"{timestamp2string(previous_split)}_{timestamp2string(current_split)}"
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+                # TODO: correct the trigger id logic?
+                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", eval_interval_name)
+                self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+                self.pipeline_log["evaluation_matrix"][model][eval_interval_name] = eval_result_writer.results
+                previous_split = current_split
+                if self.stop_replay_at is not None and current_split >= self.stop_replay_at:
+                    logger.info("reaching the end of replay data, stop matrix evaluation.")
+                    break
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file

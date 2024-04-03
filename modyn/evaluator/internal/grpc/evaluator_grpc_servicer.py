@@ -37,7 +37,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import M
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils import dynamic_module_import, grpc_connection_established
+from modyn.utils import dynamic_module_import, grpc_connection_established, timestamp2string
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +125,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
         dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 
+        dataset_size = dataset_size_response.num_keys
+
         if not dataset_size_response.success:
             logger.error(
                 f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
@@ -132,7 +134,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(evaluation_started=False)
 
-        dataset_size = dataset_size_response.num_keys
+        if dataset_size == 0:
+            logger.error(f"Dataset {dataset_size_req.dataset_id} is empty in range "
+                         f"{timestamp2string(dataset_size_req.start_timestamp)} to "
+                         f"{timestamp2string(dataset_size_req.end_timestamp)}. Evaluation cannot be started.")
+            return EvaluateModelResponse(evaluation_started=False)
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
