@@ -64,6 +64,8 @@ class PytorchEvaluator:
             evaluation_info.transform_list,
             evaluation_info.storage_address,
             evaluation_info.evaluation_id,
+            evaluation_info.start_timestamp,
+            evaluation_info.end_timestamp,
         )
         self._debug("Creating DataLoader.")
         dataloader = torch.utils.data.DataLoader(

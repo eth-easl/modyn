@@ -27,7 +27,8 @@ class EvaluationInfo:
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
-
+        self.start_timestamp = request.dataset_info.start_timestamp
+        self.end_timestamp = request.dataset_info.end_timestamp
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size
