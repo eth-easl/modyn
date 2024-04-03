@@ -7,7 +7,7 @@ import sys
 import traceback
 from time import sleep
 from typing import Any, Optional
-from datetime import datetime
+
 import modyn.utils.utils
 from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse
@@ -17,7 +17,7 @@ from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
-from modyn.utils import dynamic_module_import
+from modyn.utils import dynamic_module_import, timestamp2string
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
@@ -130,26 +130,32 @@ class PipelineExecutor:
         # find the matrix evaluation dataset
         assert "matrix_eval_dataset_id" in self.pipeline_config["evaluation"], "No matrix_eval_dataset_id found."
         matrix_eval_dataset_id = self.pipeline_config["evaluation"]["matrix_eval_dataset_id"]
-        assert matrix_eval_dataset_id in self.pipeline_config["evaluation"]["datasets"], "matrix evaluation dataset not found."
+        assert (
+            matrix_eval_dataset_id in self.pipeline_config["evaluation"]["datasets"]
+        ), "matrix evaluation dataset not found."
         matrix_eval_dataset_config = self.pipeline_config["evaluation"]["datasets"][matrix_eval_dataset_id]
         assert "eval_every" in matrix_eval_dataset_config, "No eval_every parameter found in matrix evaluation dataset."
 
         eval_every = modyn.utils.utils.convert_timestr_to_seconds(matrix_eval_dataset_config["eval_every"])
-        timestamp2string = lambda ts: datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+
         self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
             previous_split = 0 if self.stop_replay_at is None else self.stop_replay_at
             while True:
                 current_split = previous_split + eval_every
-                logger.info(f"Starting matrix evaluation for model {model} on split {previous_split} to {current_split}.")
+                logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
                 device = self.pipeline_config["training"]["device"]
-                request = GRPCHandler._prepare_evaluation_request(matrix_eval_dataset_config, model, device, previous_split, current_split)
+                request = GRPCHandler._prepare_evaluation_request(
+                    matrix_eval_dataset_config, model, device, previous_split, current_split
+                )
                 # TODO: check impl of TimeTrigger on this logic
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
                 if not response.evaluation_started:
-                    logger.error(f"Evaluation stopped for model {model} on split {previous_split} to {current_split}."
-                                 f"Stop evaluating on this model.")
+                    logger.error(
+                        f"Evaluation stopped for model {model} on split {previous_split} to {current_split}."
+                        f"Stop evaluating on this model."
+                    )
                     break
                 else:
                     # TODO: implement the correct logic on evaluator side; if no samples are available, the evaluation should not start

@@ -13,6 +13,7 @@ import re
 import sys
 import tempfile
 import time
+from datetime import datetime
 from enum import Enum
 from inspect import isfunction
 from types import ModuleType
@@ -139,6 +140,10 @@ def convert_timestr_to_seconds(timestr: str) -> int:
     if match is None or match.group(2) not in SECONDS_PER_UNIT:
         raise ValueError(f"Invalid time string: {timestr}\nValid format is <number>[s|m|h|d|w|mo|y].")
     return int(match.group(1)) * SECONDS_PER_UNIT[match.group(2)]
+
+
+def timestamp2string(ts, format: str = "%Y-%m-%d") -> str:
+    return datetime.fromtimestamp(ts).strftime(format)
 
 
 def package_available_and_can_be_imported(package: str) -> bool:

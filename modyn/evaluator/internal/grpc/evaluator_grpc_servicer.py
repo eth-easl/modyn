@@ -121,7 +121,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         dataset_size_req = GetDatasetSizeRequest(
             dataset_id=request.dataset_info.dataset_id,
             start_timestamp=dataset_info.start_timestamp,
-            end_timestamp=dataset_info.end_timestamp
+            end_timestamp=dataset_info.end_timestamp,
         )
         dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 

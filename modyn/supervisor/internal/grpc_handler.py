@@ -542,8 +542,9 @@ class GRPCHandler:
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str,
-                                    start_timestamp: int = 0, end_timestamp: int = 0) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(
+        dataset_config: dict, model_id: int, device: str, start_timestamp: int = 0, end_timestamp: int = 0
+    ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
