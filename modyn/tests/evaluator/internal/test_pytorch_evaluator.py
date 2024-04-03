@@ -74,7 +74,9 @@ class MockModule:
 class MockEvaluationDataset(IterableDataset):
     # pylint: disable=abstract-method
 
-    def __init__(self, dataset_id, bytes_parser, transform_list, storage_address, evaluation_id):
+    def __init__(
+        self, dataset_id, bytes_parser, transform_list, storage_address, evaluation_id, start_timestamp, end_timestamp
+    ):
         self.dataset = iter([(key, key, key * 2) for key in range(100)])
 
     def __iter__(self) -> Generator:
@@ -112,16 +114,12 @@ def get_evaluation_info(
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
-@patch("modyn.evaluator.internal.dataset.evaluation_dataset.grpc_connection_established", return_value=True)
-@patch.object(grpc, "insecure_channel", return_value=None)
 def get_mock_evaluator(
     query_queue: mp.Queue,
     response_queue: mp.Queue,
     metric_result_queue: mp.Queue,
     trained_model_path: pathlib.Path,
     label_transformer: bool,
-    test_insecure_channel: MagicMock,
-    test_grpc_connection_established: MagicMock,
 ):
     evaluation_info = get_evaluation_info(
         1,
