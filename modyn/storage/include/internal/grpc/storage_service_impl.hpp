@@ -192,7 +192,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     soci::session session = storage_database_connection_.get_session();
     try {
       // Check if the dataset exists
-      int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+      const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
       if (dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());

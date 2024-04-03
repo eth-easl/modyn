@@ -102,7 +102,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     int64_t filesystem_wrapper_type;
 
     soci::session session = storage_database_connection_.get_session();
-    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
     SPDLOG_INFO(fmt::format("Received DeleteDataset Request for dataset {}", dataset_id));
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
@@ -273,7 +273,7 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
   soci::session session = storage_database_connection_.get_session();
   try {
     // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());

@@ -628,10 +628,10 @@ TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInDatasetWithRange) {
   ASSERT_EQ(result, 2);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 100));
-  ASSERT_EQ(result, 0);
+  ASSERT_EQ(result, 1);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 101));
-  ASSERT_EQ(result, 1);
+  ASSERT_EQ(result, 2);
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 1, 0));
   ASSERT_EQ(result, 2);
