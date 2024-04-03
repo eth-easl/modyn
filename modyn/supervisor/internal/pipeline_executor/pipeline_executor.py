@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import modyn.utils.utils
 from modyn.common.benchmark import Stopwatch
+# pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage

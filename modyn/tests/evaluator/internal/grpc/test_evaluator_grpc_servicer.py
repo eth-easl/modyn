@@ -201,6 +201,26 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         assert not resp.evaluation_started
 
 
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.logger")
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_empty_dataset(test_connect_to_model_storage, logger):
+    storage_stub_mock = MagicMock()
+    storage_stub_mock.GetDatasetSize.return_value = GetDatasetSizeResponse(success=True, num_keys=0)
+
+    with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
+        with tempfile.TemporaryDirectory() as modyn_temp:
+            evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+            req = get_evaluate_model_request()
+            resp = evaluator.evaluate_model(req, None)
+            assert not resp.evaluation_started
+            assert evaluator._next_evaluation_id == 0
+            # ensure that it fails purely because of the empty dataset by checking the log
+            # assert only called once
+            assert logger.error.call_count == 1
+            # get the arguments of the first call
+            assert "is empty in range" in str(logger.error.call_args_list[0])
+
+
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
     return_value=pathlib.Path("downloaded_model.modyn"),
