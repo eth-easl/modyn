@@ -171,6 +171,9 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     worker_id: builtins.int
     total_workers: builtins.int
     start_timestamp: builtins.int
+    """value unset or set with default value means no limit
+    start_timestamp is inclusive, end_timestamp is exclusive
+    """
     end_timestamp: builtins.int
     def __init__(
         self,
@@ -206,13 +209,22 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     DATASET_ID_FIELD_NUMBER: builtins.int
+    START_TIMESTAMP_FIELD_NUMBER: builtins.int
+    END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
+    start_timestamp: builtins.int
+    """value unset or set with default value means no limit
+    start_timestamp is inclusive, end_timestamp is exclusive
+    """
+    end_timestamp: builtins.int
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
+        start_timestamp: builtins.int = ...,
+        end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
 
 global___GetDatasetSizeRequest = GetDatasetSizeRequest
 

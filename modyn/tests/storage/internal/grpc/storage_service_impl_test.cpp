@@ -11,8 +11,7 @@
 #include <fstream>
 
 #include "gmock/gmock.h"
-#include "internal/database/storage_database_connection.hpp"
-#include "internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
+#include "modyn/utils/utils.hpp"
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
@@ -612,6 +611,45 @@ TEST_F(StorageServiceImplTest, TestGetPartitionForWorker) {
   ASSERT_NO_THROW(result = StorageServiceImpl::get_partition_for_worker(1, 3, 9));
   ASSERT_EQ(std::get<0>(result), 3);
   ASSERT_EQ(std::get<1>(result), 3);
+}
+
+TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInDatasetWithRange) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  int64_t result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 0));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 100));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 101));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 1, 0));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 2, 0));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 2, 101));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 70, 50));
+  ASSERT_EQ(result, 0);
+
+  ASSERT_THROW(StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, -70, 50),
+               modyn::utils::ModynException);
+  ASSERT_THROW(StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 70, -50),
+               modyn::utils::ModynException);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInFile) {
