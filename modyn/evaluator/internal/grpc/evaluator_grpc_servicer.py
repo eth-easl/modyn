@@ -37,7 +37,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import M
 # pylint: disable-next=no-name-in-module
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.utils import dynamic_module_import, grpc_connection_established, timestamp2string
+from modyn.utils import dynamic_module_import, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
@@ -136,9 +136,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         if dataset_size == 0:
             logger.error(
-                f"Dataset {dataset_size_req.dataset_id} is empty in range "
-                f"{timestamp2string(dataset_size_req.start_timestamp)} to "
-                f"{timestamp2string(dataset_size_req.end_timestamp)}. Evaluation cannot be started."
+                f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
             )
             return EvaluateModelResponse(evaluation_started=False)
 
@@ -156,6 +154,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
 
         if not trained_model_path:
+            logger.error("Trained model could not be downloaded. Evaluation cannot be started.")
             return EvaluateModelResponse(evaluation_started=False)
 
         metrics = self._setup_metrics(request.metrics)
