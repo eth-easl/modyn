@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 import modyn.utils.utils
 from modyn.common.benchmark import Stopwatch
+
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
@@ -148,7 +149,7 @@ class PipelineExecutor:
                 current_split = previous_split + eval_every
                 logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
                 device = self.pipeline_config["training"]["device"]
-                request = GRPCHandler._prepare_evaluation_request(
+                request = GRPCHandler.prepare_evaluation_request(
                     matrix_eval_dataset_config, model, device, previous_split, current_split
                 )
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
@@ -159,10 +160,9 @@ class PipelineExecutor:
                     )
                     break
 
-                num_samples = response.dataset_size
                 logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
                 reporter = EvaluationStatusReporter(
-                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, num_samples
+                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
                 )
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}

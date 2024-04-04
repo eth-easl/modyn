@@ -446,7 +446,7 @@ def test_start_evaluation(test_connection_established):
 
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
-    request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
+    request = GRPCHandler.prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
 
     assert request.model_id == 23
     assert request.device == "cpu"

@@ -527,7 +527,7 @@ class GRPCHandler:
 
         for dataset in pipeline_config["evaluation"]["datasets"]:
             dataset_id = dataset["dataset_id"]
-            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
+            req = GRPCHandler.prepare_evaluation_request(dataset, model_id, device)
             response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
             if not response.evaluation_started:
@@ -543,7 +543,7 @@ class GRPCHandler:
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(
+    def prepare_evaluation_request(
         dataset_config: dict, model_id: int, device: str, start_timestamp: int = 0, end_timestamp: int = 0
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]

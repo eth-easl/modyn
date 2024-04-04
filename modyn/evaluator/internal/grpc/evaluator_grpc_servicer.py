@@ -90,8 +90,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         return StorageStub(storage_channel)
 
-
     # pylint: disable=too-many-locals, too-many-return-statements
+
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
 
@@ -135,9 +135,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             return EvaluateModelResponse(evaluation_started=False)
 
         if dataset_size == 0:
-            logger.error(f"Dataset {dataset_size_req.dataset_id} is empty in range "
-                         f"{timestamp2string(dataset_size_req.start_timestamp)} to "
-                         f"{timestamp2string(dataset_size_req.end_timestamp)}. Evaluation cannot be started.")
+            logger.error(
+                f"Dataset {dataset_size_req.dataset_id} is empty in range "
+                f"{timestamp2string(dataset_size_req.start_timestamp)} to "
+                f"{timestamp2string(dataset_size_req.end_timestamp)}. Evaluation cannot be started."
+            )
             return EvaluateModelResponse(evaluation_started=False)
 
         with self._lock:

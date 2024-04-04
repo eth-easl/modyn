@@ -385,7 +385,7 @@ def test__handle_triggers_within_batch_empty_triggers(
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
-def test__run_training(
+def test_run_training(
     test_wait_for_training_completion: MagicMock,
     test_start_evaluation: MagicMock,
     test_start_training: MagicMock,
@@ -410,7 +410,7 @@ def test__run_training(
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
-def test__run_training_with_evaluation(
+def test_run_training_with_evaluation(
     test_wait_for_training_completion: MagicMock,
     test_start_evaluation: MagicMock,
     test_wait_for_evaluation_completion: MagicMock,
