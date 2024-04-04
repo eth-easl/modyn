@@ -6,6 +6,7 @@ import shutil
 from typing import Optional
 from unittest.mock import MagicMock, call, patch
 
+import pytest
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -113,7 +114,7 @@ def get_non_connecting_pipeline_executor() -> PipelineExecutor:
         PIPELINE_ID,
         get_minimal_system_config(),
         get_minimal_pipeline_config(),
-        EVALUATION_DIRECTORY,
+        str(EVALUATION_DIRECTORY),
         SUPPORTED_EVAL_RESULT_WRITERS,
         PIPELINE_STATUS_QUEUE,
         TRAINING_STATUS_QUEUE,
@@ -563,3 +564,40 @@ def test_execute_pipeline(
 
     test_init_cluster_connection.assert_called_once()
     test_execute.assert_called_once()
+
+
+def test_build_evaluation_matrix_config_validation():
+    pipeline_config = get_minimal_pipeline_config()
+    evaluation_config = get_minimal_evaluation_config()
+    pipeline_config["evaluation"] = evaluation_config
+
+    def get_pe_with_pipeline_config(_pipeline_config):
+        return PipelineExecutor(
+            START_TIMESTAMP,
+            PIPELINE_ID,
+            get_minimal_system_config(),
+            _pipeline_config,
+            str(EVALUATION_DIRECTORY),
+            SUPPORTED_EVAL_RESULT_WRITERS,
+            PIPELINE_STATUS_QUEUE,
+            TRAINING_STATUS_QUEUE,
+            EVAL_STATUS_QUEUE,
+        )
+
+    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
+    with pytest.raises(AssertionError):
+        pipeline_executor.build_evaluation_matrix()
+
+    evaluation_config["matrix_eval_dataset_id"] = "unknown_dataset"
+    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
+    with pytest.raises(AssertionError):
+        pipeline_executor.build_evaluation_matrix()
+
+    evaluation_config["matrix_eval_dataset_id"] = "MNIST_eval"
+
+    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
+    with pytest.raises(AssertionError):
+        pipeline_executor.build_evaluation_matrix()
+
+
+# test evaluation is launched with exact args exact times

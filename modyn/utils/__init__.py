@@ -28,7 +28,6 @@ from .utils import (  # noqa: F401
     package_available_and_can_be_imported,
     reconstruct_tensor_from_bytes,
     seed_everything,
-    timestamp2string,
     trigger_available,
     unzip_file,
     validate_yaml,

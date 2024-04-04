@@ -446,7 +446,9 @@ def test_start_evaluation(test_connection_established):
 
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
-    request = GRPCHandler.prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
+    request = GRPCHandler.prepare_evaluation_request(
+        pipeline_config["evaluation"]["datasets"][0], 23, "cpu", start_timestamp=42, end_timestamp=43
+    )
 
     assert request.model_id == 23
     assert request.device == "cpu"
@@ -455,6 +457,8 @@ def test_prepare_evaluation_request():
     assert request.dataset_info.num_dataloaders == 2
     assert request.metrics[0].name == "Accuracy"
     assert request.metrics[0].config.value == "{}"
+    assert request.dataset_info.start_timestamp == 42
+    assert request.dataset_info.end_timestamp == 43
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
