@@ -31,6 +31,24 @@ storage:
         selector_batch_size: 128,
       },
       {
+        name: "criteo",
+        description: "Criteo Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/criteo",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "little",
+            record_size: 160,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2000000,
+      },
+      {
         name: "yearbook",
         description: "Yearbook Dataset from Wild-Time",
         version: "0.0.1",
@@ -49,27 +67,42 @@ storage:
         selector_batch_size: 256,
       },
       {
-        name: "huffpost_train",
-        description: "Huffpost Dataset (from Wild-time)",
+        name: "fmow",
+        description: "Functional Map of the World Dataset (from WILDS/Wild-time)",
         version: "0.0.1",
-        base_path: "/datasets/huffpost/train",
+        base_path: "/datasets/fmow",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
           {
-            file_extension: ".csv",
-            separator: "\t", #tsv best option here since headlines contain commas and semicolons
-            label_index: 1
+            file_extension: ".png",
+            label_file_extension: ".label"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 1024,
+      },
+      {
+        name: "arxiv",
+        description: "Arxiv Dataset (from Wild-time)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".txt",
+            label_file_extension: ".label"
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 4096,
       },
       {
-        name: "huffpost_test",
+        name: "huffpost",
         description: "Huffpost Dataset (from Wild-time)",
         version: "0.0.1",
-        base_path: "/datasets/huffpost/test",
+        base_path: "/datasets/huffpost",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config:
@@ -98,6 +131,22 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 4096,
+      },
+      {
+        name: "cloc",
+        description: "CLOC Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/cloc",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".jpg",
+            label_file_extension: ".label"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 999999999,
+        selector_batch_size: 100000,
       }
     ]
   database:
@@ -155,5 +204,3 @@ tensorboard:
 supervisor:
   hostname: "supervisor"
   port: "50063"
-
-seed: 42
