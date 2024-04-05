@@ -276,7 +276,7 @@ class PipelineExecutor:
             self.grpc.store_evaluation_results(writers, evaluations)
 
     def _handle_triggers_within_batch(
-        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int]
+        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
     ) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
@@ -325,6 +325,7 @@ class PipelineExecutor:
                 if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                     return num_triggers
             except StopIteration:
+                # (TODO#367) return all the remaining data
                 # If no other trigger is coming in this batch,
                 # we have to inform the Selector about the remaining data in this batch.
                 remaining_data = batch[previous_trigger_idx:]

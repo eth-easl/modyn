@@ -22,6 +22,7 @@ from modyn.utils.utils import grpc_connection_established
 logger = logging.getLogger(__name__)
 
 
+# TODO common.utils ModelDownloader (see trainer_server, evaluator)
 class ModynModelWrapper(AbstractModelWrapper):
     def __init__(
         self,
@@ -100,6 +101,7 @@ class ModynModelWrapper(AbstractModelWrapper):
         )
         self._load_state(trained_model_path)
 
+# TODO trigger utils
     def get_embeddings(self, dataloader: torch.utils.data.DataLoader) -> torch.Tensor:
         assert self._model is not None
         all_embeddings: Optional[torch.Tensor] = None

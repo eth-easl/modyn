@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 # TODO(#275): inherit common abstraction of dataset
-class OnlineTriggerDataset(IterableDataset):
+class OnlineTriggerDataset(OnlineDataset, IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
     def __init__(
         self,
@@ -26,7 +26,8 @@ class OnlineTriggerDataset(IterableDataset):
         tokenizer: Optional[str] = None,
         sample_prob: Optional[float] = None,
     ):
-        self.online_dataset = OnlineDataset(
+        OnlineDataset.__init__(
+            self,
             pipeline_id,
             trigger_id,
             dataset_id,
@@ -45,7 +46,7 @@ class OnlineTriggerDataset(IterableDataset):
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 
     def __iter__(self) -> Generator:
-        for transformed_tuple in self.online_dataset:
+        for transformed_tuple in OnlineDataset.__iter__(self):
             if self._sample_prob is not None:
                 prob = random.random()
                 if prob < self._sample_prob:

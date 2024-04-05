@@ -5,7 +5,7 @@ from typing import Optional
 from modyn.supervisor.internal.triggers.trigger_datasets import (
     DataLoaderInfo,
     OnlineTriggerDataset,
-    TriggerDatasetGivenKeys,
+    FixedKeysDataset,
 )
 from torch.utils.data import DataLoader
 

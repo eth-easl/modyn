@@ -20,8 +20,9 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
+# TODO: update __init__
 # TODO(#275): inherit common abstraction of dataset
-class TriggerDatasetGivenKeys(IterableDataset):
+class FixedKeysDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
     def __init__(
         self,

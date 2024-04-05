@@ -12,6 +12,7 @@ from evidently.metrics.data_drift.embedding_drift_methods import distance, mmd, 
 from evidently.report import Report
 
 # pylint: disable-next=no-name-in-module
+from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.triggers.model_wrappers import ModynModelWrapper
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
@@ -29,6 +30,8 @@ class DataDriftTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, trigger_config: dict):
+        self._sw = Stopwatch()
+
         self.pipeline_id: Optional[int] = None
         self.pipeline_config: Optional[dict] = None
         self.modyn_config: Optional[dict] = None
@@ -199,7 +202,9 @@ class DataDriftTrigger(Trigger):
                 triggered = True
             else:
                 # if exist previous model, detect drift
+                self._sw.start("detect_drift", overwrite=True)
                 triggered = self.detect_drift(detection_data_idx_start, detection_data_idx_end)
+                detect_time = self._sw.stop()
 
             if triggered:
                 trigger_data_points = detection_data_idx_end - detection_data_idx_start
