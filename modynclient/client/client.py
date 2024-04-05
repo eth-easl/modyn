@@ -53,11 +53,18 @@ class Client:
         self.pbar: Optional[enlighten.Counter] = None
         self.evaluations: dict[int, EvaluationStatusTracker] = {}
         self.eval_err_count: int = 0
+    
+    def _parse_pipeline_log(self, local_eval_dir) -> None:
+        with open(local_eval_dir / f"eval/pipeline_{self.pipeline_id}.log", 'r') as f:
+            pipeline_log = json.load(f)
+        logger.info(f"Evaluation results: {pipeline_log['evaluation_matrix']}")
 
     def _download_logs(self) -> None:
         local_eval_dir = self.log_directory / f"{self.pipeline_id}"
         os.makedirs(local_eval_dir, exist_ok=True)
-        subprocess.run(["docker", "cp", f"supervisor:{self.eval_directory}", local_eval_dir])
+        ret = subprocess.run(["docker", "cp", f"supervisor:{self.eval_directory}", local_eval_dir])
+        logger.info(ret)
+        self._parse_pipeline_log(local_eval_dir)
 
     def start_pipeline(self) -> bool:
         logger.info(f"model id: {self.pipeline_config['model']['id']}, maximum_triggers: {self.maximum_triggers}")
