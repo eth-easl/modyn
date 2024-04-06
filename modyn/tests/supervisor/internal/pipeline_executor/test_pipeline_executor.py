@@ -3,10 +3,18 @@ import multiprocessing as mp
 import os
 import pathlib
 import shutil
-from typing import Optional
+from typing import Callable, Optional
+from unittest import mock
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+
+# pylint: disable=no-name-in-module
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelRequest,
+    EvaluateModelResponse,
+    EvaluationNotStartReason,
+)
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -600,4 +608,88 @@ def test_build_evaluation_matrix_config_validation():
         pipeline_executor.build_evaluation_matrix()
 
 
-# test evaluation is launched with exact args exact times
+def make_mock_evaluate_model(mock_dataset: list[int]) -> Callable[[EvaluateModelRequest], EvaluateModelResponse]:
+
+    def mock_evaluate_model(req: EvaluateModelRequest) -> EvaluateModelResponse:
+        start_timestamp = req.dataset_info.start_timestamp
+        end_timestamp = req.dataset_info.end_timestamp
+
+        def filter_func(x: int) -> bool:
+            if start_timestamp == 0 and end_timestamp == 0:
+                ans = True
+            elif start_timestamp == 0:
+                ans = x < end_timestamp
+            elif end_timestamp == 0:
+                ans = x >= start_timestamp
+            else:
+                ans = start_timestamp <= x < end_timestamp
+            return ans
+
+        num_samples_in_range = len(list(filter(filter_func, mock_dataset)))
+        if num_samples_in_range > 0:
+            resp = EvaluateModelResponse(evaluation_started=True)
+        else:
+            resp = EvaluateModelResponse(
+                evaluation_started=False, not_start_reason=EvaluationNotStartReason.EMPTY_DATASET
+            )
+        return resp
+
+    return mock_evaluate_model
+
+
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "store_evaluation_results")
+def test_build_evaluation_matrix_eval_until_no_data_left(
+    test_store_evaluation_results,
+    test_wait_for_evaluation_completion,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    evaluation_config = get_minimal_evaluation_config()
+    pipeline_config["evaluation"] = evaluation_config
+    eval_dataset_config = evaluation_config["datasets"][0]
+    evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
+
+    eval_dataset_config["eval_every"] = "100s"
+    # 10 samples every 30 seconds starting from 35s
+    mock_dataset = [35, 65, 95, 125, 155, 185, 215, 245, 275, 305]
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+    evaluator_stub_mock.evaluate_model.side_effect = make_mock_evaluate_model(mock_dataset)
+
+    pipeline_executor = PipelineExecutor(
+        START_TIMESTAMP,
+        PIPELINE_ID,
+        get_minimal_system_config(),
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
+        SUPPORTED_EVAL_RESULT_WRITERS,
+        PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
+        evaluation_matrix=True,
+        start_replay_at=0,
+    )
+    pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.trained_models = [11, 12, 13]
+    pipeline_executor.triggers = [1, 2, 3]
+    with patch.object(
+        GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
+    ) as prepare_evaluation_request_mock:
+        pipeline_executor.build_evaluation_matrix()
+        assert evaluator_stub_mock.evaluate_model.call_count == 15
+
+        for model_id in pipeline_executor.trained_models:
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 0, 100
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 100, 200
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 200, 300
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 300, 400
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 400, 500
+            )

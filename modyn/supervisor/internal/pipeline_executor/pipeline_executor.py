@@ -12,8 +12,8 @@ import modyn.utils.utils
 from modyn.common.benchmark import Stopwatch
 
 # pylint: disable-next=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -129,14 +129,17 @@ class PipelineExecutor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
+    # pylint: disable=unused-argument, no-name-in-module
     def build_evaluation_matrix(self) -> None:
         # find the matrix evaluation dataset
         assert "matrix_eval_dataset_id" in self.pipeline_config["evaluation"], "No matrix_eval_dataset_id found."
         matrix_eval_dataset_id = self.pipeline_config["evaluation"]["matrix_eval_dataset_id"]
-        assert (
-            matrix_eval_dataset_id in self.pipeline_config["evaluation"]["datasets"]
-        ), "matrix evaluation dataset not found."
-        matrix_eval_dataset_config = self.pipeline_config["evaluation"]["datasets"][matrix_eval_dataset_id]
+        matrix_eval_dataset_config = None
+        for dataset_config in self.pipeline_config["evaluation"]["datasets"]:
+            if dataset_config["dataset_id"] == matrix_eval_dataset_id:
+                matrix_eval_dataset_config = dataset_config
+                break
+        assert matrix_eval_dataset_config is not None, "matrix evaluation dataset not found."
         assert "eval_every" in matrix_eval_dataset_config, "No eval_every parameter found in matrix evaluation dataset."
 
         eval_every = modyn.utils.utils.convert_timestr_to_seconds(matrix_eval_dataset_config["eval_every"])
@@ -144,21 +147,30 @@ class PipelineExecutor:
         self.pipeline_log["evaluation_matrix"] = {}
         for pos, model in enumerate(self.trained_models):
             self.pipeline_log["evaluation_matrix"][model] = {}
-            previous_split = 0 if self.stop_replay_at is None else self.stop_replay_at
+            previous_split = 0 if self.start_replay_at is None else self.start_replay_at
             while True:
                 current_split = previous_split + eval_every
                 logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
-                device = self.pipeline_config["training"]["device"]
                 request = GRPCHandler.prepare_evaluation_request(
-                    matrix_eval_dataset_config, model, device, previous_split, current_split
+                    matrix_eval_dataset_config,
+                    model,
+                    self.pipeline_config["training"]["device"],
+                    previous_split,
+                    current_split,
                 )
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
                 if not response.evaluation_started:
+                    if response.not_start_reason == EvaluationNotStartReason.EMPTY_DATASET:
+                        logger.info(
+                            f"No data available for model {model} on split {previous_split} to {current_split}."
+                        )
+                        break
+
                     logger.error(
-                        f"Evaluation stopped for model {model} on split {previous_split} to {current_split}."
-                        f"Stop evaluating on this model."
+                        f"Evaluation for model {model} on split {previous_split} to {current_split} failed with "
+                        f"reason: "
+                        f"{EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name}."
                     )
-                    break
 
                 logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
                 reporter = EvaluationStatusReporter(
@@ -168,7 +180,7 @@ class PipelineExecutor:
                 evaluation = {response.evaluation_id: reporter}
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
                 trigger_id = self.triggers[pos]
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger_id)
+                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", trigger_id)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
                 self.pipeline_log["evaluation_matrix"][model][trigger_id] = eval_result_writer.results
                 previous_split = current_split

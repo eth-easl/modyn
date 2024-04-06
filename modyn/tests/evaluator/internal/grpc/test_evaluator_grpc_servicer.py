@@ -15,6 +15,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
     EvaluateModelResponse,
+    EvaluationNotStartReason,
     EvaluationResultRequest,
     EvaluationStatusRequest,
     JsonString,
@@ -167,12 +168,11 @@ def test_init(test_connect_to_model_storage, test_connect_to_storage):
         test_connect_to_storage.assert_called_with("storage:50052")
 
 
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.logger")
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.hasattr", return_value=False)
 def test_evaluate_model_dynamic_module_import(
-    test_has_attribute, test_connect_to_model_storage, test_connect_to_storage, logger
+    test_has_attribute, test_connect_to_model_storage, test_connect_to_storage
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
@@ -180,13 +180,12 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
-        assert logger.error.call_args_list == [call("Model ResNet18 not available!")]
+        assert response.not_start_reason == EvaluationNotStartReason.MODEL_IMPORT_FAILURE
 
 
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.logger")
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_storage, logger):
+def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         req = get_evaluate_model_request()
@@ -194,31 +193,24 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert logger.error.call_args_list == [call("Trained model 15 does not exist!")]
-        logger.reset_mock()
+        assert resp.not_start_reason == EvaluationNotStartReason.MODEL_NOT_EXIST_IN_METADATA
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
-        assert logger.error.call_args_list == [
-            call("Total number of keys for dataset unknown cannot be fetched. Evaluation cannot be started.")
-        ]
-        logger.reset_mock()
+        assert resp.not_start_reason == EvaluationNotStartReason.DATASET_NOT_FOUND
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert logger.error.call_args_list == [
-            call("Trained model 2 cannot be fetched from model storage. Evaluation cannot be started.")
-        ]
+        assert resp.not_start_reason == EvaluationNotStartReason.MODEL_NOT_EXIST_IN_STORAGE
 
 
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.logger")
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_empty_dataset(test_connect_to_model_storage, logger):
+def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
     storage_stub_mock = mock.Mock(spec=["GetDatasetSize"])
     storage_stub_mock.GetDatasetSize.return_value = GetDatasetSizeResponse(success=True, num_keys=0)
     with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
@@ -228,10 +220,7 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage, logger):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-
-            assert logger.error.call_args_list == [
-                call("Dataset MNIST is empty in given time interval. Evaluation cannot be started.")
-            ]
+            assert resp.not_start_reason == EvaluationNotStartReason.EMPTY_DATASET
 
 
 @patch("multiprocessing.Process.start", autospec=True)
@@ -260,20 +249,17 @@ def test_evaluate_model_correct_time_range_used(
             ]
 
 
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.logger")
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 def test_evaluate_model_download_trained_model(
-    test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model, logger
+    test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert logger.error.call_args_list == [
-            call("Trained model could not be downloaded. Evaluation cannot be started.")
-        ]
+        assert resp.not_start_reason == EvaluationNotStartReason.DOWNLOAD_MODEL_FAILURE
 
 
 @patch("multiprocessing.Process.start", autospec=True)
