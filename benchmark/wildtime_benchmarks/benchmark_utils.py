@@ -1,7 +1,7 @@
 import argparse
 import logging
 import pathlib
-from datetime import datetime
+from datetime import datetime, timezone
 
 import gdown
 
@@ -62,4 +62,4 @@ def create_fake_timestamp(year: int, base_year: int) -> int:
 
 
 def create_timestamp(year: int, month: int = 1, day: int = 1) -> int:
-    return int(datetime(year=year, month=month, day=day).timestamp())
+    return int(datetime(year=year, month=month, day=day, tzinfo=timezone.utc).timestamp())
