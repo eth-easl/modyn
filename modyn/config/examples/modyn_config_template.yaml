@@ -1,0 +1,126 @@
+project:
+  name: "Dynamic Datasets DSL Project"
+  description: "Instance of Dynamic Datasets DSL Project"
+  version: "0.0.1"
+
+storage:
+  port: "50051"
+  hostname: "storage"
+  sample_batch_size: 2000000
+  sample_dbinsertion_batchsize: 1000000
+  insertion_threads: 8
+  retrieval_threads: 8
+  sample_table_unlogged: true
+  file_watcher_watchdog_sleep_time_s: 5
+  datasets:
+    [
+      {
+        name: "yearbook",
+        description: "Yearbook Dataset from Wild-Time",
+        version: "0.0.1",
+        base_path: "/datasets/yearbook",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "big",
+            record_size: 4100,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 256,
+      },
+      {
+        name: "huffpost",
+        description: "Huffpost Dataset (from Wild-time)",
+        version: "0.0.1",
+        base_path: "/datasets/huffpost",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since headlines contain commas and semicolons
+            label_index: 1
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      {
+        name: "arxiv",
+        description: "Arxiv Dataset (from Wild-time)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            label_index: 1
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      }
+    ]
+  database:
+    drivername: "postgresql"
+    username: "postgres"
+    password: "postgres"
+    host: "storage-db"
+    port: "5432"
+    database: "postgres"
+
+metadata_database:
+  drivername: "postgresql"
+  username: "postgres"
+  password: "postgres"
+  host: "metadata-db"
+  port: "5432"
+  database: "postgres"
+  hash_partition_modulus: 32
+
+metadata_processor:
+  port: "50055"
+  hostname: "metadata_processor"
+  processor: "SimpleProcessor"
+
+selector:
+  hostname: "selector"
+  port: "50056"
+  keys_in_selector_cache: 500000
+  sample_batch_size: 500000
+  insertion_threads: 16
+  trigger_sample_directory: "/tmp/trigger_samples"
+  local_storage_directory: "/tmp/local_storage"
+  cleanup_storage_directories_after_shutdown: true
+  ignore_existing_trigger_samples: false
+
+trainer_server:
+  hostname: "trainer_server"
+  port: "50057"
+  ftp_port: "50058"
+  offline_dataset_directory: "/tmp/offline_dataset"
+
+model_storage:
+  hostname: "model_storage"
+  port: "50059"
+  ftp_port: "50060"
+  models_directory: "/tmp/models"
+
+evaluator:
+  hostname: "evaluator"
+  port: "50061"
+
+tensorboard:
+  port: "50062"
+
+supervisor:
+  hostname: "supervisor"
+  port: "50063"
+
+seed: 42

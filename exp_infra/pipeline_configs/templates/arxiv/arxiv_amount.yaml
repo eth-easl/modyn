@@ -1,0 +1,70 @@
+pipeline:
+  name: ArXiv dataset Test Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: ArticleNet
+  config:
+    num_classes: 172
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  device: "cuda:0"
+  dataloader_workers: 2
+  use_previous_model: True
+  initial_model: random
+  batch_size: 96
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.00002
+            momentum: 0.9
+            weight_decay: 0.01
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+  selection_strategy:
+    name: NewDataStrategy
+    maximum_keys_in_memory: 10000
+    config:
+      storage_backend: "database"
+      limit: -1
+      reset_after_trigger: True
+  seed: 42
+  epochs_per_trigger: 1
+data:
+  dataset_id: arxiv
+  bytes_parser_function: |
+    def bytes_parser_function(data: bytes) -> str:
+      return str(data, "utf8")
+  tokenizer: DistilBertTokenizerTransform
+
+trigger:
+  id: DataAmountTrigger
+  trigger_config:
+    data_points_for_trigger: 1000
+  
+evaluation:
+  device: "cuda:0"
+  result_writers: ["json"]
+  datasets:
+    - dataset_id: arxiv
+      bytes_parser_function: |
+        def bytes_parser_function(data: bytes) -> str:
+          return str(data, "utf8")
+      tokenizer: DistilBertTokenizerTransform
+      batch_size: 96
+      dataloader_workers: 2
+      metrics:
+        - name: "Accuracy"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)
