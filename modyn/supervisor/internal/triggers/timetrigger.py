@@ -29,7 +29,7 @@ class TimeTrigger(Trigger):
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
-                self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted
+                self.next_trigger_at = new_data[0][1] + self.trigger_every_s - 1  # new_data is sorted
             else:
                 return
 
@@ -37,6 +37,8 @@ class TimeTrigger(Trigger):
         triggering_indices = []
 
         while self.next_trigger_at <= max_timestamp:
+            print(f">>>>>>>>>>>>>>next trigger {self.next_trigger_at}")
+            
             # The next line gets the first item which has a timestamp larger or equal to the triggering timestamp
             try:
                 idx = next(idx for (idx, (_, timestamp, _)) in enumerate(new_data) if timestamp >= self.next_trigger_at)
