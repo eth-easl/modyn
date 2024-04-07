@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import Tuple, List, Dict
+from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
