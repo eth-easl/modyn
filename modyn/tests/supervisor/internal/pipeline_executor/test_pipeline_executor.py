@@ -639,7 +639,7 @@ def make_mock_evaluate_model(mock_dataset: list[int]) -> Callable[[EvaluateModel
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test_build_evaluation_matrix_eval_until_no_data_left(
+def test_build_evaluation_matrix(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
 ):
@@ -650,8 +650,7 @@ def test_build_evaluation_matrix_eval_until_no_data_left(
     evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
 
     eval_dataset_config["eval_every"] = "100s"
-    # 10 samples every 30 seconds starting from 35s
-    mock_dataset = [35, 65, 95, 125, 155, 185, 215, 245, 275, 305]
+    mock_dataset = [35, 65, 95, 125, 155, 185, 215]
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     evaluator_stub_mock.evaluate_model.side_effect = make_mock_evaluate_model(mock_dataset)
 
@@ -675,7 +674,7 @@ def test_build_evaluation_matrix_eval_until_no_data_left(
         GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
     ) as prepare_evaluation_request_mock:
         pipeline_executor.build_evaluation_matrix()
-        assert evaluator_stub_mock.evaluate_model.call_count == 15
+        assert evaluator_stub_mock.evaluate_model.call_count == 12
 
         for model_id in pipeline_executor.trained_models:
             prepare_evaluation_request_mock.assert_any_call(
@@ -690,6 +689,23 @@ def test_build_evaluation_matrix_eval_until_no_data_left(
             prepare_evaluation_request_mock.assert_any_call(
                 eval_dataset_config, model_id, evaluation_config["device"], 300, 400
             )
+
+    evaluator_stub_mock.reset_mock()
+    pipeline_executor.stop_replay_at = 270
+
+    with patch.object(
+        GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
+    ) as prepare_evaluation_request_mock:
+        pipeline_executor.build_evaluation_matrix()
+        assert evaluator_stub_mock.evaluate_model.call_count == 9
+
+        for model_id in pipeline_executor.trained_models:
             prepare_evaluation_request_mock.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 400, 500
+                eval_dataset_config, model_id, evaluation_config["device"], 0, 100
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 100, 200
+            )
+            prepare_evaluation_request_mock.assert_any_call(
+                eval_dataset_config, model_id, evaluation_config["device"], 200, 300
             )

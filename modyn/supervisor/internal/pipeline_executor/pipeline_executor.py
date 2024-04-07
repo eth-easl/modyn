@@ -5,6 +5,7 @@ import os
 import pathlib
 import sys
 import traceback
+from datetime import datetime, timezone
 from time import sleep
 from typing import Any, Optional
 
@@ -86,7 +87,6 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.trained_models: list[int] = []
-        self.triggers: list[int] = []
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -144,8 +144,11 @@ class PipelineExecutor:
 
         eval_every = modyn.utils.utils.convert_timestr_to_seconds(matrix_eval_dataset_config["eval_every"])
 
+        def timestamp2string(ts: int) -> str:
+            return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
         self.pipeline_log["evaluation_matrix"] = {}
-        for pos, model in enumerate(self.trained_models):
+        for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
             previous_split = 0 if self.start_replay_at is None else self.start_replay_at
             while True:
@@ -179,10 +182,12 @@ class PipelineExecutor:
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                trigger_id = self.triggers[pos]
-                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", trigger_id)
+                # it does not make sense to have a result writer here, but we temporarily keep it to have the results
+                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                self.pipeline_log["evaluation_matrix"][model][trigger_id] = eval_result_writer.results
+
+                interval_name = f"{timestamp2string(previous_split)}-{timestamp2string(current_split)}"
+                self.pipeline_log["evaluation_matrix"][model][interval_name] = eval_result_writer.results
                 previous_split = current_split
                 if self.stop_replay_at is not None and current_split >= self.stop_replay_at:
                     logger.info("reaching the end of replay data, stop matrix evaluation.")
@@ -296,7 +301,6 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.trained_models.append(model_id)
-        self.triggers.append(trigger_id)
 
         # Start evaluation
         if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
