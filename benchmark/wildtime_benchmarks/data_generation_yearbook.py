@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import Tuple
+from typing import Tuple, List, Dict
 
 import numpy as np
 import torch
@@ -37,21 +37,27 @@ class YearbookDownloader(Dataset):
         self._dataset = datasets
         self.data_dir = data_dir
 
-    def _get_year_data(self, year: int, store_all_data: bool) -> list[Tuple]:
-        splits = [0, 1] if store_all_data else [0]
-        images = torch.FloatTensor(
-            np.array(
-                [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
-                    # Pytorch requires CHW format
-                    img.transpose(2, 0, 1)
-                    # _dataset has 3 dimensions [years][train=0,valid=1,test=2]["images"/"labels"]
-                    for split in splits # just train if --all not specified, else test, train and val
-                    for img in self._dataset[year][split]["images"]
-                ]
+    def _get_year_data(self, year: int, store_all_data: bool) -> dict[str, list[tuple]]:
+        def get_one_split(split: int) -> list[Tuple]:
+            images = torch.FloatTensor(
+                np.array(
+                    [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
+                        # Pytorch requires CHW format
+                        img.transpose(2, 0, 1)
+                        # _dataset has 3 dimensions [years][train=0,valid=1,test=2]["images"/"labels"]
+                        for img in self._dataset[year][split]["images"]
+                    ]
+                )
             )
-        )
-        labels = torch.cat([torch.LongTensor(self._dataset[year][split]["labels"]) for split in splits])
-        return [(images[i], labels[i]) for i in range(len(images))]
+            labels = torch.LongTensor(self._dataset[year][split]["labels"])
+            return [(images[i], labels[i]) for i in range(len(images))]
+
+        if not store_all_data:
+            ds = {"train": get_one_split(0)}
+        else:
+            ds = {"train": get_one_split(0), "valid": get_one_split(1), "test": get_one_split(2)}
+            print(f"for year {year} train size {len(get_one_split(0))}, valid size {len(get_one_split(1))}, test size {len(get_one_split(2))}")
+        return ds
 
     def __len__(self) -> int:
         return len(self._dataset["labels"])
@@ -61,21 +67,44 @@ class YearbookDownloader(Dataset):
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
 
+        train_dir = os.path.join(self.data_dir, "train")
+        os.makedirs(train_dir, exist_ok=True)
+
+        if store_all_data:
+            valid_dir = os.path.join(self.data_dir, "valid")
+            test_dir = os.path.join(self.data_dir, "test")
+            os.makedirs(valid_dir, exist_ok=True)
+            os.makedirs(test_dir, exist_ok=True)
+
         for year in self.time_steps:
             print(f"Saving data for year {year}")
             ds = self._get_year_data(year, store_all_data)
-            self.create_binary_file(ds,
-                                    os.path.join(self.data_dir, f"{year}.bin"),
+            self.create_binary_file(ds["train"],
+                                    os.path.join(train_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
+            if store_all_data:
+                self.create_binary_file(ds["valid"],
+                                        os.path.join(valid_dir, f"{year}.bin"),
+                                        create_fake_timestamp(year, base_year=1930))
+                self.create_binary_file(ds["test"],
+                                        os.path.join(test_dir, f"{year}.bin"),
+                                        create_fake_timestamp(year, base_year=1930))
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            dummy_data = [ ds[0] ] # get one sample from the previous year
+            dummy_data = [ ds["train"][0] ] # get one sample from the previous year
             self.create_binary_file(dummy_data,
-                                    os.path.join(self.data_dir, f"{dummy_year}.bin"),
+                                    os.path.join(train_dir, f"{dummy_year}.bin"),
                                     create_fake_timestamp(dummy_year, base_year=1930))
+            if store_all_data:
+                self.create_binary_file(dummy_data,
+                                        os.path.join(valid_dir, f"{dummy_year}.bin"),
+                                        create_fake_timestamp(dummy_year, base_year=1930))
+                self.create_binary_file(dummy_data,
+                                        os.path.join(test_dir, f"{dummy_year}.bin"),
+                                        create_fake_timestamp(dummy_year, base_year=1930))
 
-        os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
+        # os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
 
     @staticmethod
     def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
@@ -85,7 +114,7 @@ class YearbookDownloader(Dataset):
                 label_integer = tensor2.item()
 
                 features_size = len(features_bytes)
-                assert features_size == 4096
+                assert features_size == 12288
 
                 f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
                 f.write(features_bytes)
