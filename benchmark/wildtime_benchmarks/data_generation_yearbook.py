@@ -85,7 +85,7 @@ class YearbookDownloader(Dataset):
                 label_integer = tensor2.item()
 
                 features_size = len(features_bytes)
-                assert features_size == 4096
+                assert features_size == 12288
 
                 f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
                 f.write(features_bytes)
