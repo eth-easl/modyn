@@ -48,7 +48,7 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 1000
+    data_points_for_trigger: 10000
 evaluation:
   device: cuda:0
   result_writers:
