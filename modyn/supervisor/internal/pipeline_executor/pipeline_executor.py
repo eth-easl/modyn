@@ -268,11 +268,11 @@ class PipelineExecutor:
             )
             # TODO(#300) Add evaluator to pipeline log
             num_datasets = len(self.pipeline_config["evaluation"]["datasets"])
-            num_parallel_evals = {}
-            all_evaluations = []
+            num_parallel_evals = 32
+            all_evaluations = {}
             for i in range(0, num_datasets, num_parallel_evals):
                 evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config, dataset_idx=list(range(i, min(i+num_parallel_evals, num_datasets))))
-                all_evaluations | evaluations
+                all_evaluations = all_evaluations | evaluations
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
             self._update_pipeline_stage_and_enqueue_msg(
