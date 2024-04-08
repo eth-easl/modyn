@@ -57,7 +57,7 @@ storage:
         file_wrapper_type: "BinaryFileWrapper",
         file_wrapper_config:
           {
-            byteorder: "big",
+            byteorder: "little",
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
@@ -75,7 +75,7 @@ storage:
         file_wrapper_type: "BinaryFileWrapper",
         file_wrapper_config:
           {
-            byteorder: "big",
+            byteorder: "little",
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
@@ -93,7 +93,7 @@ storage:
         file_wrapper_type: "BinaryFileWrapper",
         file_wrapper_config:
           {
-            byteorder: "big",
+            byteorder: "little",
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
