@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import Callable, Generator, Iterable, Optional
 
 import grpc
@@ -124,7 +125,11 @@ class FixedKeysDataset(IterableDataset):
 
         assert self._transform is not None
 
+        total_samples = len(self._keys)
+        keys_per_worker = int(math.ceil(total_samples / worker_info.num_workers))
+        worker_keys = self._keys[worker_id * keys_per_worker : min(total_samples, (worker_id+1) * keys_per_worker)]
+
         # TODO(#175): we might want to do/accelerate prefetching here.
-        for data in self._get_data_from_storage(self._keys):
+        for data in self._get_data_from_storage(worker_keys):
             for key, sample, label in data:
                 yield key, self._transform(sample), label
