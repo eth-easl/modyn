@@ -69,8 +69,9 @@ uint64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
 template <typename TP>
 std::time_t to_time_t(TP tp) {
   using namespace std::chrono;
-  auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
-  return system_clock::to_time_t(sctp);
+  // auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
+  const auto systemTime = file_clock::to_sys(tp);
+  return system_clock::to_time_t(systemTime);
 }
 
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
