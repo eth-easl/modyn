@@ -320,6 +320,9 @@ class PipelineExecutor:
                 num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
                 if num_samples_in_trigger > 0:
                     self._run_training(trigger_id)  # Blocks until training is done.
+                    self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
+                        "num_samples_in_trigger": num_samples_in_trigger,
+                    }
                     if self.pipeline_config["trigger"]["id"] == "DataDriftTrigger":
                         self.trigger.inform_previous_trigger_data_points(trigger_id, num_samples_in_trigger)
                     self._update_pipeline_stage_and_enqueue_msg(
