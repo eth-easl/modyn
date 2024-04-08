@@ -12,46 +12,46 @@ storage:
   sample_table_unlogged: true
   file_watcher_watchdog_sleep_time_s: 5
   datasets:
-  # - name: yearbook
-  #   description: Yearbook Dataset from Wild-Time
-  #   version: 0.0.1
-  #   base_path: /datasets/yearbook
-  #   filesystem_wrapper_type: LocalFilesystemWrapper
-  #   file_wrapper_type: BinaryFileWrapper
-  #   file_wrapper_config:
-  #     byteorder: big
-  #     record_size: 4100
-  #     label_size: 4
-  #     file_extension: .bin
-  #   ignore_last_timestamp: false
-  #   file_watcher_interval: 5
-  #   selector_batch_size: 256
-  # - name: huffpost
-  #   description: Huffpost Dataset (from Wild-time)
-  #   version: 0.0.1
-  #   base_path: /datasets/huffpost
-  #   filesystem_wrapper_type: LocalFilesystemWrapper
-  #   file_wrapper_type: CsvFileWrapper
-  #   file_wrapper_config:
-  #     file_extension: .csv
-  #     separator: "\t"
-  #     label_index: 1
-  #   ignore_last_timestamp: false
-  #   file_watcher_interval: 5
-  #   selector_batch_size: 4096
-  # - name: arxiv
-  #   description: Arxiv Dataset (from Wild-time)
-  #   version: 0.0.1
-  #   base_path: /datasets/arxiv
-  #   filesystem_wrapper_type: LocalFilesystemWrapper
-  #   file_wrapper_type: CsvFileWrapper
-  #   file_wrapper_config:
-  #     file_extension: .csv
-  #     separator: "\t"
-  #     label_index: 1
-  #   ignore_last_timestamp: false
-  #   file_watcher_interval: 5
-  #   selector_batch_size: 4096
+  - name: yearbook
+    description: Yearbook Dataset from Wild-Time
+    version: 0.0.1
+    base_path: /datasets/yearbook
+    filesystem_wrapper_type: LocalFilesystemWrapper
+    file_wrapper_type: BinaryFileWrapper
+    file_wrapper_config:
+      byteorder: big
+      record_size: 4100
+      label_size: 4
+      file_extension: .bin
+    ignore_last_timestamp: false
+    file_watcher_interval: 5
+    selector_batch_size: 256
+  - name: huffpost
+    description: Huffpost Dataset (from Wild-time)
+    version: 0.0.1
+    base_path: /datasets/huffpost
+    filesystem_wrapper_type: LocalFilesystemWrapper
+    file_wrapper_type: CsvFileWrapper
+    file_wrapper_config:
+      file_extension: .csv
+      separator: "\t"
+      label_index: 1
+    ignore_last_timestamp: false
+    file_watcher_interval: 5
+    selector_batch_size: 4096
+  - name: arxiv
+    description: Arxiv Dataset (from Wild-time)
+    version: 0.0.1
+    base_path: /datasets/arxiv
+    filesystem_wrapper_type: LocalFilesystemWrapper
+    file_wrapper_type: CsvFileWrapper
+    file_wrapper_config:
+      file_extension: .csv
+      separator: "\t"
+      label_index: 1
+    ignore_last_timestamp: false
+    file_watcher_interval: 5
+    selector_batch_size: 4096
   - name: yearbook_train
     description: Yearbook Dataset from Wild-Time
     version: 0.0.1
