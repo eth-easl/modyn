@@ -55,7 +55,7 @@ trigger:
   
 evaluation:
   device: "cuda:0"
-  result_writers: ["log"]
+  result_writers: ["json"]
   datasets:
     - dataset_id: yearbook
       bytes_parser_function: |

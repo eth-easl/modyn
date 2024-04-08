@@ -51,20 +51,20 @@ trigger:
   trigger_config:
     trigger_every: "1d"
   
-# evaluation:
-#   device: "cuda:0"
-#   result_writers: ["json"]
-#   datasets:
-#     - dataset_id: arxiv
-#       bytes_parser_function: |
-#         def bytes_parser_function(data: bytes) -> str:
-#           return str(data, "utf8")
-#       tokenizer: DistilBertTokenizerTransform
-#       batch_size: 96
-#       dataloader_workers: 2
-#       metrics:
-#         - name: "Accuracy"
-#           evaluation_transformer_function: |
-#             import torch
-#             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
-#               return torch.argmax(model_output, dim=-1)
+evaluation:
+  device: "cuda:0"
+  result_writers: ["json"]
+  datasets:
+    - dataset_id: arxiv
+      bytes_parser_function: |
+        def bytes_parser_function(data: bytes) -> str:
+          return str(data, "utf8")
+      tokenizer: DistilBertTokenizerTransform
+      batch_size: 96
+      dataloader_workers: 2
+      metrics:
+        - name: "Accuracy"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)

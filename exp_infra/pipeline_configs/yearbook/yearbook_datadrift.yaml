@@ -54,7 +54,7 @@ trigger:
 evaluation:
   device: cuda:0
   result_writers:
-  - log
+  - json
   datasets:
   - dataset_id: yearbook_test_1930
     bytes_parser_function: |

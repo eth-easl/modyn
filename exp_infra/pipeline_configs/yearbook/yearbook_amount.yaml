@@ -38,7 +38,7 @@ training:
       limit: -1
       reset_after_trigger: true
   seed: 42
-  epochs_per_trigger: 1
+  epochs_per_trigger: 10
 data:
   dataset_id: yearbook_train
   transformations: []
@@ -54,7 +54,7 @@ trigger:
 evaluation:
   device: cuda:0
   result_writers:
-  - log
+  - json
   datasets:
   - dataset_id: yearbook_test_1930
     bytes_parser_function: |
