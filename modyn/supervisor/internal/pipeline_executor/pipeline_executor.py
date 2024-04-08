@@ -268,9 +268,11 @@ class PipelineExecutor:
             )
             # TODO(#300) Add evaluator to pipeline log
             num_datasets = len(self.pipeline_config["evaluation"]["datasets"])
-            num_parallel_evals = 2
+            num_parallel_evals = 16
+            all_evaluations = []
             for i in range(0, num_datasets, num_parallel_evals):
                 evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config, dataset_idx=list(range(i, min(i+num_parallel_evals, num_datasets))))
+                all_evaluations.extend(evaluations)
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
             self._update_pipeline_stage_and_enqueue_msg(
@@ -278,7 +280,7 @@ class PipelineExecutor:
             )
             writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
-            self.grpc.store_evaluation_results(writers, evaluations)
+            self.grpc.store_evaluation_results(writers, all_evaluations)
 
     def _handle_triggers_within_batch(
         self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
