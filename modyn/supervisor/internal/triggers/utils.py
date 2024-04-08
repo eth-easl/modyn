@@ -56,7 +56,7 @@ def prepare_trigger_dataloader_given_keys(
     if sample_size is not None:
         keys = random.sample(keys, min(len(keys), sample_size))
 
-    train_set = TriggerDatasetGivenKeys(
+    train_set = FixedKeysDataset(
         dataloader_info.dataset_id,
         dataloader_info.bytes_parser,
         dataloader_info.transform_list,

@@ -36,9 +36,7 @@ class TimeTrigger(Trigger):
         max_timestamp = new_data[-1][1]  # new_data is sorted
         triggering_indices = []
 
-        while self.next_trigger_at <= max_timestamp:
-            print(f">>>>>>>>>>>>>>next trigger {self.next_trigger_at}")
-            
+        while self.next_trigger_at <= max_timestamp:            
             # The next line gets the first item which has a timestamp larger or equal to the triggering timestamp
             try:
                 idx = next(idx for (idx, (_, timestamp, _)) in enumerate(new_data) if timestamp >= self.next_trigger_at)

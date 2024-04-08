@@ -518,7 +518,7 @@ class GRPCHandler:
         assert success, "Something went wrong while seeding the selector"
 
     def start_evaluation(
-        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None
+        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None, dataset_idx: Optional[list[int]] = None
     ) -> dict[int, EvaluationStatusReporter]:
         assert self.eval_status_queue is not None
         assert self.evaluator is not None
@@ -530,7 +530,11 @@ class GRPCHandler:
 
         if pipeline_id is None:
             # In this case, we evaluate on fixed datasets
-            for dataset in pipeline_config["evaluation"]["datasets"]:
+            datasets = pipeline_config["evaluation"]["datasets"]
+            if dataset_idx is None:
+                dataset_idx = list(range(len(datasets)))
+            for i in dataset_idx:
+                dataset = datasets[i]
                 dataset_id = dataset["dataset_id"]
 
                 req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)

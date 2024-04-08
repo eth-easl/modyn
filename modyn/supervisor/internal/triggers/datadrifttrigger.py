@@ -49,7 +49,7 @@ class DataDriftTrigger(Trigger):
             self.detection_data_points = trigger_config["data_points_for_detection"]
         assert self.detection_data_points > 0, "data_points_for_trigger needs to be at least 1"
 
-        self.drift_threshold: float = 0.55
+        self.drift_threshold: float = 0.7
         if "drift_threshold" in trigger_config.keys():
             self.drift_threshold = trigger_config["drift_threshold"]
         assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
@@ -69,34 +69,34 @@ class DataDriftTrigger(Trigger):
                     pca_components=None,
                 ),
             ),
-            EmbeddingsDriftMetric(
-                "data",
-                drift_method=ratio(
-                    component_stattest="wasserstein",
-                    component_stattest_threshold=0.1,
-                    threshold=0.2,
-                    pca_components=None,
-                ),
-            ),
-            EmbeddingsDriftMetric(
-                "data",
-                drift_method=distance(
-                    dist="euclidean",  # "euclidean", "cosine", "cityblock" or "chebyshev"
-                    threshold=0.2,
-                    bootstrap=None,
-                    quantile_probability=0.05,
-                    pca_components=None,
-                ),
-            ),
-            EmbeddingsDriftMetric(
-                "data",
-                drift_method=mmd(
-                    threshold=0.015,
-                    bootstrap=None,
-                    quantile_probability=0.05,
-                    pca_components=None,
-                ),
-            ),
+            # EmbeddingsDriftMetric(
+            #     "data",
+            #     drift_method=ratio(
+            #         component_stattest="wasserstein",
+            #         component_stattest_threshold=0.1,
+            #         threshold=0.2,
+            #         pca_components=None,
+            #     ),
+            # ),
+            # EmbeddingsDriftMetric(
+            #     "data",
+            #     drift_method=distance(
+            #         dist="euclidean",  # "euclidean", "cosine", "cityblock" or "chebyshev"
+            #         threshold=0.2,
+            #         bootstrap=None,
+            #         quantile_probability=0.05,
+            #         pca_components=None,
+            #     ),
+            # ),
+            # EmbeddingsDriftMetric(
+            #     "data",
+            #     drift_method=mmd(
+            #         threshold=0.015,
+            #         bootstrap=None,
+            #         quantile_probability=0.05,
+            #         pca_components=None,
+            #     ),
+            # ),
         ]
 
         self.data_cache = []

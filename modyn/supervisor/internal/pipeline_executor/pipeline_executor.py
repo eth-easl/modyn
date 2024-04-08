@@ -64,7 +64,9 @@ class PipelineExecutor:
         self.evaluation_matrix = evaluation_matrix
 
         self._sw = Stopwatch()
-        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
+        self.pipeline_eval_dir = self.eval_directory / str(self.pipeline_id)
+        os.makedirs(self.pipeline_eval_dir, exist_ok=True)
+        self._pipeline_log_file = self.pipeline_eval_dir / f"pipeline_{self.pipeline_id}.log"
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": self.pipeline_config, "modyn_config": self.modyn_config},
             "supervisor": {
@@ -265,8 +267,11 @@ class PipelineExecutor:
                 PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
             )
             # TODO(#300) Add evaluator to pipeline log
-            evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
-            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+            num_datasets = len(self.pipeline_config["evaluation"]["datasets"])
+            num_parallel_evals = 2
+            for i in range(0, num_datasets, num_parallel_evals):
+                evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config, dataset_idx=list(range(i, min(i+num_parallel_evals, num_datasets))))
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
             self._update_pipeline_stage_and_enqueue_msg(
                 PipelineStage.STORE_EVALUATION_RESULTS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
@@ -288,6 +293,7 @@ class PipelineExecutor:
             try:
                 triggering_idx = next(triggering_indices)
                 logger.info(f"[Trigger idx in this batch] {triggering_idx} / {len(batch)}")
+                logger.info(f">>>>>>>>>>>>trigger timestamp {batch[triggering_idx][1]}")
                 num_triggers += 1
 
                 self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
@@ -360,6 +366,7 @@ class PipelineExecutor:
         logger.info("Starting data replay.")
 
         if self.stop_replay_at is None:
+            print(f">>>>>>>>>>>>>>>>>>start replay at {self.start_replay_at}")
             generator = self.grpc.get_new_data_since(dataset_id, self.start_replay_at)
         else:
             generator = self.grpc.get_data_in_interval(dataset_id, self.start_replay_at, self.stop_replay_at)
