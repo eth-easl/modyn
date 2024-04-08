@@ -58,7 +58,7 @@ storage:
         file_wrapper_config:
           {
             byteorder: "big",
-            record_size: 4100,
+            record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
           },
@@ -76,7 +76,7 @@ storage:
         file_wrapper_config:
           {
             byteorder: "big",
-            record_size: 4100,
+            record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
           },
@@ -94,7 +94,7 @@ storage:
         file_wrapper_config:
           {
             byteorder: "big",
-            record_size: 4100,
+            record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
           },
