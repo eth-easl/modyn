@@ -333,7 +333,7 @@ class DataDriftTrigger(Trigger):
         assert self.pipeline_id is not None
         assert self.base_dir is not None
 
-        self.exp_output_dir = self.base_dir / f"{self.dataloader_info.dataset_id}_{self.pipeline_id}"
+        self.exp_output_dir = self.base_dir / str(self.pipeline_id) / f"datadrift"
         self.drift_dir = self.exp_output_dir / "drift"
         os.makedirs(self.drift_dir, exist_ok=True)
         self.timers_dir = self.exp_output_dir / "timers"
