@@ -7,13 +7,13 @@ def create_timestamp(year: int, month: int = 1, day: int = 1) -> int:
 
 def set_one_file(f: pathlib.Path, year: int, month: int, day: int) -> int:
     t = create_timestamp(year, month, day)
-    # os.utime(f, (t, t))
+    os.utime(f, (t, t))
     return t
 
 
 if __name__ == '__main__':
     base_dir = pathlib.Path("/scratch/jinzhu/modyn/datasets")
-    datasets = ['yearbook']
+    datasets = ['huffpost', 'arxiv']
 
     for d in datasets:
         dataset_dir = base_dir / d
