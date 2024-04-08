@@ -7,6 +7,17 @@ version: '3.8'
 # For storage-db and metadata-db, you might want to increase the amount of available /dev/shm and store the postgres files on a fast local disk.
 
 services:
+  cleanup:
+    image: ubuntu:latest
+    command: "chmod -R 777 /target"
+    volumes:
+      - /local/home/jinzhu3/.local/share/docker/overlay2:/target
+  postgres-db-init:
+    image: ubuntu:latest
+    command: "chmod -R 777 /metadata /storage"
+    volumes:
+      - /scratch/jinzhu/modyn/postgres-data/metadata-test:/metadata
+      - /scratch/jinzhu/modyn/postgres-data/storage-test:/storage
   metadata-db:
     image: postgres:15.2-alpine
     restart: always
@@ -15,10 +26,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 24gb
+    command: "postgres -c config_file=/etc/postgresql/postgresql.conf"
+    shm_size: 24gb
     volumes:
-      - ./metadata-postgres-data:/var/lib/postgresql/data
+      - /scratch/jinzhu/modyn/postgres-data/metadata-test:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -35,10 +46,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 8gb
+    command: "postgres -c config_file=/etc/postgresql/postgresql.conf"
+    shm_size: 8gb
     volumes:
-      - ./storage-postgres-data:/var/lib/postgresql/data
+      - /scratch/jinzhu/modyn/postgres-data/storage-test:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -57,7 +68,7 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
-#      - /mnt/datasets:/datasets
+      - /scratch/jinzhu/modyn/datasets:/datasets
 #      - .:/modyn_host
   metadata_processor:
     restart: on-failure
@@ -96,19 +107,20 @@ services:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
-    - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+      #- downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+       - /scratch/jinzhu/modyn/offline_dataset:/tmp/offline_dataset
 #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
 #      - .:/modyn_host
-#    shm_size: 4gb
+    shm_size: 4gb
 # CUDASTART (ignore/delete if enabling cuda manually)
-#    runtime: nvidia
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [gpu, utility, compute]
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
 # CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
@@ -119,50 +131,44 @@ services:
       context: .
       dockerfile: docker/Selector/Dockerfile
     volumes:
-       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
+      #- selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
+      #- selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
 #      - /mnt/ssd/local_storage:/tmp/local_storage
+      #- selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (line below)
+       - /scratch/jinzhu/modyn/selector_local_storage:/tmp/local_storage
+       - /scratch/jinzhu/modyn/experiments_tmp:/tmp/trigger_samples
 #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
 #      - .:/modyn_host
-#    shm_size: 4gb
+    shm_size: 4gb
   supervisor:
     restart: on-failure
     depends_on:
-    - storage
-    - metadata-db
-    - storage-db
-    - selector
-    - metadata_processor
-    - trainer_server
-    - evaluator
-    build:
-      context: .
-      dockerfile: docker/Supervisor/Dockerfile
-#    volumes:
-#      - .:/modyn_host
-    container_name: supervisor
-    ports:
-      - 3000:50062
-  tests:
-    depends_on:
-      supervisor:
-        condition: service_started
       storage:
         condition: service_started
       selector:
         condition: service_started
       metadata_processor:
         condition: service_started
-      model_storage:
-        condition: service_started
       evaluator:
         condition: service_started
       trainer_server:
         condition: service_started
-      metadata-db:
-        condition: service_healthy
-      storage-db:
-        condition: service_healthy
+      postgres-db-init:
+        condition: service_completed_successfully
+    build:
+      context: .
+      dockerfile: docker/Supervisor/Dockerfile
+    # volumes:
+#      - .:/modyn_host
+    container_name: supervisor
+    ports:
+     - 3000:50063
+  tests:
+    depends_on:
+      supervisor:
+        condition: service_started
+      model_storage:
+        condition: service_started
     build:
       context: .
       dockerfile: docker/Tests/Dockerfile
