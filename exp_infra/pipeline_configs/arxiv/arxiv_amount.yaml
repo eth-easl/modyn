@@ -11,7 +11,7 @@ model_storage:
     name: PyTorchFullModel
 training:
   gpus: 1
-  device: cuda:0
+  device: cuda:1
   dataloader_workers: 2
   use_previous_model: true
   initial_model: random
@@ -38,7 +38,7 @@ training:
       limit: -1
       reset_after_trigger: true
   seed: 42
-  epochs_per_trigger: 1
+  epochs_per_trigger: 5
 data:
   dataset_id: arxiv_train
   bytes_parser_function: |

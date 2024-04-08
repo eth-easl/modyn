@@ -38,7 +38,7 @@ training:
       limit: -1
       reset_after_trigger: true
   seed: 42
-  epochs_per_trigger: 1
+  epochs_per_trigger: 10
 data:
   dataset_id: huffpost_train
   bytes_parser_function: |
