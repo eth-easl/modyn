@@ -55,14 +55,17 @@ class Client:
         self.eval_err_count: int = 0
     
     def _parse_pipeline_log(self, local_eval_dir) -> None:
-        with open(local_eval_dir / f"eval/pipeline_{self.pipeline_id}.log", 'r') as f:
+        with open(local_eval_dir / str(self.pipeline_id) / f"pipeline_{self.pipeline_id}.log", 'r') as f:
             pipeline_log = json.load(f)
-        logger.info(f"Evaluation results: {pipeline_log['evaluation_matrix']}")
+        if 'evaluation_matrix' not in pipeline_log:
+            print("Not using evaluation matrix, read .eval files for model accuracy.")
+        else:
+            logger.info(f"Evaluation results: {pipeline_log['evaluation_matrix']}")
 
     def _download_logs(self) -> None:
-        local_eval_dir = self.log_directory / f"{self.pipeline_id}"
+        local_eval_dir = self.log_directory
         os.makedirs(local_eval_dir, exist_ok=True)
-        ret = subprocess.run(["docker", "cp", f"supervisor:{self.eval_directory}", local_eval_dir])
+        ret = subprocess.run(["docker", "cp", f"supervisor:{self.eval_directory}/{self.pipeline_id}", local_eval_dir])
         logger.info(ret)
         self._parse_pipeline_log(local_eval_dir)
 
