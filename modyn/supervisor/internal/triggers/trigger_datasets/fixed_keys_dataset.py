@@ -54,7 +54,7 @@ class FixedKeysDataset(IterableDataset):
 
         self._keys = keys
 
-        logger.debug("Initialized TriggerDatasetGivenKeys.")
+        logger.debug("Initialized FixedKeysDataset.")
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
@@ -119,7 +119,7 @@ class FixedKeysDataset(IterableDataset):
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
-            TriggerDatasetGivenKeys._silence_pil()
+            FixedKeysDataset._silence_pil()
             self._debug("gRPC initialized.", worker_id)
 
         assert self._transform is not None
