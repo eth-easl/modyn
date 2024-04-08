@@ -53,6 +53,15 @@ class DataDriftTrigger(Trigger):
         if "drift_threshold" in trigger_config.keys():
             self.drift_threshold = trigger_config["drift_threshold"]
         assert self.drift_threshold >= 0 and self.drift_threshold <= 1, "drift_threshold range [0,1]"
+    
+        self.bootstrap: Optional[bool] = None
+        if "bootstrap" in trigger_config.keys():
+            self.bootstrap = bool(trigger_config["bootstrap"])
+
+        self.quantile_probability: float = 0.01
+        if "quantile_probability" in trigger_config.keys():
+            self.quantile_probability = trigger_config["quantile_probability"]
+        assert self.quantile_probability >= 0 and self.quantile_probability <= 1, "quantile_probability range [0,1]"
 
         self.sample_size: Optional[int] = None
         if "sample_size" in trigger_config.keys():
@@ -64,8 +73,8 @@ class DataDriftTrigger(Trigger):
                 "data",
                 drift_method=model(
                     threshold=self.drift_threshold,
-                    bootstrap=None,
-                    quantile_probability=0.95,
+                    bootstrap=self.bootstrap,
+                    quantile_probability=self.quantile_probability,
                     pca_components=None,
                 ),
             ),
@@ -114,19 +123,20 @@ class DataDriftTrigger(Trigger):
             reference_data=reference_embeddings_df, current_data=current_embeddings_df, column_mapping=column_mapping
         )
         result = report.as_dict()
-        result_print = [(x["result"]["drift_score"], x["result"]["method_name"]) for x in result["metrics"]]
+        result_print = [(x["result"]["drift_score"], x["result"]["method_name"], x["result"]["drift_detected"]) for x in result["metrics"]]
         logger.info(
             f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
             + f"[Result] {result_print}"
         )
 
-        with open(self.drift_dir / f"{self.previous_trigger_id}.json", "w") as f:
+        with open(self.drift_dir / f"drift_{self.previous_trigger_id}.json", "w") as f:
             json.dump(result, f)
 
-        true_count = 0
-        for metric in result["metrics"]:
-            true_count += int(metric["result"]["drift_detected"])
-        return true_count * 2 > len(result["metrics"])
+        # true_count = 0
+        # for metric in result["metrics"]:
+        #     true_count += int(metric["result"]["drift_detected"])
+        # return true_count * 2 > len(result["metrics"])
+        return result["metrics"][0]["result"]["drift_detected"]
 
     def detect_drift(self, idx_start, idx_end) -> bool:
         assert self.previous_trigger_id is not None
@@ -134,6 +144,9 @@ class DataDriftTrigger(Trigger):
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
 
+        timers = {}
+ 
+        self._sw.start("detect_drift_total", overwrite=True)
         # get training data keys of previous trigger from storage
         logger.info(
             f"[Prev Trigger {self.previous_trigger_id}][Prev Model {self.previous_model_id}] Start drift detection"
@@ -168,13 +181,26 @@ class DataDriftTrigger(Trigger):
             self.model_updated = False
 
         # Compute embeddings
+        self._sw.start("compute_embeddings", overwrite=True)
         reference_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(reference_dataloader)
         current_embeddings_df = self.model_wrapper.get_embeddings_evidently_format(current_dataloader)
         # reference_embeddings_df.to_csv(f"{self.debug_dir}/{self.pipeline_id}_ref.csv", index=False)
         # current_embeddings_df.to_csv(f"{self.debug_dir}/{self.pipeline_id}_cur.csv", index=False)
+        compute_embeddings_time = self._sw.stop("compute_embeddings")
+        timers["compute_embeddings"] = compute_embeddings_time
 
-        return self.run_detection(reference_embeddings_df, current_embeddings_df)
-        # return True
+        self._sw.start("run_detection", overwrite=True)
+        drift_detected = self.run_detection(reference_embeddings_df, current_embeddings_df)
+        run_detection_time = self._sw.stop("run_detection")
+        timers["run_detection"] = run_detection_time
+        
+        detect_drift_total_time = self._sw.stop("detect_drift_total")
+        timers["detect_drift_total"] = detect_drift_total_time
+
+        with open(self.timers_dir / f"timers_{self.previous_trigger_id}.json", "w") as f:
+            json.dump(timers, f)
+
+        return drift_detected
 
     # the supervisor informs the Trigger about the previous trigger before it calls next()
 
@@ -202,9 +228,8 @@ class DataDriftTrigger(Trigger):
                 triggered = True
             else:
                 # if exist previous model, detect drift
-                self._sw.start("detect_drift", overwrite=True)
                 triggered = self.detect_drift(detection_data_idx_start, detection_data_idx_end)
-                detect_time = self._sw.stop()
+
 
             if triggered:
                 trigger_data_points = detection_data_idx_end - detection_data_idx_start
@@ -311,6 +336,8 @@ class DataDriftTrigger(Trigger):
         self.exp_output_dir = self.base_dir / f"{self.dataloader_info.dataset_id}_{self.pipeline_id}"
         self.drift_dir = self.exp_output_dir / "drift"
         os.makedirs(self.drift_dir, exist_ok=True)
+        self.timers_dir = self.exp_output_dir / "timers"
+        os.makedirs(self.timers_dir, exist_ok=True)
         self.debug_dir = self.exp_output_dir / "debug"
         os.makedirs(self.debug_dir, exist_ok=True)
 
