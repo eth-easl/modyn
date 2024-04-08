@@ -298,7 +298,9 @@ void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for
       continue;
     }
 
+    SPDLOG_INFO("[JZ][{}][{}] START", dataset_id, file_path);
     const std::vector<int64_t> labels = file_wrapper->get_all_labels();
+    SPDLOG_INFO("[JZ][{}][{}] DONE", dataset_id, file_path);
 
     int32_t index = 0;
     for (const auto& label : labels) {

@@ -6,6 +6,10 @@
 #include <numeric>
 #include <stdexcept>
 
+#include <fmt/format.h>
+#include <spdlog/spdlog.h>
+#include <iostream>
+
 using namespace modyn::storage;
 
 void CsvFileWrapper::validate_file_extension() {
@@ -67,15 +71,27 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
 
 int64_t CsvFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
-  return doc_.GetCell<int64_t>(static_cast<size_t>(label_index_), static_cast<size_t>(index));
+  int64_t label;
+  try {
+    label = doc_.GetCell<int64_t>(static_cast<size_t>(label_index_), static_cast<size_t>(index));
+  } catch (const std::exception& e) {
+    label = -1;
+  }
+  return label;
 }
 
 std::vector<int64_t> CsvFileWrapper::get_all_labels() {
   std::vector<int64_t> labels;
   const uint64_t num_samples = get_number_of_samples();
+  std::vector<uint64_t> corrupted_idx;
   for (uint64_t i = 0; i < num_samples; i++) {
-    labels.push_back(get_label(i));
+    int64_t label = get_label(i);
+    labels.push_back(label);
+    if (label == -1) {
+      corrupted_idx.push_back(i);
+    }
   }
+  SPDLOG_INFO("[JZ] {} corrupted idx: {}", corrupted_idx.size(), fmt::join(corrupted_idx, ","));
   return labels;
 }
 
