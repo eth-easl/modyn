@@ -129,7 +129,7 @@ class PipelineExecutor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
-    # pylint: disable=unused-argument, no-name-in-module
+    # pylint: disable=unused-argument, too-many-locals
     def build_evaluation_matrix(self) -> None:
         # find the matrix evaluation dataset
         assert "matrix_eval_dataset_id" in self.pipeline_config["evaluation"], "No matrix_eval_dataset_id found."
@@ -141,8 +141,17 @@ class PipelineExecutor:
                 break
         assert matrix_eval_dataset_config is not None, "matrix evaluation dataset not found."
         assert "eval_every" in matrix_eval_dataset_config, "No eval_every parameter found in matrix evaluation dataset."
+        assert (
+            "eval_start_from" in matrix_eval_dataset_config
+        ), "No eval_start_from parameter found in matrix evaluation dataset."
+        assert (
+            "eval_end_at" in matrix_eval_dataset_config
+        ), "No eval_end_at parameter found in matrix evaluation dataset."
 
         eval_every = modyn.utils.utils.convert_timestr_to_seconds(matrix_eval_dataset_config["eval_every"])
+        eval_start_from = matrix_eval_dataset_config["eval_start_from"]
+        eval_end_at = matrix_eval_dataset_config["eval_end_at"]
+        assert eval_start_from < eval_end_at, "eval_start_from must be smaller than eval_end_at."
 
         def timestamp2string(ts: int) -> str:
             return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
@@ -150,9 +159,9 @@ class PipelineExecutor:
         self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
-            previous_split = 0 if self.start_replay_at is None else self.start_replay_at
+            previous_split = eval_start_from
             while True:
-                current_split = previous_split + eval_every
+                current_split = min(previous_split + eval_every, eval_end_at)
                 logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
                 request = GRPCHandler.prepare_evaluation_request(
                     matrix_eval_dataset_config,
@@ -162,35 +171,28 @@ class PipelineExecutor:
                     current_split,
                 )
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+                interval_name = f"{timestamp2string(previous_split)}-{timestamp2string(current_split)}"
                 if not response.evaluation_started:
-                    if response.not_start_reason == EvaluationNotStartReason.EMPTY_DATASET:
-                        logger.info(
-                            f"No data available for model {model} on split {previous_split} to {current_split}."
-                        )
-                        break
-
                     logger.error(
-                        f"Evaluation for model {model} on split {previous_split} to {current_split} failed with "
+                        f"Evaluation for model {model} on split {previous_split} to {current_split} not started with "
                         f"reason: "
                         f"{EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name}."
                     )
-
-                logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
-                reporter = EvaluationStatusReporter(
-                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
-                )
-                reporter.create_tracker()
-                evaluation = {response.evaluation_id: reporter}
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                # it does not make sense to have a result writer here, but we temporarily keep it to have the results
-                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
-                self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-
-                interval_name = f"{timestamp2string(previous_split)}-{timestamp2string(current_split)}"
-                self.pipeline_log["evaluation_matrix"][model][interval_name] = eval_result_writer.results
+                    self.pipeline_log["evaluation_matrix"][model][interval_name] = {}
+                else:
+                    logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
+                    reporter = EvaluationStatusReporter(
+                        self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
+                    )
+                    reporter.create_tracker()
+                    evaluation = {response.evaluation_id: reporter}
+                    self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+                    # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
+                    eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
+                    self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+                    self.pipeline_log["evaluation_matrix"][model][interval_name] = eval_result_writer.results
                 previous_split = current_split
-                if self.stop_replay_at is not None and current_split >= self.stop_replay_at:
-                    logger.info("reaching the end of replay data, stop matrix evaluation.")
+                if current_split == eval_end_at:
                     break
 
     def get_dataset_selector_batch_size(self) -> None:

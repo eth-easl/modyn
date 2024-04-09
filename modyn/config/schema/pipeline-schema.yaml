@@ -461,6 +461,17 @@ properties:
                 Only take effect when building the evaluation matrix. Currently accepted units are
                 "s" (seconds), "m" (minutes), "h" (hours), "d" (days), "w" (weeks), "mo" (months), "y" (years).
                 This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
+            eval_start_from:
+              type: number
+              description: |
+                This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
+                It is the timestamp from which the evaluation starts.
+            eval_end_at:
+              type: number
+              description: |
+                This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
+                It is the timestamp at which the evaluation ends. In case (eval_end_at - eval_start_from) % eval_every != 0,
+                the last evaluation will be done with end_timestamp = eval_end_at.
             dataloader_workers:
               type: number
               description: |
