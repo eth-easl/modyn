@@ -176,20 +176,7 @@ class Supervisor:
             if "evaluation" not in pipeline_config:
                 logger.error("Can only create evaluation matrix with evaluation section.")
                 is_valid = False
-            else:
-                train_dataset_id = pipeline_config["data"]["dataset_id"]
-                train_dataset_in_eval = any(
-                    dataset["dataset_id"] == train_dataset_id for dataset in pipeline_config["evaluation"]["datasets"]
-                )
-                if not train_dataset_in_eval:
-                    # TODO(#335): Fix this. Clean up in general.
-                    logger.error(
-                        "To create the evaluation matrix, you need to specify"
-                        f" how to evaluate the training dataset {train_dataset_id}"  # pylint: disable
-                        " in the evaluation section of the pipeline."
-                    )
-                    is_valid = False
-
+            # TODO: Add more checks for evaluation matrix
         return is_valid
 
     def validate_pipeline_config(self, pipeline_config: dict, evaluation_matrix: bool) -> bool:

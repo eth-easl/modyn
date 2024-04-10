@@ -69,7 +69,7 @@ class PipelineExecutor:
         self.evaluation_matrix = evaluation_matrix
 
         self._sw = Stopwatch()
-        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
+        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.json"
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": self.pipeline_config, "modyn_config": self.modyn_config},
             "supervisor": {
