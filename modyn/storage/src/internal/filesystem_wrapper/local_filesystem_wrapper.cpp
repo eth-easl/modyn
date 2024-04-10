@@ -66,21 +66,13 @@ uint64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
   return static_cast<int64_t>(std::filesystem::file_size(path));
 }
 
-template <typename TP>
-std::time_t to_time_t(TP tp) {
-  using namespace std::chrono;
-  const auto systemTime = file_clock::to_sys(tp);
-  return system_clock::to_time_t(systemTime);
-}
-
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
   static_assert(sizeof(int64_t) >= sizeof(std::time_t), "Cannot cast time_t to int64_t");
 
   const auto modified_time = std::filesystem::last_write_time(path);
-  const auto cftime = to_time_t(modified_time);
-  return static_cast<int64_t>(cftime);
+  return std::chrono::duration_cast<std::chrono::seconds>(modified_time.time_since_epoch()).count();
 
   /* C++20 version, not supported by compilers yet */
   /*
