@@ -37,7 +37,7 @@ class YearbookDownloader(Dataset):
         self._dataset = datasets
         self.data_dir = data_dir
 
-    def _get_year_data(self, year: int, store_all_data: bool) -> dict[str, list[tuple]]:
+    def _get_year_data(self, year: int, store_all_data: bool) -> tuple[dict[str, list[tuple]], dict[str, int]]:
         def get_one_split(split: int) -> list[Tuple]:
             images = torch.FloatTensor(
                 np.array(
@@ -53,11 +53,18 @@ class YearbookDownloader(Dataset):
             return [(images[i], labels[i]) for i in range(len(images))]
 
         if not store_all_data:
+            train_size = len(get_one_split(0))
+            print(f"for year {year} train size {train_size}")
             ds = {"train": get_one_split(0)}
+            stats = { "train": train_size }
         else:
+            train_size = len(get_one_split(0))
+            valid_size = len(get_one_split(1))
+            test_size = len(get_one_split(2))
             ds = {"train": get_one_split(0), "valid": get_one_split(1), "test": get_one_split(2)}
-            print(f"for year {year} train size {len(get_one_split(0))}, valid size {len(get_one_split(1))}, test size {len(get_one_split(2))}")
-        return ds
+            print(f"for year {year} train size {train_size}, valid size {valid_size}, test size {test_size}")
+            stats = { "train": train_size, "valid": valid_size, "test": test_size }
+        return ds, stats
 
     def __len__(self) -> int:
         return len(self._dataset["labels"])
@@ -76,9 +83,10 @@ class YearbookDownloader(Dataset):
             os.makedirs(valid_dir, exist_ok=True)
             os.makedirs(test_dir, exist_ok=True)
 
+        overall_stats = {}
         for year in self.time_steps:
-            print(f"Saving data for year {year}")
-            ds = self._get_year_data(year, store_all_data)
+            ds, stats = self._get_year_data(year, store_all_data)
+            overall_stats[year] = stats
             self.create_binary_file(ds["train"],
                                     os.path.join(train_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
@@ -90,6 +98,17 @@ class YearbookDownloader(Dataset):
                                         os.path.join(test_dir, f"{year}.bin"),
                                         create_fake_timestamp(year, base_year=1930))
 
+        with open(os.path.join(self.data_dir, "overall_stats.json"), "w") as f:
+            import json
+            json.dump(overall_stats, f, indent=4)
+
+        train_size_sum = sum([stats["train"] for stats in overall_stats.values()])
+        print(f"Total train size: {train_size_sum}")
+        if store_all_data:
+            valid_size_sum = sum([stats["valid"] for stats in overall_stats.values()])
+            test_size_sum = sum([stats["test"] for stats in overall_stats.values()])
+            print(f"Total valid size: {valid_size_sum}")
+            print(f"Total test size: {test_size_sum}")
         if add_final_dummy_year:
             dummy_year = year + 1
             dummy_data = [ ds["train"][0] ] # get one sample from the previous year
