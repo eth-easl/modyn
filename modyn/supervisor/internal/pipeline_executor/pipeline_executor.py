@@ -350,7 +350,7 @@ class PipelineExecutor:
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
                 if len(triggering_data) > 0:
-                    last_timestamp = triggering_data[-1][1]
+                    last_timestamp: Optional[int] = triggering_data[-1][1]
                 else:
                     last_timestamp = self.last_sample_in_trigger_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
