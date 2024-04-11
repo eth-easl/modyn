@@ -3,7 +3,6 @@ import multiprocessing as mp
 import os
 import pathlib
 import shutil
-from datetime import datetime, timezone
 from typing import Optional
 from unittest import mock
 from unittest.mock import MagicMock, call, patch
@@ -664,12 +663,9 @@ def test_build_evaluation_matrix_eval_failure(
     assert test_store_evaluation_results.call_count == 2
     assert test_wait_for_evaluation_completion.call_count == 2
 
-    def ts2string(ts: int) -> str:
-        return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{ts2string(0)}-{ts2string(100)}"] != {}
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{ts2string(100)}-{ts2string(200)}"] == {}
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{ts2string(200)}-{ts2string(300)}"] != {}
+    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{0}-{100}"] != {}
+    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{100}-{200}"] == {}
+    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{200}-{300}"] != {}
 
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")

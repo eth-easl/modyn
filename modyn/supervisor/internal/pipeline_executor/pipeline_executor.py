@@ -5,7 +5,6 @@ import os
 import pathlib
 import sys
 import traceback
-from datetime import datetime, timezone
 from time import sleep
 from typing import Any, Optional
 
@@ -87,6 +86,8 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.trained_models: list[int] = []
+        self.triggers: list[int] = []
+        self.last_sample_in_trigger_timestamp: Optional[int] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -153,9 +154,6 @@ class PipelineExecutor:
         eval_end_at = matrix_eval_dataset_config["eval_end_at"]
         assert eval_start_from < eval_end_at, "eval_start_from must be smaller than eval_end_at."
 
-        def timestamp2string(ts: int) -> str:
-            return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-
         self.pipeline_log["evaluation_matrix"] = {}
         for model in self.trained_models:
             self.pipeline_log["evaluation_matrix"][model] = {}
@@ -170,8 +168,9 @@ class PipelineExecutor:
                     previous_split,
                     current_split,
                 )
+                self._sw.start("evaluate_model", overwrite=True)
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-                interval_name = f"{timestamp2string(previous_split)}-{timestamp2string(current_split)}"
+                interval_name = f"{previous_split}-{current_split}"
                 if not response.evaluation_started:
                     logger.error(
                         f"Evaluation for model {model} on split {previous_split} to {current_split} not started with "
@@ -179,6 +178,7 @@ class PipelineExecutor:
                         f"{EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name}."
                     )
                     self.pipeline_log["evaluation_matrix"][model][interval_name] = {}
+                    self._sw.stop("evaluate_model")
                 else:
                     logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
                     reporter = EvaluationStatusReporter(
@@ -191,6 +191,9 @@ class PipelineExecutor:
                     eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                     self.grpc.store_evaluation_results([eval_result_writer], evaluation)
                     self.pipeline_log["evaluation_matrix"][model][interval_name] = eval_result_writer.results
+                    self.pipeline_log["evaluation_matrix"][model][interval_name]["evaluation_time"] = self._sw.stop(
+                        "evaluate_model"
+                    )
                 previous_split = current_split
                 if current_split == eval_end_at:
                     break
@@ -296,6 +299,7 @@ class PipelineExecutor:
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
+        self.pipeline_log["supervisor"]["triggers"][trigger_id]["trained_model_id"] = model_id
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
@@ -303,6 +307,7 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.trained_models.append(model_id)
+        self.triggers.append(trigger_id)
 
         # Start evaluation
         if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
@@ -344,6 +349,11 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
+                if len(triggering_data) > 0:
+                    last_timestamp = triggering_data[-1][1]
+                else:
+                    last_timestamp = self.last_sample_in_trigger_timestamp
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 self._run_training(trigger_id)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
@@ -369,6 +379,7 @@ class PipelineExecutor:
                     self.pipeline_log["supervisor"]["selector_informs"].append(
                         {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
                     )
+                    self.last_sample_in_trigger_timestamp = remaining_data[-1][1]
 
             self._persist_pipeline_log()
 
