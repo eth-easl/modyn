@@ -358,8 +358,8 @@ class PipelineExecutor:
                     first_timestamp = self.first_sample_in_trigger_timestamp
                 else:
                     first_timestamp = triggering_data[0][1]
-                self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 self.trigger_infos[trigger_id] = {
                     "last_timestamp": last_timestamp,
                     "first_timestamp": first_timestamp,

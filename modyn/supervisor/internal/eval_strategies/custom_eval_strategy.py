@@ -11,8 +11,11 @@ class CustomEvalStrategy(AbstractEvalStrategy):
         assert self.granularity > 0, "granularity must be greater than 0"
 
     def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int, int]]:
-        yield from [
+        intervals = [
             (0, first_timestamp),  # historical data
             (first_timestamp, last_timestamp + 1),  # current data
             (last_timestamp + 1, last_timestamp + 1 + self.granularity),  # future data
         ]
+        if first_timestamp == 0:
+            intervals.pop(0)
+        yield from intervals
