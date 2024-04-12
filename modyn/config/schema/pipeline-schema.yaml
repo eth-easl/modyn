@@ -422,6 +422,22 @@ properties:
         description: |
           The dataset id to be used for building the evaluation matrix.
           This dataset should appear in the following list of datasets and should have the "eval_every" parameter.
+      eval_strategy:
+        type: object
+        description: |
+          Configuration for the evaluation strategy.
+        properties:
+          name:
+            type: string
+            description: |
+              The name of the evaluation strategy. Currently we support "PeriodicalEvalStrategy".
+          config:
+            type: object
+            description: |
+              Configuration dictionary that will be passed to the strategy. For details please
+              refer to the specific strategy's constructor.
+        required:
+          - name
       datasets:
         type: array
         description: |
@@ -454,24 +470,6 @@ properties:
               type: number
               description: |
                 The batch size to be used during evaluation.
-            eval_every:
-              type: string
-              description: |
-                The frequency of evaluation. For example, "1y" means that the model is evaluated every year.
-                Only take effect when building the evaluation matrix. Currently accepted units are
-                "s" (seconds), "m" (minutes), "h" (hours), "d" (days), "w" (weeks), "mo" (months), "y" (years).
-                This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
-            eval_start_from:
-              type: number
-              description: |
-                This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
-                It is the timestamp from which the evaluation starts.
-            eval_end_at:
-              type: number
-              description: |
-                This parameter must (and only) appear in the dataset corresponding to the "matrix_eval_dataset_id".
-                It is the timestamp at which the evaluation ends. In case (eval_end_at - eval_start_from) % eval_every != 0,
-                the last evaluation will be done with end_timestamp = eval_end_at.
             dataloader_workers:
               type: number
               description: |

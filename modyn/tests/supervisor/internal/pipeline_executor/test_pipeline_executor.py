@@ -7,10 +7,9 @@ from typing import Optional
 from unittest import mock
 from unittest.mock import MagicMock, call, patch
 
-import pytest
-
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
+from modyn.supervisor.internal.eval_strategies.periodical_eval_strategy import PeriodicalEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -72,6 +71,17 @@ def get_minimal_pipeline_config() -> dict:
         "training": get_minimal_training_config(),
         "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+    }
+
+
+def get_minimal_eval_strategies_config() -> dict:
+    return {
+        "name": "PeriodicalEvalStrategy",
+        "config": {
+            "eval_every": "100s",
+            "eval_start_from": 0,
+            "eval_end_at": 300,
+        },
     }
 
 
@@ -398,7 +408,7 @@ def test_run_training(
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
-
+    pe.trigger_infos = {21: {}}
     pe._run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
@@ -432,7 +442,7 @@ def test_run_training_with_evaluation(
     pe.pipeline_config = evaluation_pipeline_config
 
     pe.pipeline_id = 42
-
+    pe.trigger_infos = {21: {}}
     pe._run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
@@ -570,56 +580,6 @@ def test_execute_pipeline(
     test_execute.assert_called_once()
 
 
-def test_build_evaluation_matrix_config_validation():
-    pipeline_config = get_minimal_pipeline_config()
-    evaluation_config = get_minimal_evaluation_config()
-    pipeline_config["evaluation"] = evaluation_config
-
-    def get_pe_with_pipeline_config(_pipeline_config):
-        return PipelineExecutor(
-            START_TIMESTAMP,
-            PIPELINE_ID,
-            get_minimal_system_config(),
-            _pipeline_config,
-            str(EVALUATION_DIRECTORY),
-            SUPPORTED_EVAL_RESULT_WRITERS,
-            PIPELINE_STATUS_QUEUE,
-            TRAINING_STATUS_QUEUE,
-            EVAL_STATUS_QUEUE,
-        )
-
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-    evaluation_config["matrix_eval_dataset_id"] = "unknown_dataset"
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-    evaluation_config["matrix_eval_dataset_id"] = "MNIST_eval"
-
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-    matrix_eval_dataset_config = evaluation_config["datasets"][0]
-    matrix_eval_dataset_config["eval_every"] = "100s"
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-    matrix_eval_dataset_config["eval_start_from"] = 200
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-    matrix_eval_dataset_config["eval_end_at"] = 0
-    pipeline_executor = get_pe_with_pipeline_config(pipeline_config)
-    with pytest.raises(AssertionError):
-        pipeline_executor.build_evaluation_matrix()
-
-
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
 def test_build_evaluation_matrix_eval_failure(
@@ -631,10 +591,7 @@ def test_build_evaluation_matrix_eval_failure(
     pipeline_config["evaluation"] = evaluation_config
     eval_dataset_config = evaluation_config["datasets"][0]
     evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
-
-    eval_dataset_config["eval_every"] = "100s"
-    eval_dataset_config["eval_start_from"] = 0
-    eval_dataset_config["eval_end_at"] = 300
+    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
     failure_response = EvaluateModelResponse(
@@ -656,16 +613,23 @@ def test_build_evaluation_matrix_eval_failure(
         evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
-    model_id = 11
-    pipeline_executor.trained_models = [model_id]
-    pipeline_executor.build_evaluation_matrix()
-    assert evaluator_stub_mock.evaluate_model.call_count == 3
-    assert test_store_evaluation_results.call_count == 2
-    assert test_wait_for_evaluation_completion.call_count == 2
+    pipeline_executor.triggers = [0]
+    pipeline_executor.trigger_infos = {
+        0: {"model_id": 0, "last_timestamp": 100},
+    }
 
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{0}-{100}"] != {}
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{100}-{200}"] == {}
-    assert pipeline_executor.pipeline_log["evaluation_matrix"][model_id][f"{200}-{300}"] != {}
+    def fake(fist_ts: int, last_ts: int):
+        yield from [(0, 100), (100, 200), (200, 300)]
+
+    with patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake):
+        pipeline_executor.build_evaluation_matrix()
+        assert evaluator_stub_mock.evaluate_model.call_count == 3
+        assert test_store_evaluation_results.call_count == 2
+        assert test_wait_for_evaluation_completion.call_count == 2
+
+        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{0}-{100}"] != {}
+        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{100}-{200}"] == {}
+        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{200}-{300}"] != {}
 
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
@@ -679,10 +643,7 @@ def test_build_evaluation_matrix(
     pipeline_config["evaluation"] = evaluation_config
     eval_dataset_config = evaluation_config["datasets"][0]
     evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
-
-    eval_dataset_config["eval_every"] = "100s"
-    eval_dataset_config["eval_start_from"] = 0
-    eval_dataset_config["eval_end_at"] = 300
+    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
         evaluation_started=True, evaluation_id=42, dataset_size=10
@@ -701,40 +662,32 @@ def test_build_evaluation_matrix(
         evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
-    pipeline_executor.trained_models = [11, 12, 13]
-    with patch.object(
-        GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
-    ) as prepare_evaluation_request_wrap:
+    pipeline_executor.triggers = [0, 1]
+    pipeline_executor.trigger_infos = {
+        0: {"model_id": 0, "last_timestamp": 100},
+        1: {"model_id": 1, "last_timestamp": 200},
+    }
+
+    def fake(fist_ts: int, last_ts: int):
+        yield from [(0, 100), (100, 200), (200, 300)]
+
+    with (
+        patch.object(
+            GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
+        ) as prepare_evaluation_request_wrap,
+        patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake),
+    ):
         pipeline_executor.build_evaluation_matrix()
-        assert evaluator_stub_mock.evaluate_model.call_count == 9
+        assert evaluator_stub_mock.evaluate_model.call_count == 6
 
-        for model_id in pipeline_executor.trained_models:
+        for trigger_id in pipeline_executor.triggers:
+            expected_model_id = pipeline_executor.trigger_infos[trigger_id]["model_id"]
             prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 0, 100
+                eval_dataset_config, expected_model_id, evaluation_config["device"], 0, 100
             )
             prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 100, 200
+                eval_dataset_config, expected_model_id, evaluation_config["device"], 100, 200
             )
             prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 200, 300
-            )
-
-    evaluator_stub_mock.reset_mock()
-    eval_dataset_config["eval_start_from"] = 20
-
-    with patch.object(
-        GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
-    ) as prepare_evaluation_request_wrap:
-        pipeline_executor.build_evaluation_matrix()
-        assert evaluator_stub_mock.evaluate_model.call_count == 9
-
-        for model_id in pipeline_executor.trained_models:
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 20, 120
-            )
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 120, 220
-            )
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, model_id, evaluation_config["device"], 220, 300
+                eval_dataset_config, expected_model_id, evaluation_config["device"], 200, 300
             )
