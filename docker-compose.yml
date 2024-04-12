@@ -139,7 +139,7 @@ services:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
     volumes:
-      - supervisor-evaluation-data:/evaluation_results
+      - supervisor-evaluation-data:/tmp/evaluation_results
 #      - .:/modyn_host
     container_name: supervisor
     ports:
