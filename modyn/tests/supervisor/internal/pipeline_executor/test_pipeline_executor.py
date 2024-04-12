@@ -376,7 +376,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
-    test_get_number_of_samples.return_value = len(batch)
+    test_get_number_of_samples.side_effect = [0, 0, 4]
 
     pe._handle_triggers_within_batch(batch, triggering_indices)
 
@@ -388,8 +388,8 @@ def test__handle_triggers_within_batch_empty_triggers(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(0), call(1), call(2)]
-    assert test__run_training.call_count == 3
+    run_training_expected_args = [call(2)]
+    assert test__run_training.call_count == 1
     assert test__run_training.call_args_list == run_training_expected_args
 
     assert test_inform_selector.call_count == 1
@@ -615,10 +615,10 @@ def test_build_evaluation_matrix_eval_failure(
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
     pipeline_executor.triggers = [0]
     pipeline_executor.trigger_infos = {
-        0: {"model_id": 0, "last_timestamp": 100},
+        0: {"model_id": 0, "first_timestamp": 70, "last_timestamp": 100},
     }
 
-    def fake(fist_ts: int, last_ts: int):
+    def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
     with patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake):
@@ -628,7 +628,9 @@ def test_build_evaluation_matrix_eval_failure(
         assert test_wait_for_evaluation_completion.call_count == 2
 
         assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{0}-{100}"] != {}
-        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{100}-{200}"] == {}
+        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{100}-{200}"] == {
+            "failure_reason": "EMPTY_DATASET"
+        }
         assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{200}-{300}"] != {}
 
 
@@ -664,11 +666,11 @@ def test_build_evaluation_matrix(
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
     pipeline_executor.triggers = [0, 1]
     pipeline_executor.trigger_infos = {
-        0: {"model_id": 0, "last_timestamp": 100},
-        1: {"model_id": 1, "last_timestamp": 200},
+        0: {"model_id": 0, "first_timestamp": 79, "last_timestamp": 100},
+        1: {"model_id": 1, "first_timestamp": 132, "last_timestamp": 200},
     }
 
-    def fake(fist_ts: int, last_ts: int):
+    def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
     with (

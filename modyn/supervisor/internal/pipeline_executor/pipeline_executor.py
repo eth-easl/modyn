@@ -88,6 +88,7 @@ class PipelineExecutor:
         self.triggers: list[int] = []
         self.trigger_infos: dict[int, dict[str, Any]] = {}
         self.last_sample_in_trigger_timestamp: Optional[int] = None
+        self.first_sample_in_trigger_timestamp: Optional[int] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -150,11 +151,13 @@ class PipelineExecutor:
         )
         self.pipeline_log["evaluation_matrix"] = {}
         for trigger_id in self.triggers:
-            timestamp = self.trigger_infos[trigger_id]["last_timestamp"]
             model = self.trigger_infos[trigger_id]["model_id"]
             self.pipeline_log["evaluation_matrix"][trigger_id] = {}
 
-            for previous_split, current_split in eval_strategy.get_eval_interval(timestamp, timestamp):
+            for previous_split, current_split in eval_strategy.get_eval_interval(
+                first_timestamp=self.trigger_infos[trigger_id]["first_timestamp"],
+                last_timestamp=self.trigger_infos[trigger_id]["last_timestamp"],
+            ):
                 logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
                 request = GRPCHandler.prepare_evaluation_request(
                     matrix_eval_dataset_config,
@@ -167,12 +170,14 @@ class PipelineExecutor:
                 response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
                 interval_name = f"{previous_split}-{current_split}"
                 if not response.evaluation_started:
+                    reason = EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name
                     logger.error(
                         f"Evaluation for model {model} on split {previous_split} to {current_split} not started with "
-                        f"reason: "
-                        f"{EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name}."
+                        f"reason: {reason}."
                     )
-                    self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = {}
+                    self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = {
+                        "failure_reason": reason,
+                    }
                     self._sw.stop("evaluate_model")
                 else:
                     logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
@@ -345,15 +350,27 @@ class PipelineExecutor:
                     last_timestamp: Optional[int] = triggering_data[-1][1]
                 else:
                     last_timestamp = self.last_sample_in_trigger_timestamp
+
+                if previous_trigger_idx == triggering_idx + 1 and self.first_sample_in_trigger_timestamp is not None:
+                    # the first trigger in this batch; whether the first sample in the trigger is
+                    # the first sample in triggering_data depends on if during the last call
+                    # there is non-empty remaining data
+                    first_timestamp = self.first_sample_in_trigger_timestamp
+                else:
+                    first_timestamp = triggering_data[0][1]
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
-                self.trigger_infos[trigger_id] = {"last_timestamp": last_timestamp}
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
+                self.trigger_infos[trigger_id] = {
+                    "last_timestamp": last_timestamp,
+                    "first_timestamp": first_timestamp,
+                }
                 self._run_training(trigger_id)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
-
+            self.first_sample_in_trigger_timestamp = None
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
@@ -373,6 +390,7 @@ class PipelineExecutor:
                         {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
                     )
                     self.last_sample_in_trigger_timestamp = remaining_data[-1][1]
+                    self.first_sample_in_trigger_timestamp = remaining_data[0][1]
 
             self._persist_pipeline_log()
 
