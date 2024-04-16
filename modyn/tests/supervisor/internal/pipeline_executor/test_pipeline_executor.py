@@ -351,7 +351,11 @@ def test__handle_triggers_within_batch(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(0), call(1), call(2)]
+    run_training_expected_args = [
+        call(0, 1, 2),
+        call(1, 3, 4),
+        call(2, 5, 6),
+    ]
     assert test__run_training.call_count == 3
     assert test__run_training.call_args_list == run_training_expected_args
 
@@ -388,7 +392,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(2)]
+    run_training_expected_args = [call(2, 1, 4)]
     assert test__run_training.call_count == 1
     assert test__run_training.call_args_list == run_training_expected_args
 
@@ -400,7 +404,7 @@ def test__handle_triggers_within_batch_empty_triggers(
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
-def test_run_training(
+def test__run_training(
     test_wait_for_training_completion: MagicMock,
     test_start_evaluation: MagicMock,
     test_start_training: MagicMock,
@@ -408,8 +412,7 @@ def test_run_training(
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
-    pe.trigger_infos = {21: {}}
-    pe._run_training(21)
+    pe._run_training(21, 20, 70)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
 
@@ -442,8 +445,7 @@ def test_run_training_with_evaluation(
     pe.pipeline_config = evaluation_pipeline_config
 
     pe.pipeline_id = 42
-    pe.trigger_infos = {21: {}}
-    pe._run_training(21)
+    pe._run_training(21, 20, 70)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
 
@@ -582,7 +584,7 @@ def test_execute_pipeline(
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test_build_evaluation_matrix_eval_failure(
+def test__run_modern_evaluations_failure(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
 ):
@@ -613,16 +615,12 @@ def test_build_evaluation_matrix_eval_failure(
         evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
-    pipeline_executor.triggers = [0]
-    pipeline_executor.trigger_infos = {
-        0: {"model_id": 0, "first_timestamp": 70, "last_timestamp": 100},
-    }
 
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
     with patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake):
-        pipeline_executor.build_evaluation_matrix()
+        pipeline_executor._run_modern_evaluations(0, 0, 70, 100)
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2
         assert test_wait_for_evaluation_completion.call_count == 2
@@ -636,7 +634,7 @@ def test_build_evaluation_matrix_eval_failure(
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test_build_evaluation_matrix(
+def test__run_modern_evaluations_success(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
 ):
@@ -664,11 +662,6 @@ def test_build_evaluation_matrix(
         evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
-    pipeline_executor.triggers = [0, 1]
-    pipeline_executor.trigger_infos = {
-        0: {"model_id": 0, "first_timestamp": 79, "last_timestamp": 100},
-        1: {"model_id": 1, "first_timestamp": 132, "last_timestamp": 200},
-    }
 
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
@@ -679,17 +672,18 @@ def test_build_evaluation_matrix(
         ) as prepare_evaluation_request_wrap,
         patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake),
     ):
-        pipeline_executor.build_evaluation_matrix()
-        assert evaluator_stub_mock.evaluate_model.call_count == 6
+        model_id = 1
+        pipeline_executor._run_modern_evaluations(
+            trigger_id=0, model_id=model_id, trigger_set_first_timestamp=20, trigger_set_last_timestamp=70
+        )
+        assert evaluator_stub_mock.evaluate_model.call_count == 3
 
-        for trigger_id in pipeline_executor.triggers:
-            expected_model_id = pipeline_executor.trigger_infos[trigger_id]["model_id"]
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, expected_model_id, evaluation_config["device"], 0, 100
-            )
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, expected_model_id, evaluation_config["device"], 100, 200
-            )
-            prepare_evaluation_request_wrap.assert_any_call(
-                eval_dataset_config, expected_model_id, evaluation_config["device"], 200, 300
-            )
+        prepare_evaluation_request_wrap.assert_any_call(
+            eval_dataset_config, model_id, evaluation_config["device"], 0, 100
+        )
+        prepare_evaluation_request_wrap.assert_any_call(
+            eval_dataset_config, model_id, evaluation_config["device"], 100, 200
+        )
+        prepare_evaluation_request_wrap.assert_any_call(
+            eval_dataset_config, model_id, evaluation_config["device"], 200, 300
+        )

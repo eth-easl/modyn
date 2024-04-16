@@ -12,7 +12,7 @@ import shutil
 import tempfile
 import traceback
 from enum import Enum
-from typing import Any, Optional, Tuple, Union, Iterable
+from typing import Any, Iterable, Optional, Tuple, Union
 
 import grpc
 import numpy as np

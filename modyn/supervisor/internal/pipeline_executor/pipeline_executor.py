@@ -86,7 +86,6 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.triggers: list[int] = []
-        self.trigger_infos: dict[int, dict[str, Any]] = {}
         self.last_sample_in_trigger_timestamp: Optional[int] = None
         self.first_sample_in_trigger_timestamp: Optional[int] = None
 
@@ -132,7 +131,9 @@ class PipelineExecutor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     # pylint: disable=unused-argument, too-many-locals
-    def build_evaluation_matrix(self) -> None:
+    def _run_modern_evaluations(
+        self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
+    ) -> None:
         # find the matrix evaluation dataset
         assert "matrix_eval_dataset_id" in self.pipeline_config["evaluation"], "No matrix_eval_dataset_id found."
         matrix_eval_dataset_id = self.pipeline_config["evaluation"]["matrix_eval_dataset_id"]
@@ -149,51 +150,51 @@ class PipelineExecutor:
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config["name"])(
             eval_strategy_config["config"]
         )
-        self.pipeline_log["evaluation_matrix"] = {}
-        for trigger_id in self.triggers:
-            model = self.trigger_infos[trigger_id]["model_id"]
-            self.pipeline_log["evaluation_matrix"][trigger_id] = {}
+        if "evaluation_matrix" not in self.pipeline_log:
+            self.pipeline_log["evaluation_matrix"] = {}
 
-            for previous_split, current_split in eval_strategy.get_eval_interval(
-                first_timestamp=self.trigger_infos[trigger_id]["first_timestamp"],
-                last_timestamp=self.trigger_infos[trigger_id]["last_timestamp"],
-            ):
-                logger.info(f"Matrix evaluation Starts for model {model} on split {previous_split} to {current_split}.")
-                request = GRPCHandler.prepare_evaluation_request(
-                    matrix_eval_dataset_config,
-                    model,
-                    self.pipeline_config["training"]["device"],
-                    previous_split,
-                    current_split,
+        self.pipeline_log["evaluation_matrix"][trigger_id] = {}
+
+        for previous_split, current_split in eval_strategy.get_eval_interval(
+            first_timestamp=trigger_set_first_timestamp,
+            last_timestamp=trigger_set_last_timestamp,
+        ):
+            logger.info(f"Modern evaluation Starts for model {model_id} on split {previous_split} to {current_split}.")
+            request = GRPCHandler.prepare_evaluation_request(
+                matrix_eval_dataset_config,
+                model_id,
+                self.pipeline_config["training"]["device"],
+                previous_split,
+                current_split,
+            )
+            self._sw.start("evaluate_model", overwrite=True)
+            response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+            interval_name = f"{previous_split}-{current_split}"
+            if not response.evaluation_started:
+                reason = EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name
+                logger.error(
+                    f"Evaluation for model {model_id} on split {previous_split} to {current_split} not started with "
+                    f"reason: {reason}."
                 )
-                self._sw.start("evaluate_model", overwrite=True)
-                response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-                interval_name = f"{previous_split}-{current_split}"
-                if not response.evaluation_started:
-                    reason = EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name
-                    logger.error(
-                        f"Evaluation for model {model} on split {previous_split} to {current_split} not started with "
-                        f"reason: {reason}."
-                    )
-                    self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = {
-                        "failure_reason": reason,
-                    }
-                    self._sw.stop("evaluate_model")
-                else:
-                    logger.info(f"Evaluation started for model {model} on split {previous_split} to {current_split}.")
-                    reporter = EvaluationStatusReporter(
-                        self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
-                    )
-                    reporter.create_tracker()
-                    evaluation = {response.evaluation_id: reporter}
-                    self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                    # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
-                    eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
-                    self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                    self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = eval_result_writer.results
-                    self.pipeline_log["evaluation_matrix"][trigger_id][interval_name]["evaluation_time"] = (
-                        self._sw.stop("evaluate_model")
-                    )
+                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = {
+                    "failure_reason": reason,
+                }
+                self._sw.stop("evaluate_model")
+            else:
+                logger.info(f"Evaluation started for model {model_id} on split {previous_split} to {current_split}.")
+                reporter = EvaluationStatusReporter(
+                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
+                )
+                reporter.create_tracker()
+                evaluation = {response.evaluation_id: reporter}
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+                # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
+                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
+                self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = eval_result_writer.results
+                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
+                    "evaluate_model"
+                )
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
@@ -268,7 +269,7 @@ class PipelineExecutor:
 
         return False
 
-    def _run_training(self, trigger_id: int) -> None:
+    def _run_training(self, trigger_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int) -> None:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
         self._update_pipeline_stage_and_enqueue_msg(
@@ -311,23 +312,27 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.triggers.append(trigger_id)
-        self.trigger_infos[trigger_id]["model_id"] = model_id
 
         # Start evaluation
-        if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
-            self._update_pipeline_stage_and_enqueue_msg(
-                PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-            )
-            # TODO(#300) Add evaluator to pipeline log
-            evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
-            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
+        if "evaluation" in self.pipeline_config:
+            if not self.evaluation_matrix:
+                self._update_pipeline_stage_and_enqueue_msg(
+                    PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                )
+                # TODO(#300) Add evaluator to pipeline log
+                evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
 
-            self._update_pipeline_stage_and_enqueue_msg(
-                PipelineStage.STORE_EVALUATION_RESULTS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-            )
-            writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
-            writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
-            self.grpc.store_evaluation_results(writers, evaluations)
+                self._update_pipeline_stage_and_enqueue_msg(
+                    PipelineStage.STORE_EVALUATION_RESULTS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                )
+                writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
+                writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
+                self.grpc.store_evaluation_results(writers, evaluations)
+            else:
+                self._run_modern_evaluations(
+                    trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp
+                )
 
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
@@ -367,11 +372,7 @@ class PipelineExecutor:
                     first_timestamp = triggering_data[0][1]
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
-                self.trigger_infos[trigger_id] = {
-                    "last_timestamp": last_timestamp,
-                    "first_timestamp": first_timestamp,
-                }
-                self._run_training(trigger_id)  # Blocks until training is done.
+                self._run_training(trigger_id, first_timestamp, last_timestamp)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
@@ -500,9 +501,6 @@ class PipelineExecutor:
         logger.info(f"[pipeline {self.pipeline_id}] Start executing, experiment mode {self.experiment_mode}.")
         if self.experiment_mode:
             self.replay_data()
-
-            if self.evaluation_matrix:
-                self.build_evaluation_matrix()
         else:
             self.wait_for_new_data(self.start_timestamp)
 
