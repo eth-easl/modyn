@@ -12,7 +12,7 @@ import shutil
 import tempfile
 import traceback
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, Iterable
 
 import grpc
 import numpy as np
@@ -361,7 +361,7 @@ class PytorchTrainer:
 
         batch_number = -1
         if self.num_samples_to_pass == 0:
-            epoch_num_generator = range(self.epochs_per_trigger)
+            epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
             self._info("Use normal epochs_per_trigger threshold.")
         else:
             # an infinity epoch generator
