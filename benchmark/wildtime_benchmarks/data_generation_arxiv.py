@@ -46,8 +46,6 @@ class ArXivDownloader(Dataset):
         if store_all_data:
             test_dir = os.path.join(self.path, "test")
             os.makedirs(test_dir, exist_ok=True)
-            valid_dir = os.path.join(self.path, "valid")
-            os.makedirs(valid_dir, exist_ok=True)
 
         stats = {}
 
@@ -80,14 +78,6 @@ class ArXivDownloader(Dataset):
 
                 # set timestamp
                 os.utime(test_file, (year_timestamp, year_timestamp))
-
-                valid_year_rows = get_one_split(2)
-                valid_file = os.path.join(valid_dir, f"{year}.csv")
-                with open(valid_file, "w", encoding="utf-8") as f:
-                    f.write("\n".join(valid_year_rows))
-
-                print(f"for year {year} train size {len(train_year_rows)}, test size {len(test_year_rows)}, valid size {len(valid_year_rows)}")
-                stats[year] = {"train": len(train_year_rows), "test": len(test_year_rows), "valid": len(valid_year_rows)}
             else:
                 print(f"for year {year} train size {len(train_year_rows)}")
                 stats[year] = {"train": len(train_year_rows)}
@@ -112,13 +102,6 @@ class ArXivDownloader(Dataset):
 
                 # set timestamp
                 os.utime(test_dummy_file, (year_timestamp, year_timestamp))
-
-                valid_dummy_file = os.path.join(valid_dir, f"{dummy_year}.csv")
-                with open(valid_dummy_file, "w", encoding="utf-8") as f:
-                    f.write("\n".join(["dummy\t0"]))
-
-                # set timestamp
-                os.utime(valid_dummy_file, (year_timestamp, year_timestamp))
 
         # os.remove(os.path.join(self.path, "arxiv.pkl"))
 
