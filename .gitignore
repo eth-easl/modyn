@@ -78,3 +78,9 @@ plots/
 cmake-build-debug/
 clang-tidy-build/
 libbuild/
+
+
+# Data & config files
+
+.data/
+.env

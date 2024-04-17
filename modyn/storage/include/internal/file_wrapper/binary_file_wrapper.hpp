@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <fstream>
 #include <iostream>
+#include <cctype>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
@@ -24,6 +25,7 @@ class BinaryFileWrapper : public FileWrapper {
     sample_size_ = record_size_ - label_size_;
     validate_file_extension();
     file_size_ = filesystem_wrapper_->get_file_size(path);
+    little_endian_ = fw_config["byteorder"].as<std::string>() == "little";
 
     ASSERT(static_cast<int64_t>(record_size_ - label_size_) >= 1,
            "Each record must have at least 1 byte of data other than the label.");
@@ -53,12 +55,14 @@ class BinaryFileWrapper : public FileWrapper {
 
  private:
   static void validate_request_indices(uint64_t total_samples, const std::vector<uint64_t>& indices);
-  static int64_t int_from_bytes(const unsigned char* begin, const unsigned char* end);
+  static int64_t int_from_bytes_little_endian(const unsigned char* begin, const unsigned char* end);
+  static int64_t int_from_bytes_big_endian(const unsigned char* begin, const unsigned char* end);
   std::ifstream* get_stream();
   uint64_t record_size_;
   uint64_t label_size_;
   uint64_t file_size_;
   uint64_t sample_size_;
+  bool little_endian_;
   std::shared_ptr<std::ifstream> stream_;
 };
 }  // namespace modyn::storage

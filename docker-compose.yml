@@ -18,7 +18,7 @@ services:
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
 #    shm_size: 24gb
     volumes:
-      - ./metadata-postgres-data:/var/lib/postgresql/data
+      - .data/metadata-postgres-data:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -38,7 +38,7 @@ services:
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
 #    shm_size: 8gb
     volumes:
-      - ./storage-postgres-data:/var/lib/postgresql/data
+      - .data/storage-postgres-data:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -57,6 +57,7 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
+      - ./modyn/config/examples:/src/modyn/config/examples/
 #      - /mnt/datasets:/datasets
 #      - .:/modyn_host
   metadata_processor:
