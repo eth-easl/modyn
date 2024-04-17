@@ -78,6 +78,8 @@ class ArXivDownloader(Dataset):
 
                 # set timestamp
                 os.utime(test_file, (year_timestamp, year_timestamp))
+                print(f"for year {year} train size {len(train_year_rows)} test size {len(test_year_rows)}")
+                stats[year] = {"train": len(train_year_rows), "test": len(test_year_rows)}
             else:
                 print(f"for year {year} train size {len(train_year_rows)}")
                 stats[year] = {"train": len(train_year_rows)}
