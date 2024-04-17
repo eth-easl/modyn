@@ -16,7 +16,6 @@ int64_t BinaryFileWrapper::int_from_bytes_big_endian(const unsigned char* begin,
   return std::accumulate(begin, end, 0LL, [](int64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
 }
 
-
 uint64_t BinaryFileWrapper::get_number_of_samples() { return file_size_ / record_size_; }
 
 void BinaryFileWrapper::validate_file_extension() {
@@ -39,8 +38,10 @@ int64_t BinaryFileWrapper::get_label(uint64_t index) {
   std::vector<unsigned char> label_vec(label_size_);
   get_stream()->read(reinterpret_cast<char*>(label_vec.data()), static_cast<int64_t>(label_size_));
 
-  if (this->little_endian_) return int_from_bytes_little_endian(label_vec.data(), label_vec.data() + label_size_);
-  else return int_from_bytes_big_endian(label_vec.data(), label_vec.data() + label_size_);
+  if (this->little_endian_)
+    return int_from_bytes_little_endian(label_vec.data(), label_vec.data() + label_size_);
+  else
+    return int_from_bytes_big_endian(label_vec.data(), label_vec.data() + label_size_);
 }
 
 std::ifstream* BinaryFileWrapper::get_stream() {
@@ -69,8 +70,7 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
       labels.push_back(int_from_bytes_little_endian(label_vec.data(), label_vec.data() + label_size_));
       label_vec.clear();
     }
-  }
-  else {
+  } else {
     for (uint64_t i = 0; i < num_samples; ++i) {
       get_stream()->seekg(static_cast<int64_t>(i * record_size_), std::ios::beg);
       get_stream()->read(reinterpret_cast<char*>(label_vec.data()), static_cast<int64_t>(label_size_));
