@@ -85,24 +85,6 @@ storage:
         selector_batch_size: 256,
       },
       {
-        name: "yearbook-validation",
-        description: "Yearbook Dataset from Wild-Time (validation set)",
-        version: "0.0.1",
-        base_path: "/datasets/yearbook/valid",
-        filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "BinaryFileWrapper",
-        file_wrapper_config:
-          {
-            byteorder: "little",
-            record_size: 12292,
-            label_size: 4,
-            file_extension: ".bin"
-          },
-        ignore_last_timestamp: false,
-        file_watcher_interval: 5,
-        selector_batch_size: 256,
-      },
-      {
         name: "fmow",
         description: "Functional Map of the World Dataset (from WILDS/Wild-time)",
         version: "0.0.1",
@@ -122,7 +104,23 @@ storage:
         name: "arxiv",
         description: "Arxiv Dataset (from Wild-time)",
         version: "0.0.1",
-        base_path: "/datasets/arxiv",
+        base_path: "/datasets/arxiv/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".txt",
+            label_file_extension: ".label"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      {
+        name: "arxiv-test",
+        description: "Arxiv Dataset (from Wild-time)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv/test",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:

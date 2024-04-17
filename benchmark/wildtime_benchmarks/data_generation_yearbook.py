@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import Dict, List, Tuple
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -44,7 +44,7 @@ class YearbookDownloader(Dataset):
                     [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
                         # Pytorch requires CHW format
                         img.transpose(2, 0, 1)
-                        # _dataset has 3 dimensions [years][train=0,valid=1,test=2]["images"/"labels"]
+                        # _dataset has 2 dimensions [years][train=0,test=1]["images"/"labels"]
                         for img in self._dataset[year][split]["images"]
                     ]
                 )
@@ -59,11 +59,10 @@ class YearbookDownloader(Dataset):
             stats = { "train": train_size }
         else:
             train_size = len(get_one_split(0))
-            valid_size = len(get_one_split(1))
-            test_size = len(get_one_split(2))
-            ds = {"train": get_one_split(0), "valid": get_one_split(1), "test": get_one_split(2)}
-            print(f"for year {year} train size {train_size}, valid size {valid_size}, test size {test_size}")
-            stats = { "train": train_size, "valid": valid_size, "test": test_size }
+            test_size = len(get_one_split(1))
+            ds = {"train": get_one_split(0), "test": get_one_split(1)}
+            print(f"for year {year} train size {train_size}, test size {test_size}")
+            stats = {"train": train_size, "test": test_size}
         return ds, stats
 
     def __len__(self) -> int:
@@ -78,9 +77,7 @@ class YearbookDownloader(Dataset):
         os.makedirs(train_dir, exist_ok=True)
 
         if store_all_data:
-            valid_dir = os.path.join(self.data_dir, "valid")
             test_dir = os.path.join(self.data_dir, "test")
-            os.makedirs(valid_dir, exist_ok=True)
             os.makedirs(test_dir, exist_ok=True)
 
         overall_stats = {}
@@ -91,9 +88,6 @@ class YearbookDownloader(Dataset):
                                     os.path.join(train_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
             if store_all_data:
-                self.create_binary_file(ds["valid"],
-                                        os.path.join(valid_dir, f"{year}.bin"),
-                                        create_fake_timestamp(year, base_year=1930))
                 self.create_binary_file(ds["test"],
                                         os.path.join(test_dir, f"{year}.bin"),
                                         create_fake_timestamp(year, base_year=1930))
@@ -105,9 +99,7 @@ class YearbookDownloader(Dataset):
         train_size_sum = sum([stats["train"] for stats in overall_stats.values()])
         print(f"Total train size: {train_size_sum}")
         if store_all_data:
-            valid_size_sum = sum([stats["valid"] for stats in overall_stats.values()])
             test_size_sum = sum([stats["test"] for stats in overall_stats.values()])
-            print(f"Total valid size: {valid_size_sum}")
             print(f"Total test size: {test_size_sum}")
         if add_final_dummy_year:
             dummy_year = year + 1
@@ -116,9 +108,6 @@ class YearbookDownloader(Dataset):
                                     os.path.join(train_dir, f"{dummy_year}.bin"),
                                     create_fake_timestamp(dummy_year, base_year=1930))
             if store_all_data:
-                self.create_binary_file(dummy_data,
-                                        os.path.join(valid_dir, f"{dummy_year}.bin"),
-                                        create_fake_timestamp(dummy_year, base_year=1930))
                 self.create_binary_file(dummy_data,
                                         os.path.join(test_dir, f"{dummy_year}.bin"),
                                         create_fake_timestamp(dummy_year, base_year=1930))
