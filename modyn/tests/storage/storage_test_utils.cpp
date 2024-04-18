@@ -4,6 +4,7 @@ using namespace modyn::storage;
 
 YAML::Node StorageTestUtils::get_dummy_file_wrapper_config() {
   YAML::Node config;
+  config["byteorder"] = "little";
   config["file_extension"] = ".txt";
   config["label_file_extension"] = ".json";
   config["label_size"] = 2;
@@ -18,6 +19,7 @@ YAML::Node StorageTestUtils::get_dummy_file_wrapper_config() {
 
 std::string StorageTestUtils::get_dummy_file_wrapper_config_inline() {
   std::string test_config = R"(
+byteorder: "little"
 file_extension: ".txt"
 label_file_extension: ".lbl"
 label_size: 1
