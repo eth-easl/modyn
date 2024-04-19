@@ -2,10 +2,10 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cctype>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
-#include <cctype>
 
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
