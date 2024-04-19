@@ -15,7 +15,7 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  batch_size: 96
+  batch_size: 128
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -41,7 +41,7 @@ data:
   dataset_id: arxiv
   bytes_parser_function: |
     def bytes_parser_function(data: bytes) -> str:
-      return data.decode("utf-8")
+      return str(data, "utf8")
   tokenizer: DistilBertTokenizerTransform
 
 trigger:
