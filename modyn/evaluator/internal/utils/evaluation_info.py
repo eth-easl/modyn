@@ -47,6 +47,11 @@ class EvaluationInfo:
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
+        self.tokenizer: Optional[str] = None
+        if request.HasField("tokenizer"):
+            self.tokenizer = request.tokenizer.value
+        else:
+            self.tokenizer = None
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address

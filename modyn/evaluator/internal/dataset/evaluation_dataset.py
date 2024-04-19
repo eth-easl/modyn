@@ -14,6 +14,7 @@ from modyn.utils.utils import (
     MAX_MESSAGE_SIZE,
     deserialize_function,
     grpc_connection_established,
+    instantiate_class,
 )
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
@@ -32,6 +33,7 @@ class EvaluationDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
+        tokenizer: Optional[str] = None,
         start_timestamp: int = 0,
         end_timestamp: int = 0,
     ):
@@ -48,20 +50,31 @@ class EvaluationDataset(IterableDataset):
         self._bytes_parser_function: Optional[Callable] = None
         self._start_timestamp = start_timestamp
         self._end_timestamp = end_timestamp
+
+        # tokenizer for NLP tasks
+        self._tokenizer = None
+        self._tokenizer_name = tokenizer
+        if tokenizer is not None:
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+
         logger.debug("Initialized EvaluationDataset.")
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
-        self._deserialize_torchvision_transforms()
+        self._setup_composed_transform()
 
-    def _deserialize_torchvision_transforms(self) -> None:
+    def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
 
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
+
+        if self._tokenizer is not None:
+            self._transform_list.append(self._tokenizer)
+
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
