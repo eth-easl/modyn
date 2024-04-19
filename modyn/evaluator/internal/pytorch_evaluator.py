@@ -64,6 +64,7 @@ class PytorchEvaluator:
             evaluation_info.transform_list,
             evaluation_info.storage_address,
             evaluation_info.evaluation_id,
+            evaluation_info.tokenizer,
             evaluation_info.start_timestamp,
             evaluation_info.end_timestamp,
         )
@@ -125,6 +126,8 @@ class PytorchEvaluator:
                     data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
                     for name, tensor in batch[1].items():
                         data[name] = tensor.to(self._device)
+                else:
+                    raise ValueError(f"data type {type(batch[1])} not supported")
 
                 if self._label_tranformer_function is None:
                     target = batch[2].to(self._device)

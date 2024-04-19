@@ -604,6 +604,10 @@ class GRPCHandler:
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
 
+        if "tokenizer" in dataset_config:
+            tokenizer = dataset_config["tokenizer"]
+            start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
+
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
     def wait_for_evaluation_completion(

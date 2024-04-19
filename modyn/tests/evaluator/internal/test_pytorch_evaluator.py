@@ -74,7 +74,15 @@ class MockEvaluationDataset(IterableDataset):
     # pylint: disable=abstract-method
 
     def __init__(
-        self, dataset_id, bytes_parser, transform_list, storage_address, evaluation_id, start_timestamp, end_timestamp
+        self,
+        dataset_id,
+        bytes_parser,
+        transform_list,
+        storage_address,
+        evaluation_id,
+        start_timestamp,
+        end_timestamp,
+        tokenizer,
     ):
         self.dataset = iter([(key, key, key * 2) for key in range(100)])
 
@@ -108,7 +116,6 @@ def get_evaluation_info(
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=get_mock_label_transformer() if label_transformer else ""),
     )
-
     return EvaluationInfo(request, evaluation_id, "model", "{}", False, storage_address, metrics, trained_model_path)
 
 
@@ -127,6 +134,7 @@ def get_mock_evaluator(
         trained_model_path,
         label_transformer,
     )
+    print(f'[xz] {evaluation_info.tokenizer}')
     evaluator = PytorchEvaluator(
         evaluation_info, query_queue, response_queue, metric_result_queue, logging.getLogger(__name__)
     )
