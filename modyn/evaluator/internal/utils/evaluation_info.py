@@ -50,6 +50,8 @@ class EvaluationInfo:
         self.tokenizer: Optional[str] = None
         if request.HasField("tokenizer"):
             self.tokenizer = request.tokenizer.value
+        else:
+            self.tokenizer = None
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
