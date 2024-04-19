@@ -44,6 +44,7 @@ message EvaluateModelRequest {
   repeated string transform_list = 6;
   PythonString bytes_parser = 7;
   PythonString label_transformer = 8;
+  optional PythonString tokenizer = 10;
 }
 
 message EvaluateModelResponse {

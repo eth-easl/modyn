@@ -446,6 +446,8 @@ def test_start_evaluation(test_connection_established):
 
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
+    dataset_config = pipeline_config["evaluation"]["datasets"][0]
+    dataset_config["tokenizer"] = "DistilBertTokenizerTransform"
     request = GRPCHandler.prepare_evaluation_request(
         pipeline_config["evaluation"]["datasets"][0], 23, "cpu", start_timestamp=42, end_timestamp=43
     )
@@ -457,6 +459,7 @@ def test_prepare_evaluation_request():
     assert request.dataset_info.num_dataloaders == 2
     assert request.metrics[0].name == "Accuracy"
     assert request.metrics[0].config.value == "{}"
+    assert request.tokenizer.value == "DistilBertTokenizerTransform"
     assert request.dataset_info.start_timestamp == 42
     assert request.dataset_info.end_timestamp == 43
 
