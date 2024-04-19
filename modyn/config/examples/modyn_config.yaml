@@ -135,7 +135,7 @@ storage:
         selector_batch_size: 4096,
       },
       {
-        name: "arxiv",
+        name: "arxiv-test",
         description: "Arxiv Dataset from Wild-time (test set)",
         version: "0.0.1",
         base_path: "/datasets/arxiv/test",
