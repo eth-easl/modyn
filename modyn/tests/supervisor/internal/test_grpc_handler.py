@@ -470,7 +470,7 @@ def test_start_evaluation_default_prefetch_configs(prepare_evaluation_request_mo
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
     dataset_config = pipeline_config["evaluation"]["datasets"][0]
-    dataset_config['tokenizer'] = "DistilBertTokenizerTransform"
+    dataset_config["tokenizer"] = "DistilBertTokenizerTransform"
     request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
 
     assert request.model_id == 23

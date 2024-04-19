@@ -67,7 +67,7 @@ def test_init():
         serialized_transforms=[],
         storage_address="localhost:1234",
         evaluation_id=10,
-        tokenizer="DistilBertTokenizerTransform"
+        tokenizer="DistilBertTokenizerTransform",
     )
 
     assert evaluation_dataset._evaluation_id == 10
@@ -76,6 +76,7 @@ def test_init():
     assert evaluation_dataset._bytes_parser_function is None
     assert evaluation_dataset._storagestub is None
     assert isinstance(evaluation_dataset._tokenizer, DistilBertTokenizerTransform)
+
 
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.StorageStub", MockStorageStub)
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.grpc_connection_established", return_value=True)
@@ -179,7 +180,7 @@ def test__setup_composed_transform(serialized_transforms, transforms_list):
         serialized_transforms=list(serialized_transforms),
         storage_address="localhost:1234",
         evaluation_id=10,
-        tokenizer="DistilBertTokenizerTransform"
+        tokenizer="DistilBertTokenizerTransform",
     )
     evaluation_dataset._bytes_parser_function = bytes_parser_function
     evaluation_dataset._setup_composed_transform()
