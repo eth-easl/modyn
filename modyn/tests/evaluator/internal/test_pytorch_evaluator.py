@@ -134,7 +134,6 @@ def get_mock_evaluator(
         trained_model_path,
         label_transformer,
     )
-    print(f'[xz] {evaluation_info.tokenizer}')
     evaluator = PytorchEvaluator(
         evaluation_info, query_queue, response_queue, metric_result_queue, logging.getLogger(__name__)
     )
