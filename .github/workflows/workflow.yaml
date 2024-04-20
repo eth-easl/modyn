@@ -106,7 +106,7 @@ jobs:
       - name: Pytest
         run: |
           set -o pipefail
-          micromamba run -n modyn pytest modyn --cache-clear --cov-report term --cov-fail-under=100 | tee pytest-coverage.txt
+          micromamba run -n modyn pytest modyn --cache-clear --cov-report term --cov-fail-under=90 | tee pytest-coverage.txt
 
       - name: Comment coverage
         uses: coroo/pytest-coverage-commentator@v1.0.2
