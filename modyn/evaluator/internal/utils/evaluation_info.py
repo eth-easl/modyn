@@ -24,7 +24,12 @@ class EvaluationInfo:
         storage_address: str,
         metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
-    ) -> None:
+        pipeline_id: Optional[int] = None,
+        trigger_id: Optional[int] = None,
+        num_prefetched_partitions: Optional[int] = None,
+        parallel_prefetch_requests: Optional[int] = None,
+        selector_address: Optional[str] = None,
+    ) -> None:  # pragma: no cover
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
