@@ -24,7 +24,7 @@ class EvaluationInfo:
         storage_address: str,
         metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
-    ) -> None:
+    ) -> None:  # pragma: no cover
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders

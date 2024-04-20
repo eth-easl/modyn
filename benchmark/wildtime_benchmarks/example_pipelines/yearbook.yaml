@@ -42,7 +42,7 @@ data:
   transformations: []
   bytes_parser_function: |
     import torch
-    def bytes_parser_function(data: bytes) -> torch.Tensor:
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
       return torch.frombuffer(bytearray(data), dtype=torch.float32).reshape(3, 32, 32)
 
 trigger:
