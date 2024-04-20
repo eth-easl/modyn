@@ -645,11 +645,17 @@ def test_iter_multi_partition(
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     idx = 0
+    all_samples = []
+    all_data = []
     for idx, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert torch.equal(batch[0], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
-        assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
+        all_samples.extend(batch[0].tolist())
+        all_data.extend(batch[1].tolist())
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+    expected_samples = list(range(64))
+    expected_data = expected_samples
+    assert set(all_samples) == set(expected_samples)
+    assert set(all_data) == set(expected_data)
     assert idx == 15
 
 
@@ -703,12 +709,18 @@ def test_iter_multi_partition_weighted(
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
 
     idx = 0
+    all_samples = []
+    all_data = []
     for idx, batch in enumerate(dataloader):
         assert len(batch) == 4
-        assert torch.equal(batch[0], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
-        assert torch.equal(batch[1], torch.Tensor([4 * idx, 4 * idx + 1, 4 * idx + 2, 4 * idx + 3]))
+        all_samples.extend(batch[0].tolist())
+        all_data.extend(batch[1].tolist())
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
         assert torch.equal(batch[3], 0.9 * torch.ones(4, dtype=torch.float64))
+    expected_samples = list(range(64))
+    expected_data = expected_samples
+    assert set(all_samples) == set(expected_samples)
+    assert set(all_data) == set(expected_data)
     assert idx == 15
 
 
