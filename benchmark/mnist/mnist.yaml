@@ -43,7 +43,7 @@ data:
   bytes_parser_function: |
     from PIL import Image
     import io
-    def bytes_parser_function(data: bytes) -> Image:
+    def bytes_parser_function(data: memoryview) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
