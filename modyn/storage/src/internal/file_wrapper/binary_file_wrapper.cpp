@@ -9,11 +9,13 @@ using namespace modyn::storage;
 int64_t BinaryFileWrapper::int_from_bytes_little_endian(const unsigned char* begin, const unsigned char* end) {
   const std::reverse_iterator<const unsigned char*> rbegin(end);
   const std::reverse_iterator<const unsigned char*> rend(begin);
-  return std::accumulate(rbegin, rend, 0LL, [](int64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
+  return static_cast<int64_t>(
+      std::accumulate(rbegin, rend, 0LL, [](uint64_t acc, unsigned char byte) { return (acc << 8u) | byte; }));
 }
 
 int64_t BinaryFileWrapper::int_from_bytes_big_endian(const unsigned char* begin, const unsigned char* end) {
-  return std::accumulate(begin, end, 0LL, [](int64_t acc, unsigned char byte) { return (acc << 8u) | byte; });
+  return static_cast<int64_t>(
+      std::accumulate(begin, end, 0LL, [](uint64_t acc, unsigned char byte) { return (acc << 8u) | byte; }));
 }
 
 uint64_t BinaryFileWrapper::get_number_of_samples() { return file_size_ / record_size_; }
@@ -38,10 +40,10 @@ int64_t BinaryFileWrapper::get_label(uint64_t index) {
   std::vector<unsigned char> label_vec(label_size_);
   get_stream()->read(reinterpret_cast<char*>(label_vec.data()), static_cast<int64_t>(label_size_));
 
-  if (this->little_endian_)
+  if (this->little_endian_) {
     return int_from_bytes_little_endian(label_vec.data(), label_vec.data() + label_size_);
-  else
-    return int_from_bytes_big_endian(label_vec.data(), label_vec.data() + label_size_);
+  }
+  return int_from_bytes_big_endian(label_vec.data(), label_vec.data() + label_size_);
 }
 
 std::ifstream* BinaryFileWrapper::get_stream() {
