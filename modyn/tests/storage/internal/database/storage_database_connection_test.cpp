@@ -73,6 +73,21 @@ TEST_F(StorageDatabaseConnectionTest, TestAddDataset) {
   std::string dataset_name;  // NOLINT
   session << "SELECT name FROM datasets;", soci::into(dataset_name);
   ASSERT_EQ(dataset_name, "test_dataset");
+
+  // Try inserting the same dataset again, without the upsert flag
+  ASSERT_FALSE(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                       FileWrapperType::SINGLE_SAMPLE, "test_description", "test_version",
+                                       "test_file_wrapper_config", false, 0));
+
+  // Now upsert the dataset changing its description
+  ASSERT_TRUE(connection2.add_dataset("test_dataset", "test_base_path", FilesystemWrapperType::LOCAL,
+                                      FileWrapperType::SINGLE_SAMPLE, "modified_test_description", "test_version",
+                                      "test_file_wrapper_config", false, 0, true));
+
+  // assert description changed
+  std::string description;
+  session << "SELECT description FROM datasets where name='test_dataset';", soci::into(description);
+  ASSERT_EQ(description, "modified_test_description");
 }
 
 TEST_F(StorageDatabaseConnectionTest, TestAddExistingDataset) {

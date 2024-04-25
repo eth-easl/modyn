@@ -81,7 +81,6 @@ def register_new_dataset() -> None:
     )
 
     response = storage.RegisterNewDataset(request)
-
     assert response.success, "Could not register new dataset."
 
 
