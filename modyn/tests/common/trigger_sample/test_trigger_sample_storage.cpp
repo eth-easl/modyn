@@ -4,6 +4,7 @@
 #include <array>
 #include <filesystem>
 
+#include "../../utils/test_utils.hpp"
 #include "trigger_sample_storage.hpp"
 
 using namespace modyn::common::trigger_sample_storage;
@@ -12,7 +13,7 @@ class TriggerSampleTest : public ::testing::Test {
  protected:
   std::string tmp_dir_;
 
-  TriggerSampleTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/trigger_sample_test"} {}
+  TriggerSampleTest() : tmp_dir_{modyn::test::TestUtils::get_tmp_testdir("trigger_sample_test")} {}
 
   void SetUp() override {
     // Create temporary directory

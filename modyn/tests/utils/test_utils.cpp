@@ -1,5 +1,9 @@
 #include "test_utils.hpp"
 
+#include <cstdlib>
+#include <filesystem>
+#include <iostream>
+
 using namespace modyn::test;
 
 void TestUtils::create_dummy_yaml() {
@@ -31,4 +35,8 @@ YAML::Node TestUtils::get_dummy_config() {
   config["storage"]["database"]["host"] = "";
   config["storage"]["database"]["port"] = "";
   return config;
+}
+
+std::string TestUtils::get_tmp_testdir(const std::string& subsdir) {
+  return std::filesystem::temp_directory_path().string() + "/" + std::getenv("USER") + "/" + subsdir;
 }
