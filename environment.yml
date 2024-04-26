@@ -37,7 +37,7 @@ dependencies:
   - transformers
   - pytorch::pytorch=2.2.1
   - pytorch::torchvision
-  - pytorch::cpuonly=2.2.1 # comment out if commenting in lines below for CUDA
+  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
 #  - pytorch::pytorch-cuda=12.1
 #  - nvidia::cuda-libraries-dev=12.1.*
 #  - nvidia::cuda-nvcc=12.1.*
