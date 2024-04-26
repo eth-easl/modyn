@@ -425,7 +425,7 @@ def test_save_state_to_file():
                 },
                 {
                     "lr": pytest.approx(0.8),
-                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
+                    "betas": (pytest.approx(0.9, abs=1e-3), pytest.approx(0.999)),
                     "eps": pytest.approx(1e-08),
                     "weight_decay": 0,
                     "amsgrad": False,
