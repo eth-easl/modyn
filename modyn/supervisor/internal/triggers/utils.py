@@ -66,3 +66,48 @@ def prepare_trigger_dataloader_fixed_keys(
 
     logger.debug("Creating fixed keys DataLoader.")
     return DataLoader(train_set, batch_size=dataloader_info.batch_size, num_workers=dataloader_info.num_dataloaders)
+
+
+def get_embeddings(model_downloader: ModelDownloader, dataloader: DataLoader) -> torch.Tensor:
+    """
+    input: model_downloader with downloaded model
+    output: embeddings Tensor
+    """
+    assert model_downloader._model is not None
+    all_embeddings: Optional[torch.Tensor] = None
+
+    model_downloader._model.model.eval()
+    model_downloader._model.model.embedding_recorder.start_recording()
+
+    with torch.no_grad():
+        for batch in dataloader:
+            data: Union[torch.Tensor, dict]
+            if isinstance(batch[1], torch.Tensor):
+                data = batch[1].to(model_downloader._device)
+            elif isinstance(batch[1], dict):
+                data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+                for name, tensor in batch[1].items():
+                    data[name] = tensor.to(model_downloader._device)
+            else:
+                raise ValueError(f"data type {type(batch[1])} not supported")
+
+            with torch.autocast(model_downloader._device_type, enabled=model_downloader._amp):
+                model_downloader._model.model(data)
+                embeddings = model_downloader._model.model.embedding_recorder.embedding
+                if all_embeddings is None:
+                    all_embeddings = embeddings
+                else:
+                    all_embeddings = torch.cat((all_embeddings, embeddings), 0)
+
+    model_downloader._model.model.embedding_recorder.end_recording()
+
+    return all_embeddings
+
+
+def get_embeddings_evidently_format(
+    model_downloader: ModelDownloader, dataloader: torch.utils.data.DataLoader
+) -> pd.DataFrame:
+    embeddings_numpy = get_embeddings(model_downloader, dataloader).cpu().detach().numpy()
+    embeddings_df = pd.DataFrame(embeddings_numpy).astype("float64")
+    embeddings_df.columns = ["col_" + str(x) for x in embeddings_df.columns]
+    return embeddings_df
