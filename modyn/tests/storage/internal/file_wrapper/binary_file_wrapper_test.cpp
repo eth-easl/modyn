@@ -5,15 +5,16 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
+#include <filesystem>
 #include <fstream>
 
 #include "internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
-using namespace modyn::storage;
+namespace modyn::storage {
 
-class ::modyn::storage::BinaryFileWrapperTest : public ::testing::Test {
+class BinaryFileWrapperTest : public ::testing::Test {
  protected:
   std::string file_name_, file_name_endian_;
   YAML::Node config_;
@@ -40,7 +41,7 @@ class ::modyn::storage::BinaryFileWrapperTest : public ::testing::Test {
     // tmp test file with 2 byte labels
     std::ofstream file_endian(file_name_endian_, std::ios::binary);
     const std::vector<std::pair<uint16_t, uint16_t>> data_endian = {
-        {(1 << 8) + 2, 0}, {(3 << 8) + 4, 1}, {(5 << 8) + 6, 2}, {(7 << 8) + 8, 3}};
+        {(1u << 8) + 2, 0}, {(3u << 8) + 4, 1}, {(5u << 8) + 6, 2}, {(7u << 8) + 8, 3}};
     for (const auto& [payload, label] : data_endian) {
       // note: on macos & linux, the architecture's endianess is little
       payload_to_file(file_endian, payload, label);
@@ -48,7 +49,7 @@ class ::modyn::storage::BinaryFileWrapperTest : public ::testing::Test {
     file_endian.close();
 
     ASSERT_TRUE(std::filesystem::exists(file_name_));
-    ASSERT_TRUE(std::filesystem::exists(file_endian));
+    ASSERT_TRUE(std::filesystem::exists(file_name_endian_));
   }
 
   static void payload_to_file(std::ofstream& file, uint16_t payload, uint16_t label) {
@@ -62,27 +63,25 @@ class ::modyn::storage::BinaryFileWrapperTest : public ::testing::Test {
   }
 
   // tests needs to be in class context to access private members
-  void test_int_from_bytes() {
-    // length: 1 byte
-    const unsigned char bytes1[] = {0b00000001};
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes1, bytes1 + 1), 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes1, bytes1 + 1), 1);
+  constexpr static std::array<unsigned char, 1> bytes1{0b00000001};
+  constexpr static std::array<unsigned char, 2> bytes2{0b00000001, 0b00000010};
+  constexpr static std::array<unsigned char, 4> bytes4{0b00000001, 0b00000010, 0b00000011, 0b00000100};
+  constexpr static std::array<unsigned char, 8> bytes8{0b00000001, 0, 0, 0, 0, 0, 0, 0b00001000};
 
-    // length: 2 byte
-    const unsigned char bytes2[] = {0b00000001, 0b00000010};
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes2, bytes2 + 2), (2 << 8) + 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes2, bytes2 + 2), (1 << 8) + 2);
+  static void test_int_from_bytes_little_endian() {
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes1.data(), bytes1.data() + 1), 1);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes2.data(), bytes2.data() + 2), (2u << 8) + 1);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes4.data(), bytes4.data() + 4),
+              (4ull << 24) + (3u << 16) + (2u << 8) + 1);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes8.data(), bytes8.data() + 8), (8ll << 56) + 1);
+  }
 
-    // length: 4 byte
-    const unsigned char bytes4[] = {0b00000001, 0b00000010, 0b00000011, 0b00000100};
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes4, bytes4 + 4),
-              (4LL << 24) + (3 << 16) + (2 << 8) + 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes4, bytes4 + 4), (1 << 24) + (2 << 16) + (3 << 8) + 4);
-
-    // length: 8 byte
-    const unsigned char bytes8[] = {0b00000001, 0, 0, 0, 0, 0, 0, 0b00001000};
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(bytes8, bytes8 + 8), (8LL << 56) + 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes8, bytes8 + 8), (1LL << 56) + 8);
+  static void test_int_from_bytes_big_endian() {
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes1.data(), bytes1.data() + 1), 1);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes2.data(), bytes2.data() + 2), (1u << 8) + 2);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes4.data(), bytes4.data() + 4),
+              (1u << 24) + (2u << 16) + (3u << 8) + 4);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(bytes8.data(), bytes8.data() + 8), (1ll << 56) + 8);
   }
 };
 
@@ -129,7 +128,8 @@ TEST_F(BinaryFileWrapperTest, TestValidateRequestIndices) {
   ASSERT_THROW(file_wrapper2.get_sample(8), modyn::utils::ModynException);
 }
 
-TEST_F(BinaryFileWrapperTest, TestIntFromBytes) { test_int_from_bytes(); }
+TEST_F(BinaryFileWrapperTest, TestIntFromBytesLittleEndian) { test_int_from_bytes_little_endian(); }
+TEST_F(BinaryFileWrapperTest, TestIntFromBytesBigEndian) { test_int_from_bytes_big_endian(); }
 
 TEST_F(BinaryFileWrapperTest, TestGetLabel) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
@@ -157,18 +157,18 @@ TEST_F(BinaryFileWrapperTest, TestGetLabelEndian) {
   // [LITTLE ENDIAN]
   YAML::Node little_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("little");
   BinaryFileWrapper file_wrapper_little_endian(file_name_endian_, little_endian_config, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(0), (1 << 8) + 2);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(1), (3 << 8) + 4);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(2), (5 << 8) + 6);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(3), (7 << 8) + 8);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(0), (1u << 8) + 2);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(1), (3u << 8) + 4);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(2), (5u << 8) + 6);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(3), (7u << 8) + 8);
 
   // [BIG ENDIAN]
   YAML::Node big_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("big");
   BinaryFileWrapper file_wrapper_big_endian(file_name_, big_endian_config, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(0), (2 << 8) + 1);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(1), (4 << 8) + 3);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(2), (6 << 8) + 5);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(3), (8 << 8) + 7);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(0), (2u << 8) + 1);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(1), (4u << 8) + 3);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(2), (6u << 8) + 5);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(3), (8u << 8) + 7);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
@@ -201,20 +201,20 @@ TEST_F(BinaryFileWrapperTest, TestGetAllLabelsEndian) {
   BinaryFileWrapper file_wrapper_little_endian(file_name_, little_endian_config, filesystem_wrapper_);
   std::vector<int64_t> labels_little = file_wrapper_little_endian.get_all_labels();
   ASSERT_EQ(labels_little.size(), 4);
-  ASSERT_EQ((labels_little)[0], (1 << 8) + 2);
-  ASSERT_EQ((labels_little)[1], (3 << 8) + 4);
-  ASSERT_EQ((labels_little)[2], (5 << 8) + 6);
-  ASSERT_EQ((labels_little)[3], (7 << 8) + 8);
+  ASSERT_EQ((labels_little)[0], (1u << 8) + 2);
+  ASSERT_EQ((labels_little)[1], (3u << 8) + 4);
+  ASSERT_EQ((labels_little)[2], (5u << 8) + 6);
+  ASSERT_EQ((labels_little)[3], (7u << 8) + 8);
 
   // [BIG ENDIAN]
   YAML::Node big_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("big");
   BinaryFileWrapper file_wrapper_big_endian(file_name_, big_endian_config, filesystem_wrapper_);
   std::vector<int64_t> labels_big = file_wrapper_big_endian.get_all_labels();
   ASSERT_EQ(labels_big.size(), 4);
-  ASSERT_EQ((labels_big)[0], (2 << 8) + 1);
-  ASSERT_EQ((labels_big)[1], (4 << 8) + 3);
-  ASSERT_EQ((labels_big)[2], (6 << 8) + 5);
-  ASSERT_EQ((labels_big)[3], (8 << 8) + 7);
+  ASSERT_EQ((labels_big)[0], (2u << 8) + 1);
+  ASSERT_EQ((labels_big)[1], (4u << 8) + 3);
+  ASSERT_EQ((labels_big)[2], (6u << 8) + 5);
+  ASSERT_EQ((labels_big)[3], (8u << 8) + 7);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSample) {
@@ -339,3 +339,5 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
 }
+
+}  // namespace modyn::storage
