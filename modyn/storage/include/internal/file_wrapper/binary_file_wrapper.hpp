@@ -64,5 +64,7 @@ class BinaryFileWrapper : public FileWrapper {
   uint64_t sample_size_;
   bool little_endian_;
   std::shared_ptr<std::ifstream> stream_;
+
+  friend class BinaryFileWrapperTest;  // let gtest access private members
 };
 }  // namespace modyn::storage
