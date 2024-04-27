@@ -87,7 +87,7 @@ class YearbookDownloader(Dataset):
                 features_size = len(features_bytes)
                 assert features_size == 4096
 
-                f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
+                f.write(int.to_bytes(label_integer, length=4, byteorder="little"))
                 f.write(features_bytes)
 
         os.utime(output_file_name, (timestamp, timestamp))
