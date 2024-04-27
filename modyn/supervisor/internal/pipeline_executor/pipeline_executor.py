@@ -6,7 +6,7 @@ import pathlib
 import sys
 import traceback
 from time import sleep
-from typing import Any, Optional
+from typing import Any, Optional, Generator
 
 from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
@@ -113,6 +113,8 @@ class PipelineExecutor:
 
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
+        self.trigger.init_trigger(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
+        self.trigger.inform_previous_model(self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
