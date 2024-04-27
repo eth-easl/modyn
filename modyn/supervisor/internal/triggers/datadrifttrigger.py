@@ -192,12 +192,9 @@ class DataDriftTrigger(Trigger):
         del self.data_cache[:detection_idx_start]
         self.leftover_data_points = detection_idx_end - detection_idx_start
 
-    def inform_previous_trigger(self, previous_trigger_id: int) -> None:
+    def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
         self.previous_trigger_id = previous_trigger_id
+        self.previous_data_points = data_points
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
-    
-    def inform_previous_trigger_data_points(self, previous_trigger_id: int, data_points: int) -> None:
-        assert self.previous_trigger_id == previous_trigger_id
-        self.previous_data_points = data_points

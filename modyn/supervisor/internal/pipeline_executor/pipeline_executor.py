@@ -237,7 +237,6 @@ class PipelineExecutor:
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
-        self.trigger.inform_previous_trigger(trigger_id)
         self.trigger.inform_previous_model(model_id)
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
@@ -293,8 +292,8 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
+                self.trigger.inform_previous_trigger_and_data_points(trigger_id, num_samples_in_trigger)
                 self._run_training(trigger_id)  # Blocks until training is done.
-                self.trigger.inform_previous_trigger_data_points(trigger_id, num_samples_in_trigger)
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
