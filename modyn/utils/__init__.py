@@ -31,7 +31,6 @@ from .utils import (  # noqa: F401
     trigger_available,
     unzip_file,
     validate_timestr,
-    validate_yaml,
     zip_file,
 )
 
