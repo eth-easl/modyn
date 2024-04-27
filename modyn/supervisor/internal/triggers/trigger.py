@@ -11,7 +11,9 @@ class Trigger(ABC):
     def init_trigger(
         self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
     ) -> None:
-        """The supervisor initializes the trigger with trigger type specific configurations"""
+        """The supervisor initializes the concrete Trigger with Trigger-type-specific configurations
+        base_dir: the base directory to store Trigger outputs. A location at the supervisor.
+        """
 
     @abstractmethod
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
