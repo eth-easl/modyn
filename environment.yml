@@ -35,7 +35,7 @@ dependencies:
   - types-psycopg2
   - types-PyYAML
   - transformers
-  - pytorch::pytorch
+  - pytorch::pytorch=2.2.1
   - pytorch::torchvision
   - pytorch::cpuonly # comment out if commenting in lines below for CUDA
 #  - pytorch::pytorch-cuda=12.1
