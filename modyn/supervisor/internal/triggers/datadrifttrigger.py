@@ -5,6 +5,11 @@ from typing import Optional, Generator
 
 # pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
+from modyn.supervisor.internal.triggers.utils import (
+    prepare_trigger_dataloader_by_trigger,
+    prepare_trigger_dataloader_fixed_keys,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -22,6 +27,12 @@ class DataDriftTrigger(Trigger):
 
         self.previous_trigger_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
+        self.previous_data_points: Optional[int] = None
+
+        self.dataloader_info: Optional[DataLoaderInfo] = None
+
+        self.detection_interval: int = 1000
+        self.sample_size: Optional[int] = None
         
         self.data_cache = []
         self.leftover_data_points = 0
@@ -30,10 +41,65 @@ class DataDriftTrigger(Trigger):
 
     
     def _parse_trigger_config(self) -> None:
-        self.detection_interval: int = 1000
         if "data_points_for_detection" in self.trigger_config.keys():
             self.detection_interval = self.trigger_config["data_points_for_detection"]
         assert self.detection_interval > 0, "data_points_for_trigger needs to be at least 1"
+        
+        if "sample_size" in self.trigger_config.keys():
+            self.sample_size = self.trigger_config["sample_size"]
+        assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
+    
+    def _init_dataloader_info(self) -> None:
+        assert self.pipeline_id is not None
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+        assert self.base_dir is not None
+
+        training_config = self.pipeline_config["training"]
+        data_config = self.pipeline_config["data"]
+
+        if "num_prefetched_partitions" in training_config:
+            num_prefetched_partitions = training_config["num_prefetched_partitions"]
+        else:
+            if "prefetched_partitions" in training_config:
+                raise ValueError(
+                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
+                    + " Please rename/remove that configuration"
+                )
+            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
+            num_prefetched_partitions = 1
+
+        if "parallel_prefetch_requests" in training_config:
+            parallel_prefetch_requests = training_config["parallel_prefetch_requests"]
+        else:
+            logger.warning(
+                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
+            )
+            parallel_prefetch_requests = 1
+
+        if "tokenizer" in data_config:
+            tokenizer = data_config["tokenizer"]
+        else:
+            tokenizer = None
+
+        if "transformations" in data_config:
+            transform_list = data_config["transformations"]
+        else:
+            transform_list = []
+
+        self.dataloader_info = DataLoaderInfo(
+            self.pipeline_id,
+            dataset_id=data_config["dataset_id"],
+            num_dataloaders=training_config["dataloader_workers"],
+            batch_size=training_config["batch_size"],
+            bytes_parser=data_config["bytes_parser_function"],
+            transform_list=transform_list,
+            storage_address=f"{self.modyn_config['storage']['hostname']}:{self.modyn_config['storage']['port']}",
+            selector_address=f"{self.modyn_config['selector']['hostname']}:{self.modyn_config['selector']['port']}",
+            num_prefetched_partitions=num_prefetched_partitions,
+            parallel_prefetch_requests=parallel_prefetch_requests,
+            tokenizer=tokenizer,
+        )
     
     def _create_dirs(self) -> None:
         assert self.pipeline_id is not None
@@ -56,11 +122,32 @@ class DataDriftTrigger(Trigger):
         if "trigger_config" in self.pipeline_config["trigger"].keys():
             trigger_config = self.pipeline_config["trigger"]["trigger_config"]
             self._parse_trigger_config(trigger_config)
+
+        self._init_dataloader_info()
         self._create_dirs()
 
 
     def detect_drift(self, idx_start, idx_end) -> bool:
-        pass
+        assert self.previous_trigger_id is not None
+        assert self.previous_data_points is not None and self.previous_data_points > 0
+        assert self.previous_model_id is not None
+        assert self.dataloader_info is not None
+
+        reference_dataloader = prepare_trigger_dataloader_by_trigger(
+            self.previous_trigger_id,
+            self.dataloader_info,
+            data_points_in_trigger=self.previous_data_points,
+            sample_size=self.sample_size,
+        )
+
+        current_keys, _, _ = zip(*self.data_cache[idx_start:idx_end])  # type: ignore
+        current_dataloader = prepare_trigger_dataloader_fixed_keys(
+            self.previous_trigger_id + 1,
+            self.dataloader_info,
+            current_keys,
+            sample_size=self.sample_size,
+        )
+
 
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
@@ -110,3 +197,7 @@ class DataDriftTrigger(Trigger):
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
+    
+    def inform_previous_trigger_data_points(self, previous_trigger_id: int, data_points: int) -> None:
+        assert self.previous_trigger_id == previous_trigger_id
+        self.previous_data_points = data_points

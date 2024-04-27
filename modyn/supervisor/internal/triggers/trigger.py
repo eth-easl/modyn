@@ -36,3 +36,7 @@ class Trigger(ABC):
     @abstractmethod
     def inform_previous_model(self, previous_model_id: int) -> None:
         """The supervisor informs the Trigger about the model_id of the previous trigger"""
+    
+    @abstractmethod
+    def inform_previous_trigger_data_points(self, previous_trigger_id: int, data_points: int) -> None:
+        """The supervisor informs the Trigger about data points trained in previous trigger"""
