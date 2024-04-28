@@ -58,7 +58,7 @@ class ModelDownloader:
     def _load_state(self, path: pathlib.Path) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
 
-        self._info(f"Loading model state from {path}")
+        logger.info(f"Loading model state from {path}")
         with open(path, "rb") as state_file:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 

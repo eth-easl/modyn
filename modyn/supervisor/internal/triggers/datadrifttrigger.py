@@ -55,11 +55,6 @@ class DataDriftTrigger(Trigger):
         assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
     
     def _init_dataloader_info(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.pipeline_config is not None
-        assert self.modyn_config is not None
-        assert self.base_dir is not None
-
         training_config = self.pipeline_config["training"]
         data_config = self.pipeline_config["data"]
 
@@ -106,6 +101,15 @@ class DataDriftTrigger(Trigger):
             tokenizer=tokenizer,
         )
     
+    def _init_model_downloader(self) -> None:
+        self.model_downloader = ModelDownloader(
+            self.modyn_config,
+            self.pipeline_id,
+            self.pipeline_config["training"]["device"],
+            self.base_dir,
+            f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
+        )
+    
     def _create_dirs(self) -> None:
         assert self.pipeline_id is not None
         assert self.base_dir is not None
@@ -122,11 +126,11 @@ class DataDriftTrigger(Trigger):
         self.modyn_config = modyn_config
         self.base_dir = base_dir
 
-        if "trigger_config" in self.pipeline_config["trigger"].keys():
-            trigger_config = self.pipeline_config["trigger"]["trigger_config"]
-            self._parse_trigger_config(trigger_config)
+        if len(self.trigger_config) > 0:
+            self._parse_trigger_config()
 
         self._init_dataloader_info()
+        self._init_model_downloader()
         self._create_dirs()
 
 
@@ -218,3 +222,4 @@ class DataDriftTrigger(Trigger):
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
+        self.model_updated = True
