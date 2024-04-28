@@ -1,16 +1,14 @@
 import pathlib
-from typing import Generator
 from abc import ABC, abstractmethod
+from typing import Generator
 
 
 class Trigger(ABC):
     def __init__(self, trigger_config: dict) -> None:
         assert trigger_config is not None, "trigger_config cannot be None."
-    
+
     @abstractmethod
-    def init_trigger(
-        self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
-    ) -> None:
+    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
         """The supervisor initializes the concrete Trigger with Trigger-type-specific configurations
         base_dir: the base directory to store Trigger outputs. A location at the supervisor.
         """
@@ -28,7 +26,7 @@ class Trigger(ABC):
              Returns:
                      triggering_indices (list[int]): List of all indices that trigger training
         """
-    
+
     @abstractmethod
     def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
         """The supervisor informs the Trigger about the previous trigger_id

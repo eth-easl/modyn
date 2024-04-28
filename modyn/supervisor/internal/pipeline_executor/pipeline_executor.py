@@ -6,7 +6,7 @@ import pathlib
 import sys
 import traceback
 from time import sleep
-from typing import Any, Optional, Generator
+from typing import Any, Generator, Optional
 
 from modyn.common.benchmark import Stopwatch
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
@@ -305,7 +305,7 @@ class PipelineExecutor:
 
         # If no other trigger is coming in this batch,
         # we have to inform the Selector about the remaining data in this batch.
-        
+
         remaining_data = batch[previous_trigger_idx:]
         logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 

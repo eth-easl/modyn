@@ -21,7 +21,6 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
-# TODO: update __init__
 # TODO(#275): inherit common abstraction of dataset
 class FixedKeysDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
@@ -127,7 +126,7 @@ class FixedKeysDataset(IterableDataset):
 
         total_samples = len(self._keys)
         keys_per_worker = int(math.ceil(total_samples / worker_info.num_workers))
-        worker_keys = self._keys[worker_id * keys_per_worker : min(total_samples, (worker_id+1) * keys_per_worker)]
+        worker_keys = self._keys[worker_id * keys_per_worker : min(total_samples, (worker_id + 1) * keys_per_worker)]
 
         # TODO(#175): we might want to do/accelerate prefetching here.
         for data in self._get_data_from_storage(worker_keys):

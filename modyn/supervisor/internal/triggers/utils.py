@@ -2,15 +2,10 @@ import logging
 import random
 from typing import Optional, Union
 
-from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
-from modyn.supervisor.internal.triggers.trigger_datasets import (
-    DataLoaderInfo,
-    OnlineTriggerDataset,
-    FixedKeysDataset,
-)
-
 import pandas as pd
 import torch
+from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)

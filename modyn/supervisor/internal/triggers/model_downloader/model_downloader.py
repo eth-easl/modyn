@@ -5,7 +5,6 @@ import pathlib
 from typing import Optional
 
 import grpc
-import pandas as pd
 import torch
 from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -100,4 +99,3 @@ class ModelDownloader:
             base_directory=self.base_dir,
         )
         self._load_state(trained_model_path)
-

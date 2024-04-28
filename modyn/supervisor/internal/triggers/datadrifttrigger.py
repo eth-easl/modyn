@@ -1,19 +1,19 @@
 import logging
 import os
 import pathlib
-from typing import Optional, Generator
+from typing import Generator, Optional
+
 import pandas as pd
+from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 
 # pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.utils import (
+    get_embeddings_evidently_format,
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
-    get_embeddings_evidently_format
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,22 +38,24 @@ class DataDriftTrigger(Trigger):
 
         self.detection_interval: int = 2
         self.sample_size: Optional[int] = None
-        
+
         self.data_cache = []
         self.leftover_data_points = 0
 
+        self.exp_output_dir: Optional[pathlib.Path] = None
+        self.drift_dir: Optional[pathlib.Path] = None
+
         super().__init__(trigger_config)
 
-    
     def _parse_trigger_config(self) -> None:
         if "data_points_for_detection" in self.trigger_config.keys():
             self.detection_interval = self.trigger_config["data_points_for_detection"]
         assert self.detection_interval > 0, "data_points_for_trigger needs to be at least 1"
-        
+
         if "sample_size" in self.trigger_config.keys():
             self.sample_size = self.trigger_config["sample_size"]
         assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
-    
+
     def _init_dataloader_info(self) -> None:
         training_config = self.pipeline_config["training"]
         data_config = self.pipeline_config["data"]
@@ -100,7 +102,7 @@ class DataDriftTrigger(Trigger):
             parallel_prefetch_requests=parallel_prefetch_requests,
             tokenizer=tokenizer,
         )
-    
+
     def _init_model_downloader(self) -> None:
         self.model_downloader = ModelDownloader(
             self.modyn_config,
@@ -109,18 +111,16 @@ class DataDriftTrigger(Trigger):
             self.base_dir,
             f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
         )
-    
+
     def _create_dirs(self) -> None:
         assert self.pipeline_id is not None
         assert self.base_dir is not None
 
-        self.exp_output_dir = self.base_dir / str(self.pipeline_id) / f"datadrift"
+        self.exp_output_dir = self.base_dir / str(self.pipeline_id) / "datadrift"
         self.drift_dir = self.exp_output_dir / "drift_results"
         os.makedirs(self.drift_dir, exist_ok=True)
 
-    def init_trigger(
-        self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
-    ) -> None:
+    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
         self.pipeline_id = pipeline_id
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
@@ -133,10 +133,8 @@ class DataDriftTrigger(Trigger):
         self._init_model_downloader()
         self._create_dirs()
 
-
     def run_detection(self, reference_embeddings_df: pd.DataFrame, current_embeddings_df: pd.DataFrame) -> bool:
         return True
-
 
     def detect_drift(self, idx_start, idx_end) -> bool:
         assert self.previous_trigger_id is not None
@@ -164,7 +162,7 @@ class DataDriftTrigger(Trigger):
         if self.model_updated:
             self.model_downloader.download(self.previous_model_id)
             self.model_updated = False
-        
+
         # Compute embeddings
         reference_embeddings_df = get_embeddings_evidently_format(self.model_downloader, reference_dataloader)
         current_embeddings_df = get_embeddings_evidently_format(self.model_downloader, current_dataloader)
@@ -172,7 +170,6 @@ class DataDriftTrigger(Trigger):
         drift_detected = self.run_detection(reference_embeddings_df, current_embeddings_df)
 
         return drift_detected
-
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         """
@@ -201,7 +198,6 @@ class DataDriftTrigger(Trigger):
             else:
                 # if exist previous trigger, detect drift
                 triggered = self.detect_drift(detection_idx_start, detection_idx_end)
-
 
             if triggered:
                 trigger_data_points = detection_idx_end - detection_idx_start

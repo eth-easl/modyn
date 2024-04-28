@@ -1,5 +1,5 @@
 import pathlib
-from typing import Optional, Generator
+from typing import Generator, Optional
 
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.utils import convert_timestr_to_seconds, validate_timestr
@@ -26,24 +26,25 @@ class TimeTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def init_trigger(
-        self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
-    ) -> None:
-            pass
+    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
+        pass
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
             if len(new_data) > 0:
                 self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted
             else:
-                return []
+                return
 
         max_timestamp = new_data[-1][1]  # new_data is sorted
         triggering_indices = []
 
         while self.next_trigger_at <= max_timestamp:
             # The next line gets the first item which has a timestamp larger or equal to the triggering timestamp
-            idx = next(idx for (idx, (_, timestamp, _)) in enumerate(new_data) if timestamp >= self.next_trigger_at)
+            try:
+                idx = next(idx for (idx, (_, timestamp, _)) in enumerate(new_data) if timestamp >= self.next_trigger_at)
+            except StopIteration:
+                break
             # This index `idx` describes the first item not belonging to the trigger.
             # Hence, the previous item causes a trigger.
             # If this is the first item, then we need to emit a trigger for index -1.

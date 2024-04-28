@@ -1,5 +1,6 @@
 import pathlib
 from typing import Generator
+
 from modyn.supervisor.internal.triggers.trigger import Trigger
 
 
@@ -15,10 +16,8 @@ class DataAmountTrigger(Trigger):
         self.remaining_data_points = 0
 
         super().__init__(trigger_config)
-    
-    def init_trigger(
-        self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path
-    ) -> None:
+
+    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
         pass
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
@@ -30,7 +29,7 @@ class DataAmountTrigger(Trigger):
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
         yield from triggering_indices
-    
+
     def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
         pass
 
