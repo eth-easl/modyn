@@ -51,13 +51,14 @@ class DatasetFileWrapperConfig(BaseModel):
     """
 
     file_extension: str = Field(
-        description="The file extension of the dataset.", pattern=r"\..*"
+        description="The file extension of the dataset.", pattern=r"^\..*$"
     )
     label_file_extension: str = Field(
-        description="The label file extension of the dataset", pattern=r"\..*"
+        description="The label file extension of the dataset", pattern=r"$\..*$"
     )
 
     # [BinaryFileWrapper]
+    # TODO: required only conditionally
     record_size: int = Field(
         description="The size of each full record in bytes (label + features)."
     )
@@ -216,7 +217,7 @@ class EvaluatorConfig(HostnamePortMixin):
 # ---------------------------------------------------- METADATA DB --------------------------------------------------- #
 
 
-class MetadataDatabaseConfig(BaseModel, DatabaseConfig):
+class MetadataDatabaseConfig(DatabaseConfig):
     """
     Configuration for modyn's metadata database.
     """
@@ -331,12 +332,18 @@ class SupervisorConfig(HostnamePortMixin):
     )
 
 
+# ------------------------------------------------------ CONFIG ------------------------------------------------------ #
+
+
 class ModynConfig(BaseModel):
     """Configuration for the Modyn system. Please adapt the fields as needed."""
 
     project: ProjectConfig
     storage: StorageConfig
-    model_storage: ModelStorageConfig
+
+    # model is a reserved keyword in Pydantic, so we use modyn_model instead
+    modyn_model_storage: ModelStorageConfig = Field(alias="model_storage")
+
     evaluator: EvaluatorConfig
     metadata_database: MetadataDatabaseConfig
     metadata_processor: MetadataProcessorConfig | None

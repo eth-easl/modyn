@@ -8,8 +8,8 @@ import grpc
 import numpy as np
 import pytest
 import torch
-import yaml
 from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.config import read_modyn_config, read_pipeline
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
@@ -66,22 +66,10 @@ def test_trigger_available():
 
 
 def test_validate_yaml():
-    with open(
-        pathlib.Path("modyn") / "config" / "examples" / "modyn_config.yaml",
-        "r",
-        encoding="utf-8",
-    ) as concrete_file:
-        breakpoint()
-        yaml.safe_load(concrete_file)
-
-    # TODO(robinholzi): this pr
-
-    with open(
-        pathlib.Path("modyn") / "config" / "examples" / "example-pipeline.yaml",
-        "r",
-        encoding="utf-8",
-    ) as concrete_file:
-        yaml.safe_load(concrete_file)
+    modyn_config_path = pathlib.Path("modyn") / "config" / "examples" / "modyn_config.yaml"
+    pipeline_path = pathlib.Path("modyn") / "config" / "examples" / "example-pipeline.yaml"
+    read_modyn_config(modyn_config_path)
+    read_pipeline(pipeline_path)
 
 
 @patch("time.time", lambda: 0.4)
