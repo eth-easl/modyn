@@ -29,7 +29,7 @@ class EvaluationInfo:
         num_prefetched_partitions: Optional[int] = None,
         parallel_prefetch_requests: Optional[int] = None,
         selector_address: Optional[str] = None,
-    ) -> None:
+    ) -> None:  # pragma: no cover
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
@@ -47,6 +47,11 @@ class EvaluationInfo:
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
+        self.tokenizer: Optional[str] = None
+        if request.HasField("tokenizer"):
+            self.tokenizer = request.tokenizer.value
+        else:
+            self.tokenizer = None
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address

@@ -74,7 +74,7 @@ class MockModule:
 class MockEvaluationDataset(IterableDataset):
     # pylint: disable=abstract-method
 
-    def __init__(self, dataset_id, bytes_parser, transform_list, storage_address, evaluation_id):
+    def __init__(self, dataset_id, bytes_parser, transform_list, storage_address, evaluation_id, tokenizer):
         self.dataset = iter([(key, key, key * 2) for key in range(100)])
 
     def __iter__(self) -> Generator:
