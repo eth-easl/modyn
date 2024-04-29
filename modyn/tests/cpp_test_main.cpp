@@ -17,8 +17,7 @@ class GlobalTestEnvironment : public ::testing::Environment {
 };
 
 int main(int argc, char** argv) {
-  GlobalTestEnvironment env{};
   ::testing::InitGoogleTest(&argc, argv);
-  ::testing::AddGlobalTestEnvironment(&env);
+  ::testing::AddGlobalTestEnvironment(new GlobalTestEnvironment());  // gtest takes ownership
   return RUN_ALL_TESTS();
 }
