@@ -41,9 +41,9 @@ class BinaryFileWrapperTest : public ::testing::Test {
     // tmp test file with 2 byte labels
     std::ofstream file_endian(file_name_endian_, std::ios::binary);
     const std::vector<std::pair<uint16_t, uint16_t>> data_endian = {
-        {(1u << 8) + 2u, 0}, {(3u << 8) + 4u, 1}, {(5u << 8) + 6u, 2}, {(7u << 8) + 8u, 3}};
+        {(1u << 8u) + 2u, 0}, {(3u << 8u) + 4u, 1}, {(5u << 8u) + 6u, 2}, {(7u << 8u) + 8u, 3}};
     for (const auto& [payload, label] : data_endian) {
-      // note: on macos & linux, the architecture's endianess is little
+      // note: on macOS & linux, the architecture's endian is little
       payload_to_file(file_endian, payload, label);
     }
     file_endian.close();
@@ -70,18 +70,18 @@ class BinaryFileWrapperTest : public ::testing::Test {
 
   static void test_int_from_bytes_little_endian() {
     ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES1.data(), BYTES1.data() + 1u), 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES2.data(), BYTES2.data() + 2u), (2u << 8) + 1u);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES2.data(), BYTES2.data() + 2u), (2u << 8u) + 1u);
     ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES4.data(), BYTES4.data() + 4u),
-              (4ull << 24) + (3u << 16) + (2u << 8) + 1u);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES8.data(), BYTES8.data() + 8u), (8ll << 56) + 1u);
+              (4ull << 24u) + (3u << 16u) + (2u << 8u) + 1u);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_little_endian(BYTES8.data(), BYTES8.data() + 8u), (8ull << 56u) + 1u);
   }
 
   static void test_int_from_bytes_big_endian() {
     ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES1.data(), BYTES1.data() + 1u), 1);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES2.data(), BYTES2.data() + 2u), (1u << 8) + 2u);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES2.data(), BYTES2.data() + 2u), (1u << 8u) + 2u);
     ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES4.data(), BYTES4.data() + 4u),
-              (1u << 24) + (2u << 16) + (3u << 8) + 4u);
-    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES8.data(), BYTES8.data() + 8u), (1ll << 56) + 8u);
+              (1u << 24u) + (2u << 16u) + (3u << 8u) + 4u);
+    ASSERT_EQ(BinaryFileWrapper::int_from_bytes_big_endian(BYTES8.data(), BYTES8.data() + 8u), (1ull << 56u) + 8u);
   }
 };
 
@@ -157,18 +157,18 @@ TEST_F(BinaryFileWrapperTest, TestGetLabelEndian) {
   // [LITTLE ENDIAN]
   const YAML::Node little_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("little");
   BinaryFileWrapper file_wrapper_little_endian(file_name_endian_, little_endian_config, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(0), (1u << 8) + 2u);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(1), (3u << 8) + 4u);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(2), (5u << 8) + 6u);
-  ASSERT_EQ(file_wrapper_little_endian.get_label(3), (7u << 8) + 8u);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(0), (1u << 8u) + 2u);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(1), (3u << 8u) + 4u);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(2), (5u << 8u) + 6u);
+  ASSERT_EQ(file_wrapper_little_endian.get_label(3), (7u << 8u) + 8u);
 
   // [BIG ENDIAN]
   const YAML::Node big_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("big");
   BinaryFileWrapper file_wrapper_big_endian(file_name_, big_endian_config, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(0), (2u << 8) + 1u);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(1), (4u << 8) + 3u);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(2), (6u << 8) + 5u);
-  ASSERT_EQ(file_wrapper_big_endian.get_label(3), (8u << 8) + 7u);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(0), (2u << 8u) + 1u);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(1), (4u << 8u) + 3u);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(2), (6u << 8u) + 5u);
+  ASSERT_EQ(file_wrapper_big_endian.get_label(3), (8u << 8u) + 7u);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
@@ -179,7 +179,7 @@ TEST_F(BinaryFileWrapperTest, TestGetAllLabels) {
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
-  const BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<int64_t> labels = file_wrapper.get_all_labels();
   ASSERT_EQ(labels.size(), 4);
   ASSERT_EQ((labels)[0], 42);
@@ -201,20 +201,20 @@ TEST_F(BinaryFileWrapperTest, TestGetAllLabelsEndian) {
   BinaryFileWrapper file_wrapper_little_endian(file_name_, little_endian_config, filesystem_wrapper_);
   std::vector<int64_t> labels_little = file_wrapper_little_endian.get_all_labels();
   ASSERT_EQ(labels_little.size(), 4);
-  ASSERT_EQ((labels_little)[0], (1u << 8) + 2u);
-  ASSERT_EQ((labels_little)[1], (3u << 8) + 4u);
-  ASSERT_EQ((labels_little)[2], (5u << 8) + 6u);
-  ASSERT_EQ((labels_little)[3], (7u << 8) + 8u);
+  ASSERT_EQ((labels_little)[0], (1u << 8u) + 2u);
+  ASSERT_EQ((labels_little)[1], (3u << 8u) + 4u);
+  ASSERT_EQ((labels_little)[2], (5u << 8u) + 6u);
+  ASSERT_EQ((labels_little)[3], (7u << 8u) + 8u);
 
   // [BIG ENDIAN]
   const YAML::Node big_endian_config = StorageTestUtils::get_dummy_file_wrapper_config("big");
   BinaryFileWrapper file_wrapper_big_endian(file_name_, big_endian_config, filesystem_wrapper_);
   std::vector<int64_t> labels_big = file_wrapper_big_endian.get_all_labels();
   ASSERT_EQ(labels_big.size(), 4);
-  ASSERT_EQ((labels_big)[0], (2u << 8) + 1u);
-  ASSERT_EQ((labels_big)[1], (4u << 8) + 3u);
-  ASSERT_EQ((labels_big)[2], (6u << 8) + 5u);
-  ASSERT_EQ((labels_big)[3], (8u << 8) + 7u);
+  ASSERT_EQ((labels_big)[0], (2u << 8u) + 1u);
+  ASSERT_EQ((labels_big)[1], (4u << 8u) + 3u);
+  ASSERT_EQ((labels_big)[2], (6u << 8u) + 5u);
+  ASSERT_EQ((labels_big)[3], (8u << 8u) + 7u);
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSample) {
