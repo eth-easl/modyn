@@ -118,7 +118,7 @@ class ArXivDownloader(Dataset):
                 # set timestamp
                 os.utime(test_dummy_file, (year_timestamp, year_timestamp))
 
-        # os.remove(os.path.join(self.path, "arxiv.pkl"))
+        os.remove(os.path.join(self.path, "arxiv.pkl"))
 
     @staticmethod
     def filter_corrupted_lines(year, rows):
