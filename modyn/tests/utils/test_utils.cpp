@@ -1,5 +1,6 @@
 #include "test_utils.hpp"
 
+#include <string.h>
 #include <unistd.h>
 
 #include <filesystem>
