@@ -40,7 +40,7 @@ training:
 data:
   dataset_id: arxiv
   bytes_parser_function: |
-    def bytes_parser_function(data: bytes) -> str:
+    def bytes_parser_function(data: memoryview) -> str:
       return str(data, "utf8")
   tokenizer: DistilBertTokenizerTransform
 
