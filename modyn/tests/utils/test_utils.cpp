@@ -1,6 +1,6 @@
 #include "test_utils.hpp"
 
-#include <cstdlib>
+#include <unistd.h>
 #include <filesystem>
 #include <iostream>
 
@@ -38,5 +38,8 @@ YAML::Node TestUtils::get_dummy_config() {
 }
 
 std::string TestUtils::get_tmp_testdir(const std::string& subsdir) {
-  return std::filesystem::temp_directory_path().string() + "/" + std::getenv("USER") + "/" + subsdir;
+  std::array<char, 20> buf{0};
+  getlogin_r(buf.data(), 20);
+  const std::string username{buf.data(), 20};
+  return std::filesystem::temp_directory_path().string() + "/" + username + "/" + subsdir;
 }
