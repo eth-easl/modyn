@@ -8,7 +8,7 @@
 
 namespace modyn::storage {
 
-enum FileWrapperType { INVALID_FW, SINGLE_SAMPLE, BINARY, CSV };
+enum FileWrapperType: uint8_t { INVALID_FW, SINGLE_SAMPLE, BINARY, CSV };
 
 class FileWrapper {
  public:

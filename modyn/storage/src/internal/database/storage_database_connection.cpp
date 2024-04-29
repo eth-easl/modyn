@@ -87,7 +87,7 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
   auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
   std::string boolean_string = ignore_last_timestamp ? "true" : "false";
 
-  const int dataset_id = get_dataset_id(name);
+  const int64_t dataset_id = get_dataset_id(name);
 
   if (dataset_id != -1 && !upsert) {
     // Dataset already exists

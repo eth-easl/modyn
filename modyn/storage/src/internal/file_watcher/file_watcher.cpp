@@ -375,14 +375,16 @@ void FileWatcher::insert_file_samples(const std::vector<FileFrame>& file_samples
                                       const bool force_fallback, soci::session& session,
                                       DatabaseDriver& database_driver) {
   if (force_fallback) {
-    return fallback_insertion(file_samples, dataset_id, session);
+    fallback_insertion(file_samples, dataset_id, session);
   }
 
   switch (database_driver) {
     case DatabaseDriver::POSTGRESQL:
-      return postgres_copy_insertion(file_samples, dataset_id, session);
+      postgres_copy_insertion(file_samples, dataset_id, session);
+      return;
     case DatabaseDriver::SQLITE3:
-      return fallback_insertion(file_samples, dataset_id, session);
+      fallback_insertion(file_samples, dataset_id, session);
+      return;
     default:
       FAIL("Unsupported database driver");
   }

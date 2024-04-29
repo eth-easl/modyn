@@ -14,7 +14,7 @@
 
 namespace modyn::storage {
 
-enum class DatabaseDriver { POSTGRESQL, SQLITE3 };
+enum class DatabaseDriver: uint8_t { POSTGRESQL, SQLITE3 };
 
 class StorageDatabaseConnection {
  public:

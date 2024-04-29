@@ -30,7 +30,7 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
   };
 
   // NOLINTNEXTLINE(readability-identifier-naming)
-  inline bool Write(const T& msg) { return Write(msg, grpc::WriteOptions()); }
+  bool Write(const T& msg) { return Write(msg, grpc::WriteOptions()); }
 
   std::vector<T> get_responses() { return responses_; }
 

@@ -47,7 +47,7 @@ void StorageServer::run() {
     const bool success = connection_.add_dataset(
         dataset_id, base_path, FilesystemWrapper::get_filesystem_wrapper_type(filesystem_wrapper_type),
         FileWrapper::get_file_wrapper_type(file_wrapper_type), description, version, file_wrapper_config,
-        ignore_last_timestamp, file_watcher_interval, true);
+        ignore_last_timestamp, file_watcher_interval, /*upsert=*/true);
     if (!success) {
       SPDLOG_ERROR(fmt::format("Could not register dataset {} - potentially it already exists.", dataset_id));
     }
