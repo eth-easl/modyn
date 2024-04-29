@@ -4,7 +4,7 @@
 #include <array>
 #include <filesystem>
 
-#include "../../utils/test_utils.hpp"
+#include "test_utils.hpp"
 #include "trigger_sample_storage.hpp"
 
 using namespace modyn::common::trigger_sample_storage;
