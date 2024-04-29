@@ -57,12 +57,6 @@ class EvaluationDataset(IterableDataset):
         if tokenizer is not None:
             self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
 
-        # tokenizer for NLP tasks
-        self._tokenizer = None
-        self._tokenizer_name = tokenizer
-        if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
-
         logger.debug("Initialized EvaluationDataset.")
 
     def _init_transforms(self) -> None:

@@ -77,8 +77,8 @@ message GetDatasetSizeRequest {
   string dataset_id = 1;
   // value unset or set with default value means no limit
   // start_timestamp is inclusive, end_timestamp is exclusive
-  int64 start_timestamp = 4;
-  int64 end_timestamp = 5;
+  int64 start_timestamp = 2;
+  int64 end_timestamp = 3;
 }
 
 message GetDatasetSizeResponse {
