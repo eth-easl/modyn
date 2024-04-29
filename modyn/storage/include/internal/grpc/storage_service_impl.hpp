@@ -478,7 +478,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
 
       // Send leftovers
-      const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx), sample_indices.end());
+      const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+                                               sample_indices.end());
       const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
       // Protobuf expects the data as std::string...
       std::vector<std::string> stringified_data;
@@ -489,8 +490,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       modyn::storage::GetResponse response;
       response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
-      response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx), sample_keys.end());
-      response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx), sample_labels.end());
+      response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
+                                      sample_keys.end());
+      response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                        sample_labels.end());
 
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);
