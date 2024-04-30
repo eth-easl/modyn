@@ -21,6 +21,7 @@ dependencies:
   - protobuf
   - pip:
     - grpcio==1.59.0
+    - evidently
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
