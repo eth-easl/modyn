@@ -41,9 +41,12 @@ data:
   dataset_id: yearbook
   transformations: []
   bytes_parser_function: |
+    import warnings
     import torch
-    def bytes_parser_function(data: bytes) -> torch.Tensor:
-      return torch.frombuffer(bytearray(data), dtype=torch.float32).reshape(3, 32, 32)
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
+      with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)
 
 trigger:
   id: TimeTrigger
