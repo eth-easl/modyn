@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 import pathlib
 from typing import Generator, Optional
 
@@ -13,7 +14,13 @@ from modyn.supervisor.internal.triggers.utils import (
     get_embeddings_evidently_format,
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
+    get_evidently_metrics,
 )
+
+from evidently import ColumnMapping
+from evidently.metrics import EmbeddingsDriftMetric
+from evidently.metrics.data_drift.embedding_drift_methods import distance, mmd, model, ratio
+from evidently.report import Report
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +45,8 @@ class DataDriftTrigger(Trigger):
 
         self.detection_interval: int = 2
         self.sample_size: Optional[int] = None
+        self.evidently_column_mapping_name = "data"
+        self.metrics: Optional[list] = None
 
         self.data_cache = []
         self.leftover_data_points = 0
@@ -55,6 +64,8 @@ class DataDriftTrigger(Trigger):
         if "sample_size" in self.trigger_config.keys():
             self.sample_size = self.trigger_config["sample_size"]
         assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
+        
+        self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, self.trigger_config)
 
     def _init_dataloader_info(self) -> None:
         training_config = self.pipeline_config["training"]
@@ -134,7 +145,25 @@ class DataDriftTrigger(Trigger):
         self._create_dirs()
 
     def run_detection(self, reference_embeddings_df: pd.DataFrame, current_embeddings_df: pd.DataFrame) -> bool:
-        return True
+        # Run Evidently detection
+        column_mapping = ColumnMapping(embeddings={self.evidently_column_mapping_name: reference_embeddings_df.columns})
+
+        # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
+        report = Report(metrics=self.metrics)
+        report.run(
+            reference_data=reference_embeddings_df, current_data=current_embeddings_df, column_mapping=column_mapping
+        )
+        result = report.as_dict()
+        result_print = [(x["result"]["drift_score"], x["result"]["method_name"], x["result"]["drift_detected"]) for x in result["metrics"]]
+        logger.info(
+            f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
+            + f"[Result] {result_print}"
+        )
+
+        with open(self.drift_dir / f"drift_{self.previous_trigger_id}.json", "w") as f:
+            json.dump(result, f)
+
+        return result["metrics"][0]["result"]["drift_detected"]
 
     def detect_drift(self, idx_start, idx_end) -> bool:
         assert self.previous_trigger_id is not None

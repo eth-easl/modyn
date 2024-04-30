@@ -6,9 +6,33 @@ import pandas as pd
 import torch
 from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
+
 from torch.utils.data import DataLoader
+from evidently import ColumnMapping
+from evidently.metrics import EmbeddingsDriftMetric
+import evidently.metrics.data_drift.embedding_drift_methods as embedding_drift_methods
+from evidently.report import Report
 
 logger = logging.getLogger(__name__)
+
+
+def get_evidently_metrics(column_mapping_name: str, trigger_config: dict = {}) -> list[EmbeddingsDriftMetric]:  
+    metric_name: str = "model"  
+    metric_config: dict = {}
+    if "metric_name" in trigger_config.keys():
+        metric_name = trigger_config["metric_name"]
+        if "metric_config" in trigger_config.keys():
+            metric_config = trigger_config["metric_config"]
+
+    metric = getattr(embedding_drift_methods, metric_name)(**metric_config)
+
+    metrics = [
+        EmbeddingsDriftMetric(
+            column_mapping_name,
+            drift_method=metric,
+        )
+    ]
+    return metrics
 
 
 def prepare_trigger_dataloader_by_trigger(
