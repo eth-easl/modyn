@@ -18,7 +18,7 @@ class BinaryFileWrapperTest : public ::testing::Test {
   std::string file_name_;
   YAML::Node config_;
   std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper_;
-  std::string tmp_dir_ = std::filesystem::temp_directory_path().string() + "/binary_file_wrapper_test";
+  std::string tmp_dir_ = modyn::test::TestUtils::get_tmp_testdir("binary_file_wrapper_test");
 
   BinaryFileWrapperTest()
       : config_{StorageTestUtils::get_dummy_file_wrapper_config()},
