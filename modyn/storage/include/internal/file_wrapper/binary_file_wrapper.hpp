@@ -2,7 +2,6 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cctype>
 #include <cstddef>
 #include <fstream>
 #include <iostream>

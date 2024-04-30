@@ -40,10 +40,8 @@ int64_t BinaryFileWrapper::get_label(uint64_t index) {
   std::vector<unsigned char> tmp_label_buffer(label_size_);
   get_stream()->read(reinterpret_cast<char*>(tmp_label_buffer.data()), static_cast<int64_t>(label_size_));
 
-  if (this->little_endian_) {
-    return int_from_bytes_little_endian(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_);
-  }
-  return int_from_bytes_big_endian(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_);
+  auto func_int_from_bytes = little_endian_ ? int_from_bytes_little_endian : int_from_bytes_big_endian;
+  return func_int_from_bytes(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_);
 }
 
 std::ifstream* BinaryFileWrapper::get_stream() {
@@ -63,22 +61,13 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
 
   std::vector<unsigned char> tmp_label_buffer(label_size_);
 
-  // Duplicating the loop here to avoid doing the endianess check in every loop iteration;
-  // there might be more idomatic ways to do this though.
-  if (this->little_endian_) {
-    for (uint64_t i = 0; i < num_samples; ++i) {
-      get_stream()->seekg(static_cast<int64_t>(i * record_size_), std::ios::beg);
-      tmp_label_buffer.assign(label_size_, 0);
-      get_stream()->read(reinterpret_cast<char*>(tmp_label_buffer.data()), static_cast<int64_t>(label_size_));
-      labels.push_back(int_from_bytes_little_endian(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_));
-    }
-  } else {
-    for (uint64_t i = 0; i < num_samples; ++i) {
-      get_stream()->seekg(static_cast<int64_t>(i * record_size_), std::ios::beg);
-      tmp_label_buffer.assign(label_size_, 0);
-      get_stream()->read(reinterpret_cast<char*>(tmp_label_buffer.data()), static_cast<int64_t>(label_size_));
-      labels.push_back(int_from_bytes_big_endian(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_));
-    }
+  auto func_int_from_bytes = little_endian_ ? int_from_bytes_little_endian : int_from_bytes_big_endian;
+
+  for (uint64_t i = 0; i < num_samples; ++i) {
+    get_stream()->seekg(static_cast<int64_t>(i * record_size_), std::ios::beg);
+    tmp_label_buffer.assign(label_size_, 0);
+    get_stream()->read(reinterpret_cast<char*>(tmp_label_buffer.data()), static_cast<int64_t>(label_size_));
+    labels.push_back(func_int_from_bytes(tmp_label_buffer.data(), tmp_label_buffer.data() + label_size_));
   }
 
   return labels;

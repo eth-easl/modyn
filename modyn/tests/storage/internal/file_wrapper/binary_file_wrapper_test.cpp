@@ -34,7 +34,8 @@ class BinaryFileWrapperTest : public ::testing::Test {
     std::ofstream file(file_name_, std::ios::binary);
     const std::vector<std::pair<uint16_t, uint16_t>> data = {{42, 12}, {43, 13}, {44, 14}, {45, 15}};
     for (const auto& [payload, label] : data) {
-      payload_to_file(file, payload, label);
+      payload_to_file_little_endian(file, payload);
+      payload_to_file_little_endian(file, label);
     }
     file.close();
 
@@ -43,8 +44,8 @@ class BinaryFileWrapperTest : public ::testing::Test {
     const std::vector<std::pair<uint16_t, uint16_t>> data_endian = {
         {(1u << 8u) + 2u, 0}, {(3u << 8u) + 4u, 1}, {(5u << 8u) + 6u, 2}, {(7u << 8u) + 8u, 3}};
     for (const auto& [payload, label] : data_endian) {
-      // note: on macOS & linux, the architecture's endian is little
-      payload_to_file(file_endian, payload, label);
+      payload_to_file_little_endian(file_endian, payload);
+      payload_to_file_little_endian(file_endian, label);
     }
     file_endian.close();
 
@@ -52,9 +53,11 @@ class BinaryFileWrapperTest : public ::testing::Test {
     ASSERT_TRUE(std::filesystem::exists(file_name_endian_));
   }
 
-  static void payload_to_file(std::ofstream& file, uint16_t payload, uint16_t label) {
-    file.write(reinterpret_cast<const char*>(&payload), sizeof(uint16_t));
-    file.write(reinterpret_cast<const char*>(&label), sizeof(uint16_t));
+  static void payload_to_file_little_endian(std::ofstream& file, uint16_t data) {
+    auto tmp = static_cast<uint8_t>(data & 0x00FFu);  // least significant byte
+    file.write(reinterpret_cast<const char*>(&tmp), 1);
+    tmp = static_cast<uint8_t>(data >> 8u);  // most significant byte
+    file.write(reinterpret_cast<const char*>(&tmp), 1);
   }
 
   void TearDown() override {
