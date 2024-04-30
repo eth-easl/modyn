@@ -15,6 +15,8 @@ def main():
     ArXivDownloader(args.dir).store_data(args.all, args.dummyyear)
 
 
+# There are some lines in the train dataset that are corrupted, i.e. the csv file wrapper cannot properly read the data.
+# We remove these lines from the dataset.
 corrupted_idx_dict = {
     2007: [33213],
     2008: [22489],
@@ -47,7 +49,7 @@ class ArXivDownloader(Dataset):
         self._dataset = datasets
         self.path = data_dir
 
-    def store_data(self, store_all_data: bool, add_final_dummy_year: bool):
+    def store_data(self, create_test_data: bool, add_final_dummy_year: bool):
         # create directories
         if not os.path.exists(self.path):
             os.mkdir(self.path)
@@ -55,7 +57,7 @@ class ArXivDownloader(Dataset):
         train_dir = os.path.join(self.path, "train")
         os.makedirs(train_dir, exist_ok=True)
 
-        if store_all_data:
+        if create_test_data:
             test_dir = os.path.join(self.path, "test")
             os.makedirs(test_dir, exist_ok=True)
 
@@ -65,7 +67,7 @@ class ArXivDownloader(Dataset):
             # for simplicity, instead of using years we map each day to a year from 1970
             year_timestamp = create_timestamp(year=1970, month=1, day=year-2006)
 
-            def get_one_split(split: int) -> list[str]:
+            def get_split_by_id(split: int) -> list[str]:
                 rows = []
                 for i in range(len(self._dataset[year][split]["title"])):
                     text = self._dataset[year][split]["title"][i].replace("\n", " ")
@@ -74,7 +76,7 @@ class ArXivDownloader(Dataset):
                     rows.append(csv_row)
                 return rows
 
-            train_year_rows = get_one_split(0)
+            train_year_rows = get_split_by_id(0)
             train_year_rows = self.filter_corrupted_lines(year, train_year_rows)
             train_file = os.path.join(train_dir, f"{year}.csv")
             with open(train_file, "w", encoding="utf-8") as f:
@@ -83,18 +85,16 @@ class ArXivDownloader(Dataset):
             # set timestamp
             os.utime(train_file, (year_timestamp, year_timestamp))
 
-            if store_all_data:
-                test_year_rows = get_one_split(1)
+            if create_test_data:
+                test_year_rows = get_split_by_id(1)
                 test_file = os.path.join(test_dir, f"{year}.csv")
                 with open(test_file, "w", encoding="utf-8") as f:
                     f.write("\n".join(test_year_rows))
 
                 # set timestamp
                 os.utime(test_file, (year_timestamp, year_timestamp))
-                print(f"for year {year} train size {len(train_year_rows)} test size {len(test_year_rows)}")
                 stats[year] = {"train": len(train_year_rows), "test": len(test_year_rows)}
             else:
-                print(f"for year {year} train size {len(train_year_rows)}")
                 stats[year] = {"train": len(train_year_rows)}
         with open(os.path.join(self.path, "overall_stats.json"), "w") as f:
             import json
@@ -110,7 +110,7 @@ class ArXivDownloader(Dataset):
             # set timestamp
             os.utime(train_dummy_file, (year_timestamp, year_timestamp))
 
-            if store_all_data:
+            if create_test_data:
                 test_dummy_file = os.path.join(test_dir, f"{dummy_year}.csv")
                 with open(test_dummy_file, "w", encoding="utf-8") as f:
                     f.write("\n".join(["dummy\t0"]))

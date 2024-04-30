@@ -37,8 +37,8 @@ class YearbookDownloader(Dataset):
         self._dataset = datasets
         self.data_dir = data_dir
 
-    def _get_year_data(self, year: int, store_all_data: bool) -> tuple[dict[str, list[tuple]], dict[str, int]]:
-        def get_one_split(split: int) -> list[Tuple]:
+    def _get_year_data(self, year: int, create_test_data: bool) -> tuple[dict[str, list[tuple]], dict[str, int]]:
+        def get_split_by_id(split: int) -> list[Tuple]:
             images = torch.FloatTensor(
                 np.array(
                     [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
@@ -52,23 +52,21 @@ class YearbookDownloader(Dataset):
             labels = torch.LongTensor(self._dataset[year][split]["labels"])
             return [(images[i], labels[i]) for i in range(len(images))]
 
-        if not store_all_data:
-            train_size = len(get_one_split(0))
-            print(f"for year {year} train size {train_size}")
-            ds = {"train": get_one_split(0)}
+        if not create_test_data:
+            train_size = len(get_split_by_id(0))
+            ds = {"train": get_split_by_id(0)}
             stats = { "train": train_size }
         else:
-            train_size = len(get_one_split(0))
-            test_size = len(get_one_split(1))
-            ds = {"train": get_one_split(0), "test": get_one_split(1)}
-            print(f"for year {year} train size {train_size}, test size {test_size}")
+            train_size = len(get_split_by_id(0))
+            test_size = len(get_split_by_id(1))
+            ds = {"train": get_split_by_id(0), "test": get_split_by_id(1)}
             stats = {"train": train_size, "test": test_size}
         return ds, stats
 
     def __len__(self) -> int:
         return len(self._dataset["labels"])
 
-    def store_data(self, store_all_data: bool, add_final_dummy_year: bool) -> None:
+    def store_data(self, create_test_data: bool, add_final_dummy_year: bool) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
@@ -76,18 +74,18 @@ class YearbookDownloader(Dataset):
         train_dir = os.path.join(self.data_dir, "train")
         os.makedirs(train_dir, exist_ok=True)
 
-        if store_all_data:
+        if create_test_data:
             test_dir = os.path.join(self.data_dir, "test")
             os.makedirs(test_dir, exist_ok=True)
 
         overall_stats = {}
         for year in self.time_steps:
-            ds, stats = self._get_year_data(year, store_all_data)
+            ds, stats = self._get_year_data(year, create_test_data)
             overall_stats[year] = stats
             self.create_binary_file(ds["train"],
                                     os.path.join(train_dir, f"{year}.bin"),
                                     create_fake_timestamp(year, base_year=1930))
-            if store_all_data:
+            if create_test_data:
                 self.create_binary_file(ds["test"],
                                         os.path.join(test_dir, f"{year}.bin"),
                                         create_fake_timestamp(year, base_year=1930))
@@ -96,18 +94,13 @@ class YearbookDownloader(Dataset):
             import json
             json.dump(overall_stats, f, indent=4)
 
-        train_size_sum = sum([stats["train"] for stats in overall_stats.values()])
-        print(f"Total train size: {train_size_sum}")
-        if store_all_data:
-            test_size_sum = sum([stats["test"] for stats in overall_stats.values()])
-            print(f"Total test size: {test_size_sum}")
         if add_final_dummy_year:
             dummy_year = year + 1
             dummy_data = [ ds["train"][0] ] # get one sample from the previous year
             self.create_binary_file(dummy_data,
                                     os.path.join(train_dir, f"{dummy_year}.bin"),
                                     create_fake_timestamp(dummy_year, base_year=1930))
-            if store_all_data:
+            if create_test_data:
                 self.create_binary_file(dummy_data,
                                         os.path.join(test_dir, f"{dummy_year}.bin"),
                                         create_fake_timestamp(dummy_year, base_year=1930))
@@ -124,7 +117,7 @@ class YearbookDownloader(Dataset):
                 features_size = len(features_bytes)
                 assert features_size == 12288
 
-                f.write(int.to_bytes(label_integer, length=4, byteorder="little"))
+                f.write(int.to_bytes(label_integer, length=4, byteorder="big"))
                 f.write(features_bytes)
 
         os.utime(output_file_name, (timestamp, timestamp))
