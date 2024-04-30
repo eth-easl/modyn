@@ -208,6 +208,7 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
             dataset_partition_table_name, dataset_id);
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
+        session.close();
         return false;
       }
 
@@ -222,6 +223,7 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         }
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
+        session.close();
         return false;
       }
       break;
@@ -238,6 +240,5 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
   }
 
   session.close();
-
   return true;
 }
