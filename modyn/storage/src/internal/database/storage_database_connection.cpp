@@ -102,19 +102,10 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
 #include "sql/SQLUpdateDataset.sql"
         ;
 
-    switch (drivername_) {
-      // same logic for both dbms > fallthrough
-      case DatabaseDriver::POSTGRESQL:
-      case DatabaseDriver::SQLITE3:
-        session << update_query, soci::use(base_path), soci::use(filesystem_wrapper_type_int),
-            soci::use(file_wrapper_type_int), soci::use(description), soci::use(version),
-            soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval),
-            soci::use(dataset_id);
-        return true;
-      default:
-        SPDLOG_ERROR("Error adding dataset: Unsupported database driver.");
-        return false;
-    }
+    session << update_query, soci::use(base_path), soci::use(filesystem_wrapper_type_int),
+        soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
+        soci::use(boolean_string), soci::use(file_watcher_interval), soci::use(dataset_id);
+    return true;
   }
 
   // Dataset does not exist
