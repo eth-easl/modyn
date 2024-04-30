@@ -57,7 +57,7 @@ def setup_logger():
 
 
 def create_fake_timestamp(year: int, base_year: int) -> int:
-    timestamp = ((year - base_year) * DAY_LENGTH_SECONDS) + 1
+    timestamp = ((year - base_year) * DAY_LENGTH_SECONDS)
     return timestamp
 
 
