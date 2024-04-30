@@ -20,7 +20,7 @@ class FileWatcherTest : public ::testing::Test {
  protected:
   std::string tmp_dir_;
 
-  FileWatcherTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_test"} {}
+  FileWatcherTest() : tmp_dir_{modyn::test::TestUtils::get_tmp_testdir("file_watcher_test")} {}
 
   void SetUp() override {
     modyn::test::TestUtils::create_dummy_yaml();

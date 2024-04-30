@@ -14,8 +14,7 @@ class FileWatcherWatchdogTest : public ::testing::Test {
  protected:
   std::string tmp_dir_;
 
-  FileWatcherWatchdogTest()
-      : tmp_dir_{std::filesystem::temp_directory_path().string() + "/file_watcher_watchdog_test"} {}
+  FileWatcherWatchdogTest() : tmp_dir_{modyn::test::TestUtils::get_tmp_testdir("file_watcher_watchdog_test")} {}
 
   void SetUp() override {
     modyn::test::TestUtils::create_dummy_yaml();

@@ -544,6 +544,7 @@ class GRPCHandler:
                     evaluations[evaluation_id] = EvaluationStatusReporter(
                         self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
                     )
+                    evaluations[evaluation_id].create_tracker()
 
             return evaluations
 
@@ -647,6 +648,10 @@ class GRPCHandler:
             "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
+
+        if "tokenizer" in dataset_config:
+            tokenizer = dataset_config["tokenizer"]
+            start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
 
         if pipeline_id is not None:
             assert trigger_id is not None

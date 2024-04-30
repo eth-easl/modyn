@@ -469,6 +469,8 @@ def test_start_evaluation_default_prefetch_configs(prepare_evaluation_request_mo
 
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
+    dataset_config = pipeline_config["evaluation"]["datasets"][0]
+    dataset_config["tokenizer"] = "DistilBertTokenizerTransform"
     request = GRPCHandler._prepare_evaluation_request(pipeline_config["evaluation"]["datasets"][0], 23, "cpu")
 
     assert request.model_id == 23
@@ -478,6 +480,7 @@ def test_prepare_evaluation_request():
     assert request.dataset_info.num_dataloaders == 2
     assert request.metrics[0].name == "Accuracy"
     assert request.metrics[0].config.value == "{}"
+    assert request.tokenizer.value == "DistilBertTokenizerTransform"
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
