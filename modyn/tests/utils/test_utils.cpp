@@ -1,5 +1,11 @@
 #include "test_utils.hpp"
 
+#include <string.h>
+#include <unistd.h>
+
+#include <filesystem>
+#include <iostream>
+
 using namespace modyn::test;
 
 void TestUtils::create_dummy_yaml() {
@@ -31,4 +37,14 @@ YAML::Node TestUtils::get_dummy_config() {
   config["storage"]["database"]["host"] = "";
   config["storage"]["database"]["port"] = "";
   return config;
+}
+
+std::string TestUtils::get_tmp_testdir(const std::string& subsdir) {
+  std::array<char, 20> buf{0};
+  getlogin_r(buf.data(), 20);
+  std::string username{buf.data(), strnlen(buf.data(), 20)};
+  if (username.empty()) {
+    username = "modyn";
+  }
+  return std::filesystem::temp_directory_path().string() + "/" + username + "/" + subsdir;
 }

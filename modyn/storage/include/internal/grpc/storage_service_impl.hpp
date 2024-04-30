@@ -360,6 +360,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     session.close();
 
     if (file_ids.empty()) {
+      SPDLOG_INFO("No files found for dataset {} with start_timestamp = {} and end_timestamp = {}", dataset_id,
+                  start_timestamp, end_timestamp);
       return;
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC

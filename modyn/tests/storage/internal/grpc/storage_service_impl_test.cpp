@@ -24,7 +24,7 @@ class StorageServiceImplTest : public ::testing::Test {
   int64_t early_sample_id_ = -1;
   int64_t late_sample_id_ = -1;
 
-  StorageServiceImplTest() : tmp_dir_{std::filesystem::temp_directory_path().string() + "/storage_service_impl_test"} {}
+  StorageServiceImplTest() : tmp_dir_{modyn::test::TestUtils::get_tmp_testdir("storage_service_impl_test")} {}
 
   void SetUp() override {
     modyn::test::TestUtils::create_dummy_yaml();
