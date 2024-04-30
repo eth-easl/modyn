@@ -4,21 +4,29 @@ from typing import Optional, Union
 
 import pandas as pd
 import torch
+from evidently.metrics import EmbeddingsDriftMetric
+from evidently.metrics.data_drift import embedding_drift_methods
 from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
-
 from torch.utils.data import DataLoader
-from evidently import ColumnMapping
-from evidently.metrics import EmbeddingsDriftMetric
-import evidently.metrics.data_drift.embedding_drift_methods as embedding_drift_methods
-from evidently.report import Report
 
 logger = logging.getLogger(__name__)
 
 
-def get_evidently_metrics(column_mapping_name: str, trigger_config: dict = {}) -> list[EmbeddingsDriftMetric]:  
-    metric_name: str = "model"  
+def get_evidently_metrics(
+    column_mapping_name: str, trigger_config: Optional[dict] = None
+) -> list[EmbeddingsDriftMetric]:
+    """Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
+    model, distance, mmd, ratio
+    If metric_name not given, we use the default 'model' metric.
+    Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
+    """
+    if trigger_config is None:
+        trigger_config = {}
+
+    metric_name: str = "model"
     metric_config: dict = {}
+
     if "metric_name" in trigger_config.keys():
         metric_name = trigger_config["metric_name"]
         if "metric_config" in trigger_config.keys():

@@ -1,10 +1,12 @@
+import json
 import logging
 import os
-import json
 import pathlib
 from typing import Generator, Optional
 
 import pandas as pd
+from evidently import ColumnMapping
+from evidently.report import Report
 from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 
 # pylint: disable-next=no-name-in-module
@@ -12,15 +14,10 @@ from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
     get_embeddings_evidently_format,
+    get_evidently_metrics,
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
-    get_evidently_metrics,
 )
-
-from evidently import ColumnMapping
-from evidently.metrics import EmbeddingsDriftMetric
-from evidently.metrics.data_drift.embedding_drift_methods import distance, mmd, model, ratio
-from evidently.report import Report
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +61,7 @@ class DataDriftTrigger(Trigger):
         if "sample_size" in self.trigger_config.keys():
             self.sample_size = self.trigger_config["sample_size"]
         assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
-        
+
         self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, self.trigger_config)
 
     def _init_dataloader_info(self) -> None:
@@ -154,13 +151,16 @@ class DataDriftTrigger(Trigger):
             reference_data=reference_embeddings_df, current_data=current_embeddings_df, column_mapping=column_mapping
         )
         result = report.as_dict()
-        result_print = [(x["result"]["drift_score"], x["result"]["method_name"], x["result"]["drift_detected"]) for x in result["metrics"]]
+        result_print = [
+            (x["result"]["drift_score"], x["result"]["method_name"], x["result"]["drift_detected"])
+            for x in result["metrics"]
+        ]
         logger.info(
             f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
             + f"[Result] {result_print}"
         )
 
-        with open(self.drift_dir / f"drift_{self.previous_trigger_id}.json", "w") as f:
+        with open(self.drift_dir / f"drift_{self.previous_trigger_id}.json", "w", encoding="utf-8") as f:
             json.dump(result, f)
 
         return result["metrics"][0]["result"]["drift_detected"]
