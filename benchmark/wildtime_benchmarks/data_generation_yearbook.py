@@ -112,7 +112,7 @@ class YearbookDownloader(Dataset):
                                         os.path.join(test_dir, f"{dummy_year}.bin"),
                                         create_fake_timestamp(dummy_year, base_year=1930))
 
-        # os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
+        os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
 
     @staticmethod
     def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
