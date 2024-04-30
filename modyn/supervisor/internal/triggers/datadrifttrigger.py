@@ -40,12 +40,12 @@ class DataDriftTrigger(Trigger):
         self.dataloader_info: Optional[DataLoaderInfo] = None
         self.model_downloader: Optional[ModelDownloader] = None
 
-        self.detection_interval: int = 2
+        self.detection_interval: int = 1000
         self.sample_size: Optional[int] = None
         self.evidently_column_mapping_name = "data"
         self.metrics: Optional[list] = None
 
-        self.data_cache = []
+        self.data_cache: list[tuple[int, int, int]] = []
         self.leftover_data_points = 0
 
         self.exp_output_dir: Optional[pathlib.Path] = None
@@ -65,6 +65,9 @@ class DataDriftTrigger(Trigger):
         self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, self.trigger_config)
 
     def _init_dataloader_info(self) -> None:
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+
         training_config = self.pipeline_config["training"]
         data_config = self.pipeline_config["data"]
 
@@ -112,6 +115,9 @@ class DataDriftTrigger(Trigger):
         )
 
     def _init_model_downloader(self) -> None:
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+
         self.model_downloader = ModelDownloader(
             self.modyn_config,
             self.pipeline_id,
@@ -142,6 +148,9 @@ class DataDriftTrigger(Trigger):
         self._create_dirs()
 
     def run_detection(self, reference_embeddings_df: pd.DataFrame, current_embeddings_df: pd.DataFrame) -> bool:
+        assert self.dataloader_info is not None
+        assert self.drift_dir is not None
+
         # Run Evidently detection
         column_mapping = ColumnMapping(embeddings={self.evidently_column_mapping_name: reference_embeddings_df.columns})
 
@@ -165,11 +174,12 @@ class DataDriftTrigger(Trigger):
 
         return result["metrics"][0]["result"]["drift_detected"]
 
-    def detect_drift(self, idx_start, idx_end) -> bool:
+    def detect_drift(self, idx_start: int, idx_end: int) -> bool:
         assert self.previous_trigger_id is not None
         assert self.previous_data_points is not None and self.previous_data_points > 0
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
+        assert self.model_downloader is not None
 
         reference_dataloader = prepare_trigger_dataloader_by_trigger(
             self.previous_trigger_id,

@@ -39,7 +39,7 @@ class ModelDownloader:
 
         self._model_storage_stub = self.connect_to_model_storage(model_storage_address)
 
-        self.model_configuration_dict = None
+        self.model_configuration_dict: Optional[dict] = None
         self.model_handler = None
         self._amp: Optional[bool] = None
         self._model = None
@@ -56,6 +56,7 @@ class ModelDownloader:
 
     def _load_state(self, path: pathlib.Path) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
+        assert self._model is not None
 
         logger.info(f"Loading model state from {path}")
         with open(path, "rb") as state_file:
@@ -77,8 +78,12 @@ class ModelDownloader:
         self._amp = amp
         model_module = dynamic_module_import("modyn.models")
         self.model_handler = getattr(model_module, model_class_name)
+        assert self.model_handler is not None
+
         self.model_configuration_dict = json.loads(model_config)
         self._model = self.model_handler(self.model_configuration_dict, self._device, amp)
+
+        assert self._model is not None
         assert isinstance(self._model.model, CoresetSupportingModule)
 
     def download(self, model_id: int) -> None:

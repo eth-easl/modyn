@@ -191,7 +191,7 @@ class PipelineExecutor:
 
     def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         self._sw.start("trigger_inform", overwrite=True)
-        triggering_indices: Generator[int] = self.trigger.inform(batch)
+        triggering_indices: Generator[int, None, None] = self.trigger.inform(batch)
         num_triggers = self._handle_triggers_within_batch(batch, triggering_indices)
 
         logger.info(f"There are {num_triggers} triggers in this batch.")
@@ -263,7 +263,9 @@ class PipelineExecutor:
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(
+        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
+    ) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
