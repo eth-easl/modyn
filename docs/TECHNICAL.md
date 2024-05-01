@@ -44,18 +44,101 @@ By default, we only build the extensions to avoid downloading the huge gRPC libr
 In case you want to build the storage C++ component, enable `-DMODYN_BUILD_STORAGE=On` when running CMake.
 
 Furthermore, by default, we enable the `-DMODYN_TRY_LOCAL_GRPC` flag.
-This flag checks whether gRPC is available locally on your system and uses this installation for rapid development, instead of rebuilding gRPC from source everytime like in CI.
+This flag checks whether gRPC is available locally on your system and uses this installation for rapid development, instead of rebuilding gRPC from source everytime. Using pre-compiled gRPC can speed up the build process significantly.
+Furthermore, this avoids cloning the gRPC repository during the cmake build process.
 In order to install gRPC on your system, you can either use your system's package manager or run the following instructions:
 
-```
-git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
-    cd grpc && mkdir -p cmake/build && cd cmake/build && \
-    cmake -DgRPC_PROTOBUF_PROVIDER=module -DABSL_ENABLE_INSTALL=On -DgRPC_BUILD_CSHARP_EXT=Off -DABSL_BUILD_TESTING=Off -DgRPC_INSTALL=ON -DgRPC_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=${MODYN_DEP_BUILDTYPE} ../.. && \
-    make -j8 && make install && cd ../../
+
+#### `DMODYN_TRY_LOCAL_GRPC="ON"`
+
+If you installed gPRC on your system with a package manager, there is nothing to do.
+
+##### Build grpc from source once
+
+> **Note**: CLion provides nice CMake integration, which can be used to build both modyn and grpc. We won't show how to specify the CLion equivalents of the commandline variants here though.
+
+> **Warning**: Adjust the following variables:
+
+- **`<grpc_src_dir>`**: the directory where you want to clone the grpc repository: e.g. `~/vendor/grpc`
+- **`<build_type>`**: "Debug" or "Release" ("Release" is recommended)
+- **`<grpc_install_prefix>`**: the directory where grpc binaries should be installed
+  We recommend using a build specific directory: e.g.
+  - `~/vendor/lib/dev/`
+  - `~/vendor/lib/release/`
+
+```bash
+# Clone the grpc repository into a directory of your choice (e.g., `~/vendor/grpc`).:
+git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc <grpc_src_dir>
+
+#  Create a build directory
+cd <grpc_src_dir> && mkdir -p cmake/build && cd cmake/build
+
+# Run cmake to configure the build
+cmake \
+    -DCMAKE_INSTALL_PREFIX="<grpc_install_prefix>" \
+    -DCMAKE_BUILD_TYPE=<build_type> \
+    -DgRPC_PROTOBUF_PROVIDER=module \
+    -DABSL_ENABLE_INSTALL=On \
+    -DgRPC_BUILD_CSHARP_EXT=Off \
+    -DABSL_BUILD_TESTING=Off \
+    -DgRPC_INSTALL=ON \
+    -DgRPC_BUILD_TESTS=Off \
+    ../..
+
+# Build and install grpc (this will take a while)
+make -j8
+
+# Install grpc into the install prefix directory
+make install
+
+# Inspect the linked libraries
+ls <grpc_install_prefix>
 ```
 
-Please adjust the version as required. 
-If you run into problems with the system gRPC installation, set `-DMODYN_TRY_LOCAL_GRPC=Off`.
+Even though `Release` should be enough for most cases, you might want to build `Debug` as well (using a different install prefix).
+
+##### Build modyn using those grpc binaries
+
+> **Note**: CLion can again be useful here for automatic CMake configuration.
+
+> **Warning**: Adjust the following variables:
+
+- **`<build_type>`**: "Debug" or "Release"
+- **`<modyn_src_dir>`**: the directory where you cloned the modyn repository
+- **`<grpc_install_prefix>`**: the directory where grpc binaries are installed
+
+```bash
+# Enter the modyn source directory
+cd <modyn_src_dir>
+
+# Create a build directory
+mkdir -p build && cd build
+
+# Run cmake to configure the build
+cmake -G "Unix Makefiles" \
+    -DCMAKE_PREFIX_PATH="<grpc_install_prefix>" \
+    -DCMAKE_BUILD_TYPE=<build_type> \
+    -DMODYN_BUILD_STORAGE="ON" \
+    -DMODYN_BUILD_PLAYGROUND="ON" \
+    -DMODYN_TRY_LOCAL_GRPC="ON" \
+    -DMODYN_BUILD_TESTS="ON" \
+    -DMODYN_TEST_COVERAGE="OFF" \
+    ..
+
+# Build modyn
+make -j8
+
+# Run the tests
+./build/modyn/tests/modyn-test
+```
+
+If you run into problems with the system gRPC installation, use the `-DMODYN_TRY_LOCAL_GRPC=OFF` option described below.
+
+#### `DMODYN_TRY_LOCAL_GRPC="OFF"` (clones grpc repo into modyn directory)
+
+You can invoke CMake with the `-DMODYN_TRY_LOCAL_GRPC=OFF` and let Cmake download and build gRPC for you.
+
+This option will try to rebuild gRPC from source every time you compile modyn which can be time-consuming.
 
 ### Docker-Compose Setup
 We use docker-compose to manage the system setup.

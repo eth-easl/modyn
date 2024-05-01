@@ -14,6 +14,7 @@ WORKDIR /src
 RUN chown -R appuser /src
 USER appuser
 
+# TODO: use local grpc
 RUN mkdir build \
     && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} -DMODYN_BUILD_TESTS=Off -DMODYN_BUILD_PLAYGROUND=Off -DMODYN_BUILD_STORAGE=On \

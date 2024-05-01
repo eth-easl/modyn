@@ -17,6 +17,7 @@ function run_build() {
     cmake -S ${SCRIPT_DIR}/.. -B "${BUILD_DIR}" \
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=OFF \
+        -DMODYN_TRY_LOCAL_GRPC=ON \
         -DMODYN_BUILD_STORAGE=ON
 
     pushd ${BUILD_DIR}
@@ -27,6 +28,7 @@ function run_build() {
         -DCMAKE_BUILD_TYPE=Debug \
         -DCMAKE_UNITY_BUILD=ON \
         -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 \
+        -DMODYN_TRY_LOCAL_GRPC=ON \
         -DMODYN_BUILD_STORAGE=ON
 
     # Due to the include-based nature of the unity build, clang-tidy will not find this configuration file otherwise:

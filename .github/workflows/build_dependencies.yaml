@@ -4,13 +4,92 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # Run at midnight on the first of every month
   workflow_dispatch:
-  pull_request:  # TODO: remove once fully implemented
+  pull_request:
+    branches: main  # TODO: remove once fully implemented
 
 jobs:
   build_grpc:
     name: Build gRPC artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [ Release, Debug ]
+        compiler:
+          - { c: gcc, cxx: g++, version: 11 }
+          - { c: gcc, cxx: g++, version: 12 }
+          - { c: clang, cxx: clang++, version: 14 }
+          - { c: clang, cxx: clang++, version: 17, coverage: true }
+        include:
+          # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
+          # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
+          - compiler: {c: clang, cxx: clang++, version: 14}
+            build-type: Tsan
+          - compiler: {c: clang, cxx: clang++, version: 14}
+            build-type: Asan
+        exclude:
+          # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
+          - compiler: { c: gcc, cxx: g++, version: 12 }
+            build-type: Release
+    env:
+      CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
+      CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
+      CCACHE_BASEDIR: ${{github.workspace}}
     steps:
-      - name: Check out codebase
+      - name: Check out grpc codebase
         uses: actions/checkout@v4
+        with:
+          repository: grpc/grpc
+          ref: v1.59.2
+          submodules: true
+          fetch-depth: 1
+
+      - name: Install ccache
+        run: |
+          sudo apt update
+          sudo apt install -y ccache
+        
+      - name: Install clang version
+        if: ${{ matrix.compiler.version > 14 }}
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: ${{ matrix.compiler.version }}.0
+          env: true
+
+      - name: Create build and artifact directories
+        run: >
+          mkdir -p ${{github.workspace}}/cmake/build
+          mkdir -p ${{github.workspace}}/install
+      
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/cmake/build
+        # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
+        run: >
+          cmake
+            -G "Unix Makefiles"
+            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install"
+            -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
+            -DgRPC_PROTOBUF_PROVIDER=module
+            -DABSL_ENABLE_INSTALL=On
+            -DgRPC_BUILD_CSHARP_EXT=Off
+            -DABSL_BUILD_TESTING=Off
+            -DgRPC_INSTALL=ON
+            -DgRPC_BUILD_TESTS=Off
+            ${{github.workspace}}
+
+      - name: Build
+        working-directory: ${{github.workspace}}/cmake/build
+        run: make -j2 && make install
+
+      - name: Store binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
+          path: ${{github.workspace}}/install
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 90
+

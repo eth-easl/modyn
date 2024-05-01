@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -64,7 +64,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -82,7 +82,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -98,7 +98,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -116,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: DoozyX/clang-format-lint-action@v0.16.2
         with:
           source: 'modyn'
@@ -127,16 +127,16 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      CLANG_TIDY: clang-tidy-15
-      RUN_CLANG_TIDY: run-clang-tidy-15
+      CLANG_TIDY: clang-tidy-18
+      RUN_CLANG_TIDY: run-clang-tidy-18
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt install -y clang-tidy-15
+          sudo apt install -y clang-tidy-18
           cmake --version
 
       - name: Configure CMake
@@ -181,7 +181,7 @@ jobs:
       CCACHE_BASEDIR: ${{github.workspace}}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Install ccache
         run: |
@@ -244,6 +244,8 @@ jobs:
           name: coverage-results
           path: ${{github.workspace}}/build/modyn/tests/coverage
 
+  # TODO (this PR): use existing binaries
+
   cpp_coverage_main:
     name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
     runs-on: ubuntu-latest
@@ -255,7 +257,7 @@ jobs:
       line-coverage: ${{steps.run_main_test_with_coverage.outputs.LINE_COVERAGE}}
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: main 
 
@@ -336,7 +338,7 @@ jobs:
 
     steps:
     - name: Check out code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup base container
       uses: ./.github/actions/base
@@ -359,7 +361,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Debug
@@ -378,7 +380,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Asan
@@ -397,7 +399,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Tsan
@@ -416,7 +418,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Release
