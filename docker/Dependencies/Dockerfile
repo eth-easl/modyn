@@ -48,8 +48,6 @@ ENV MODYN_DEP_BUILDTYPE=$MODYN_DEP_BUILDTYPE
 RUN echo "Used buildtype is ${MODYN_BUILDTYPE}" >> /src/.modyn_buildtype
 RUN echo "Used dependency buildtype is ${MODYN_DEP_BUILDTYPE}" >> /src/.modyn_dep_buildtype
 
-# TODO: this PR: use pre-built binaries for grpc
-
 # Install gRPC systemwide. When updating the version, make sure to also update the storage_dependencies.cmake file
 RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https://github.com/grpc/grpc && \
     cd grpc && mkdir -p cmake/build && cd cmake/build && \

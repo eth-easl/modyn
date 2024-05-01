@@ -14,10 +14,10 @@ WORKDIR /src
 RUN chown -R appuser /src
 USER appuser
 
-# TODO: use local grpc
 RUN mkdir build \
     && cd build \
-    && cmake .. -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} -DMODYN_BUILD_TESTS=Off -DMODYN_BUILD_PLAYGROUND=Off -DMODYN_BUILD_STORAGE=On \
+    && cmake .. -DCMAKE_BUILD_TYPE=${MODYN_BUILDTYPE} -DMODYN_BUILD_TESTS=Off -DMODYN_BUILD_PLAYGROUND=Off \
+        -DMODYN_BUILD_STORAGE=On -DMODYN_TRY_LOCAL_GRPC=On \
     && make -j8 modyn-storage
 
 # These files are copied after building the storage to avoid rebuilding if the config changes

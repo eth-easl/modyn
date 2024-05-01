@@ -127,8 +127,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      CLANG_TIDY: clang-tidy-18
-      RUN_CLANG_TIDY: run-clang-tidy-18
+      CLANG_TIDY: clang-tidy-15
+      RUN_CLANG_TIDY: run-clang-tidy-15
+      # TODO: https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
+      # TODO: how to bump run-clang-tidy?
 
     steps:
       - uses: actions/checkout@v4
@@ -136,12 +138,20 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt install -y clang-tidy-18
+          sudo apt install -y clang-tidy-15
           cmake --version
+
+      - name: Setup pre-built grpc binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: grpc-binaries-clang-clang++-17-Release
+          path: ${{github.workspace}}/install
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
         run: bash scripts/clang-tidy.sh build
+        env:
+          CMAKE_PREFIX_PATH: ${{github.workspace}}/install
 
       - name: Run clang-tidy
         working-directory: ${{github.workspace}}
@@ -194,6 +204,12 @@ jobs:
         with:
           version: ${{ matrix.compiler.version }}.0
           env: true
+      
+      - name: Setup pre-built grpc binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
+          path: ${{github.workspace}}/install
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}//build
@@ -204,6 +220,7 @@ jobs:
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
         run: >
           cmake ${{github.workspace}}
+          -DCMAKE_PREFIX_PATH=${{github.workspace}}/install
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
@@ -267,6 +284,12 @@ jobs:
           version: 17.0
           env: true
 
+      - name: Setup pre-built grpc binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: grpc-binaries-clang-clang++-17-Release
+          path: ${{github.workspace}}/install
+
       - name: Create Build Environment
         run: |
           cmake -E make_directory ${{github.workspace}}/build
@@ -275,7 +298,9 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         run: >
-          cmake ${{github.workspace}} -DCMAKE_BUILD_TYPE=Debug
+          cmake ${{github.workspace}} 
+          -DCMAKE_PREFIX_PATH=${{github.workspace}}/install
+          -DCMAKE_BUILD_TYPE=Debug
           -DMODYN_BUILD_PLAYGROUND=ON -DMODYN_BUILD_TESTS=ON -DMODYN_BUILD_STORAGE=ON -DMODYN_TEST_COVERAGE=ON
 
       - name: Build

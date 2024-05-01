@@ -69,24 +69,24 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/cmake/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
-        run: |
-          cmake \
-            -G "Unix Makefiles" \
-            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install" \
-            -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=." \
-            -DgRPC_PROTOBUF_PROVIDER=module \
-            -DABSL_ENABLE_INSTALL=On \
-            -DgRPC_BUILD_CSHARP_EXT=Off \
-            -DABSL_BUILD_TESTING=Off \
-            -DgRPC_INSTALL=ON \
-            -DgRPC_BUILD_TESTS=Off \
-            ${{github.workspace}}
+        run: >
+          cmake
+          -G "Unix Makefiles"
+          -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install"
+          -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
+          -DgRPC_PROTOBUF_PROVIDER=module
+          -DABSL_ENABLE_INSTALL=On
+          -DgRPC_BUILD_CSHARP_EXT=Off
+          -DABSL_BUILD_TESTING=Off
+          -DgRPC_INSTALL=ON
+          -DgRPC_BUILD_TESTS=Off
+          ${{github.workspace}}
 
       - name: Build
         working-directory: ${{github.workspace}}/cmake/build
-        run: make -j2 && make install
+        run: make && make install
 
       - name: Store binaries
         uses: actions/upload-artifact@v4
