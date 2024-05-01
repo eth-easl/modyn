@@ -218,7 +218,7 @@ class PipelineExecutor:
         logger.info(f"Running training for trigger {trigger_id}")
 
         self._sw.start("train", overwrite=True)
-        num_samples_to_pass_per_trigger = self.pipeline_config["training"].get("num_samples_to_pass_per_trigger", [])
+        num_samples_to_pass_per_trigger = self.pipeline_config["training"].get("num_samples_to_pass", [])
         current_trigger_index = len(self.triggers)
         if current_trigger_index <= len(num_samples_to_pass_per_trigger) - 1:
             num_samples_to_pass = num_samples_to_pass_per_trigger[current_trigger_index]

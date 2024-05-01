@@ -103,7 +103,7 @@ properties:
         type: number
         description: |
           The number of epochs per trigger. Defaults to 1, if not given.
-      num_samples_to_pass_per_trigger:
+      num_samples_to_pass:
         type: array
         description: |
           If it is set, during the i-th trigger, the number of samples to train on (multiple passes counted as exactly
