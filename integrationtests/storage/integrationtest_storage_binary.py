@@ -45,6 +45,7 @@ def register_new_dataset() -> None:
         description="Test dataset for integration tests of binary wrapper.",
         file_wrapper_config=json.dumps(
             {
+                "byteorder": "little",
                 "file_extension": ".bin",
                 "label_size": 4,
                 "record_size": 10,
