@@ -103,6 +103,16 @@ properties:
         type: number
         description: |
           The number of epochs per trigger. Defaults to 1, if not given.
+      num_samples_to_pass_per_trigger:
+        type: array
+        description: |
+          If it is set, during the i-th trigger, the number of samples to train on (multiple passes counted as exactly
+          multiple times, e.g. if we train for 2 epochs then each sample is counted twice) is the i-th element
+          in the array. If the array is not long enough, out-of-range triggers will fall back to the `epochs_per_trigger`
+          constraint. `epochs_per_trigger` has to effect to in-range triggers.
+        minItems: 1
+        items:
+          type: number
       num_prefetched_partitions:
         type: number
         description: |

@@ -258,7 +258,12 @@ class GRPCHandler:
 
     # pylint: disable=too-many-branches,too-many-locals,too-many-statements
     def start_training(
-        self, pipeline_id: int, trigger_id: int, pipeline_config: dict, previous_model_id: Optional[int]
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        pipeline_config: dict,
+        previous_model_id: Optional[int],
+        num_samples_to_pass: int = 0,
     ) -> int:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
@@ -375,6 +380,7 @@ class GRPCHandler:
             "parallel_prefetch_requests": parallel_prefetch_requests,
             "seed": seed,
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
+            "num_samples_to_pass": num_samples_to_pass,
         }
 
         cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
