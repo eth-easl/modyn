@@ -410,9 +410,9 @@ def test__run_training(
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "wait_for_training_completion")
 def test__run_training_set_num_samples_to_pass(
-        test_wait_for_training_completion: MagicMock,
-        test_start_training: MagicMock,
-        test_store_trained_model: MagicMock,
+    test_wait_for_training_completion: MagicMock,
+    test_start_training: MagicMock,
+    test_store_trained_model: MagicMock,
 ):
     pipeline_config = get_minimal_pipeline_config()
     pipeline_config["training"]["num_samples_to_pass"] = [73]
@@ -422,7 +422,7 @@ def test__run_training_set_num_samples_to_pass(
     test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
     test_start_training.reset_mock()
 
-    # the next time the training is called, the num_samples_to_pass should be set to 0
+    # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
     pe._run_training(trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, 0)
