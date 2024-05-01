@@ -18,7 +18,7 @@ Use the `-h` flag to find out more.
 The goal is to predict the sex given a yearbook picture.
 The dataset contains 37189 samples collected from 1930 to 2013. 
 Since timestamps in Modyn are based on Unix Timestamps (so 0 is 1/1/1970) we have to remap the years to days. 
-Precisely, the timestamp for pictures from 1930 is 1/1/1970, then 2/1/1970 for the ones taken in 1931 and so forth. 
+Precisely, the timestamp for pictures from 1930 is 1/Jan/1970, then 2/Jan/1970 for the ones taken in 1931 and so forth. 
 Samples are saved using BinaryFileWrapper by grouping all samples of the same year in one file.
 
 ### FMoW
@@ -34,7 +34,7 @@ Titles belonging to the same year are grouped into the same CSV file and stored 
 Each year is mapped to a year starting from 1/1/1970.
 
 ### Arxiv
-The goal is to predict the paper category (55 classes) given the paper title. 
+The goal is to predict the paper category (172 classes) given the paper title. 
 The dataset contains more than 2 million samples collected from 2002 to 2017. 
 Titles belonging to the same year are grouped into the same CSV file and stored together. 
 Each year is mapped to a year starting from 1/1/1970.
