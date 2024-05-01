@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: main  # TODO: remove once fully implemented
 
+concurrency: 
+  group: grpc-build
+  cancel-in-progress: true
+
 jobs:
   build_grpc:
     name: Build gRPC artifacts
@@ -58,26 +62,26 @@ jobs:
           env: true
 
       - name: Create build and artifact directories
-        run: >
+        run: |
           mkdir -p ${{github.workspace}}/cmake/build
           mkdir -p ${{github.workspace}}/install
       
       - name: Configure CMake
         working-directory: ${{github.workspace}}/cmake/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
-        run: >
-          cmake
-            -G "Unix Makefiles"
-            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install"
+        run: |
+          cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install" \
             -DCMAKE_BUILD_TYPE=${{matrix.build-type}} \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-            -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
-            -DgRPC_PROTOBUF_PROVIDER=module
-            -DABSL_ENABLE_INSTALL=On
-            -DgRPC_BUILD_CSHARP_EXT=Off
-            -DABSL_BUILD_TESTING=Off
-            -DgRPC_INSTALL=ON
-            -DgRPC_BUILD_TESTS=Off
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=." \
+            -DgRPC_PROTOBUF_PROVIDER=module \
+            -DABSL_ENABLE_INSTALL=On \
+            -DgRPC_BUILD_CSHARP_EXT=Off \
+            -DABSL_BUILD_TESTING=Off \
+            -DgRPC_INSTALL=ON \
+            -DgRPC_BUILD_TESTS=Off \
             ${{github.workspace}}
 
       - name: Build
