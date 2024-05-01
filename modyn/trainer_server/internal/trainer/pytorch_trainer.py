@@ -366,7 +366,7 @@ class PytorchTrainer:
         else:
             # an infinity epoch generator
             epoch_num_generator = itertools.count(start=0)
-            self._info("Training will stop when the number of samples to pass is reached.")
+            self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
