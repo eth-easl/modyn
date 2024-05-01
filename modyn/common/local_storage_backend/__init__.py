@@ -1,5 +1,5 @@
 """
-This module contains classes shared among several components.
+This submodule implements necessary functions to persist samples to storage.
 """
 
 import os
