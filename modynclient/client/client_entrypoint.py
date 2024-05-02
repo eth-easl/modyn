@@ -72,9 +72,6 @@ def validate_args(args: Any) -> None:
 
     if args.maximum_triggers is not None and args.maximum_triggers < 1:
         raise ValueError(f"maximum_triggers is {args.maximum_triggers}, needs to be >= 1")
-    
-    if args.evaluation_matrix and args.start_replay_at is None:
-        raise ValueError("--evaluation-matrix can only be used in experiment mode currently.")
 
 
 def main() -> None:
@@ -102,7 +99,6 @@ def main() -> None:
         args.start_replay_at,
         args.stop_replay_at,
         args.maximum_triggers,
-        args.evaluation_matrix
     )
 
     logger.info("Starting pipeline.")

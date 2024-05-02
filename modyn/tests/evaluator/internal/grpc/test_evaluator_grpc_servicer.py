@@ -208,9 +208,7 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(
-    test_connect_to_model_storage, test_connect_to_storage, download_model_mock
-):
+def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(), None)

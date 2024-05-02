@@ -47,7 +47,6 @@ class GRPCHandler:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> dict:
         if not self.connected_to_supervisor:
             raise ConnectionError(
@@ -64,8 +63,6 @@ class GRPCHandler:
             start_pipeline_request.stop_replay_at = stop_replay_at
         if maximum_triggers is not None:
             start_pipeline_request.maximum_triggers = maximum_triggers
-
-        start_pipeline_request.evaluation_matrix = evaluation_matrix
 
         res: PipelineResponse = self.supervisor.start_pipeline(start_pipeline_request)
         ret = MessageToDict(

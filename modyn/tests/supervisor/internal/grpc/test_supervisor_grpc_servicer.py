@@ -101,9 +101,7 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(
-        pipeline_config, modyn_config["supervisor"]["eval_directory"], 0, 1, 2
-    )
+    test_start_pipeline.assert_called_once_with(pipeline_config, modyn_config["supervisor"]["eval_directory"], 0, 1, 2)
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
