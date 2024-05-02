@@ -150,6 +150,12 @@ jobs:
           run-id: 8914657344  # TODO: generalize
           github-token: ${{secrets.GITHUB_TOKEN}}
 
+      - name: Patch artifacts
+        run: |
+          ls -l ${github.workspace}/install/bin
+          ls -l ${github.workspace}/install/lib
+          chmod -R +x ${github.workspace}/install/
+
       - name: Configure CMake
         working-directory: ${{github.workspace}}
         run: bash scripts/clang-tidy.sh build
@@ -213,7 +219,7 @@ jobs:
         with:
           name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
           path: ${{github.workspace}}/install
-          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          run-id: 8914657344  # TODO: generalize
           github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Create Build Environment
