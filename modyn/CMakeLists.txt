@@ -2,6 +2,9 @@
 ##### Common Files for Modyn Library #####
 add_subdirectory("common")
 
+##### Local Storage Backend #####
+add_subdirectory("selector")
+
 ##### MODYN STORAGE BINARY #####
 if (${MODYN_BUILD_STORAGE})
   message(STATUS "Storage is included in this build.")
