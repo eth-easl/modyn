@@ -31,7 +31,7 @@ def wait_for_pipeline(pipeline_id: int) -> str:
 
 
 def parse_grpc_res(msg: Message) -> dict:
-    return MessageToDict(msg, preserving_proto_field_name=True, including_default_value_fields=True)
+    return MessageToDict(msg, preserving_proto_field_name=True, always_print_fields_with_no_presence=True)
 
 
 def assert_pipeline_exit_without_error(res: dict) -> None:
