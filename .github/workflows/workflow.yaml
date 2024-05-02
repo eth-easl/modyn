@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CLANG_TIDY: clang-tidy-18
-      RUN_CLANG_TIDY: run-clang-tidy-18
+      RUN_CLANG_TIDY: run-clang-tidy
     steps:
       - uses: actions/checkout@v4
 
@@ -150,7 +150,7 @@ jobs:
           run-id: 8914657344  # TODO: generalize
           github-token: ${{secrets.GITHUB_TOKEN}}
 
-      - name: Patch artifacts
+      - name: Inspect and patch artifacts
         run: |
           ls -l ${{github.workspace}}/install/bin
           ls -l ${{github.workspace}}/install/lib
@@ -217,10 +217,16 @@ jobs:
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
-          name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
+          name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
           run-id: 8914657344  # TODO: generalize
           github-token: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Inspect and patch artifacts
+        run: |
+          ls -l ${{github.workspace}}/install/bin
+          ls -l ${{github.workspace}}/install/lib
+          chmod -R +x ${{github.workspace}}/install/
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}//build
