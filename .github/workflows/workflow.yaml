@@ -5,6 +5,10 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+  actions: read
+  
 defaults:
   run:
     shell: bash -l {0}
@@ -127,25 +131,24 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      CLANG_TIDY: clang-tidy-15
-      RUN_CLANG_TIDY: run-clang-tidy-15
-      # TODO: https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/clang-tidy/tool/run-clang-tidy.py
-      # TODO: how to bump run-clang-tidy?
-
+      CLANG_TIDY: clang-tidy-18
+      RUN_CLANG_TIDY: run-clang-tidy-18
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install clang-tidy
-        run: |
-          sudo apt update
-          sudo apt install -y clang-tidy-15
-          cmake --version
+      - name: Install clang environment
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: .github/actions/environment_clang.yaml
+          cache-environment: true
 
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
           name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
+          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
@@ -210,6 +213,8 @@ jobs:
         with:
           name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
           path: ${{github.workspace}}/install
+          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}//build
@@ -289,6 +294,8 @@ jobs:
         with:
           name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
+          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Create Build Environment
         run: |
