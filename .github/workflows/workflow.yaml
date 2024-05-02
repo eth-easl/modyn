@@ -229,8 +229,7 @@ jobs:
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
-          # name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
-          name: grpc-binaries-gcc-g++-11-Release
+          name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
           path: ${{github.workspace}}/install
           run-id: ${{ needs.retrieve_grpc_build_run_id.outputs.run_id }}
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -315,7 +314,7 @@ jobs:
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
-          name: grpc-binaries-gcc-g++-11-Release
+          name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
           run-id: ${{ needs.retrieve_grpc_build_run_id.outputs.run_id }}
           github-token: ${{secrets.GITHUB_TOKEN}}
