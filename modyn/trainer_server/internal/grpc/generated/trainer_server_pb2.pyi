@@ -134,6 +134,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     PARALLEL_PREFETCH_REQUESTS_FIELD_NUMBER: builtins.int
     SEED_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
+    NUM_SAMPLES_TO_PASS_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -166,6 +167,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     seed: builtins.int
     @property
     def tokenizer(self) -> global___PythonString: ...
+    num_samples_to_pass: builtins.int
     def __init__(
         self,
         *,
@@ -191,9 +193,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
         parallel_prefetch_requests: builtins.int = ...,
         seed: builtins.int | None = ...,
         tokenizer: global___PythonString | None = ...,
+        num_samples_to_pass: builtins.int = ...,
     ) -> None: ...
     def HasField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "_tokenizer", b"_tokenizer", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "seed", b"seed", "tokenizer", b"tokenizer", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "_tokenizer", b"_tokenizer", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "epochs_per_trigger", b"epochs_per_trigger", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "num_prefetched_partitions", b"num_prefetched_partitions", "parallel_prefetch_requests", b"parallel_prefetch_requests", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "seed", b"seed", "tokenizer", b"tokenizer", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["_seed", b"_seed", "_tokenizer", b"_tokenizer", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "epochs_per_trigger", b"epochs_per_trigger", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "num_prefetched_partitions", b"num_prefetched_partitions", "num_samples_to_pass", b"num_samples_to_pass", "parallel_prefetch_requests", b"parallel_prefetch_requests", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "seed", b"seed", "tokenizer", b"tokenizer", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "transform_list", b"transform_list", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing_extensions.Literal["_seed", b"_seed"]) -> typing_extensions.Literal["seed"] | None: ...
     @typing.overload
