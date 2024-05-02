@@ -21,13 +21,13 @@ void* get_all_samples(const char* folder, int64_t* size, const char* pattern) {
 
 void write_files(const char* filenames[], const void* data, int64_t data_lengths[], const char* headers[],
                  int64_t header_length, std::uint64_t num_files) {
-  return modyn::common::trigger_sample_storage::write_files_impl(filenames, data, data_lengths, headers, header_length,
-                                                                 num_files);
+  modyn::common::trigger_sample_storage::write_files_impl(filenames, data, data_lengths, headers, header_length,
+                                                          num_files);
 }
 
 void* parse_file(const char* filename, int64_t* size) {
   return modyn::common::trigger_sample_storage::parse_file_impl(filename, size);
 }
 
-void release_data(void* data) { return modyn::common::trigger_sample_storage::release_data_impl(data); }
+void release_data(void* data) { modyn::common::trigger_sample_storage::release_data_impl(data); }
 }
