@@ -1,6 +1,7 @@
 # pylint: disable=no-name-in-module
 import glob
 import io
+import itertools
 import json
 import logging
 import multiprocessing as mp
@@ -11,7 +12,7 @@ import shutil
 import tempfile
 import traceback
 from enum import Enum
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Iterable, Optional, Tuple, Union
 
 import grpc
 import numpy as np
@@ -114,6 +115,7 @@ class PytorchTrainer:
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
         self.epochs_per_trigger = training_info.epochs_per_trigger
+        self.num_samples_to_pass = training_info.num_samples_to_pass
         self._log_file_path = training_info.log_file_path
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
 
@@ -358,7 +360,13 @@ class PytorchTrainer:
         self._log["epochs"] = []
 
         batch_number = -1
-        for epoch in range(self.epochs_per_trigger):
+        if self.num_samples_to_pass == 0:
+            epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
+        else:
+            # an infinity epoch generator
+            epoch_num_generator = itertools.count(start=0)
+            self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
+        for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
             batch_timings = []
@@ -452,6 +460,9 @@ class PytorchTrainer:
                         self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
+                if 0 < self.num_samples_to_pass <= self._num_samples:
+                    self._info("Stopping training as we have reached the sample threshold.")
+                    break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
 
@@ -488,6 +499,9 @@ class PytorchTrainer:
             self._log["epochs"][epoch]["OnBatchEnd"] = stopw.measurements.get("OnBatchEnd", 0)
 
             self._persist_pipeline_log()
+            if 0 < self.num_samples_to_pass <= self._num_samples:
+                self._info("reached the threshold of samples to pass; break out of epoch loop to stop training")
+                break
 
         total_stopw.stop("TotalTrain")
 
