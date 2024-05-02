@@ -436,13 +436,13 @@ def test__run_training_set_num_samples_to_pass(
     pipeline_config["training"]["num_samples_to_pass"] = [73]
     pe = get_non_connecting_pipeline_executor(pipeline_config)
     pe.pipeline_id = 42
-    pe._run_training(trigger_id=21)
+    pe._run_training(trigger_id=21, trigger_set_first_timestamp=0, trigger_set_last_timestamp=0)
     test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
     test_start_training.reset_mock()
 
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
-    pe._run_training(trigger_id=22)
+    pe._run_training(trigger_id=22, trigger_set_first_timestamp=0, trigger_set_last_timestamp=0)
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
