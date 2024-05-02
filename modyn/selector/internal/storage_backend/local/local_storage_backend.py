@@ -169,7 +169,7 @@ class LocalStorageBackend(AbstractStorageBackend):
             read_blocks.append((filenames, data_lengths, data_offsets))
 
         for filenames, data_lengths, data_offsets in read_blocks:
-            yield self._parse_files(filenames, data_lengths, data_offsets), {}
+            yield self._parse_files(filenames, data_lengths, data_offsets).tolist(), {}
 
     def persist_samples(
         self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
