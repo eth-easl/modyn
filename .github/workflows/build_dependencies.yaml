@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # Run at midnight on the first of every month
   workflow_dispatch:
-  pull_request:
-    branches: main  # TODO: remove once fully implemented
+  # pull_request:
+  #   branches: main
 
 concurrency: 
   group: grpc-build
