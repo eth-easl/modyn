@@ -23,8 +23,8 @@ jobs:
           gh variable list
           gh variable set LAST_SUCCESSFUL_GRPC_BUILD_RUN_ID --body "dummyvalue"
           gh variable list
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build_grpc:
     name: Build gRPC artifacts
     runs-on: ubuntu-latest
