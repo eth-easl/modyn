@@ -99,8 +99,10 @@ def register_new_dataset() -> None:
     )
 
     response = storage.RegisterNewDataset(request)
-
     assert response.success, "Could not register new dataset."
+    
+    response = storage.RegisterNewDataset(request)
+    assert not response.success, "Registering an existing dataset should fail"
 
 
 def check_dataset_availability() -> None:
