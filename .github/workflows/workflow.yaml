@@ -147,7 +147,7 @@ jobs:
         with:
           name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
-          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          run-id: 8914657344  # TODO: generalize
           github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Configure CMake
