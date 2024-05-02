@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # Run at midnight on the first of every month
   workflow_dispatch:
-  # pull_request:
-  #   branches: main
+  pull_request:
+    branches: main
 
 concurrency: 
   group: grpc-build
@@ -75,7 +75,8 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install"
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
+          -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20' || ''}} -fdebug-prefix-map=${{github.workspace}}/build=."
+          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -lc++abi' || ''}}"
           -DgRPC_PROTOBUF_PROVIDER=module
           -DABSL_ENABLE_INSTALL=On
           -DgRPC_BUILD_CSHARP_EXT=Off

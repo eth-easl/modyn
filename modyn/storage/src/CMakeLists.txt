@@ -59,7 +59,7 @@ protobuf_generate(
     OUT_VAR PROTO_GENERATED_FILES
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-    PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:grpc_cpp_plugin>"
+    PLUGIN "protoc-gen-grpc=\$<TARGET_FILE:${MODYN_GRPC_CPP_PLUGIN}>"
     # PLUGIN_OPTIONS "generate_mock_code=true"
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
