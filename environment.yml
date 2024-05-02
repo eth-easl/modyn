@@ -11,7 +11,7 @@ channels:
   - anaconda
   - nvidia
   - pytorch
-  # - huggingface
+  - huggingface
 
 dependencies:
   - python>=3.11
