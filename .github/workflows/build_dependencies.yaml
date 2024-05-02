@@ -7,11 +7,24 @@ on:
   pull_request:
     branches: main  # TODO: remove once fully implemented
 
+permissions: write-all
+
 concurrency: 
   group: grpc-build
   cancel-in-progress: true
 
 jobs:
+  dummy_write_variable:
+    name: Dummy write variable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          gh variable list
+          gh variable set LAST_SUCCESSFUL_GRPC_BUILD_RUN_ID --body "dummyvalue"
+          gh variable list
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   build_grpc:
     name: Build gRPC artifacts
     runs-on: ubuntu-latest
