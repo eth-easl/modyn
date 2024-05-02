@@ -224,25 +224,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
               fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id LIMIT {} OFFSET {}",
                           dataset_id, limit, start_index);
         } else {
-          std::string timestamp_filter;
-          if (start_timestamp > 0 && end_timestamp == 0) {
-            timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
-          } else if (start_timestamp == 0 && end_timestamp > 0) {
-            timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
-          } else if (start_timestamp > 0 && end_timestamp > 0) {
-            timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
-          } else if (start_timestamp == 0 && end_timestamp == 0) {
-            timestamp_filter = "1 = 1";
-          } else {
-            FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
-          }
+          const std::string timestamp_condition = get_timestamp_condition(start_timestamp, end_timestamp);
           query = fmt::format(
               "SELECT samples.sample_id "
               "FROM samples INNER JOIN files "
               "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
               "WHERE samples.dataset_id = {} AND {} "
               "ORDER BY sample_id LIMIT {} OFFSET {}",
-              dataset_id, timestamp_filter, limit, start_index);
+              dataset_id, timestamp_condition, limit, start_index);
         }
         const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
         CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
@@ -653,10 +642,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     session.close();
   }
 
-  static int64_t get_number_of_samples_in_dataset_with_range(const int64_t dataset_id, soci::session& session,
-                                                             const int64_t start_timestamp = 0,
-                                                             const int64_t end_timestamp = 0) {
-    int64_t total_keys = 0;
+  static std::string get_timestamp_condition(const int64_t start_timestamp, const int64_t end_timestamp) {
     std::string timestamp_filter;
     if (start_timestamp > 0 && end_timestamp == 0) {
       timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
@@ -665,13 +651,21 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     } else if (start_timestamp > 0 && end_timestamp > 0) {
       timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
     } else if (start_timestamp == 0 && end_timestamp == 0) {
+      // No limit on timestamps, return an always true condition
       timestamp_filter = "1 = 1";
     } else {
       FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
     }
+    return timestamp_filter;
+  }
 
+  static int64_t get_number_of_samples_in_dataset_with_range(const int64_t dataset_id, soci::session& session,
+                                                             const int64_t start_timestamp = 0,
+                                                             const int64_t end_timestamp = 0) {
+    int64_t total_keys = 0;
+    const std::string timestamp_condition = get_timestamp_condition(start_timestamp, end_timestamp);
     session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
-                   timestamp_filter,
+                   timestamp_condition,
         soci::into(total_keys), soci::use(dataset_id);
 
     return total_keys;
