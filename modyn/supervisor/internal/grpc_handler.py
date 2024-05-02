@@ -533,7 +533,6 @@ class GRPCHandler:
 
         evaluations: dict[int, EvaluationStatusReporter] = {}
 
-        # In this case, we evaluate on fixed datasets
         for dataset in pipeline_config["evaluation"]["datasets"]:
             dataset_id = dataset["dataset_id"]
 

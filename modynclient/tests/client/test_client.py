@@ -89,9 +89,7 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     client = get_non_connecting_client()  # pylint: disable=no-value-for-parameter
     started = client.start_pipeline()
 
-    test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), None, None, None, False
-    )
+    test_start_pipeline.assert_called_once_with(get_minimal_pipeline_config(), None, None, None)
     assert started is True
     assert client.pipeline_id == PIPELINE_ID
 
@@ -101,8 +99,6 @@ def test_start_pipeline_failed(test_start_pipeline: MagicMock):
     client = get_non_connecting_client()  # pylint: disable=no-value-for-parameter
     started = client.start_pipeline()
 
-    test_start_pipeline.assert_called_once_with(
-        get_minimal_pipeline_config(), None, None, None, False
-    )
+    test_start_pipeline.assert_called_once_with(get_minimal_pipeline_config(), None, None, None)
     assert started is False
     assert client.pipeline_id is None

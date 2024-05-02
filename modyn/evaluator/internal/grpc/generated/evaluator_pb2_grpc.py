@@ -17,17 +17,17 @@ class EvaluatorStub(object):
                 '/modyn.evaluator.Evaluator/evaluate_model',
                 request_serializer=evaluator__pb2.EvaluateModelRequest.SerializeToString,
                 response_deserializer=evaluator__pb2.EvaluateModelResponse.FromString,
-                )
+                _registered_method=True)
         self.get_evaluation_status = channel.unary_unary(
                 '/modyn.evaluator.Evaluator/get_evaluation_status',
                 request_serializer=evaluator__pb2.EvaluationStatusRequest.SerializeToString,
                 response_deserializer=evaluator__pb2.EvaluationStatusResponse.FromString,
-                )
+                _registered_method=True)
         self.get_evaluation_result = channel.unary_unary(
                 '/modyn.evaluator.Evaluator/get_evaluation_result',
                 request_serializer=evaluator__pb2.EvaluationResultRequest.SerializeToString,
                 response_deserializer=evaluator__pb2.EvaluationResultResponse.FromString,
-                )
+                _registered_method=True)
 
 
 class EvaluatorServicer(object):
@@ -90,11 +90,21 @@ class Evaluator(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.evaluator.Evaluator/evaluate_model',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modyn.evaluator.Evaluator/evaluate_model',
             evaluator__pb2.EvaluateModelRequest.SerializeToString,
             evaluator__pb2.EvaluateModelResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def get_evaluation_status(request,
@@ -107,11 +117,21 @@ class Evaluator(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.evaluator.Evaluator/get_evaluation_status',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modyn.evaluator.Evaluator/get_evaluation_status',
             evaluator__pb2.EvaluationStatusRequest.SerializeToString,
             evaluator__pb2.EvaluationStatusResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def get_evaluation_result(request,
@@ -124,8 +144,18 @@ class Evaluator(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.evaluator.Evaluator/get_evaluation_result',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modyn.evaluator.Evaluator/get_evaluation_result',
             evaluator__pb2.EvaluationResultRequest.SerializeToString,
             evaluator__pb2.EvaluationResultResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
