@@ -263,7 +263,7 @@ class GRPCHandler:
         trigger_id: int,
         pipeline_config: dict,
         previous_model_id: Optional[int],
-        num_samples_to_pass: int = 0,
+        num_samples_to_pass: Optional[int] = None,
     ) -> int:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:

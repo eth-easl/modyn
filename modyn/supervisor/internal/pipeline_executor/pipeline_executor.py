@@ -223,7 +223,7 @@ class PipelineExecutor:
         if current_trigger_index <= len(num_samples_to_pass_per_trigger) - 1:
             num_samples_to_pass = num_samples_to_pass_per_trigger[current_trigger_index]
         else:
-            num_samples_to_pass = 0
+            num_samples_to_pass = None
 
         self.current_training_id = self.grpc.start_training(
             self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model_id, num_samples_to_pass

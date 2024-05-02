@@ -401,7 +401,7 @@ def test__run_training(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, 0)
+    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, None)
     test_store_trained_model.assert_called_once()
     test_start_evaluation.assert_not_called()
 
@@ -425,7 +425,7 @@ def test__run_training_set_num_samples_to_pass(
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
     pe._run_training(trigger_id=22)
-    test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, 0)
+    test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -457,7 +457,7 @@ def test__run_training_with_evaluation(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, 0)
+    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, None)
     test_store_trained_model.assert_called_once()
 
     test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)

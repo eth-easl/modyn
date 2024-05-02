@@ -462,7 +462,7 @@ class PytorchTrainer:
                     )
                 stopw.stop()
                 if 0 < self.num_samples_to_pass <= self._num_samples:
-                    self._info("reached the threshold of samples to pass; break out of batch loop to stop training")
+                    self._info("Stopping training as we have reached the sample threshold.")
                     break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
