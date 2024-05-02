@@ -79,45 +79,45 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
                                             const FilesystemWrapperType& filesystem_wrapper_type,
                                             const FileWrapperType& file_wrapper_type, const std::string& description,
                                             const std::string& version, const std::string& file_wrapper_config,
-                                            const bool ignore_last_timestamp,
-                                            const int64_t file_watcher_interval) const {
+                                            const bool ignore_last_timestamp, const int64_t file_watcher_interval,
+                                            const bool upsert) const {
   soci::session session = get_session();
 
   auto filesystem_wrapper_type_int = static_cast<int64_t>(filesystem_wrapper_type);
   auto file_wrapper_type_int = static_cast<int64_t>(file_wrapper_type);
   std::string boolean_string = ignore_last_timestamp ? "true" : "false";
 
-  if (get_dataset_id(name) != -1) {
-    SPDLOG_ERROR("Dataset {} already exists", name);
+  const int64_t dataset_id = get_dataset_id(name);
+
+  if (dataset_id != -1 && !upsert) {
+    // Dataset already exists
+    SPDLOG_ERROR("Cannot insert dataset {} as it already exists", name);
     return false;
   }
+
+  if (dataset_id != -1) {
+    SPDLOG_INFO("Dataset {} already exists, updating...", name);
+
+    const std::string update_query =
+#include "sql/SQLUpdateDataset.sql"
+        ;
+
+    session << update_query, soci::use(base_path), soci::use(filesystem_wrapper_type_int),
+        soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
+        soci::use(boolean_string), soci::use(file_watcher_interval), soci::use(dataset_id);
+    return true;
+  }
+
+  // Dataset does not exist
+  const std::string insertion_query =
+#include "sql/SQLInsertDataset.sql"
+      ;
+
   switch (drivername_) {
+    // same logic for both dbms > fallthrough
     case DatabaseDriver::POSTGRESQL:
-      try {
-        session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-                   "file_wrapper_type, description, version, file_wrapper_config, "
-                   "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
-                   "VALUES (:name, "
-                   ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-                   ":description, :version, :file_wrapper_config, "
-                   ":ignore_last_timestamp, :file_watcher_interval, 0)",
-            soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
-            soci::use(file_wrapper_type_int), soci::use(description), soci::use(version),
-            soci::use(file_wrapper_config), soci::use(boolean_string), soci::use(file_watcher_interval);
-      } catch (const std::exception& e) {
-        SPDLOG_ERROR("Error adding dataset: {}", e.what());
-        return false;
-      }
-      break;
     case DatabaseDriver::SQLITE3:
-      session << "INSERT INTO datasets (name, base_path, filesystem_wrapper_type, "
-                 "file_wrapper_type, description, version, file_wrapper_config, "
-                 "ignore_last_timestamp, file_watcher_interval, last_timestamp) "
-                 "VALUES (:name, "
-                 ":base_path, :filesystem_wrapper_type, :file_wrapper_type, "
-                 ":description, :version, :file_wrapper_config, "
-                 ":ignore_last_timestamp, :file_watcher_interval, 0)",
-          soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
+      session << insertion_query, soci::use(name), soci::use(base_path), soci::use(filesystem_wrapper_type_int),
           soci::use(file_wrapper_type_int), soci::use(description), soci::use(version), soci::use(file_wrapper_config),
           soci::use(boolean_string), soci::use(file_watcher_interval);
       break;
@@ -130,8 +130,6 @@ bool StorageDatabaseConnection::add_dataset(const std::string& name, const std::
   if (!add_sample_dataset_partition(name)) {
     FAIL("Partition creation failed.");
   }
-  session.close();
-
   return true;
 }
 
@@ -210,6 +208,7 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
             dataset_partition_table_name, dataset_id);
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating partition table for dataset {}: {}", dataset_name, e.what());
+        session.close();
         return false;
       }
 
@@ -224,6 +223,7 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
         }
       } catch (const soci::soci_error& e) {
         SPDLOG_ERROR("Error creating hash partitions for dataset {}: {}", dataset_name, e.what());
+        session.close();
         return false;
       }
       break;
@@ -240,6 +240,5 @@ bool StorageDatabaseConnection::add_sample_dataset_partition(const std::string& 
   }
 
   session.close();
-
   return true;
 }
