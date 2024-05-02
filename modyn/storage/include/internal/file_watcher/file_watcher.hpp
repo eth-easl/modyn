@@ -154,8 +154,8 @@ class FileWatcher {
   int64_t dataset_id_ = -1;
   int16_t insertion_threads_ = 1;
   bool disable_multithreading_ = false;
-  std::vector<std::thread> insertion_thread_pool_ = {};
-  std::vector<std::atomic<bool>> insertion_thread_exceptions_ = {};
+  std::vector<std::thread> insertion_thread_pool_;
+  std::vector<std::atomic<bool>> insertion_thread_exceptions_;
   int64_t sample_dbinsertion_batchsize_ = 1000000;
   bool force_fallback_ = false;
   StorageDatabaseConnection storage_database_connection_;

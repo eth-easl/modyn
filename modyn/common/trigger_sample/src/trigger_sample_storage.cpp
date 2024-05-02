@@ -244,7 +244,7 @@ std::vector<std::string> get_matching_files(const char* folder, const char* patt
   for (const auto& entry : std::filesystem::directory_iterator(folder)) {
     if (std::filesystem::is_regular_file(entry)) {
       const std::string filename = entry.path().filename().string();
-      if (filename.rfind(pattern, 0) == 0) {
+      if (filename.starts_with(pattern)) {
         matching_files.push_back(std::string(folder) + '/' + filename);
       }
     }

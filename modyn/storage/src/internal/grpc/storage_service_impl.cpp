@@ -314,7 +314,7 @@ StorageServiceImpl::get_keys_per_thread(const std::vector<int64_t>& keys, uint64
       threads = number_of_keys;
     }
 
-    const auto subset_size = static_cast<uint64_t>(number_of_keys / threads);
+    const auto subset_size = number_of_keys / threads;
     for (uint64_t thread_id = 0; thread_id < threads; ++thread_id) {
       // These need to be signed because we add them to iterators.
       const auto start_index = static_cast<int64_t>(thread_id * subset_size);
