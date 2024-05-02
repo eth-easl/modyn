@@ -9,7 +9,7 @@ from time import sleep
 from typing import Any, Optional
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -35,7 +35,6 @@ class PipelineExecutor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> None:
         self.stage = PipelineStage.INIT
 
@@ -60,7 +59,6 @@ class PipelineExecutor:
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
-        self.evaluation_matrix = evaluation_matrix
 
         self._sw = Stopwatch()
         self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
@@ -80,7 +78,6 @@ class PipelineExecutor:
 
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
-        self.trained_models: list[int] = []
         self.triggers: list[int] = []
 
     def _update_pipeline_stage_and_enqueue_msg(
@@ -123,18 +120,6 @@ class PipelineExecutor:
 
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
-
-    def build_evaluation_matrix(self) -> None:
-        self.pipeline_log["evaluation_matrix"] = {}
-        for model in self.trained_models:
-            self.pipeline_log["evaluation_matrix"][model] = {}
-            for trigger in self.triggers:
-                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
-                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
-                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
-                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
@@ -250,11 +235,10 @@ class PipelineExecutor:
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = model_id
 
-        self.trained_models.append(model_id)
         self.triggers.append(trigger_id)
 
         # Start evaluation
-        if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
+        if "evaluation" in self.pipeline_config:
             self._update_pipeline_stage_and_enqueue_msg(
                 PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
             )
@@ -420,9 +404,6 @@ class PipelineExecutor:
         logger.info(f"[pipeline {self.pipeline_id}] Start executing, experiment mode {self.experiment_mode}.")
         if self.experiment_mode:
             self.replay_data()
-
-            if self.evaluation_matrix:
-                self.build_evaluation_matrix()
         else:
             self.wait_for_new_data(self.start_timestamp)
 
@@ -446,7 +427,6 @@ def execute_pipeline(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
-    evaluation_matrix: bool = False,
 ) -> None:
     try:
         pipeline = PipelineExecutor(
@@ -462,7 +442,6 @@ def execute_pipeline(
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
-            evaluation_matrix,
         )
         pipeline.init_cluster_connection()
         pipeline.execute()
