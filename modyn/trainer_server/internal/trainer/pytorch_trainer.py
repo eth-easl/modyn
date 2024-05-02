@@ -362,7 +362,6 @@ class PytorchTrainer:
         batch_number = -1
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
-            self._info("Use normal epochs_per_trigger threshold.")
         else:
             # an infinity epoch generator
             epoch_num_generator = itertools.count(start=0)
