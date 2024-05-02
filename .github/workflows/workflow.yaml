@@ -152,9 +152,9 @@ jobs:
 
       - name: Patch artifacts
         run: |
-          ls -l ${github.workspace}/install/bin
-          ls -l ${github.workspace}/install/lib
-          chmod -R +x ${github.workspace}/install/
+          ls -l ${{github.workspace}}/install/bin
+          ls -l ${{github.workspace}}/install/lib
+          chmod -R +x ${{github.workspace}}/install/
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}
