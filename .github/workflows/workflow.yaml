@@ -14,6 +14,24 @@ defaults:
     shell: bash -l {0}
 
 jobs:
+  retrieve_grpc_build_run_id:
+    name: Fetch last successful run ID for gRPC build
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.get-run-id.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get run ID of last successful gRPC build
+        id: get-run-id
+        run: |
+          # Fetch the latest successful run ID using gh run list and jq
+          LATEST_RUN_ID=$(gh run list -w build_dependencies.yaml -s success -L 1 --json databaseId -q '.[0].databaseId')
+          
+          # Output the LATEST_RUN_ID
+          echo "::set-output name=run_id::$LATEST_RUN_ID"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
   flake8:
     timeout-minutes: 40
     runs-on: ubuntu-latest
@@ -128,6 +146,7 @@ jobs:
           clangFormatVersion: 16
 
   tidy:
+    needs: retrieve_grpc_build_run_id
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
@@ -147,7 +166,7 @@ jobs:
         with:
           name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
-          run-id: 8914657344  # TODO: generalize
+          run-id: ${{ needs.retrieve_grpc_build_run_id.outputs.run_id }}
           github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Inspect and patch artifacts
@@ -168,6 +187,7 @@ jobs:
 
   cpp_build_and_test:
     name: Build + Test (C++)
+    needs: retrieve_grpc_build_run_id
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -193,12 +213,10 @@ jobs:
           # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
           - compiler: { c: gcc, cxx: g++, version: 12 }
             build-type: Release
-
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
       CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
       CCACHE_BASEDIR: ${{github.workspace}}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -217,9 +235,9 @@ jobs:
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
-          name: grpc-binaries-clang-clang++-17-Release
+          name: grpc-binaries-${{matrix.compiler.c}}-${{matrix.compiler.cxx}}-${{matrix.compiler.version}}-${{matrix.build-type}}
           path: ${{github.workspace}}/install
-          run-id: 8914657344  # TODO: generalize
+          run-id: ${{ needs.retrieve_grpc_build_run_id.outputs.run_id }}
           github-token: ${{secrets.GITHUB_TOKEN}}
 
       - name: Inspect and patch artifacts
@@ -282,6 +300,7 @@ jobs:
 
   cpp_coverage_main:
     name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
+    needs: retrieve_grpc_build_run_id
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -306,8 +325,14 @@ jobs:
         with:
           name: grpc-binaries-clang-clang++-17-Release
           path: ${{github.workspace}}/install
-          run-id: https://github.com/eth-easl/modyn/actions/runs/8914657344  # TODO: generalize
+          run-id: ${{ needs.retrieve_grpc_build_run_id.outputs.run_id }}
           github-token: ${{secrets.GITHUB_TOKEN}}
+  
+      - name: Inspect and patch artifacts
+        run: |
+          ls -l ${{github.workspace}}/install/bin
+          ls -l ${{github.workspace}}/install/lib
+          chmod -R +x ${{github.workspace}}/install/
 
       - name: Create Build Environment
         run: |
