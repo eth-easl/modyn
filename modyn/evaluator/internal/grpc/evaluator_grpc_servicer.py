@@ -128,8 +128,6 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(evaluation_started=False)
 
-        assert dataset_size > -1
-
         with self._lock:
             evaluation_id = self._next_evaluation_id
             self._next_evaluation_id += 1
