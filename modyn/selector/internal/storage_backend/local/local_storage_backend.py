@@ -68,7 +68,7 @@ class LocalStorageBackend(AbstractStorageBackend):
         if not path.exists():
             raise RuntimeError(f"Cannot find LocalStorageBackend library at {path}")
 
-    def _parse_files(self, file_paths: list, data_lengths: list, data_offsets: list) -> None:
+    def _parse_files(self, file_paths: list, data_lengths: list, data_offsets: list) -> np.ndarray:
         """Read data from multiple files. Reading supports offset and length per file.
 
         Args:
