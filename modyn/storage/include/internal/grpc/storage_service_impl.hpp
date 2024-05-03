@@ -230,6 +230,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     session.close();
 
     if (file_ids.empty()) {
+      SPDLOG_INFO("No files found for dataset {} with start_timestamp = {} and end_timestamp = {}", dataset_id,
+                  start_timestamp, end_timestamp);
       return;
     }
     std::mutex writer_mutex;  // We need to protect the writer from concurrent writes as this is not supported by gRPC
@@ -418,7 +420,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::use(dataset_data.dataset_id);
 
       int64_t current_file_id = sample_fileids[0];
-      int64_t current_file_start_idx = 0;
+      uint64_t current_file_start_idx = 0;
       std::string current_file_path;
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
@@ -473,12 +475,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           file_wrapper->set_file_path(current_file_path);
-          current_file_start_idx = static_cast<int64_t>(sample_idx);
+          current_file_start_idx = sample_idx;
         }
       }
 
       // Send leftovers
-      const std::vector<uint64_t> file_indexes(sample_indices.begin() + current_file_start_idx, sample_indices.end());
+      const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+                                               sample_indices.end());
       const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
       // Protobuf expects the data as std::string...
       std::vector<std::string> stringified_data;
@@ -489,8 +492,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       modyn::storage::GetResponse response;
       response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
-      response.mutable_keys()->Assign(sample_keys.begin() + current_file_start_idx, sample_keys.end());
-      response.mutable_labels()->Assign(sample_labels.begin() + current_file_start_idx, sample_labels.end());
+      response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
+                                      sample_keys.end());
+      response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                        sample_labels.end());
 
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);

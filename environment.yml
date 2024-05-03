@@ -18,9 +18,10 @@ dependencies:
   - pip
   - tqdm
   - conda-forge::enlighten
-  - protobuf
   - pip:
     - grpcio==1.59.0
+    - protobuf==5.26.*
+    - types-protobuf==5.26.*
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
@@ -31,11 +32,10 @@ dependencies:
   - tensorboard
   - scipy
   - pyftpdlib
-  - types-protobuf
   - types-psycopg2
   - types-PyYAML
   - transformers
-  - pytorch::pytorch
+  - pytorch::pytorch=2.2.1
   - pytorch::torchvision
   - pytorch::cpuonly # comment out if commenting in lines below for CUDA
 #  - pytorch::pytorch-cuda=12.1

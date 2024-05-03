@@ -5,7 +5,7 @@ pipeline:
 model:
   id: YearbookNet
   config:
-    num_input_channels: 1
+    num_input_channels: 3
     num_classes: 2
 model_storage:
   full_model_strategy:
@@ -41,10 +41,12 @@ data:
   dataset_id: yearbook
   transformations: []
   bytes_parser_function: |
+    import warnings
     import torch
-    import numpy as np
-    def bytes_parser_function(data: bytes) -> torch.Tensor:
-      return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(1, 32, 32)
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
+      with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)
 
 trigger:
   id: TimeTrigger

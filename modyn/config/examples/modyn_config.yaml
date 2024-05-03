@@ -50,15 +50,33 @@ storage:
       },
       {
         name: "yearbook",
-        description: "Yearbook Dataset from Wild-Time",
+        description: "Yearbook Dataset from Wild-Time (training set)",
         version: "0.0.1",
-        base_path: "/datasets/yearbook",
+        base_path: "/datasets/yearbook/train",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "BinaryFileWrapper",
         file_wrapper_config:
           {
             byteorder: "big",
-            record_size: 4100,
+            record_size: 12292,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 256,
+      },
+      {
+        name: "yearbook-test",
+        description: "Yearbook Dataset from Wild-Time (test set)",
+        version: "0.0.1",
+        base_path: "/datasets/yearbook/test",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "big",
+            record_size: 12292,
             label_size: 4,
             file_extension: ".bin"
           },
@@ -83,22 +101,6 @@ storage:
         selector_batch_size: 1024,
       },
       {
-        name: "arxiv",
-        description: "Arxiv Dataset (from Wild-time)",
-        version: "0.0.1",
-        base_path: "/datasets/arxiv",
-        filesystem_wrapper_type: "LocalFilesystemWrapper",
-        file_wrapper_type: "SingleSampleFileWrapper",
-        file_wrapper_config:
-          {
-            file_extension: ".txt",
-            label_file_extension: ".label"
-          },
-        ignore_last_timestamp: false,
-        file_watcher_interval: 5,
-        selector_batch_size: 4096,
-      },
-      {
         name: "huffpost",
         description: "Huffpost Dataset (from Wild-time)",
         version: "0.0.1",
@@ -117,9 +119,26 @@ storage:
       },
       {
         name: "arxiv",
-        description: "Arxiv Dataset (from Wild-time)",
+        description: "Arxiv Dataset from Wild-time (training set)",
         version: "0.0.1",
-        base_path: "/datasets/arxiv",
+        base_path: "/datasets/arxiv/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            label_index: 1
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      {
+        name: "arxiv-test",
+        description: "Arxiv Dataset from Wild-time (test set)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv/test",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config:

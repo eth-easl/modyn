@@ -40,6 +40,7 @@ message EvaluateModelRequest {
   PythonString bytes_parser = 7;
   PythonString label_transformer = 8;
   optional TriggerTrainingSetInfo trigger_training_set_info = 9;
+  optional PythonString tokenizer = 10;
 }
 
 message EvaluateModelResponse {

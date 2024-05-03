@@ -1,6 +1,6 @@
 R"(CREATE TABLE IF NOT EXISTS datasets (
     dataset_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(80) NOT NULL,
+    name VARCHAR(80) UNIQUE NOT NULL,
     description VARCHAR(120),
     version VARCHAR(80),
     filesystem_wrapper_type INTEGER,

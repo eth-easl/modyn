@@ -107,13 +107,15 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
-def get_non_connecting_pipeline_executor() -> PipelineExecutor:
+def get_non_connecting_pipeline_executor(pipeline_config=None) -> PipelineExecutor:
+    if pipeline_config is None:
+        pipeline_config = get_minimal_pipeline_config()
     pipeline_executor = PipelineExecutor(
         START_TIMESTAMP,
         PIPELINE_ID,
         get_minimal_system_config(),
-        get_minimal_pipeline_config(),
-        EVALUATION_DIRECTORY,
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
         SUPPORTED_EVAL_RESULT_WRITERS,
         PIPELINE_STATUS_QUEUE,
         TRAINING_STATUS_QUEUE,
@@ -399,9 +401,31 @@ def test__run_training(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
+    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, None)
     test_store_trained_model.assert_called_once()
     test_start_evaluation.assert_not_called()
+
+
+@patch.object(GRPCHandler, "store_trained_model", return_value=101)
+@patch.object(GRPCHandler, "start_training", return_value=1337)
+@patch.object(GRPCHandler, "wait_for_training_completion")
+def test__run_training_set_num_samples_to_pass(
+    test_wait_for_training_completion: MagicMock,
+    test_start_training: MagicMock,
+    test_store_trained_model: MagicMock,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    pipeline_config["training"]["num_samples_to_pass"] = [73]
+    pe = get_non_connecting_pipeline_executor(pipeline_config)
+    pe.pipeline_id = 42
+    pe._run_training(trigger_id=21)
+    test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
+    test_start_training.reset_mock()
+
+    # the next time _run_training is called, the num_samples_to_pass should be set to 0
+    # because the next trigger is out of the range of `num_samples_to_pass`
+    pe._run_training(trigger_id=22)
+    test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -433,7 +457,7 @@ def test__run_training_with_evaluation(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None)
+    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, None)
     test_store_trained_model.assert_called_once()
 
     test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)

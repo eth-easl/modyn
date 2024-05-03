@@ -6,6 +6,7 @@ import grpc
 import pytest
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
+from modyn.models.tokenizers import DistilBertTokenizerTransform
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetDataPerWorkerRequest,
     GetDataPerWorkerResponse,
@@ -66,6 +67,7 @@ def test_init():
         serialized_transforms=[],
         storage_address="localhost:1234",
         evaluation_id=10,
+        tokenizer="DistilBertTokenizerTransform",
     )
 
     assert evaluation_dataset._evaluation_id == 10
@@ -73,6 +75,7 @@ def test_init():
     assert evaluation_dataset._first_call
     assert evaluation_dataset._bytes_parser_function is None
     assert evaluation_dataset._storagestub is None
+    assert isinstance(evaluation_dataset._tokenizer, DistilBertTokenizerTransform)
 
 
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.StorageStub", MockStorageStub)
@@ -141,7 +144,7 @@ def test_init_transforms():
     assert evaluation_dataset._bytes_parser_function is None
     assert evaluation_dataset._transform is None
 
-    with patch.object(evaluation_dataset, "_deserialize_torchvision_transforms") as tv_ds:
+    with patch.object(evaluation_dataset, "_setup_composed_transform") as tv_ds:
         evaluation_dataset._init_transforms()
         assert evaluation_dataset._bytes_parser_function is not None
         assert evaluation_dataset._bytes_parser_function(b"\x03") == 3
@@ -170,20 +173,22 @@ def test_init_transforms():
         )
     ],
 )
-def test_deserialize_torchvision_transforms(serialized_transforms, transforms_list):
+def test__setup_composed_transform(serialized_transforms, transforms_list):
     evaluation_dataset = EvaluationDataset(
         dataset_id="MNIST",
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=list(serialized_transforms),
         storage_address="localhost:1234",
         evaluation_id=10,
+        tokenizer="DistilBertTokenizerTransform",
     )
     evaluation_dataset._bytes_parser_function = bytes_parser_function
-    evaluation_dataset._deserialize_torchvision_transforms()
+    evaluation_dataset._setup_composed_transform()
     assert isinstance(evaluation_dataset._transform.transforms, list)
     assert evaluation_dataset._transform.transforms[0].__name__ == "bytes_parser_function"
-    for transform1, transform2 in zip(evaluation_dataset._transform.transforms[1:], transforms_list):
+    for transform1, transform2 in zip(evaluation_dataset._transform.transforms[1:-1], transforms_list):
         assert transform1.__dict__ == transform2.__dict__
+    assert isinstance(evaluation_dataset._transform.transforms[-1], DistilBertTokenizerTransform)
 
 
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.StorageStub", MockStorageStub)
