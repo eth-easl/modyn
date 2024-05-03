@@ -8,8 +8,8 @@ COPY ./modyn/common/CMakeLists.txt /src/modyn/common/CMakeLists.txt
 COPY ./modyn/common/cpp /src/modyn/common/cpp
 COPY ./modyn/common/example_extension /src/modyn/common/example_extension
 COPY ./modyn/common/trigger_sample /src/modyn/common/trigger_sample
-COPY ./modyn/common/local_storage_backend /src/modyn/common/local_storage_backend
 COPY ./modyn/protos/storage.proto /src/modyn/protos/storage.proto
+COPY ./modyn/selector/internal/storage_backend/local /src/modyn/selector/internal/storage_backend/local
 
 WORKDIR /src
 RUN chown -R appuser /src
