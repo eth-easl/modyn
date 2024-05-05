@@ -4,8 +4,8 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # Run at midnight on the first of every month
   workflow_dispatch:
-  # pull_request:
-  #   branches: main
+  pull_request:
+    branches: main
 
 concurrency: 
   group: grpc-build
@@ -21,8 +21,8 @@ jobs:
       matrix:
         build-type: [ Release, Debug ]
         compiler:
-          - { c: gcc, cxx: g++, version: 11 }
-          - { c: gcc, cxx: g++, version: 12 }
+          # - { c: gcc, cxx: g++, version: 11 }  # TODO revert
+          # - { c: gcc, cxx: g++, version: 12 }
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 17, coverage: true }
         include:
@@ -36,10 +36,6 @@ jobs:
           # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
           - compiler: { c: gcc, cxx: g++, version: 12 }
             build-type: Release
-    env:
-      CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
-      CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
-      CCACHE_BASEDIR: ${{github.workspace}}
     steps:
       - name: Check out grpc codebase
         uses: actions/checkout@v4
@@ -49,18 +45,14 @@ jobs:
           submodules: true
           fetch-depth: 1
 
-      - name: Install ccache
-        run: |
-          sudo apt update
-          sudo apt install -y ccache
-        
-      - name: Install clang version
-        if: ${{ matrix.compiler.version > 14 }}
-        uses: KyleMayes/install-llvm-action@v2
+      - name: Install clang environment
+        uses: mamba-org/setup-micromamba@v1
         with:
-          version: ${{ matrix.compiler.version }}.0
-          env: true
-
+          environment-file: .github/actions/environment_clang.yaml
+          cache-environment: true
+          create-args: ccache clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
+          # gcc_linux-64=${{matrix.compiler.version}} gxx_linux-64=${{matrix.compiler.version}}
+        
       - name: Create build and artifact directories
         run: |
           mkdir -p ${{github.workspace}}/cmake/build
@@ -69,19 +61,20 @@ jobs:
       - name: Configure CMake
         working-directory: ${{github.workspace}}/cmake/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
+        # -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20' || ''}} -fdebug-prefix-map=${{github.workspace}}/build=."
+        # -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -lc++abi' || ''}}"
         run: >
           cmake
           -G "Unix Makefiles"
           -DCMAKE_INSTALL_PREFIX="${{github.workspace}}/install"
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20' || ''}} -fdebug-prefix-map=${{github.workspace}}/build=."
-          -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -lc++abi' || ''}}"
+          -DCMAKE_C_COMPILER=${{matrix.compiler.c}}
+          -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}
           -DgRPC_PROTOBUF_PROVIDER=module
           -DABSL_ENABLE_INSTALL=On
+          -DgRPC_INSTALL=ON
           -DgRPC_BUILD_CSHARP_EXT=Off
           -DABSL_BUILD_TESTING=Off
-          -DgRPC_INSTALL=ON
           -DgRPC_BUILD_TESTS=Off
           ${{github.workspace}}
 
