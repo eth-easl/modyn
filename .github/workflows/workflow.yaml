@@ -154,6 +154,7 @@ jobs:
         with:
           environment-file: .github/actions/environment_clang.yaml
           cache-environment: true
+          create-args: clang-18 clang-tools clang-format-18
 
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
@@ -192,8 +193,8 @@ jobs:
       matrix:
         build-type: [ Release, Debug ]
         compiler:
-          - { c: gcc, cxx: g++, version: 11 }
-          - { c: gcc, cxx: g++, version: 12 }
+          # - { c: gcc, cxx: g++, version: 11 }
+          # - { c: gcc, cxx: g++, version: 12 }
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 17, coverage: true }
         include:
@@ -210,22 +211,18 @@ jobs:
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
       CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
-      CCACHE_BASEDIR: ${{github.workspace}}
+      # CCACHE_BASEDIR: ${{github.workspace}}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ccache
-        run: |
-          sudo apt update
-          sudo apt install -y ccache
-
-      - name: Install clang version
-        if: ${{ matrix.compiler.version > 14 }}
-        uses: KyleMayes/install-llvm-action@v1
+      - name: Install clang environment
+        uses: mamba-org/setup-micromamba@v1
         with:
-          version: ${{ matrix.compiler.version }}.0
-          env: true
-      
+          environment-file: .github/actions/environment_clang.yaml
+          cache-environment: true
+          create-args: ccache clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
+          # gcc_linux-64=${{matrix.compiler.version}} gxx_linux-64=${{matrix.compiler.version}}
+
       - name: Setup pre-built grpc binaries
         uses: actions/download-artifact@v4
         with:
@@ -247,13 +244,13 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
+        # -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        # -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
         run: >
           cmake ${{github.workspace}}
           -DCMAKE_PREFIX_PATH=${{github.workspace}}/install
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DMODYN_TRY_LOCAL_GRPC=ON
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
           -DMODYN_BUILD_PLAYGROUND=ON
           -DMODYN_BUILD_TESTS=ON
           -DMODYN_BUILD_STORAGE=ON

@@ -2,6 +2,4 @@ name: modyn-ci-tools
 channels:
   - conda-forge
 dependencies:
-  - clang-18
-  - clang-tools
-  - clang-format-18
+  - cmake
