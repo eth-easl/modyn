@@ -6,7 +6,10 @@ from .schema.config import (
     BinaryFileByteOrder,
     DatabaseConfig,
     DatabaseMixin,
+    DatasetBinaryFileWrapperConfig,
+    DatasetCsvFileWrapperConfig,
     DatasetFileWrapperConfig,
+    DatasetPngFileWrapperConfig,
     DatasetsConfig,
     EvaluatorConfig,
     HostnamePortMixin,
@@ -43,6 +46,7 @@ from .schema.pipeline import (
     ResultWriter,
     SelectionStrategy,
     SelectionStrategyConfig,
+    StorageBackend,
     TrainingConfig,
     TriggerConfig,
 )
@@ -53,6 +57,9 @@ __all__ = [
     "DatabaseMixin",
     "ProjectConfig",
     "BinaryFileByteOrder",
+    "DatasetCsvFileWrapperConfig",
+    "DatasetBinaryFileWrapperConfig",
+    "DatasetPngFileWrapperConfig",
     "DatasetFileWrapperConfig",
     "DatasetsConfig",
     "DatabaseConfig",
@@ -90,6 +97,7 @@ __all__ = [
     "ResultWriter",
     "EvaluationConfig",
     "ModynPipelineConfig",
+    "StorageBackend",
     # file readers
     "read_modyn_config",
     "read_pipeline",
@@ -103,7 +111,7 @@ def read_modyn_config(path: Path) -> ModynConfig:
         path: Path to the configuration file.
 
     Returns:
-        The validated Modyn as a pydantic model.
+        The validated Modyn config as a pydantic model.
     """
     with open(path, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)

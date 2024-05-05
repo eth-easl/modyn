@@ -19,7 +19,10 @@ class Pipeline(BaseModel):
 
 class ModelConfig(BaseModel):
     id: str = Field(description="The ID of the model that should be trained.")
-    config: dict = Field(description="Configuration dictionary that will be passed to the model on initialization.")
+    config: dict = Field(
+        default_factory=dict,
+        description="Configuration dictionary that will be passed to the model on initialization.",
+    )
 
 
 # --------------------------------------------------- MODEL STORAGE -------------------------------------------------- #
@@ -129,11 +132,14 @@ class MultiDownsamplingConfig(BaseModel):
         return self
 
 
-class SelectionStrategyConfig(BaseModel):
+StorageBackend = Literal["database", "local"]
+
+
+class _BaseSelectionStrategyConfig(BaseModel):
     limit: int = Field(
         description="This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit."
     )
-    storage_backend: str = Field(
+    storage_backend: StorageBackend = Field(
         description="Most strategies currently support `database`, and the NewDataStrategy supports `local` as well."
     )
     uses_weights: bool = Field(
@@ -155,7 +161,10 @@ class SelectionStrategyConfig(BaseModel):
             "previous datapoint."
         ),
     )
-    # ------------------------------------------- FreshnessSamplingStrategy ------------------------------------------ #
+
+
+class FreshnessSamplingStrategyConfig(_BaseSelectionStrategyConfig):
+
     unused_data_ratio: float = Field(
         0.0,
         description=(
@@ -163,13 +172,18 @@ class SelectionStrategyConfig(BaseModel):
             "data (in all previous triggers)."
         ),
     )
-    # ------------------------------------------------ NewDataStrategy ----------------------------------------------- #
+
+
+class NewDataSelectionStrategyConfig(_BaseSelectionStrategyConfig):
+
     limit_reset: LimitResetStrategy = Field(
         description=(
             "Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true."
         )
     )
-    # ------------------------------------------------ CoresetStrategy ----------------------------------------------- #
+
+
+class CoresetSelectionStrategyConfig(_BaseSelectionStrategyConfig):
     presampling_config: Optional[PresamplingConfig] = Field(
         None,
         description=("Config for the presampling strategy. If missing, no presampling is applied."),
@@ -177,6 +191,11 @@ class SelectionStrategyConfig(BaseModel):
     downsampling_config: DownsamplingConfig | MultiDownsamplingConfig = Field(
         description="Configurates the downsampling with one or multiple strategies."
     )
+
+
+SelectionStrategyConfig = (
+    FreshnessSamplingStrategyConfig | NewDataSelectionStrategyConfig | CoresetSelectionStrategyConfig
+)
 
 
 class SelectionStrategy(BaseModel):
@@ -195,8 +214,11 @@ class CheckpointingConfig(BaseModel):
     """Configuration for checkpointing during training."""
 
     activated: bool = Field(description="Whether we checkpoint or not.")
-    interval: int | None = Field(description="In what interval we checkpoint.")
-    path: Path | None = Field(description="The path on the training node where the checkpoints are stored.")
+    interval: int | None = Field(None, description="In what interval we checkpoint.")
+    path: Path | None = Field(
+        None,
+        description="The path on the training node where the checkpoints are stored.",
+    )
 
 
 OptimizerSource = Literal["PyTorch", "APEX"]
@@ -427,4 +449,4 @@ class ModynPipelineConfig(BaseModel):
     training: TrainingConfig
     data: DataConfig
     trigger: TriggerConfig
-    evalutation: EvaluationConfig
+    evaluation: EvaluationConfig | None = Field(None)

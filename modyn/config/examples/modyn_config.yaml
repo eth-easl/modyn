@@ -137,7 +137,7 @@ storage:
     drivername: "postgresql"
     username: "postgres"
     password: "postgres"
-    host: "storage-db"
+    hostname: "storage-db"
     port: "5432"
     database: "postgres"
 
@@ -145,7 +145,7 @@ metadata_database:
   drivername: "postgresql"
   username: "postgres"
   password: "postgres"
-  host: "metadata-db"
+  hostname: "metadata-db"
   port: "5432"
   database: "postgres"
   hash_partition_modulus: 32

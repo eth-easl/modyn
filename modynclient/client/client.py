@@ -8,6 +8,7 @@ import enlighten
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modynclient.config.schema.client_config import ModynClientConfig
 
 POLL_TIMEOUT = 2
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Client:
     def __init__(
         self,
-        client_config: dict,
+        client_config: ModynClientConfig,
         pipeline_config: dict,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,

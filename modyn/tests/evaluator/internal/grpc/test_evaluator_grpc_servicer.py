@@ -41,7 +41,7 @@ def get_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": 0,
             "database": f"{DATABASE}",
         },

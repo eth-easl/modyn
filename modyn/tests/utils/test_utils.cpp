@@ -28,7 +28,7 @@ YAML::Node TestUtils::get_dummy_config() {
   config["storage"]["database"]["database"] = "test.db";
   config["storage"]["database"]["username"] = "";
   config["storage"]["database"]["password"] = "";
-  config["storage"]["database"]["host"] = "";
+  config["storage"]["database"]["hostname"] = "";
   config["storage"]["database"]["port"] = "";
   return config;
 }

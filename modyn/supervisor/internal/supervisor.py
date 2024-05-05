@@ -5,6 +5,7 @@ import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
+from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
@@ -22,6 +23,7 @@ from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -182,9 +184,11 @@ class Supervisor:
         return is_valid
 
     def validate_pipeline_config(self, pipeline_config: dict, evaluation_matrix: bool) -> bool:
-        return self.validate_pipeline_config_schema(pipeline_config) and self.validate_pipeline_config_content(
-            pipeline_config, evaluation_matrix
-        )
+        try:
+            ModynPipelineConfig.model_validate(pipeline_config)
+        except ValidationError:
+            return False
+        return self.validate_pipeline_config_content(pipeline_config, evaluation_matrix)
 
     def dataset_available(self, pipeline_config: dict) -> bool:
         dataset_id = pipeline_config["data"]["dataset_id"]

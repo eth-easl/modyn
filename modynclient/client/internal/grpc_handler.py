@@ -10,12 +10,13 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
+from modynclient.config.schema.client_config import ModynClientConfig
 
 logger = logging.getLogger(__name__)
 
 
 class GRPCHandler:
-    def __init__(self, client_config: dict) -> None:
+    def __init__(self, client_config: ModynClientConfig) -> None:
         self.config = client_config
         self.connected_to_supervisor = False
         self.init_supervisor()

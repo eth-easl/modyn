@@ -45,31 +45,19 @@ class ProjectConfig(BaseModel):
 BinaryFileByteOrder = Literal["big", "little"]
 
 
-class DatasetFileWrapperConfig(BaseModel):
+class _DatasetBaseFileWrapperConfig(BaseModel):
     """
     Represents a dataset file used by modyn.
     """
 
-    file_extension: str = Field(
-        description="The file extension of the dataset.", pattern=r"^\..*$"
-    )
-    label_file_extension: str = Field(
-        description="The label file extension of the dataset", pattern=r"$\..*$"
-    )
+    file_extension: str = Field(description="The file extension of the dataset.", pattern=r"^\..*$")
 
-    # [BinaryFileWrapper]
-    # TODO: required only conditionally
-    record_size: int = Field(
-        description="The size of each full record in bytes (label + features)."
-    )
-    label_size: int = Field(
-        description="The size of the label field in bytes for a binary file wrapper."
-    )
-    byteorder: BinaryFileByteOrder = Field(
-        description="The byteorder when reading an integer from multibyte data in a binary file."
-    )
 
-    # [CsvFileWrapper]
+class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
+    """
+    Represents a csv dataset file used by modyn.
+    """
+
     separator: str = Field(",", description="The separator used in CSV files.")
     label_index: int = Field(
         description=(
@@ -81,13 +69,36 @@ class DatasetFileWrapperConfig(BaseModel):
         description="If the first line is the table header, you can skip it setting this parameter to True.",
     )
     encoding: str = Field("utf-8", description="Encoding of the CSV files.")
-    validate_file_content: bool | None = Field(
+    validate_file_content: bool = Field(
         True,
         description=(
             "Whether to validate the file content before inserting the data. It checks that it is a csv, that all "
             "rows are the same size and that the 'label' column exists."
         ),
     )
+
+
+class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
+    """
+    Represents a binary dataset file used by modyn.
+    """
+
+    byteorder: BinaryFileByteOrder = Field(
+        description="The byteorder when reading an integer from multibyte data in a binary file"
+    )
+    record_size: int = Field(description="The size of each full record in bytes (label + features).")
+    label_size: int = Field(description="The size of the label field in bytes for a binary file wrapper.")
+
+
+class DatasetPngFileWrapperConfig(_DatasetBaseFileWrapperConfig):
+    """
+    Represents a png dataset file used by modyn.
+    """
+
+    label_file_extension: str = Field(description="The label file extension of the dataset", pattern=r"^\..*$")
+
+
+DatasetFileWrapperConfig = DatasetCsvFileWrapperConfig | DatasetBinaryFileWrapperConfig | DatasetPngFileWrapperConfig
 
 
 class DatasetsConfig(BaseModel):
@@ -99,22 +110,20 @@ class DatasetsConfig(BaseModel):
     description: str = Field(description="The description of the dataset.")
     version: str = Field(description="The version of the dataset.")
     base_path: str = Field(description="The base path of the dataset.")
-    filesystem_wrapper_type: str = Field(
-        description="The filesystem wrapper type of the dataset."
-    )
+    filesystem_wrapper_type: str = Field(description="The filesystem wrapper type of the dataset.")
     file_wrapper_type: str = Field(description="The file wrapper type of the dataset.")
-    file_wrapper_config: DatasetFileWrapperConfig = Field(
-        description="The file wrapper config of the dataset."
-    )
+    file_wrapper_config: DatasetFileWrapperConfig = Field(description="The file wrapper config of the dataset.")
     ignore_last_timestamp: bool | None = Field(
+        None,
         description=(
             "Whether to ignore the last timestamp when scanning for new files, i.e., if this is set to false, in "
             "case a new file gets added to the storage that has a smaller timestamp than the latest file that the "
             "storage has already processed, the file is not processed."
-        )
+        ),
     )
     file_watcher_interval: int | None = Field(
-        description="The interval in seconds in which the file watcher checks for new files."
+        None,
+        description="The interval in seconds in which the file watcher checks for new files.",
     )
     selector_batch_size: int = Field(
         True,
@@ -158,10 +167,11 @@ class StorageConfig(BaseModel):
         )
     )
     retrieval_threads: int | None = Field(
+        None,
         description=(
             "The number of threads used to get samples from the storage DB. If set to <= 1, multithreaded gets "
             "are disabled."
-        )
+        ),
     )
     sample_table_unlogged: bool = Field(
         True,
@@ -197,12 +207,8 @@ class ModelStorageConfig(HostnamePortMixin):
     Configuration for modyn's model storage component and its grpc service.
     """
 
-    ftp_port: str = Field(
-        description="The port of the FDP server used by the model_storage component."
-    )
-    models_directory: str | None = Field(
-        description="The directory where we store the trained models."
-    )
+    ftp_port: str = Field(description="The port of the FDP server used by the model_storage component.")
+    models_directory: str | None = Field(None, description="The directory where we store the trained models.")
 
 
 # ----------------------------------------------------- EVALUATOR ---------------------------------------------------- #
@@ -223,7 +229,8 @@ class MetadataDatabaseConfig(DatabaseConfig):
     """
 
     hash_partition_modulus: int | None = Field(
-        description="The modulus to use for the hash partitioning of the metadata."
+        None,
+        description="The modulus to use for the hash partitioning of the metadata.",
     )
     seed: float | None = Field(
         None,
@@ -241,9 +248,7 @@ class SelectorConfig(HostnamePortMixin):
     Configuration for modyn's selector.
     """
 
-    keys_in_selector_cache: int = Field(
-        description="How many keys each selector is allowed to cache in memory."
-    )
+    keys_in_selector_cache: int = Field(description="How many keys each selector is allowed to cache in memory.")
     sample_batch_size: int = Field(
         description=(
             "The size of a batch when requesting sample keys for a trigger partition and worker. All new samples are "
@@ -289,9 +294,7 @@ class TrainingServerConfig(HostnamePortMixin):
     Configuration for modyn's training server and its grpc service.
     """
 
-    ftp_port: str = Field(
-        description="The port of the FDP server used by the trainer_server component."
-    )
+    ftp_port: str = Field(description="The port of the FDP server used by the trainer_server component.")
     offline_dataset_directory: str = Field(
         description=(
             "The directory where the selected samples are stored when downsampling in Sample-then-batch mode is used."
@@ -327,9 +330,7 @@ class SupervisorConfig(HostnamePortMixin):
     Configuration for the modyn's supervisor.
     """
 
-    eval_directory: str = Field(
-        description="The directory to store the evaluation results."
-    )
+    eval_directory: str = Field(description="The directory to store the evaluation results.")
 
 
 # ------------------------------------------------------ CONFIG ------------------------------------------------------ #
@@ -346,8 +347,8 @@ class ModynConfig(BaseModel):
 
     evaluator: EvaluatorConfig
     metadata_database: MetadataDatabaseConfig
-    metadata_processor: MetadataProcessorConfig | None
+    metadata_processor: MetadataProcessorConfig | None = Field(None)
     selector: SelectorConfig
     trainer_server: TrainingServerConfig
-    tensorboard: TensorboardConfig | None
-    supervisor: SupervisorConfig | None
+    tensorboard: TensorboardConfig | None = Field(None)
+    supervisor: SupervisorConfig | None = Field(None)

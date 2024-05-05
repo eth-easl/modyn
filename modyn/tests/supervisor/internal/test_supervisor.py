@@ -17,7 +17,10 @@ from modyn.supervisor.internal.supervisor import Supervisor
 from modyn.supervisor.internal.utils import PipelineInfo
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
-SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
+SUPPORTED_EVAL_RESULT_WRITERS: dict = {
+    "json": JsonResultWriter,
+    "tensorboard": TensorboardResultWriter,
+}
 START_TIMESTAMP = 21
 PIPELINE_ID = 42
 
@@ -32,7 +35,12 @@ def get_minimal_training_config() -> dict:
         "learning_rate": 0.1,
         "batch_size": 42,
         "optimizers": [
-            {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
+            {
+                "name": "default1",
+                "algorithm": "SGD",
+                "source": "PyTorch",
+                "param_groups": [{"module": "model"}],
+            },
         ],
         "optimization_criterion": {"name": "CrossEntropyLoss"},
         "checkpointing": {"activated": False},
@@ -61,8 +69,14 @@ def get_minimal_pipeline_config() -> dict:
         "model": {"id": "ResNet18"},
         "model_storage": {"full_model_strategy": {"name": "PyTorchFullModel"}},
         "training": get_minimal_training_config(),
-        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
-        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+        "data": {
+            "dataset_id": "test",
+            "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x",
+        },
+        "trigger": {
+            "id": "DataAmountTrigger",
+            "trigger_config": {"data_points_for_trigger": 1},
+        },
     }
 
 
@@ -173,25 +187,6 @@ def get_non_connecting_supervisor(
 
 def test_initialization() -> None:
     get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
-
-
-@patch.object(Supervisor, "__init__", noop_constructor_mock)
-def test_validate_pipeline_config_schema():
-    sup = Supervisor(get_minimal_system_config())
-
-    # Check that our minimal pipeline config gets accepted
-    pipeline_config = get_minimal_pipeline_config()
-    assert sup.validate_pipeline_config_schema(pipeline_config)
-
-    # Check that an empty pipeline config gets rejected
-    pipeline_config = {}
-    assert not sup.validate_pipeline_config_schema(pipeline_config)
-
-    # Check that an unknown model gets accepted because it has the correct schema
-    # Semantic validation is done in another method
-    pipeline_config = get_minimal_pipeline_config()
-    pipeline_config["model"]["id"] = "UnknownModel"
-    assert sup.validate_pipeline_config_schema(pipeline_config)
 
 
 @patch.object(Supervisor, "__init__", noop_constructor_mock)
@@ -329,7 +324,10 @@ def test_validate_system(test_trainer_server_available):
     assert not sup.validate_system(pipeline_config)
 
 
-@patch("modyn.supervisor.internal.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch(
+    "modyn.supervisor.internal.supervisor.MetadataDatabaseConnection",
+    MockDatabaseConnection,
+)
 def test_register_pipeline():
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
 
@@ -338,7 +336,10 @@ def test_register_pipeline():
     assert pipeline_id == 0
 
 
-@patch("modyn.supervisor.internal.supervisor.MetadataDatabaseConnection", MockDatabaseConnection)
+@patch(
+    "modyn.supervisor.internal.supervisor.MetadataDatabaseConnection",
+    MockDatabaseConnection,
+)
 def test_unregister_pipeline():
     # TODO(#64,#124,#302): implement a real test when func is implemented.
     sup = get_non_connecting_supervisor()  # pylint: disable=no-value-for-parameter
