@@ -10,7 +10,9 @@ from pydantic import BaseModel, Field, model_validator
 
 class Pipeline(BaseModel):
     name: str = Field(description="The name of the pipeline.")
-    description: Optional[str] = Field(None, description="The description of the pipeline.")
+    description: Optional[str] = Field(
+        None, description="The description of the pipeline."
+    )
     version: Optional[str] = Field(None, description="The version of the pipeline.")
 
 
@@ -39,18 +41,24 @@ class FullModelStrategy(BaseModel):
         description="Configuration dictionary that will be passed to the strategy.",
     )
     zip: bool = Field(False, description="Whether to zip the file in the end.")
-    zip_algorithm: str = Field(default="ZIP_DEFLATED", description="Which zip algorithm to use.")
+    zip_algorithm: str = Field(
+        default="ZIP_DEFLATED", description="Which zip algorithm to use."
+    )
 
 
 class IncrementalModelStrategy(BaseModel):
     """Which incremental model strategy is used for the model storage."""
 
-    name: str = Field(description="Name of the incremental model strategy. We currently support WeightsDifference.")
+    name: str = Field(
+        description="Name of the incremental model strategy. We currently support WeightsDifference."
+    )
     config: Dict[str, Any] = Field(
         default_factory=dict,
         description="Configuration dictionary that will be passed to the strategy.",
     )
-    zip: Optional[bool] = Field(False, description="Whether to zip the file in the end.")
+    zip: Optional[bool] = Field(
+        False, description="Whether to zip the file in the end."
+    )
     zip_algorithm: str = Field(
         default="ZIP_DEFLATED",
         description="Which zip algorithm to use. Default is ZIP_DEFLATED.",
@@ -61,7 +69,9 @@ class IncrementalModelStrategy(BaseModel):
 
 
 class PipelineModelStorageConfig(BaseModel):
-    full_model_strategy: FullModelStrategy = Field(description="Which full model strategy is used.")
+    full_model_strategy: FullModelStrategy = Field(
+        description="Which full model strategy is used."
+    )
     incremental_model_strategy: Optional[IncrementalModelStrategy] = Field(
         None, description="Which incremental model strategy is used."
     )
@@ -75,9 +85,9 @@ LimitResetStrategy = Literal["lastX", "sampleUAR"]
 class PresamplingConfig(BaseModel):
     """Config for the presampling strategy of CoresetStrategy. If missing, no presampling is applied."""
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
-        description="Strategy used to presample the data."
-    )
+    strategy: Literal[
+        "Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"
+    ] = Field(description="Strategy used to presample the data.")
     ratio: float = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
         min=0,
@@ -88,7 +98,9 @@ class PresamplingConfig(BaseModel):
 class DownsamplingConfig(BaseModel):
     """Config for the downsampling strategy of SelectionStrategy."""
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
+    strategy: Literal[
+        "Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"
+    ] = Field(
         description="Strategy used to downsample the data. Available strategies: Loss, Gradnorm, No (no downsampling)."
     )
     sample_then_batch: bool = Field(
@@ -114,7 +126,9 @@ class DownsamplingConfig(BaseModel):
 
 
 class MultiDownsamplingConfig(BaseModel):
-    downsampling_list: List[DownsamplingConfig] = Field(description="An array of downsampling strategies.")
+    downsampling_list: List[DownsamplingConfig] = Field(
+        description="An array of downsampling strategies."
+    )
     downsampling_thresholds: List[int] = Field(
         description=(
             "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
@@ -128,7 +142,9 @@ class MultiDownsamplingConfig(BaseModel):
         self: "MultiDownsamplingConfig",
     ) -> "MultiDownsamplingConfig":
         if len(self.downsampling_thresholds) != len(self.downsampling_list) - 1:
-            raise ValueError("The downsampling_thresholds list should have one less item than the downsampling_list.")
+            raise ValueError(
+                "The downsampling_thresholds list should have one less item than the downsampling_list."
+            )
         return self
 
 
@@ -186,7 +202,9 @@ class NewDataSelectionStrategyConfig(_BaseSelectionStrategyConfig):
 class CoresetSelectionStrategyConfig(_BaseSelectionStrategyConfig):
     presampling_config: Optional[PresamplingConfig] = Field(
         None,
-        description=("Config for the presampling strategy. If missing, no presampling is applied."),
+        description=(
+            "Config for the presampling strategy. If missing, no presampling is applied."
+        ),
     )
     downsampling_config: DownsamplingConfig | MultiDownsamplingConfig = Field(
         description="Configurates the downsampling with one or multiple strategies."
@@ -194,16 +212,22 @@ class CoresetSelectionStrategyConfig(_BaseSelectionStrategyConfig):
 
 
 SelectionStrategyConfig = (
-    FreshnessSamplingStrategyConfig | NewDataSelectionStrategyConfig | CoresetSelectionStrategyConfig
+    FreshnessSamplingStrategyConfig
+    | NewDataSelectionStrategyConfig
+    | CoresetSelectionStrategyConfig
 )
 
 
 class SelectionStrategy(BaseModel):
-    name: str = Field(description="The name of the selection strategy that should be used.")
+    name: str = Field(
+        description="The name of the selection strategy that should be used."
+    )
     maximum_keys_in_memory: int = Field(
         description="Limits how many keys should be materialized at a time in the strategy."
     )
-    config: Optional[SelectionStrategyConfig] = Field(None, description="Configuration for the selection strategy.")
+    config: Optional[SelectionStrategyConfig] = Field(
+        None, description="Configuration for the selection strategy."
+    )
     processor_type: Optional[str] = Field(
         None,
         description="The name of the Metadata Processor strategy that should be used.",
@@ -239,7 +263,9 @@ class OptimizerConfig(BaseModel):
 
     name: str = Field(description="The name of the optimizer (like an ID).")
     algorithm: str = Field(description="The type of the optimizer (e.g. SGD).")
-    source: OptimizerSource = Field(description="The framework/package the optimizer comes from.")
+    source: OptimizerSource = Field(
+        description="The framework/package the optimizer comes from."
+    )
     param_groups: List[OptimizerParamGroup] = Field(
         description="An array of the parameter groups (parameters and optional configs) this optimizer supervises.",
         min_length=1,
@@ -249,8 +275,12 @@ class OptimizerConfig(BaseModel):
 class OptimizationCriterion(BaseModel):
     """Configuration for the optimization criterion that we optimize."""
 
-    name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
-    config: Dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
+    name: str = Field(
+        description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss)."
+    )
+    config: Dict[str, Any] = Field(
+        default_factory=dict, description="Optional configuration of the criterion."
+    )
 
 
 LrSchedulerSource = Literal["PyTorch", "custom"]
@@ -273,13 +303,28 @@ class LrSchedulerConfig(BaseModel):
     @model_validator(mode="after")
     def validate_optimizers(self: "LrSchedulerConfig") -> "LrSchedulerConfig":
         if self.source == "PyTorch" and len(self.optimizers) != 1:
-            raise ValueError("In case a PyTorch LR scheduler is used, the optimizers list should have only one item.")
+            raise ValueError(
+                "In case a PyTorch LR scheduler is used, the optimizers list should have only one item."
+            )
         return self
 
 
 class TrainingConfig(BaseModel):
-    gpus: int = Field(description="The number of GPUs that should be used for training.")
-    epochs_per_trigger: int = Field(1, description="The number of epochs that should be trained per trigger.")
+    gpus: int = Field(
+        description="The number of GPUs that should be used for training."
+    )
+    epochs_per_trigger: int = Field(
+        1, description="The number of epochs that should be trained per trigger."
+    )
+    num_samples_to_pass: list[int] = Field(
+        description=(
+            "If it is set, during the i-th trigger, the number of samples to train on (multiple passes counted as "
+            "exactly multiple times, e.g. if we train for 2 epochs then each sample is counted twice) is the i-th "
+            "element in the array. If the array is not long enough, out-of-range triggers will fall back to "
+            "the `epochs_per_trigger` constraint. `epochs_per_trigger` has to effect to in-range triggers."
+        ),
+        min_length=1,
+    )
     num_prefetched_partitions: int = Field(
         1,
         description="The number of partitions that are prefetched per DataLoader worker.",
@@ -311,14 +356,20 @@ class TrainingConfig(BaseModel):
             "modyn_config."
         ),
     )
-    selection_strategy: SelectionStrategy = Field(description="Configuration for the Selector")
+    selection_strategy: SelectionStrategy = Field(
+        description="Configuration for the Selector"
+    )
 
-    initial_model: str = Field(description="What type of initial model should be used (random or pretrained).")
+    initial_model: str = Field(
+        description="What type of initial model should be used (random or pretrained)."
+    )
     initial_model_id: Optional[int] = Field(
         None,
         description="The ID of the model that should be used as the initial model.",
     )
-    checkpointing: CheckpointingConfig = Field(description="Configuration of checkpointing during training")
+    checkpointing: CheckpointingConfig = Field(
+        description="Configuration of checkpointing during training"
+    )
     optimizers: List[OptimizerConfig] = Field(
         description="An array of the optimizers for the training",
         min_length=1,
@@ -380,7 +431,9 @@ class TriggerConfig(BaseModel):
 
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Configuration for the evaluation metric."
+    )
     evaluation_transformer_function: Optional[str] = Field(
         None,
         description="A function used to transform the model output before evaluation.",
@@ -418,7 +471,9 @@ class DatasetConfig(BaseModel):
 
 class ResultWriter(BaseModel):
     name: str = Field(description="The name of the result writer.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Optional configuration for the result writer."
+    )
 
 
 class EvaluationConfig(BaseModel):

@@ -69,7 +69,6 @@ bool FileWatcher::check_file_for_insertion(const std::string& file_path, bool ig
 void FileWatcher::search_for_new_files_in_directory(const std::string& directory_path, int64_t timestamp) {
   std::vector<std::string> file_paths =
       filesystem_wrapper->list(directory_path, /*recursive=*/true, data_file_extension_);
-  SPDLOG_INFO("Found {} files in total", file_paths.size());
 
   if (file_paths.empty()) {
     return;
@@ -85,10 +84,8 @@ void FileWatcher::search_for_new_files_in_directory(const std::string& directory
     }
   } else {
     const auto chunk_size = static_cast<int64_t>(file_paths.size()) / static_cast<int64_t>(insertion_threads_);
-    SPDLOG_INFO("Inserting {} files per thread (total = {} threads)", chunk_size, insertion_threads_);
 
     for (int16_t i = 0; i < insertion_threads_; ++i) {
-      SPDLOG_INFO("Spawning thread {}/{} for insertion.", i + 1, insertion_threads_);
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
       const std::vector<std::string>::iterator begin = file_paths.begin() + static_cast<int64_t>(i) * chunk_size;
       // NOLINTNEXTLINE(modernize-use-auto): Let's be explicit about the iterator type here
@@ -128,8 +125,6 @@ void FileWatcher::seek_dataset(soci::session& session) {
   session << "SELECT last_timestamp FROM datasets "
              "WHERE dataset_id = :dataset_id",
       soci::into(last_timestamp), soci::use(dataset_id_);
-
-  SPDLOG_INFO("Seeking dataset {} with last timestamp = {}", dataset_id_, last_timestamp);
 
   search_for_new_files_in_directory(dataset_path_, last_timestamp);
 }
@@ -194,7 +189,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
                                     std::atomic<bool>* exception_thrown) {
   try {
-    SPDLOG_INFO("Hi, this is handle_file_paths. Checking {} items", file_paths_end - file_paths_begin);
     if (file_paths_begin >= file_paths_end) {
       return;
     }
@@ -220,7 +214,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
     std::vector<std::string> unknown_files;
 
     for (int64_t i = 0; i < num_chunks; ++i) {
-      SPDLOG_INFO("Handling chunk {}/{}", i + 1, num_chunks);
       auto start_it = file_paths_begin + i * sample_dbinsertion_batchsize;
       auto end_it = i < num_chunks - 1 ? start_it + sample_dbinsertion_batchsize : file_paths_end;
       std::vector<std::string> chunk_paths(start_it, end_it);
@@ -236,7 +229,6 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
       std::copy_if(chunk_paths.begin(), chunk_paths.end(), std::back_inserter(unknown_files),
                    [&known_paths_set](const std::string& file_path) { return !known_paths_set.contains(file_path); });
     }
-    SPDLOG_INFO("Found {} unknown files!", unknown_files.size());
     std::vector<std::string> files_for_insertion;
 
     if (ignore_last_timestamp == 0) {
@@ -375,14 +367,16 @@ void FileWatcher::insert_file_samples(const std::vector<FileFrame>& file_samples
                                       const bool force_fallback, soci::session& session,
                                       DatabaseDriver& database_driver) {
   if (force_fallback) {
-    return fallback_insertion(file_samples, dataset_id, session);
+    fallback_insertion(file_samples, dataset_id, session);
   }
 
   switch (database_driver) {
     case DatabaseDriver::POSTGRESQL:
-      return postgres_copy_insertion(file_samples, dataset_id, session);
+      postgres_copy_insertion(file_samples, dataset_id, session);
+      return;
     case DatabaseDriver::SQLITE3:
-      return fallback_insertion(file_samples, dataset_id, session);
+      fallback_insertion(file_samples, dataset_id, session);
+      return;
     default:
       FAIL("Unsupported database driver");
   }
@@ -395,7 +389,6 @@ void FileWatcher::insert_file_samples(const std::vector<FileFrame>& file_samples
  */
 void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_samples, const int64_t dataset_id,
                                           soci::session& session) {
-  SPDLOG_INFO(fmt::format("Doing copy insertion for {} samples", file_samples.size()));
   auto* postgresql_session_backend = static_cast<soci::postgresql_session_backend*>(session.get_backend());
   PGconn* conn = postgresql_session_backend->conn_;
 
@@ -414,7 +407,6 @@ void FileWatcher::postgres_copy_insertion(const std::vector<FileFrame>& file_sam
                              // indicate to the backend that it has finished sending its data.
                              // https://web.mit.edu/cygwin/cygwin_v1.3.2/usr/doc/postgresql-7.1.2/html/libpq-copy.html
   PQendcopy(conn);
-  SPDLOG_INFO(fmt::format("Copy insertion for {} samples finished.", file_samples.size()));
 }
 
 /*

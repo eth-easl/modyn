@@ -19,7 +19,7 @@ class CsvFileWrapperTest : public ::testing::Test {
   std::string file_name_;
   YAML::Node config_;
   std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper_;
-  std::string tmp_dir_ = std::filesystem::temp_directory_path().string() + "/csv_file_wrapper_test";
+  std::string tmp_dir_ = modyn::test::TestUtils::get_tmp_testdir("csv_file_wrapper_test");
 
   CsvFileWrapperTest()
       : config_{StorageTestUtils::get_dummy_file_wrapper_config()},
@@ -36,6 +36,7 @@ class CsvFileWrapperTest : public ::testing::Test {
     file << "2,Jane,Smith,30\n";
     file << "3,Michael,Johnson,35\n";
     file.close();
+    ASSERT_TRUE(std::filesystem::exists(file_name_));
   }
 
   void TearDown() override { std::filesystem::remove_all(file_name_); }
@@ -45,6 +46,7 @@ TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -59,6 +61,7 @@ TEST_F(CsvFileWrapperTest, TestGetLabel) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -80,6 +83,7 @@ TEST_F(CsvFileWrapperTest, TestGetAllLabels) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -94,6 +98,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -113,6 +118,7 @@ TEST_F(CsvFileWrapperTest, TestGetSample) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -128,6 +134,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
@@ -146,6 +153,7 @@ TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};

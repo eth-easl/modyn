@@ -1,6 +1,5 @@
 import json
 import logging
-import pathlib
 from typing import Optional
 
 import grpc
@@ -23,7 +22,9 @@ class GRPCHandler:
 
     def init_supervisor(self) -> None:
         assert self.config is not None
-        supervisor_address = f"{self.config['supervisor']['ip']}:{self.config['supervisor']['port']}"
+        supervisor_address = (
+            f"{self.config['supervisor']['ip']}:{self.config['supervisor']['port']}"
+        )
         self.supervisor_channel = grpc.insecure_channel(
             supervisor_address,
             options=[
@@ -33,7 +34,9 @@ class GRPCHandler:
         )
 
         if not grpc_connection_established(self.supervisor_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to supervisor at {supervisor_address}.")
+            raise ConnectionError(
+                f"Could not establish gRPC connection to supervisor at {supervisor_address}."
+            )
 
         self.supervisor = SupervisorStub(self.supervisor_channel)
         logger.info("Successfully connected to supervisor.")
@@ -48,7 +51,9 @@ class GRPCHandler:
         evaluation_matrix: bool = False,
     ) -> dict:
         if not self.connected_to_supervisor:
-            raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
+            raise ConnectionError(
+                "Tried to start pipeline at supervisor, but not there is no gRPC connection."
+            )
 
         start_pipeline_request = StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
@@ -60,21 +65,33 @@ class GRPCHandler:
             start_pipeline_request.stop_replay_at = stop_replay_at
         if maximum_triggers is not None:
             start_pipeline_request.maximum_triggers = maximum_triggers
-        
+
         start_pipeline_request.evaluation_matrix = evaluation_matrix
 
         res: PipelineResponse = self.supervisor.start_pipeline(start_pipeline_request)
-        ret = MessageToDict(res, preserving_proto_field_name=True, including_default_value_fields=True)
+        ret = MessageToDict(
+            res,
+            preserving_proto_field_name=True,
+            always_print_fields_with_no_presence=True,
+        )
 
         return ret
 
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         if not self.connected_to_supervisor:
-            raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
+            raise ConnectionError(
+                "Tried to start pipeline at supervisor, but not there is no gRPC connection."
+            )
 
         get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
-        res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
-        ret = MessageToDict(res, preserving_proto_field_name=True, including_default_value_fields=True)
+        res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(
+            get_status_request
+        )
+        ret = MessageToDict(
+            res,
+            preserving_proto_field_name=True,
+            always_print_fields_with_no_presence=True,
+        )
 
         return ret
