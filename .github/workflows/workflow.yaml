@@ -152,7 +152,7 @@ jobs:
       - name: Install clang environment
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: .github/actions/environment_clang.yaml
+          environment-name: clang
           cache-environment: true
           create-args: clang-18 clang-tools clang-format-18
 
@@ -208,19 +208,15 @@ jobs:
           # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
           - compiler: { c: gcc, cxx: g++, version: 12 }
             build-type: Release
-    env:
-      CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
-      CXX: ${{matrix.compiler.cxx}}-${{matrix.compiler.version}}
-      # CCACHE_BASEDIR: ${{github.workspace}}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install clang environment
         uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: .github/actions/environment_clang.yaml
+          environment-name: clang
           cache-environment: true
-          create-args: ccache clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
+          create-args: clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
           # gcc_linux-64=${{matrix.compiler.version}} gxx_linux-64=${{matrix.compiler.version}}
 
       - name: Setup pre-built grpc binaries
@@ -242,13 +238,14 @@ jobs:
 
       - name: Configure CMake
         working-directory: ${{github.workspace}}/build
-        # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
-        # -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-        # -DCMAKE_CXX_FLAGS="-fdebug-prefix-map=${{github.workspace}}/build=."
         run: >
           cmake ${{github.workspace}}
           -DCMAKE_PREFIX_PATH=${{github.workspace}}/install
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
+          -DCMAKE_C_COMPILER=${{matrix.compiler.c}}
+          -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}
+          -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20' || ''}} -fdebug-prefix-map=${{github.workspace}}/build=."
+          -DCMAKE_CXX_STANDARD_LIBRARIES="${{ matrix.compiler.cxx == 'clang++' && '-lc++ -lc++abi' || ''}}"
           -DMODYN_TRY_LOCAL_GRPC=ON
           -DMODYN_BUILD_PLAYGROUND=ON
           -DMODYN_BUILD_TESTS=ON
