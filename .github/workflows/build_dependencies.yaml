@@ -48,6 +48,7 @@ jobs:
       - name: Install clang environment
         uses: mamba-org/setup-micromamba@v1
         with:
+          environment-name: clang
           environment-file: .github/actions/environment_clang.yaml
           cache-environment: true
           create-args: ccache clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
