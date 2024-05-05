@@ -50,7 +50,7 @@ jobs:
         with:
           environment-name: clang
           cache-environment: true
-          create-args: clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} 
+          create-args: clang=${{matrix.compiler.version}} libclang=${{matrix.compiler.version}} clang-tools=${{matrix.compiler.version}} libcxx libcxxabi
           # gcc_linux-64=${{matrix.compiler.version}} gxx_linux-64=${{matrix.compiler.version}}
         
       - name: Create build and artifact directories
@@ -67,8 +67,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{matrix.build-type}}
           -DCMAKE_C_COMPILER=${{matrix.compiler.c}}
           -DCMAKE_CXX_COMPILER=${{matrix.compiler.cxx}}
-          -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20' || ''}} -fdebug-prefix-map=${{github.workspace}}/build=."
-          -DCMAKE_CXX_STANDARD_LIBRARIES="${{ matrix.compiler.cxx == 'clang++' && '-lc++ -lc++abi' || ''}}"
+          -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxx == 'clang++' && '-stdlib=libc++ -std=c++20 -lc++ -lc++abi' || ''}} -L$CONDA_PREFIX/lib -I$CONDA_PREFIX/include/c++/v1 -fdebug-prefix-map=${{github.workspace}}/build=."
+          -DCMAKE_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
           -DgRPC_PROTOBUF_PROVIDER=module
           -DABSL_ENABLE_INSTALL=On
           -DgRPC_INSTALL=ON
