@@ -241,7 +241,6 @@ jobs:
         run: cmake -E make_directory ${{github.workspace}}//build
 
       - name: Configure CMake
-        shell: bash
         working-directory: ${{github.workspace}}/build
         # fdebug-prefix-map is for ccache to not have absolute paths interfere with caching, see https://ccache.dev/manual/3.6.html#_compiling_in_different_directories
         # -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -258,13 +257,11 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        shell: bash
         run: cmake --build . --target modyn modyn-test playground --config ${{matrix.build-type}} -- -j8
 
       - name: Run tests
         timeout-minutes: 20
         working-directory: ${{github.workspace}}/build/modyn/tests
-        shell: bash
         env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
         run: ./modyn-test
 
@@ -327,7 +324,6 @@ jobs:
           cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
-        shell: bash
         working-directory: ${{github.workspace}}/build
         run: >
           cmake ${{github.workspace}} 
@@ -338,12 +334,10 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        shell: bash
         run: cmake --build . --config Debug --target modyn modyn-test -- -j8
 
       - name: Run tests
         working-directory: ${{github.workspace}}/build/modyn/tests
-        shell: bash
         run: ./modyn-test
 
       - name: Create Coverage Report for main branch
@@ -363,7 +357,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Calculate changes
-        shell: bash
         run: |
           echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.line-coverage }}-${{ needs.cpp_coverage_main.outputs.line-coverage }}; exit}')"
           echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"        
