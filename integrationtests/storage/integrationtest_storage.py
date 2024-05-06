@@ -43,6 +43,7 @@ DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
 # from the storage service.
 FIRST_ADDED_IMAGES = []
 SECOND_ADDED_IMAGES = []
+THIRD_ADDED_IMAGES = []
 IMAGE_UPDATED_TIME_STAMPS = []
 
 
@@ -95,11 +96,13 @@ def check_dataset_availability() -> None:
     assert response.available, "Dataset is not available."
 
 
-def check_dataset_size(expected_size: int) -> None:
+def check_dataset_size(expected_size: int, start_timestamp=0, end_timestamp=0) -> None:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
-    request = GetDatasetSizeRequest(dataset_id="test_dataset")
+    request = GetDatasetSizeRequest(
+        dataset_id="test_dataset", start_timestamp=start_timestamp, end_timestamp=end_timestamp
+    )
     response: GetDatasetSizeResponse = storage.GetDatasetSize(request)
 
     assert response.success, "Dataset is not available."
@@ -121,15 +124,59 @@ def check_data_per_worker() -> None:
 
     storage = StorageStub(storage_channel)
 
-    for worker_id in range(6):
-        request = GetDataPerWorkerRequest(dataset_id="test_dataset", worker_id=worker_id, total_workers=6)
+    # 30 images in total; the first two workers should get 5 images each, the rest should get 4 images
+    for worker_id in range(7):
+        request = GetDataPerWorkerRequest(dataset_id="test_dataset", worker_id=worker_id, total_workers=7)
         responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
 
         assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
 
         response_keys_size = len(responses[0].keys)
 
-        assert response_keys_size == 4 if worker_id <= 1 else response_keys_size == 3
+        assert response_keys_size == 5 if worker_id <= 1 else response_keys_size == 4
+
+    split_ts1 = IMAGE_UPDATED_TIME_STAMPS[9] + 1
+    split_ts2 = IMAGE_UPDATED_TIME_STAMPS[19] + 1
+
+    for worker_id in range(3):
+        request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=3, end_timestamp=split_ts2
+        )
+        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
+
+        response_keys_size = len(responses[0].keys)
+
+        assert response_keys_size == 7 if worker_id <= 1 else response_keys_size == 6
+
+    for worker_id in range(3):
+        request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=3, start_timestamp=split_ts2
+        )
+        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
+
+        response_keys_size = len(responses[0].keys)
+
+        assert response_keys_size == 4 if worker_id == 0 else response_keys_size == 3
+
+    for worker_id in range(3):
+        request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset",
+            worker_id=worker_id,
+            total_workers=3,
+            start_timestamp=split_ts1,
+            end_timestamp=split_ts2,
+        )
+        responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
+
+        response_keys_size = len(responses[0].keys)
+
+        assert response_keys_size == 4 if worker_id == 0 else response_keys_size == 3
 
 
 def check_get_current_timestamp() -> None:
@@ -327,11 +374,37 @@ def test_storage() -> None:
 
     check_data(keys, FIRST_ADDED_IMAGES)
 
+    print("Sleeping for 2 seconds before adding even more images to the dataset...")
+    time.sleep(2)
+    print("Continuing test.")
+    add_images_to_dataset(20, 30, THIRD_ADDED_IMAGES)
+
+    for i in range(60):
+        keys = []
+        labels = []
+        responses = list(get_new_data_since(IMAGE_UPDATED_TIME_STAMPS[19] + 1))
+        if len(responses) > 0:
+            keys = flatten([list(response.keys) for response in responses])
+            labels = flatten([list(response.keys) for response in responses])
+            if len(keys) == 10:
+                assert (label in [f"{i}" for i in range(20, 30)] for label in labels)
+                break
+        time.sleep(1)
+
+    assert len(responses) > 0, "Did not get any response from Storage"
+    assert len(keys) == 10, f"Not all images were returned. Images returned = {keys}"
+
     check_data_per_worker()
+    check_dataset_size(30)
+    check_dataset_size(10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
+    check_dataset_size(20, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
+    check_dataset_size(
+        10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[9] + 1, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1
+    )
 
     check_delete_data(first_image_keys)
 
-    check_dataset_size(10)
+    check_dataset_size(20)
 
     check_get_current_timestamp()  # Check if the storage service is still available.
 
