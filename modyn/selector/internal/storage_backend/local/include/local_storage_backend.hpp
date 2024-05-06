@@ -5,7 +5,7 @@
 
 // NOLINTBEGIN(modernize-avoid-c-arrays)
 
-namespace modyn::common::local_storage_backend {
+namespace modyn::selector::local_storage_backend {
 
 const int64_t dtype_size = 8;
 
@@ -19,6 +19,6 @@ void write_file(const char* filename, const void* data, int64_t data_offset, int
 
 std::ifstream open_file(const char* filename);
 std::ofstream open_file_write(const char* filename);
-}  // namespace modyn::common::local_storage_backend
+}  // namespace modyn::selector::local_storage_backend
 
 // NOLINTEND(modernize-avoid-c-arrays)

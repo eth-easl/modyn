@@ -327,6 +327,10 @@ properties:
           type: string
           description: |
             The directory where selection strategies that use the local storage backend persist data to.
+        local_storage_max_samples_in_file:
+          type: number
+          description: |
+            The maximum amount of samples to be persisted in a single file for the local storage backend.
         cleanup_storage_directories_after_shutdown:
           type: boolean
           description: |
@@ -343,6 +347,7 @@ properties:
         - insertion_threads
         - trigger_sample_directory
         - local_storage_directory
+        - local_storage_max_samples_in_file
     trainer_server:
       type: object
       properties:

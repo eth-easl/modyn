@@ -20,6 +20,7 @@ set(
   common/cpp/utils/test_utils.cpp
   common/example_extension/test_example_extension.cpp
   common/trigger_sample/test_trigger_sample_storage.cpp
+  selector/internal/storage_backend/local/test_local_storage_backend.cpp
 )
 
 #################################################t

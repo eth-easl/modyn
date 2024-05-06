@@ -11,8 +11,6 @@ from numpy.ctypeslib import ndpointer
 
 logger = logging.getLogger(__name__)
 
-MAX_SAMPLES_IN_FILE = 1000000
-
 
 class LocalStorageBackend(AbstractStorageBackend):
     """
@@ -25,6 +23,8 @@ class LocalStorageBackend(AbstractStorageBackend):
 
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
+
+        self.max_samples_in_file = self._modyn_config["selector"]["local_storage_max_samples_in_file"]
 
         self.local_storage_directory = self._modyn_config["selector"]["local_storage_directory"]
         if not Path(self.local_storage_directory).exists():
@@ -189,7 +189,7 @@ class LocalStorageBackend(AbstractStorageBackend):
 
         existing_count = len(list(trigger_folder.glob("*")))
 
-        data_lengths = [MAX_SAMPLES_IN_FILE] * (len(keys_array) // MAX_SAMPLES_IN_FILE)
+        data_lengths = [self.max_samples_in_file] * (len(keys_array) // self.max_samples_in_file)
 
         if sum(data_lengths) < len(keys_array):
             data_lengths.append(len(keys_array) - sum(data_lengths))
