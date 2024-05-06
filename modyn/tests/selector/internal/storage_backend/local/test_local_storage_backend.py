@@ -17,6 +17,7 @@ def get_minimal_modyn_config():
             "insertion_threads": 8,
             "trigger_sample_directory": TMP_DIR_TSAMPLES,
             "local_storage_directory": TMP_DIR_STORAGE,
+            "local_storage_max_samples_in_file": 1000000,
         },
     }
 
