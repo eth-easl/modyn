@@ -24,23 +24,14 @@ class GetRequest(google.protobuf.message.Message):
     KEYS_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "dataset_id", b"dataset_id", "keys", b"keys"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
 
 global___GetRequest = GetRequest
 
@@ -52,23 +43,11 @@ class GetResponse(google.protobuf.message.Message):
     KEYS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
     @property
-    def samples(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.bytes
-    ]: ...
+    def samples(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def labels(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
@@ -76,12 +55,7 @@ class GetResponse(google.protobuf.message.Message):
         keys: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "keys", b"keys", "labels", b"labels", "samples", b"samples"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]) -> None: ...
 
 global___GetResponse = GetResponse
 
@@ -111,12 +85,7 @@ class GetNewDataSinceRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "dataset_id", b"dataset_id", "timestamp", b"timestamp"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "timestamp", b"timestamp"]) -> None: ...
 
 global___GetNewDataSinceRequest = GetNewDataSinceRequest
 
@@ -128,23 +97,11 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
     TIMESTAMPS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def timestamps(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def timestamps(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def labels(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
@@ -152,12 +109,7 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]) -> None: ...
 
 global___GetNewDataSinceResponse = GetNewDataSinceResponse
 
@@ -178,17 +130,7 @@ class GetDataInIntervalRequest(google.protobuf.message.Message):
         start_timestamp: builtins.int = ...,
         end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "dataset_id",
-            b"dataset_id",
-            "end_timestamp",
-            b"end_timestamp",
-            "start_timestamp",
-            b"start_timestamp",
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
 
 global___GetDataInIntervalRequest = GetDataInIntervalRequest
 
@@ -200,23 +142,11 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
     TIMESTAMPS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def timestamps(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def timestamps(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def labels(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
@@ -224,12 +154,7 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]) -> None: ...
 
 global___GetDataInIntervalResponse = GetDataInIntervalResponse
 
@@ -240,27 +165,26 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     DATASET_ID_FIELD_NUMBER: builtins.int
     WORKER_ID_FIELD_NUMBER: builtins.int
     TOTAL_WORKERS_FIELD_NUMBER: builtins.int
+    START_TIMESTAMP_FIELD_NUMBER: builtins.int
+    END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     worker_id: builtins.int
     total_workers: builtins.int
+    start_timestamp: builtins.int
+    """value unset or set with default value means no limit
+    start_timestamp is inclusive, end_timestamp is exclusive
+    """
+    end_timestamp: builtins.int
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
         worker_id: builtins.int = ...,
         total_workers: builtins.int = ...,
+        start_timestamp: builtins.int = ...,
+        end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "dataset_id",
-            b"dataset_id",
-            "total_workers",
-            b"total_workers",
-            "worker_id",
-            b"worker_id",
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
 
 global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
 
@@ -270,19 +194,13 @@ class GetDataPerWorkerResponse(google.protobuf.message.Message):
 
     KEYS_FIELD_NUMBER: builtins.int
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["keys", b"keys"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys"]) -> None: ...
 
 global___GetDataPerWorkerResponse = GetDataPerWorkerResponse
 
@@ -291,15 +209,22 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     DATASET_ID_FIELD_NUMBER: builtins.int
+    START_TIMESTAMP_FIELD_NUMBER: builtins.int
+    END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
+    start_timestamp: builtins.int
+    """value unset or set with default value means no limit
+    start_timestamp is inclusive, end_timestamp is exclusive
+    """
+    end_timestamp: builtins.int
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
+        start_timestamp: builtins.int = ...,
+        end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
 
 global___GetDatasetSizeRequest = GetDatasetSizeRequest
 
@@ -317,12 +242,7 @@ class GetDatasetSizeResponse(google.protobuf.message.Message):
         success: builtins.bool = ...,
         num_keys: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "num_keys", b"num_keys", "success", b"success"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["num_keys", b"num_keys", "success", b"success"]) -> None: ...
 
 global___GetDatasetSizeResponse = GetDatasetSizeResponse
 
@@ -337,9 +257,7 @@ class DatasetAvailableRequest(google.protobuf.message.Message):
         *,
         dataset_id: builtins.str = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]) -> None: ...
 
 global___DatasetAvailableRequest = DatasetAvailableRequest
 
@@ -354,9 +272,7 @@ class DatasetAvailableResponse(google.protobuf.message.Message):
         *,
         available: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["available", b"available"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
 
 global___DatasetAvailableResponse = DatasetAvailableResponse
 
@@ -395,29 +311,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
         ignore_last_timestamp: builtins.bool = ...,
         file_watcher_interval: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "base_path",
-            b"base_path",
-            "dataset_id",
-            b"dataset_id",
-            "description",
-            b"description",
-            "file_watcher_interval",
-            b"file_watcher_interval",
-            "file_wrapper_config",
-            b"file_wrapper_config",
-            "file_wrapper_type",
-            b"file_wrapper_type",
-            "filesystem_wrapper_type",
-            b"filesystem_wrapper_type",
-            "ignore_last_timestamp",
-            b"ignore_last_timestamp",
-            "version",
-            b"version",
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["base_path", b"base_path", "dataset_id", b"dataset_id", "description", b"description", "file_watcher_interval", b"file_watcher_interval", "file_wrapper_config", b"file_wrapper_config", "file_wrapper_type", b"file_wrapper_type", "filesystem_wrapper_type", b"filesystem_wrapper_type", "ignore_last_timestamp", b"ignore_last_timestamp", "version", b"version"]) -> None: ...
 
 global___RegisterNewDatasetRequest = RegisterNewDatasetRequest
 
@@ -432,9 +326,7 @@ class RegisterNewDatasetResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["success", b"success"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___RegisterNewDatasetResponse = RegisterNewDatasetResponse
 
@@ -449,9 +341,7 @@ class GetCurrentTimestampResponse(google.protobuf.message.Message):
         *,
         timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["timestamp", b"timestamp"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["timestamp", b"timestamp"]) -> None: ...
 
 global___GetCurrentTimestampResponse = GetCurrentTimestampResponse
 
@@ -466,9 +356,7 @@ class DeleteDatasetResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["success", b"success"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteDatasetResponse = DeleteDatasetResponse
 
@@ -480,23 +368,14 @@ class DeleteDataRequest(google.protobuf.message.Message):
     KEYS_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     @property
-    def keys(
-        self,
-    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[
-        builtins.int
-    ]: ...
+    def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing_extensions.Literal[
-            "dataset_id", b"dataset_id", "keys", b"keys"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
 
 global___DeleteDataRequest = DeleteDataRequest
 
@@ -511,8 +390,6 @@ class DeleteDataResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing_extensions.Literal["success", b"success"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteDataResponse = DeleteDataResponse
