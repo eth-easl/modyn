@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -193,9 +193,9 @@ class CoresetSelectionStrategyConfig(_BaseSelectionStrategyConfig):
     )
 
 
-SelectionStrategyConfig = (
-    FreshnessSamplingStrategyConfig | NewDataSelectionStrategyConfig | CoresetSelectionStrategyConfig
-)
+SelectionStrategyConfig = Union[
+    FreshnessSamplingStrategyConfig, NewDataSelectionStrategyConfig, CoresetSelectionStrategyConfig
+]
 
 
 class SelectionStrategy(BaseModel):

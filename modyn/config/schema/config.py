@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import List, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -98,7 +98,9 @@ class DatasetPngFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     label_file_extension: str = Field(description="The label file extension of the dataset", pattern=r"^\..*$")
 
 
-DatasetFileWrapperConfig = DatasetCsvFileWrapperConfig | DatasetBinaryFileWrapperConfig | DatasetPngFileWrapperConfig
+DatasetFileWrapperConfig = Union[
+    DatasetCsvFileWrapperConfig, DatasetBinaryFileWrapperConfig, DatasetPngFileWrapperConfig
+]
 
 
 class DatasetsConfig(BaseModel):

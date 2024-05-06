@@ -65,6 +65,14 @@ class PytorchEvaluator:
 
     def _prepare_trigger_evaluation_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
         self._debug("Creating OnlineDataset.")
+        assert (
+            evaluation_info.pipeline_id
+            and evaluation_info.trigger_id
+            and evaluation_info.selector_address
+            and evaluation_info.num_prefetched_partitions
+            and evaluation_info.parallel_prefetch_requests
+        )
+
         dataloader, _ = prepare_trigger_dataloaders(
             evaluation_info.pipeline_id,
             evaluation_info.trigger_id,

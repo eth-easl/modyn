@@ -154,6 +154,7 @@ class ModelStorageManager:
         self._clear_cuda_mem()
 
         # we apply the incremental strategy to load our model state.
+        assert policy.incremental_model_strategy is not None
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
     def _get_base_model_state(self, pipeline_id: int) -> dict:

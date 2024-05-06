@@ -91,7 +91,7 @@ class Selector:
         self, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> tuple[int, dict[str, Any]]:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
-        log = {"cached": False}
+        log: dict[str, Any] = {"cached": False}
 
         if len(keys) > 0:
             log["inform"] = self._strategy.inform_data(keys, timestamps, labels)
@@ -110,7 +110,7 @@ class Selector:
             ]
             self._current_keys_in_cache += total_keys_in_trigger
             assert total_keys_in_trigger == len(
-                flatten(self._trigger_cache[trigger_id])
+                flatten(self._trigger_cache[trigger_id])  # type: ignore
             ), "Inconsistency in DB and Strategy"
             log["cached"] = True
 

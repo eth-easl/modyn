@@ -19,7 +19,7 @@ class ResNet50:
 
 class ResNet50Modyn(ResNet, CoresetSupportingModule):
     def __init__(self, model_configuration: dict[str, Any]) -> None:
-        super().__init__(Bottleneck, [3, 4, 6, 3], **model_configuration)
+        super().__init__(Bottleneck, [3, 4, 6, 3], **model_configuration)  # type: ignore
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         x = self.conv1(x)

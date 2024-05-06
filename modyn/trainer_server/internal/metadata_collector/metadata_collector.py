@@ -10,7 +10,7 @@ from modyn.trainer_server.internal.utils.metric_type import MetricType
 
 
 class MetadataCollector:
-    def __init__(self, pipeline_id: str, trigger_id: int):
+    def __init__(self, pipeline_id: int, trigger_id: int):
         self._per_sample_metadata_dict: dict[MetricType, Any] = {}
         self._per_trigger_metadata: dict[MetricType, Any] = {}
         self._metric_handlers: dict[MetricType, Callable] = {}
@@ -25,7 +25,7 @@ class MetadataCollector:
         # can register new handlers here
         self._metric_handlers[MetricType.LOSS] = self.send_loss
 
-    def add_per_sample_metadata_for_batch(self, metric: MetricType, sample_ids: list[str], metadata: list[Any]) -> None:
+    def add_per_sample_metadata_for_batch(self, metric: MetricType, sample_ids: list[int], metadata: list[Any]) -> None:
         # We expect a list of the sample ids for a batch, along with a list of their metadata.
         # Also, we expect metadata are already in a proper format for grpc messages
         # (no need for extra serialization, or type transform)
