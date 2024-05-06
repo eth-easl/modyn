@@ -2,10 +2,6 @@
 
 This assumes python 3.6+ is installed.
 
-## Install the grpcio-tools package
-
-`pip install grpcio-tools==1.63.0`
-
 ## Generate the python files
 
 First move to the directory where you want to generate the python files.
