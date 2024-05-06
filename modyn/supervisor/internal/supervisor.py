@@ -85,7 +85,9 @@ class Supervisor:
 
         if not valid_yaml:
             logger.error(
-                f"Error while validating pipeline configuration file for schema-compliance: {exception.message}"
+                f"""Error while validating pipeline configuration file for schema-compliance: {
+                    exception.message if exception else ''
+                }"""
             )
             logger.error(exception)
             return False
@@ -361,7 +363,7 @@ class Supervisor:
             msg: dict[str, Any] = pipeline_stage_msg(
                 stage=PipelineStage.EXIT,
                 msg_type=MsgType.EXIT,
-                submsg=exit_submsg(p_info.process_handler.exitcode, p_info.check_for_exception()),
+                submsg=exit_submsg(p_info.process_handler.exitcode or -1, p_info.check_for_exception()),
             )
 
             ret["pipeline_stage"].append(msg)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
@@ -19,7 +21,7 @@ class AbstractProcessorStrategy(ABC):
     """
 
     def __init__(self, modyn_config: dict, pipeline_id: int):
-        self.processor_strategy_type: ProcessorStrategyType = None
+        self.processor_strategy_type: ProcessorStrategyType | None = None
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
 

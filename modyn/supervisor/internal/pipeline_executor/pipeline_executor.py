@@ -9,7 +9,7 @@ from time import sleep
 from typing import Any, Optional
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -131,8 +131,9 @@ class PipelineExecutor:
             for trigger in self.triggers:
                 logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
                 evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
+                assert self.current_training_id
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
+                eval_result_writer = self._init_evaluation_writer("log", trigger)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluations)
                 self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
@@ -325,7 +326,7 @@ class PipelineExecutor:
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                 break
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:
