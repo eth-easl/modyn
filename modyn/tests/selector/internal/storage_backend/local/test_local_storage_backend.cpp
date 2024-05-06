@@ -33,7 +33,7 @@ TEST_F(LocalStorageBackendTest, TestWriteReadSingle) {
   std::string data_read(32, '\0');
 
   modyn::selector::local_storage_backend::write_file(file.c_str(), data_write.c_str(), 0u, 2u);
-  modyn::selector::local_storage_backend::parse_file(file.c_str(), data_read.c_str(), 0u, 2u, 0u);
+  modyn::selector::local_storage_backend::parse_file(file.c_str(), static_cast<void*>(data_read.c_str()), 0u, 2u, 0u);
 
   // Check whether read data equals written data
   ASSERT_STREQ(data_read.data(), data_write.data());
@@ -41,14 +41,15 @@ TEST_F(LocalStorageBackendTest, TestWriteReadSingle) {
 
 TEST_F(LocalStorageBackendTest, TestWriteReadAllMulti) {
   // Hardcoded data to write
-  const char* files[] = {"test_a.npy", "test_b.npy"};
+  const char* files[] = {"test_a.npy", "test_b.npy"};  // NOLINT
   const std::string data_write("0123456789012345678901234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTU");
   std::string data_read(80, '\0');
-  const int64_t data_lengths[] = {3u, 2u};
-  const int64_t data_offsets[] = {0u, 0u};
+  std::array<int64_t, 2> data_lengths = {3u, 2u};
+  std::array<int64_t, 2> data_offsets = {0u, 0u};
 
-  modyn::selector::local_storage_backend::write_files_impl(files, data_write.c_str(), data_lengths, 2u);
-  modyn::selector::local_storage_backend::parse_files_impl(files, data_read.c_str(), data_lengths, data_offsets, 2u);
+  modyn::selector::local_storage_backend::write_files_impl(files, data_write.c_str(), data_lengths.data(), 2u);
+  modyn::selector::local_storage_backend::parse_files_impl(files, static_cast<void*>(data_read.c_str()),
+                                                           data_lengths.data(), data_offsets.data(), 2u);
 
   // Check whether read data equals written data
   ASSERT_STREQ(data_read.data(), data_write.data());
