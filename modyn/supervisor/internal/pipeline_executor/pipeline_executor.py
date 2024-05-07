@@ -130,7 +130,7 @@ class PipelineExecutor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     # pylint: disable=unused-argument, too-many-locals
-    def _run_modern_evaluations(
+    def _start_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
@@ -178,7 +178,8 @@ class PipelineExecutor:
                 )
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}
-                self.grpc.wait_for_evaluation_completion(0, evaluation)
+                assert self.current_training_id is not None, "Training ID not set."
+                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
                 # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
@@ -305,7 +306,7 @@ class PipelineExecutor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
-            self._run_modern_evaluations(trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp)
+            self._start_evaluations(trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp)
 
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0

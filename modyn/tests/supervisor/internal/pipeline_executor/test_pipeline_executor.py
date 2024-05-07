@@ -559,7 +559,7 @@ def test_execute_pipeline(
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test__run_modern_evaluations_failure(
+def test__start_evaluations_failure(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
 ):
@@ -587,12 +587,13 @@ def test__run_modern_evaluations_failure(
         EVAL_STATUS_QUEUE,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.current_training_id = 0
 
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
     with patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake):
-        pipeline_executor._run_modern_evaluations(0, 0, 70, 100)
+        pipeline_executor._start_evaluations(0, 0, 70, 100)
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2
         assert test_wait_for_evaluation_completion.call_count == 2
@@ -606,7 +607,7 @@ def test__run_modern_evaluations_failure(
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test__run_modern_evaluations_success(
+def test__start_evaluations_success(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
 ):
@@ -632,6 +633,7 @@ def test__run_modern_evaluations_success(
         EVAL_STATUS_QUEUE,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.current_training_id = 0
 
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
@@ -643,7 +645,7 @@ def test__run_modern_evaluations_success(
         patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake),
     ):
         model_id = 1
-        pipeline_executor._run_modern_evaluations(
+        pipeline_executor._start_evaluations(
             trigger_id=0, model_id=model_id, trigger_set_first_timestamp=20, trigger_set_last_timestamp=70
         )
         assert evaluator_stub_mock.evaluate_model.call_count == 3
