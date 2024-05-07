@@ -69,6 +69,12 @@ trigger:
   trigger_config:
     data_points_for_trigger: 100
 evaluation:
+  eval_strategy:
+    name: "PeriodicalEvalStrategy"
+    config:
+      eval_every: 1d
+      eval_start_from: 0
+      eval_end_at: 1715094374
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   dataset:

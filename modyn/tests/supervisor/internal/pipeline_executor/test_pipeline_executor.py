@@ -10,14 +10,9 @@ from unittest.mock import MagicMock, call, patch
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
 from modyn.supervisor.internal.eval_strategies.periodical_eval_strategy import PeriodicalEvalStrategy
-from modyn.supervisor.internal.evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-    JsonResultWriter,
-    TensorboardResultWriter,
-)
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import EVALUATION_RESULTS, PipelineExecutor, execute_pipeline
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
