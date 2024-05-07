@@ -171,7 +171,6 @@ class Supervisor:
             if "evaluation" not in pipeline_config:
                 logger.error("Can only create evaluation matrix with evaluation section.")
                 is_valid = False
-            # TO-DO: Add more checks for evaluation matrix
         return is_valid
 
     def validate_pipeline_config(self, pipeline_config: dict, evaluation_matrix: bool) -> bool:
