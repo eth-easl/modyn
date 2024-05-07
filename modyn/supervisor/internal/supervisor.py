@@ -32,7 +32,11 @@ from modyn.supervisor.internal.grpc.template_msg import (
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
-from modyn.utils import is_directory_writable, model_available, trigger_available
+from modyn.utils import (
+    is_directory_writable,
+    model_available,
+    trigger_available
+)
 
 logger = logging.getLogger(__name__)
 
