@@ -207,6 +207,8 @@ class LocalStorageBackend(AbstractStorageBackend):
         log["persist_samples_time"] = swt.stop()
         return log
 
+    # pylint: disable=too-many-locals
+
     def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
         root = self._modyn_config["selector"]["local_storage_directory"]
 
