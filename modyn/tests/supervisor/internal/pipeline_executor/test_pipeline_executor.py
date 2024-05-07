@@ -443,47 +443,6 @@ def test__run_training_set_num_samples_to_pass(
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
-@patch.object(GRPCHandler, "store_trained_model", return_value=101)
-@patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "store_evaluation_results")
-@patch.object(GRPCHandler, "wait_for_evaluation_completion")
-@patch.object(GRPCHandler, "start_evaluation")
-@patch.object(GRPCHandler, "wait_for_training_completion")
-def test_run_training_with_evaluation(
-    test_wait_for_training_completion: MagicMock,
-    test_start_evaluation: MagicMock,
-    test_wait_for_evaluation_completion: MagicMock,
-    test_store_evaluation_results: MagicMock,
-    test_start_training: MagicMock,
-    test_store_trained_model: MagicMock,
-):
-    evaluations = {1: EvaluationStatusReporter(TRAINING_STATUS_QUEUE, EVAL_ID, "MNIST_eval", 1000)}
-    test_start_evaluation.return_value = evaluations
-    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-    evaluation_pipeline_config = get_minimal_pipeline_config()
-    evaluation_pipeline_config["evaluation"] = get_minimal_evaluation_config()
-    evaluation_pipeline_config["evaluation"]["result_writers"] = ["json"]
-    pe.pipeline_config = evaluation_pipeline_config
-
-    pe.pipeline_id = 42
-    pe._run_training(21, 20, 70)
-    assert pe.previous_model_id == 101
-    assert pe.current_training_id == 1337
-
-    test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, None)
-    test_store_trained_model.assert_called_once()
-
-    test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)
-    test_wait_for_evaluation_completion.assert_called_once_with(1337, evaluations)
-    test_store_evaluation_results.assert_called_once()
-    assert len(test_store_evaluation_results.call_args[0][0]) == 1
-    result_writer: AbstractEvaluationResultWriter = test_store_evaluation_results.call_args[0][0][0]
-    assert result_writer.eval_directory == EVALUATION_DIRECTORY
-    assert result_writer.pipeline_id == 42
-    assert result_writer.trigger_id == 21
-
-
 @patch.object(GRPCHandler, "get_data_in_interval", return_value=[([(10, 1), (11, 2)], 0)])
 @patch.object(PipelineExecutor, "_handle_new_data")
 def test_replay_data_closed_interval(test__handle_new_data: MagicMock, test_get_data_in_interval: MagicMock):
@@ -631,7 +590,6 @@ def test__run_modern_evaluations_failure(
         PIPELINE_STATUS_QUEUE,
         TRAINING_STATUS_QUEUE,
         EVAL_STATUS_QUEUE,
-        evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
 
@@ -677,7 +635,6 @@ def test__run_modern_evaluations_success(
         PIPELINE_STATUS_QUEUE,
         TRAINING_STATUS_QUEUE,
         EVAL_STATUS_QUEUE,
-        evaluation_matrix=True,
     )
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
 

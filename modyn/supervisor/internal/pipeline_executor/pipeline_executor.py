@@ -13,7 +13,7 @@ from modyn.common.benchmark import Stopwatch
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, JsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -306,9 +306,7 @@ class PipelineExecutor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
-                self._run_modern_evaluations(
-                    trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp
-                )
+            self._run_modern_evaluations(trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp)
 
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
@@ -383,7 +381,7 @@ class PipelineExecutor:
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                 break
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> JsonResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:

@@ -262,7 +262,6 @@ def test_evaluate_model_download_trained_model(
         assert resp.not_start_reason == EvaluationNotStartReason.DOWNLOAD_MODEL_FAILURE
 
 
-
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
     return_value=pathlib.Path("downloaded_model.modyn"),
