@@ -7,10 +7,42 @@ import builtins
 import collections.abc
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
+import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
+import sys
 import typing
 
+if sys.version_info >= (3, 10):
+    import typing as typing_extensions
+else:
+    import typing_extensions
+
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
+
+class _EvaluationNotStartReason:
+    ValueType = typing.NewType("ValueType", builtins.int)
+    V: typing_extensions.TypeAlias = ValueType
+
+class _EvaluationNotStartReasonEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_EvaluationNotStartReason.ValueType], builtins.type):
+    DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
+    UNKNOWN: _EvaluationNotStartReason.ValueType  # 0
+    MODEL_NOT_EXIST_IN_METADATA: _EvaluationNotStartReason.ValueType  # 1
+    MODEL_IMPORT_FAILURE: _EvaluationNotStartReason.ValueType  # 2
+    MODEL_NOT_EXIST_IN_STORAGE: _EvaluationNotStartReason.ValueType  # 3
+    DATASET_NOT_FOUND: _EvaluationNotStartReason.ValueType  # 4
+    EMPTY_DATASET: _EvaluationNotStartReason.ValueType  # 5
+    DOWNLOAD_MODEL_FAILURE: _EvaluationNotStartReason.ValueType  # 6
+
+class EvaluationNotStartReason(_EvaluationNotStartReason, metaclass=_EvaluationNotStartReasonEnumTypeWrapper): ...
+
+UNKNOWN: EvaluationNotStartReason.ValueType  # 0
+MODEL_NOT_EXIST_IN_METADATA: EvaluationNotStartReason.ValueType  # 1
+MODEL_IMPORT_FAILURE: EvaluationNotStartReason.ValueType  # 2
+MODEL_NOT_EXIST_IN_STORAGE: EvaluationNotStartReason.ValueType  # 3
+DATASET_NOT_FOUND: EvaluationNotStartReason.ValueType  # 4
+EMPTY_DATASET: EvaluationNotStartReason.ValueType  # 5
+DOWNLOAD_MODEL_FAILURE: EvaluationNotStartReason.ValueType  # 6
+global___EvaluationNotStartReason = EvaluationNotStartReason
 
 @typing.final
 class DatasetInfo(google.protobuf.message.Message):
@@ -138,17 +170,20 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     DATASET_SIZE_FIELD_NUMBER: builtins.int
+    NOT_START_REASON_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
     dataset_size: builtins.int
+    not_start_reason: global___EvaluationNotStartReason.ValueType
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
         dataset_size: builtins.int = ...,
+        not_start_reason: global___EvaluationNotStartReason.ValueType = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started", "not_start_reason", b"not_start_reason"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 
