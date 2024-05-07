@@ -413,20 +413,6 @@ properties:
     description: |
       Evaluation configuration.
     properties:
-      device:
-        type: string
-        description: |
-          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
-          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
-      result_writers:
-        type: array
-        description: |
-          Specifies in which formats to store the evaluation results. We currently support json and tensorboard.
-        minItems: 1
-        items:
-          type: string
-          description: |
-            Name of the evaluation result writer.
       eval_strategy:
         type: object
         description: |
@@ -443,6 +429,21 @@ properties:
               refer to the specific strategy's constructor.
         required:
           - name
+          - config
+      device:
+        type: string
+        description: |
+          The device the model should be put on. In the future (#131), we might want this to be either "cpu" or "gpu"
+          and let the evaluator figure out the exact device, but for now, this really is the identifier of the device.
+      result_writers:
+        type: array
+        description: |
+          Specifies in which formats to store the evaluation results. We currently support json and tensorboard.
+        minItems: 1
+        items:
+          type: string
+          description: |
+            Name of the evaluation result writer.
       dataset:
         type: object
         description: |
@@ -509,6 +510,7 @@ properties:
       - device
       - result_writers
       - dataset
+      - eval_strategy
 required:
   - pipeline
   - model

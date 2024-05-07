@@ -135,7 +135,6 @@ class PipelineExecutor:
     ) -> None:
         eval_dataset_config = self.pipeline_config["evaluation"]["dataset"]
         eval_dataset_id = eval_dataset_config["dataset_id"]
-        assert "eval_strategy" in self.pipeline_config["evaluation"], "No eval_strategy found."
         eval_strategy_config = self.pipeline_config["evaluation"]["eval_strategy"]
         eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config["name"])(
@@ -295,7 +294,6 @@ class PipelineExecutor:
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
-        self.pipeline_log["supervisor"]["triggers"][trigger_id]["trained_model_id"] = model_id
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
