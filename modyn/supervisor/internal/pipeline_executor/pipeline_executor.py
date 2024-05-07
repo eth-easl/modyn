@@ -133,6 +133,7 @@ class PipelineExecutor:
     def _run_modern_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:
+        assert self.grpc.evaluator is not None, "Evaluator not initialized."
         eval_dataset_config = self.pipeline_config["evaluation"]["dataset"]
         eval_dataset_id = eval_dataset_config["dataset_id"]
         eval_strategy_config = self.pipeline_config["evaluation"]["eval_strategy"]
@@ -177,7 +178,7 @@ class PipelineExecutor:
                 )
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+                self.grpc.wait_for_evaluation_completion(0, evaluation)
                 # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
