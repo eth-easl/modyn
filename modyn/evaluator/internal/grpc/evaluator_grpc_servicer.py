@@ -90,7 +90,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         return StorageStub(storage_channel)
 
-    # pylint: disable=too-many-locals, too-many-return-statements
+    # pylint: disable=too-many-locals
 
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
