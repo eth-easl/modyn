@@ -2,7 +2,7 @@ from typing import Any
 
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, AbstractHolisticMetric, Accuracy, F1Score, RocAuc
 
-all_metrics = {Accuracy, F1Score, RocAuc}
+all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc}
 
 
 class MetricFactory:

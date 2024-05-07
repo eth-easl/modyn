@@ -6,11 +6,15 @@ import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.metadata_database_connection import (
+    MetadataDatabaseConnection,
+)
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    JsonString as SelectorJsonString,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import (
     JsonResultWriter,
@@ -18,11 +22,20 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
-from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
+from modyn.supervisor.internal.grpc.template_msg import (
+    exit_submsg,
+    pipeline_res_msg,
+    pipeline_stage_msg,
+)
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
-from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
+from modyn.utils import (
+    is_directory_writable,
+    model_available,
+    trigger_available,
+    validate_yaml,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +98,9 @@ class Supervisor:
 
         if not valid_yaml:
             logger.error(
-                f"Error while validating pipeline configuration file for schema-compliance: {exception.message}"
+                f"""Error while validating pipeline configuration file for schema-compliance: {
+                    exception.message if exception else ''
+                }"""
             )
             logger.error(exception)
             return False
@@ -337,11 +352,12 @@ class Supervisor:
             ret["status"] = str(PipelineStatus.RUNNING)
         else:
             ret["status"] = str(PipelineStatus.EXIT)
+            p_info.process_handler.join()
 
             msg: dict[str, Any] = pipeline_stage_msg(
                 stage=PipelineStage.EXIT,
                 msg_type=MsgType.EXIT,
-                submsg=exit_submsg(p_info.process_handler.exitcode, p_info.check_for_exception()),
+                submsg=exit_submsg(p_info.process_handler.exitcode or 0, p_info.check_for_exception()),
             )
 
             ret["pipeline_stage"].append(msg)
