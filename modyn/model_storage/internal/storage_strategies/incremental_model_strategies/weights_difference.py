@@ -4,6 +4,7 @@ from typing import BinaryIO, Union
 
 import torch
 from bitstring import BitArray
+from modyn.model_storage.internal.storage_strategies.abstract_difference_operator import AbstractDifferenceOperator
 from modyn.model_storage.internal.storage_strategies.difference_operators import (
     SubDifferenceOperator,
     XorDifferenceOperator,
@@ -13,7 +14,10 @@ from modyn.model_storage.internal.storage_strategies.incremental_model_strategie
 )
 from modyn.utils import get_tensor_byte_size
 
-available_difference_operators = {"xor": XorDifferenceOperator, "sub": SubDifferenceOperator}
+available_difference_operators: dict[str, type[AbstractDifferenceOperator]] = {
+    "xor": XorDifferenceOperator,
+    "sub": SubDifferenceOperator,
+}
 
 
 class WeightsDifference(AbstractIncrementalModelStrategy):
@@ -28,7 +32,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         self._validate_config(config)
 
     def _validate_config(self, config: dict) -> None:
-        self.difference_operator = SubDifferenceOperator
+        self.difference_operator: type[AbstractDifferenceOperator] = SubDifferenceOperator
         if "operator" in config:
             difference_operator_name = config["operator"]
             if difference_operator_name not in available_difference_operators:

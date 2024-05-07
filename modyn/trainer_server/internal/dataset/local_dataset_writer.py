@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 import platform
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -45,7 +48,7 @@ class LocalDatasetWriter(TriggerSampleStorage):
         pipeline_id: int,
         training_samples: np.ndarray,
         data_lengths: list,
-        offline_dataset_path: str,
+        offline_dataset_path: str | Path,
     ) -> None:
         TriggerSampleStorage(trigger_sample_directory=offline_dataset_path).save_trigger_samples(
             pipeline_id=pipeline_id,

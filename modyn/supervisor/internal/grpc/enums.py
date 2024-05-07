@@ -1,4 +1,15 @@
-from enum import StrEnum  # type: ignore # noqa: F401
+from enum import Enum
+
+
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+        return self.value
+
+    def __eq__(self, other: object) -> bool:
+        return str(self) == str(other)
+
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class PipelineStatus(StrEnum):

@@ -1,4 +1,6 @@
 # pylint: disable=no-name-in-module
+from __future__ import annotations
+
 import glob
 import io
 import itertools
@@ -272,7 +274,9 @@ class PytorchTrainer:
 
         torch.save(dict_to_save, destination)
 
-    def load_state_if_given(self, path: pathlib.Path, load_optimizer_state: bool = False) -> None:
+    def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
+        if path is None:
+            return
         assert path.exists(), "Cannot load state from non-existing file"
         self._info(f"Loading model state from {path}")
         # We load the weights on the CPU, and `load_state_dict` moves them to GPU

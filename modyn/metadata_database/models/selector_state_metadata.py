@@ -1,5 +1,7 @@
 """SelectorStateMetadata model."""
 
+from __future__ import annotations
+
 import logging
 from typing import Any, Optional
 
@@ -45,7 +47,7 @@ class SelectorStateMetadata(
     __tablename__ = "selector_state_metadata"
 
     @staticmethod
-    def add_pipeline(pipeline_id: int, session: Session, engine: Engine) -> PartitionByMeta:
+    def add_pipeline(pipeline_id: int, session: Session, engine: Engine) -> PartitionByMeta | None:
         partition_stmt = f"FOR VALUES IN ({pipeline_id})"
         partition_suffix = f"_pid{pipeline_id}"
         result = SelectorStateMetadata._create_partition(
