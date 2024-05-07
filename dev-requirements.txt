@@ -9,7 +9,7 @@ pillow
 autopep8
 isort
 black
-grpcio-tools
-grpcio # Linux
+grpcio-tools>=1.63
+grpcio>=1.63 # Linux
 mypy-protobuf
 pystack

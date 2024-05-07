@@ -19,7 +19,7 @@ dependencies:
   - tqdm
   - conda-forge::enlighten
   - pip:
-    - grpcio==1.59.0
+    - grpcio>=1.63
     - protobuf==5.26.*
     - types-protobuf==5.26.*
   - jsonschema
