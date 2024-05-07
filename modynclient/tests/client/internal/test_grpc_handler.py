@@ -111,14 +111,11 @@ def test_start_pipeline(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
     pipeline_config = get_minimal_pipeline_config()
 
-    req_minimal = StartPipelineRequest(
-        pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-        evaluation_matrix=False,
-    )
+    req_minimal = StartPipelineRequest(pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)))
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
         mock.return_value = START_PIPELINE_RES
-        ret_minimal = handler.start_pipeline(pipeline_config, evaluation_matrix=False)
+        ret_minimal = handler.start_pipeline(pipeline_config)
 
         assert ret_minimal["pipeline_id"] == 42
         assert "exception" not in ret_minimal
@@ -133,7 +130,6 @@ def test_start_pipeline(test_grpc_connection_established):
         start_replay_at=start_replay_at,
         stop_replay_at=stop_replay_at,
         maximum_triggers=maximum_triggers,
-        evaluation_matrix=True,
     )
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
@@ -143,7 +139,6 @@ def test_start_pipeline(test_grpc_connection_established):
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
-            evaluation_matrix=True,
         )
 
         assert ret_full["pipeline_id"] == 42
