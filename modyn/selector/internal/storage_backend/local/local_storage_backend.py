@@ -172,6 +172,8 @@ class LocalStorageBackend(AbstractStorageBackend):
         for filenames, data_lengths, data_offsets in read_blocks:
             yield self._parse_files(filenames, data_lengths, data_offsets).tolist(), {}
 
+    # pylint: disable=too-many-locals
+
     def persist_samples(
         self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
     ) -> dict[str, Any]:
@@ -206,8 +208,6 @@ class LocalStorageBackend(AbstractStorageBackend):
         self._write_files(file_paths, keys_array, data_lengths)
         log["persist_samples_time"] = swt.stop()
         return log
-
-    # pylint: disable=too-many-locals
 
     def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
         root = self._modyn_config["selector"]["local_storage_directory"]
