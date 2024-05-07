@@ -3,9 +3,10 @@ import logging
 import sys
 from pathlib import Path
 from sys import platform
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import numpy as np
+from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from numpy.ctypeslib import ndpointer
 
@@ -173,7 +174,10 @@ class LocalStorageBackend(AbstractStorageBackend):
 
     def persist_samples(
         self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> None:
+    ) -> dict[str, Any]:
+        log = {}
+        swt = Stopwatch()
+        swt.start("persist_samples_time")
         root = self._modyn_config["selector"]["local_storage_directory"]
         trigger_folder = Path(root) / str(self._pipeline_id) / str(seen_in_trigger_id)
         Path(trigger_folder).mkdir(parents=True, exist_ok=True)
@@ -200,6 +204,8 @@ class LocalStorageBackend(AbstractStorageBackend):
             existing_count += 1
 
         self._write_files(file_paths, keys_array, data_lengths)
+        log["persist_samples_time"] = swt.stop()
+        return log
 
     def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
         root = self._modyn_config["selector"]["local_storage_directory"]
