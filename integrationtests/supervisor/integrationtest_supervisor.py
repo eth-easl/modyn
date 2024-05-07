@@ -56,7 +56,6 @@ def test_mnist() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -79,7 +78,6 @@ def test_one_experiment_pipeline() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -102,7 +100,6 @@ def test_two_experiment_pipelines() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -115,7 +112,6 @@ def test_two_experiment_pipelines() -> None:
                 start_replay_at=0,
                 stop_replay_at=100000,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )

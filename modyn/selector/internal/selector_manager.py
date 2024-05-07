@@ -90,8 +90,10 @@ class SelectorManager:
 
     def _instantiate_selector(self, pipeline_id: int, num_workers: int, selection_strategy: str) -> None:
         assert pipeline_id in self._selector_locks, f"Trying to register pipeline {pipeline_id} without existing lock!"
-        selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
-        selector = Selector(selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size)
+        parsed_selection_strategy = self._instantiate_strategy(json.loads(selection_strategy), pipeline_id)
+        selector = Selector(
+            parsed_selection_strategy, pipeline_id, num_workers, self._modyn_config, self._selector_cache_size
+        )
         self._selectors[pipeline_id] = selector
 
     def get_sample_keys_and_weights(
@@ -117,7 +119,9 @@ class SelectorManager:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)
+        return self._selectors[pipeline_id].get_sample_keys_and_weights(
+            trigger_id, worker_id, partition_id
+        )  # type: ignore
 
     def inform_data(
         self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]

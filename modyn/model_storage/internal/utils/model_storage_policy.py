@@ -29,13 +29,15 @@ class ModelStoragePolicy:
         full_model_strategy_config: Optional[str],
     ) -> None:
         self.zipping_dir = zipping_dir
-        self.full_model_strategy: AbstractFullModelStrategy = self._setup_model_storage_strategy(
+        storage_strategy = self._setup_model_storage_strategy(
             full_model_strategy_name,
             full_model_strategy_zip,
             full_model_strategy_zip_algorithm,
             full_model_strategy_config,
             FULL_MODEL_STRATEGY_MODULE,
         )
+        assert isinstance(storage_strategy, AbstractFullModelStrategy)
+        self.full_model_strategy: AbstractFullModelStrategy = storage_strategy
 
         self.incremental_model_strategy: Optional[AbstractIncrementalModelStrategy] = None
         self.full_model_interval: Optional[int] = None
@@ -48,9 +50,11 @@ class ModelStoragePolicy:
         config: Optional[str],
         full_model_interval: Optional[int],
     ) -> None:
-        self.incremental_model_strategy = self._setup_model_storage_strategy(
+        setup_strategy = self._setup_model_storage_strategy(
             name, zip_enabled, zip_algorithm, config, INCREMENTAL_MODEL_STRATEGY_MODULE
         )
+        assert isinstance(setup_strategy, AbstractIncrementalModelStrategy)
+        self.incremental_model_strategy = setup_strategy
         if full_model_interval is not None:
             self._validate_full_model_interval(full_model_interval)
 

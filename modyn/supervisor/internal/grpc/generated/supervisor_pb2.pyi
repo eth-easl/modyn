@@ -35,11 +35,9 @@ class StartPipelineRequest(google.protobuf.message.Message):
     START_REPLAY_AT_FIELD_NUMBER: builtins.int
     STOP_REPLAY_AT_FIELD_NUMBER: builtins.int
     MAXIMUM_TRIGGERS_FIELD_NUMBER: builtins.int
-    EVALUATION_MATRIX_FIELD_NUMBER: builtins.int
     start_replay_at: builtins.int
     stop_replay_at: builtins.int
     maximum_triggers: builtins.int
-    evaluation_matrix: builtins.bool
     @property
     def pipeline_config(self) -> global___JsonString: ...
     def __init__(
@@ -49,10 +47,9 @@ class StartPipelineRequest(google.protobuf.message.Message):
         start_replay_at: builtins.int | None = ...,
         stop_replay_at: builtins.int | None = ...,
         maximum_triggers: builtins.int | None = ...,
-        evaluation_matrix: builtins.bool = ...,
     ) -> None: ...
     def HasField(self, field_name: typing.Literal["_maximum_triggers", b"_maximum_triggers", "_start_replay_at", b"_start_replay_at", "_stop_replay_at", b"_stop_replay_at", "maximum_triggers", b"maximum_triggers", "pipeline_config", b"pipeline_config", "start_replay_at", b"start_replay_at", "stop_replay_at", b"stop_replay_at"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_maximum_triggers", b"_maximum_triggers", "_start_replay_at", b"_start_replay_at", "_stop_replay_at", b"_stop_replay_at", "evaluation_matrix", b"evaluation_matrix", "maximum_triggers", b"maximum_triggers", "pipeline_config", b"pipeline_config", "start_replay_at", b"start_replay_at", "stop_replay_at", b"stop_replay_at"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["_maximum_triggers", b"_maximum_triggers", "_start_replay_at", b"_start_replay_at", "_stop_replay_at", b"_stop_replay_at", "maximum_triggers", b"maximum_triggers", "pipeline_config", b"pipeline_config", "start_replay_at", b"start_replay_at", "stop_replay_at", b"stop_replay_at"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_maximum_triggers", b"_maximum_triggers"]) -> typing.Literal["maximum_triggers"] | None: ...
     @typing.overload

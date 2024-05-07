@@ -262,16 +262,14 @@ def test_evaluate_model_download_trained_model(
         assert resp.not_start_reason == EvaluationNotStartReason.DOWNLOAD_MODEL_FAILURE
 
 
-@patch("multiprocessing.Process.start", autospec=True)
+
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
     return_value=pathlib.Path("downloaded_model.modyn"),
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(
-    test_connect_to_model_storage, test_connect_to_storage, download_model_mock, test_multiprocess_start
-):
+def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(), None)

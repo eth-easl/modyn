@@ -1,10 +1,12 @@
 # pylint: disable=no-name-in-module
+from __future__ import annotations
+
 import json
 import logging
 import multiprocessing as mp
 from collections import deque
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Sequence
 
 import grpc
 from modyn.common.benchmark import Stopwatch
@@ -684,7 +686,7 @@ class GRPCHandler:
 
     def store_evaluation_results(
         self,
-        evaluation_result_writers: list[AbstractEvaluationResultWriter],
+        evaluation_result_writers: Sequence[AbstractEvaluationResultWriter],
         evaluations: dict[int, EvaluationStatusReporter],
     ) -> None:
         assert self.evaluator is not None

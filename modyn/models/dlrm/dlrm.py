@@ -132,7 +132,7 @@ class DlrmModel(CoresetSupportingModule):
         return self.top_model.embedding
 
     @property
-    def embedding_recorder(self) -> EmbeddingRecorder:
+    def embedding_recorder(self) -> EmbeddingRecorder:  # type: ignore
         return self.top_model.embedding_recorder
 
     def get_last_layer(self) -> nn.Module:

@@ -93,6 +93,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
             ).update({"last_used_in_trigger": next_trigger_id})
             session.commit()
 
+        assert isinstance(self._storage_backend, DatabaseStorageBackend)
         self._storage_backend._execute_on_session(_session_callback)
 
     def _count_number_of_sampled_points(self, next_trigger_id: int) -> int:
@@ -106,4 +107,5 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
                 .count()
             )
 
+        assert isinstance(self._storage_backend, DatabaseStorageBackend)
         return self._storage_backend._execute_on_session(_session_callback)

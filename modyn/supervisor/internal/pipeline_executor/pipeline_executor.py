@@ -41,7 +41,6 @@ class PipelineExecutor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> None:
         self.stage = PipelineStage.INIT
 
@@ -66,7 +65,6 @@ class PipelineExecutor:
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
-        self.evaluation_matrix = evaluation_matrix
 
         self._sw = Stopwatch()
         self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.json"
@@ -308,21 +306,6 @@ class PipelineExecutor:
 
         # Start evaluation
         if "evaluation" in self.pipeline_config:
-            if not self.evaluation_matrix:
-                self._update_pipeline_stage_and_enqueue_msg(
-                    PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                )
-                # TODO(#300) Add evaluator to pipeline log
-                evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-
-                self._update_pipeline_stage_and_enqueue_msg(
-                    PipelineStage.STORE_EVALUATION_RESULTS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                )
-                writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
-                writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
-                self.grpc.store_evaluation_results(writers, evaluations)
-            else:
                 self._run_modern_evaluations(
                     trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp
                 )
@@ -400,7 +383,7 @@ class PipelineExecutor:
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                 break
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:
@@ -518,7 +501,6 @@ def execute_pipeline(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
-    evaluation_matrix: bool = False,
 ) -> None:
     try:
         pipeline = PipelineExecutor(
@@ -534,7 +516,6 @@ def execute_pipeline(
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
-            evaluation_matrix,
         )
         pipeline.init_cluster_connection()
         pipeline.execute()
