@@ -16,7 +16,7 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
+from modyn.supervisor.internal.pipeline_executor import EVALUATION_RESULTS, PipelineExecutor, execute_pipeline
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -51,15 +51,13 @@ def get_minimal_training_config() -> dict:
 def get_minimal_evaluation_config() -> dict:
     return {
         "device": "cpu",
-        "datasets": [
-            {
-                "dataset_id": "MNIST_eval",
-                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                "dataloader_workers": 2,
-                "batch_size": 64,
-                "metrics": [{"name": "Accuracy"}],
-            }
-        ],
+        "dataset": {
+            "dataset_id": "MNIST_eval",
+            "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+            "dataloader_workers": 2,
+            "batch_size": 64,
+            "metrics": [{"name": "Accuracy"}],
+        },
     }
 
 
@@ -615,8 +613,6 @@ def test__run_modern_evaluations_failure(
     pipeline_config = get_minimal_pipeline_config()
     evaluation_config = get_minimal_evaluation_config()
     pipeline_config["evaluation"] = evaluation_config
-    eval_dataset_config = evaluation_config["datasets"][0]
-    evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
     evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
@@ -649,11 +645,11 @@ def test__run_modern_evaluations_failure(
         assert test_store_evaluation_results.call_count == 2
         assert test_wait_for_evaluation_completion.call_count == 2
 
-        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{0}-{100}"] != {}
-        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{100}-{200}"] == {
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{0}-{100}"] != {}
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{100}-{200}"] == {
             "failure_reason": "EMPTY_DATASET"
         }
-        assert pipeline_executor.pipeline_log["evaluation_matrix"][0][f"{200}-{300}"] != {}
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{200}-{300}"] != {}
 
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
@@ -664,9 +660,8 @@ def test__run_modern_evaluations_success(
 ):
     pipeline_config = get_minimal_pipeline_config()
     evaluation_config = get_minimal_evaluation_config()
+    eval_dataset_config = evaluation_config["dataset"]
     pipeline_config["evaluation"] = evaluation_config
-    eval_dataset_config = evaluation_config["datasets"][0]
-    evaluation_config["matrix_eval_dataset_id"] = eval_dataset_config["dataset_id"]
     evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(

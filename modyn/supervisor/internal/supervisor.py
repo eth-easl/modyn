@@ -90,27 +90,22 @@ class Supervisor:
     def _validate_evaluation_options(self, evaluation_config: dict) -> bool:
         is_valid = True
 
-        dataset_ids = [dataset["dataset_id"] for dataset in evaluation_config["datasets"]]
-        if len(set(dataset_ids)) < len(dataset_ids):
-            logger.error("Dataset ids must be unique in evaluation")
-            is_valid = False
-
         if "result_writers" in evaluation_config:
             writer_names = set(evaluation_config["result_writers"])
             if diff := writer_names.difference(self.supported_evaluation_result_writers.keys()):
                 logger.error(f"Found invalid evaluation result writers: {', '.join(diff)}.")
                 is_valid = False
 
-        for dataset in evaluation_config["datasets"]:
-            batch_size = dataset["batch_size"]
-            if batch_size < 1:
-                logger.error(f"Invalid batch size: {batch_size}.")
-                is_valid = False
+        dataset = evaluation_config["dataset"]
+        batch_size = dataset["batch_size"]
+        if batch_size < 1:
+            logger.error(f"Invalid batch size: {batch_size}.")
+            is_valid = False
 
-            dataloader_workers = dataset["dataloader_workers"]
-            if dataloader_workers < 1:
-                logger.error(f"Invalid dataloader worker amount: {dataloader_workers}.")
-                is_valid = False
+        dataloader_workers = dataset["dataloader_workers"]
+        if dataloader_workers < 1:
+            logger.error(f"Invalid dataloader worker amount: {dataloader_workers}.")
+            is_valid = False
 
         return is_valid
 

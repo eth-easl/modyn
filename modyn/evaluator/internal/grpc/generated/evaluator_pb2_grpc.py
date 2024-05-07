@@ -3,8 +3,6 @@
 import warnings
 
 import grpc
-import warnings
-
 import modyn.evaluator.internal.grpc.generated.evaluator_pb2 as evaluator__pb2
 
 GRPC_GENERATED_VERSION = '1.63.0'

@@ -427,11 +427,6 @@ properties:
           type: string
           description: |
             Name of the evaluation result writer.
-      matrix_eval_dataset_id:
-        type: string
-        description: |
-          The dataset id to be used for building the evaluation matrix.
-          This dataset should appear in the following list of datasets and should have the "eval_every" parameter.
       eval_strategy:
         type: object
         description: |
@@ -448,77 +443,72 @@ properties:
               refer to the specific strategy's constructor.
         required:
           - name
-      datasets:
-        type: array
+      dataset:
+        type: object
         description: |
-          An array of all datasets on which the model is evaluated.
-        minItems: 1
-        items:
-          type: object
-          description: |
-            Configuration for the evaluation dataset.
-          properties:
-            dataset_id:
-              type: string
+          Configuration for the evaluation dataset.
+        properties:
+          dataset_id:
+            type: string
+            description: |
+              The id of the dataset.
+          bytes_parser_function:
+            type: string
+            description: |
+              Function used to convert bytes received from the storage, to a format useful for further transformations
+              (e.g. Tensors). This function is called before any other transformations are performed on the data.
+          transformations:
+            type: array
+            description: |
+              Further (optional) transformations to be applied on the data after bytes_parser_function has been
+              applied. For example, this can be torchvision transformations.
+          label_transformer_function:
+            type: string
+            description: |
+              (Optional) function used to transform the label (which are tensors of integers).
+          batch_size:
+            type: number
+            description: |
+              The batch size to be used during evaluation.
+          dataloader_workers:
+            type: number
+            description: |
+              The number of data loader workers on the evaluation node that fetch data from storage.
+          metrics:
+            type: array
+            description: |
+              All metrics used to evaluate the model on the given dataset.
+            minItems: 1
+            items:
+              type: object
               description: |
-                The id of the dataset.
-            bytes_parser_function:
-              type: string
-              description: |
-                Function used to convert bytes received from the storage, to a format useful for further transformations
-                (e.g. Tensors). This function is called before any other transformations are performed on the data.
-            transformations:
-              type: array
-              description: |
-                Further (optional) transformations to be applied on the data after bytes_parser_function has been
-                applied. For example, this can be torchvision transformations.
-            label_transformer_function:
-              type: string
-              description: |
-                (Optional) function used to transform the label (which are tensors of integers).
-            batch_size:
-              type: number
-              description: |
-                The batch size to be used during evaluation.
-            dataloader_workers:
-              type: number
-              description: |
-                The number of data loader workers on the evaluation node that fetch data from storage.
-            metrics:
-              type: array
-              description: |
-                All metrics used to evaluate the model on the given dataset.
-              minItems: 1
-              items:
-                type: object
-                description: |
-                  Confguration for the metric.
-                properties:
-                  name:
-                    type: string
-                    description: |
-                      The name of the evaluation metric. Currently we support F1-score, Accuracy and ROC-AUC.
-                  config:
-                    type: object
-                    description: |
-                      Optional configuration for the evaluation metric.
-                  evaluation_transformer_function:
-                    type: string
-                    description: |
-                      The (optional) function used to transform the model output before evaluation.
-                      This might for example include the application of the sigmoid-function.
-                required:
-                  - name
-          required:
-            - dataset_id
-            - bytes_parser_function
-            - dataloader_workers
-            - batch_size
-            - metrics
+                Confguration for the metric.
+              properties:
+                name:
+                  type: string
+                  description: |
+                    The name of the evaluation metric. Currently we support F1-score, Accuracy and ROC-AUC.
+                config:
+                  type: object
+                  description: |
+                    Optional configuration for the evaluation metric.
+                evaluation_transformer_function:
+                  type: string
+                  description: |
+                    The (optional) function used to transform the model output before evaluation.
+                    This might for example include the application of the sigmoid-function.
+              required:
+                - name
+        required:
+          - dataset_id
+          - bytes_parser_function
+          - dataloader_workers
+          - batch_size
+          - metrics
     required:
       - device
       - result_writers
-      - datasets
+      - dataset
 required:
   - pipeline
   - model

@@ -23,6 +23,7 @@ from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
+EVALUATION_RESULTS = "evaluation_results"
 
 
 class PipelineExecutor:
@@ -134,34 +135,26 @@ class PipelineExecutor:
     def _run_modern_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:
-        # find the matrix evaluation dataset
-        assert "matrix_eval_dataset_id" in self.pipeline_config["evaluation"], "No matrix_eval_dataset_id found."
-        matrix_eval_dataset_id = self.pipeline_config["evaluation"]["matrix_eval_dataset_id"]
-        matrix_eval_dataset_config = None
-        for dataset_config in self.pipeline_config["evaluation"]["datasets"]:
-            if dataset_config["dataset_id"] == matrix_eval_dataset_id:
-                matrix_eval_dataset_config = dataset_config
-                break
-        assert matrix_eval_dataset_config is not None, "matrix evaluation dataset not found."
-
+        eval_dataset_config = self.pipeline_config["evaluation"]["dataset"]
+        eval_dataset_id = eval_dataset_config["dataset_id"]
         assert "eval_strategy" in self.pipeline_config["evaluation"], "No eval_strategy found."
         eval_strategy_config = self.pipeline_config["evaluation"]["eval_strategy"]
         eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config["name"])(
             eval_strategy_config["config"]
         )
-        if "evaluation_matrix" not in self.pipeline_log:
-            self.pipeline_log["evaluation_matrix"] = {}
+        if EVALUATION_RESULTS not in self.pipeline_log:
+            self.pipeline_log[EVALUATION_RESULTS] = {}
 
-        self.pipeline_log["evaluation_matrix"][trigger_id] = {}
+        self.pipeline_log[EVALUATION_RESULTS][trigger_id] = {}
 
         for previous_split, current_split in eval_strategy.get_eval_interval(
             first_timestamp=trigger_set_first_timestamp,
             last_timestamp=trigger_set_last_timestamp,
         ):
-            logger.info(f"Modern evaluation Starts for model {model_id} on split {previous_split} to {current_split}.")
+            logger.info(f"Evaluation Starts for model {model_id} on split {previous_split} to {current_split}.")
             request = GRPCHandler.prepare_evaluation_request(
-                matrix_eval_dataset_config,
+                eval_dataset_config,
                 model_id,
                 self.pipeline_config["training"]["device"],
                 previous_split,
@@ -176,14 +169,14 @@ class PipelineExecutor:
                     f"Evaluation for model {model_id} on split {previous_split} to {current_split} not started with "
                     f"reason: {reason}."
                 )
-                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = {
+                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = {
                     "failure_reason": reason,
                 }
                 self._sw.stop("evaluate_model")
             else:
                 logger.info(f"Evaluation started for model {model_id} on split {previous_split} to {current_split}.")
                 reporter = EvaluationStatusReporter(
-                    self.eval_status_queue, response.evaluation_id, matrix_eval_dataset_id, response.dataset_size
+                    self.eval_status_queue, response.evaluation_id, eval_dataset_id, response.dataset_size
                 )
                 reporter.create_tracker()
                 evaluation = {response.evaluation_id: reporter}
@@ -191,8 +184,8 @@ class PipelineExecutor:
                 # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name] = eval_result_writer.results
-                self.pipeline_log["evaluation_matrix"][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
+                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results
+                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
                     "evaluate_model"
                 )
 
