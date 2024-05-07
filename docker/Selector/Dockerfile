@@ -1,5 +1,10 @@
 FROM modynbase:latest
 
+COPY ./modyn/selector/internal/storage_backend/local /src/modyn/selector/internal/storage_backend/local
+COPY ./modyn/selector/CMakeLists.txt /src/modyn/selector/CMakeLists.txt
+COPY ./modyn/selector/internal/CMakeLists.txt /src/modyn/selector/internal/CMakeLists.txt
+COPY ./modyn/selector/internal/storage_backend/CMakeLists.txt /src/modyn/selector/internal/storage_backend/CMakeLists.txt
+
 RUN chmod a+x /src/modyn/selector/modyn-selector
 RUN mkdir -p /tmp/trigger_samples
 RUN chown appuser /tmp/trigger_samples
