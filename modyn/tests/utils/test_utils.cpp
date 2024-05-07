@@ -21,7 +21,7 @@ void TestUtils::create_dummy_yaml() {
   out << "    database: test.db" << '\n';
   out << "    username: ''" << '\n';
   out << "    password: ''" << '\n';
-  out << "    host: ''" << '\n';
+  out << "    hostname: ''" << '\n';
   out << "    port: ''" << '\n';
   out.close();
 }
