@@ -12,8 +12,13 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.pipeline_executor import (
+    PipelineExecutor,
+    execute_pipeline,
+)
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -255,7 +260,7 @@ def test__handle_new_data_with_batch():
 
     batch_mock: MagicMock
     with patch.object(pe, "_handle_new_data_batch") as batch_mock:
-        pe._handle_new_data(new_data)
+        pe.handle_new_data(new_data)
         expected_handle_new_data_batch_arg_list = [
             call([(10, 1), (11, 2), (12, 3)]),
             call([(13, 4), (14, 5), (15, 6)]),
@@ -270,7 +275,7 @@ def test__handle_new_data_with_large_batch():
 
     batch_mock: MagicMock
     with patch.object(pe, "_handle_new_data_batch") as batch_mock:
-        pe._handle_new_data(new_data)
+        pe.handle_new_data(new_data)
         expected_handle_new_data_batch_arg_list = [call(new_data)]
         assert batch_mock.call_args_list == expected_handle_new_data_batch_arg_list
 
@@ -284,7 +289,7 @@ def test__handle_new_data():
 
     batch_mock: MagicMock
     with patch.object(pe, "_handle_new_data_batch", side_effect=batching_return_vals) as batch_mock:
-        result = pe._handle_new_data(new_data)
+        result = pe.handle_new_data(new_data)
         assert result
 
         expected_handle_new_data_batch_arg_list = [
@@ -396,7 +401,7 @@ def test__run_training(
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
 
-    pe._run_training(21)
+    pe.run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
 
@@ -418,13 +423,13 @@ def test__run_training_set_num_samples_to_pass(
     pipeline_config["training"]["num_samples_to_pass"] = [73]
     pe = get_non_connecting_pipeline_executor(pipeline_config)
     pe.pipeline_id = 42
-    pe._run_training(trigger_id=21)
+    pe.run_training(trigger_id=21)
     test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
     test_start_training.reset_mock()
 
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
-    pe._run_training(trigger_id=22)
+    pe.run_training(trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
@@ -452,7 +457,7 @@ def test__run_training_with_evaluation(
 
     pe.pipeline_id = 42
 
-    pe._run_training(21)
+    pe.run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
 
