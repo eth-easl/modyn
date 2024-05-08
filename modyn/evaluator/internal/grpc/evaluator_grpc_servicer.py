@@ -15,6 +15,7 @@ from modyn.common.ftp import download_trained_model
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
+    EvaluationAbortedReason,
     EvaluationData,
     EvaluationResultRequest,
     EvaluationResultResponse,
@@ -100,12 +101,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             if not trained_model:
                 logger.error(f"Trained model {request.model_id} does not exist!")
-                return EvaluateModelResponse(evaluation_started=False)
+                return EvaluateModelResponse(
+                    evaluation_started=False, aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+                )
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
         if not hasattr(dynamic_module_import("modyn.models"), model_class_name):
             logger.error(f"Model {model_class_name} not available!")
-            return EvaluateModelResponse(evaluation_started=False)
+            return EvaluateModelResponse(
+                evaluation_started=False, aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
+            )
 
         fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
@@ -115,7 +120,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 f"Trained model {request.model_id} cannot be fetched from model storage. "
                 f"Evaluation cannot be started."
             )
-            return EvaluateModelResponse(evaluation_started=False)
+            return EvaluateModelResponse(
+                evaluation_started=False, aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+            )
 
         dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
         dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
@@ -126,7 +133,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
                 f"Evaluation cannot be started."
             )
-            return EvaluateModelResponse(evaluation_started=False)
+            return EvaluateModelResponse(
+                evaluation_started=False, aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
+            )
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
@@ -142,7 +151,10 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
 
         if not trained_model_path:
-            return EvaluateModelResponse(evaluation_started=False)
+            logger.error("Trained model could not be downloaded. Evaluation cannot be started.")
+            return EvaluateModelResponse(
+                evaluation_started=False, aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+            )
 
         metrics = self._setup_metrics(request.metrics)
         evaluation_info = EvaluationInfo(

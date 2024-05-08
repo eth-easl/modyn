@@ -13,6 +13,15 @@ message DatasetInfo {
   int32 num_dataloaders = 2;
 }
 
+enum EvaluationAbortedReason {
+  UNKNOWN = 0;
+  MODEL_NOT_EXIST_IN_METADATA = 1;
+  MODEL_IMPORT_FAILURE = 2;
+  MODEL_NOT_EXIST_IN_STORAGE = 3;
+  DATASET_NOT_FOUND = 4;
+  EMPTY_DATASET = 5;
+  DOWNLOAD_MODEL_FAILURE = 6;
+}
 
 message PythonString { string value = 1; }
 
@@ -40,6 +49,7 @@ message EvaluateModelResponse {
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
   int64 dataset_size = 3;
+  EvaluationAbortedReason aborted_reason = 4;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
