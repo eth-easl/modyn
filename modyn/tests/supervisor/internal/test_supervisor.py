@@ -29,7 +29,6 @@ def get_minimal_training_config() -> dict:
         "dataloader_workers": 1,
         "use_previous_model": True,
         "initial_model": "random",
-        "learning_rate": 0.1,
         "batch_size": 42,
         "optimizers": [
             {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
@@ -181,6 +180,10 @@ def test_validate_pipeline_config_schema():
     # Check that our minimal pipeline config gets accepted
     pipeline_config = get_minimal_pipeline_config()
     assert sup.validate_pipeline_config_schema(pipeline_config)
+
+    # Check that a pipeline config with unknown keys gets rejected
+    pipeline_config["unknown_key"] = "unknown_value"
+    assert not sup.validate_pipeline_config_schema(pipeline_config)
 
     # Check that an empty pipeline config gets rejected
     pipeline_config = {}

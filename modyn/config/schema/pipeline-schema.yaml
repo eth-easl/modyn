@@ -24,6 +24,7 @@ properties:
           The version of the pipeline.
     required:
       - name
+    additionalProperties: false
   model:
     type: object
     properties:
@@ -37,6 +38,7 @@ properties:
           Configuration dictionary that will be passed to the model on initialization.
     required:
       - id
+    additionalProperties: false
   model_storage:
     type: object
     properties:
@@ -63,6 +65,7 @@ properties:
               Which zip algorithm to use. Default is ZIP_DEFLATED.
         required:
           - name
+        additionalProperties: false
       incremental_model_strategy:
         type: object
         description: |
@@ -90,8 +93,10 @@ properties:
               In which interval we are using the full model strategy.
         required:
           - name
+        additionalProperties: false
     required:
       - full_model_strategy
+    additionalProperties: false
   training:
     type: object
     properties:
@@ -234,6 +239,7 @@ properties:
         required:
           - name
           - maximum_keys_in_memory
+        additionalProperties: false
       initial_model:
         type: string
         description: |
@@ -261,6 +267,7 @@ properties:
               The path on the training node where the checkpoints are stored
         required:
           - activated
+        additionalProperties: false
       optimizers:
         type: array
         description: |
@@ -302,11 +309,13 @@ properties:
                       Optional configuration for the parameter group (e.g. learning rate)
                 required:
                   - module
+                additionalProperties: false
           required:
             - name
             - algorithm
             - source
             - param_groups
+          additionalProperties: false
       optimization_criterion:
         type: object
         description: |
@@ -322,6 +331,7 @@ properties:
               Optional configuration of the criterion. Passed to the optimizer class as a dict.
         required:
           - name
+        additionalProperties: false
       lr_scheduler:
         type: object
         description: |
@@ -348,6 +358,7 @@ properties:
           - name
           - source
           - optimizers
+        additionalProperties: false
       grad_scaler_config:
         type: object
         description: |
@@ -363,6 +374,7 @@ properties:
       - checkpointing
       - optimization_criterion
       - optimizers
+    additionalProperties: false
   data:
     type: object
     description: |
@@ -393,6 +405,7 @@ properties:
     required:
       - dataset_id
       - bytes_parser_function
+    additionalProperties: false
   trigger:
     type: object
     description: |
@@ -408,6 +421,7 @@ properties:
           Configuration dictionary that will be passed to the trigger on initialization.
     required:
       - id
+    additionalProperties: false
   evaluation:
     type: object
     description: |
@@ -488,16 +502,19 @@ properties:
                       This might for example include the application of the sigmoid-function.
                 required:
                   - name
+                additionalProperties: false
           required:
             - dataset_id
             - bytes_parser_function
             - dataloader_workers
             - batch_size
             - metrics
+          additionalProperties: false
     required:
       - device
       - result_writers
       - datasets
+    additionalProperties: false
 required:
   - pipeline
   - model
@@ -505,6 +522,7 @@ required:
   - training
   - data
   - trigger
+additionalProperties: false
 definitions:
   single_downsampling_config:
     type: object
@@ -529,4 +547,4 @@ definitions:
           In multi-epoch training and sample_then_batch, how frequently the data is selected. The default value is 1 (select every epoch). To select once per trigger, set this parameter to 0.
     required:
       - strategy
-
+    additionalProperties: false
