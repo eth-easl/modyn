@@ -3,7 +3,11 @@
 add_subdirectory("common")
 
 ##### Local Storage Backend #####
-add_subdirectory("selector")
+if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/selector")
+  message(STATUS "Selector LocalStorageBackend is included in this build.")
+  # When building the storage container, the selector subdirectory does not exist and is not required.
+  add_subdirectory("selector")
+endif()
 
 ##### MODYN STORAGE BINARY #####
 if (${MODYN_BUILD_STORAGE})
