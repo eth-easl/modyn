@@ -19,7 +19,7 @@ class AggregatedEvalStrategy(AbstractEvalStrategy):
             else:
                 offset = convert_timestr_to_seconds(offset)
                 if offset < 0:
-                    yield min(first_timestamp + offset, 0), first_timestamp
+                    yield max(first_timestamp + offset, 0), first_timestamp
                 elif offset > 0:
                     yield last_timestamp + 1, last_timestamp + offset + 1
                 else:
