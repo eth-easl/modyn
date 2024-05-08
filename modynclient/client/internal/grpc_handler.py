@@ -9,21 +9,20 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
+from modynclient.config.schema.client_config import ModynClientConfig
 
 logger = logging.getLogger(__name__)
 
 
 class GRPCHandler:
-    def __init__(self, client_config: dict) -> None:
+    def __init__(self, client_config: ModynClientConfig) -> None:
         self.config = client_config
         self.connected_to_supervisor = False
         self.init_supervisor()
 
     def init_supervisor(self) -> None:
         assert self.config is not None
-        supervisor_address = (
-            f"{self.config['supervisor']['ip']}:{self.config['supervisor']['port']}"
-        )
+        supervisor_address = f"{self.config.supervisor.ip}:{self.config.supervisor.port}"
         self.supervisor_channel = grpc.insecure_channel(
             supervisor_address,
             options=[
@@ -47,7 +46,6 @@ class GRPCHandler:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> dict:
         if not self.connected_to_supervisor:
             raise ConnectionError(
@@ -64,8 +62,6 @@ class GRPCHandler:
             start_pipeline_request.stop_replay_at = stop_replay_at
         if maximum_triggers is not None:
             start_pipeline_request.maximum_triggers = maximum_triggers
-
-        start_pipeline_request.evaluation_matrix = evaluation_matrix
 
         res: PipelineResponse = self.supervisor.start_pipeline(start_pipeline_request)
         ret = MessageToDict(

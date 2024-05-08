@@ -23,7 +23,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -46,7 +46,12 @@ def setup_and_teardown():
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test_init():
     # Test init works
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     assert not strat.has_limit
     assert not strat.reset_after_trigger
     assert strat._pipeline_id == 42
@@ -58,31 +63,55 @@ def test_init():
 
     with pytest.raises(ValueError):
         AbstractSelectionStrategy(
-            {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000, ["doesntexist"]
+            {"limit": -1, "reset_after_trigger": False},
+            get_minimal_modyn_config(),
+            42,
+            1000,
+            ["doesntexist"],
         )
 
     #  Test reinit works
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     strat._next_trigger_id = 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__on_trigger():
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     with pytest.raises(NotImplementedError):
         strat._on_trigger()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test__reset_state():
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     with pytest.raises(NotImplementedError):
         strat._reset_state()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
 def test_inform_data():
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     with pytest.raises(NotImplementedError):
         strat.inform_data([], [], [])
 
@@ -91,7 +120,12 @@ def test_inform_data():
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
@@ -117,11 +151,19 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = AbstractSelectionStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0), (14, 1.0), (15, 1.0)], {})]
+    test__on_trigger.return_value = [
+        ([(10, 1.0), (11, 1.0), (12, 1.0)], {}),
+        ([(13, 1.0), (14, 1.0), (15, 1.0)], {}),
+    ]
 
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
 
@@ -180,7 +222,10 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
-    test__on_trigger.return_value = [([(10, 1.0), (11, 1.0), (12, 1.0)], {}), ([(13, 1.0)], {})]
+    test__on_trigger.return_value = [
+        ([(10, 1.0), (11, 1.0), (12, 1.0)], {}),
+        ([(13, 1.0)], {}),
+    ]
 
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_id == 0
@@ -220,7 +265,10 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     test__on_trigger.return_value = []
 
     strat1 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
     )
     assert strat1._pipeline_id == 42
     assert strat1._next_trigger_id == 0
@@ -231,7 +279,10 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     assert strat1._next_trigger_id == 2
 
     strat2 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 21, 1000
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        21,
+        1000,
     )
     assert strat2._pipeline_id == 21
     assert strat2._next_trigger_id == 0

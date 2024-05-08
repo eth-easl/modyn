@@ -8,6 +8,7 @@ import enlighten
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modynclient.config.schema.client_config import ModynClientConfig
 
 POLL_TIMEOUT = 2
 
@@ -17,19 +18,17 @@ logger = logging.getLogger(__name__)
 class Client:
     def __init__(
         self,
-        client_config: dict,
+        client_config: ModynClientConfig,
         pipeline_config: dict,
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> None:
         self.client_config = client_config
         self.pipeline_config = pipeline_config
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
-        self.evaluation_matrix = evaluation_matrix
 
         self.grpc = GRPCHandler(client_config)
         self.pipeline_id: Optional[int] = None
@@ -55,7 +54,6 @@ class Client:
             self.start_replay_at,
             self.stop_replay_at,
             self.maximum_triggers,
-            self.evaluation_matrix,
         )
         if "exception" in res:
             logger.info(f"Pipeline <{res['pipeline_id']}> failed with error {res['exception']}.")

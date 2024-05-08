@@ -27,7 +27,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -48,7 +48,9 @@ def setup_and_teardown():
 
 def insert_data(strat, base_index=0, size=200):
     strat.inform_data(
-        range(base_index, base_index + size), range(base_index, base_index + size), [0, 1] * int((size / 2))
+        range(base_index, base_index + size),
+        range(base_index, base_index + size),
+        [0, 1] * int((size / 2)),
     )
 
 

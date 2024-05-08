@@ -20,11 +20,14 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
-        "selector": {"insertion_threads": 8, "trigger_sample_directory": "/should/not/exist/as/a/directory/"},
+        "selector": {
+            "insertion_threads": 8,
+            "trigger_sample_directory": "/should/not/exist/as/a/directory/",
+        },
     }
 
 
@@ -89,7 +92,9 @@ def test_inform_data():
 @patch.object(FreshnessSamplingStrategy, "_get_trigger_data")
 @patch.object(FreshnessSamplingStrategy, "_mark_used")
 def test__on_trigger_first_trigger(
-    test__mark_used: MagicMock, test__get_trigger_data: MagicMock, test__get_first_trigger_data: MagicMock
+    test__mark_used: MagicMock,
+    test__get_trigger_data: MagicMock,
+    test__get_first_trigger_data: MagicMock,
 ):
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = True
@@ -117,7 +122,9 @@ def test__on_trigger_first_trigger(
 @patch.object(FreshnessSamplingStrategy, "_get_trigger_data")
 @patch.object(FreshnessSamplingStrategy, "_mark_used")
 def test__on_trigger_subsequent_trigger(
-    test__mark_used: MagicMock, test__get_trigger_data: MagicMock, test__get_first_trigger_data: MagicMock
+    test__mark_used: MagicMock,
+    test__get_trigger_data: MagicMock,
+    test__get_first_trigger_data: MagicMock,
 ):
     strat = FreshnessSamplingStrategy(get_freshness_config(), get_minimal_modyn_config(), 0, 1000)
     strat._is_first_trigger = False

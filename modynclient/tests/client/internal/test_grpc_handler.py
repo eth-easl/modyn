@@ -1,6 +1,4 @@
 import json
-import os
-import pathlib
 from unittest.mock import patch
 
 import grpc
@@ -10,6 +8,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modynclient.client.internal.grpc_handler import GRPCHandler
+from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 PIPELINE_ID = 42
 START_PIPELINE_RES = PipelineResponse(pipeline_id=PIPELINE_ID)
@@ -20,10 +19,13 @@ def noop_constructor_mock(self, channel: grpc.Channel) -> None:
     pass
 
 
-def get_simple_config() -> dict:
-    return {
-        "supervisor": {"ip": "127.0.0.1", "port": 42},
-    }
+def get_simple_config() -> ModynClientConfig:
+    return ModynClientConfig(
+        supervisor=Supervisor(
+            ip="127.0.0.1",
+            port=42,
+        )
+    )
 
 
 def get_minimal_pipeline_config() -> dict:
@@ -111,14 +113,11 @@ def test_start_pipeline(test_grpc_connection_established):
     handler = GRPCHandler(get_simple_config())
     pipeline_config = get_minimal_pipeline_config()
 
-    req_minimal = StartPipelineRequest(
-        pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-        evaluation_matrix=False,
-    )
+    req_minimal = StartPipelineRequest(pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)))
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
         mock.return_value = START_PIPELINE_RES
-        ret_minimal = handler.start_pipeline(pipeline_config, evaluation_matrix=False)
+        ret_minimal = handler.start_pipeline(pipeline_config)
 
         assert ret_minimal["pipeline_id"] == 42
         assert "exception" not in ret_minimal
@@ -133,7 +132,6 @@ def test_start_pipeline(test_grpc_connection_established):
         start_replay_at=start_replay_at,
         stop_replay_at=stop_replay_at,
         maximum_triggers=maximum_triggers,
-        evaluation_matrix=True,
     )
 
     with patch.object(handler.supervisor, "start_pipeline") as mock:
@@ -143,7 +141,6 @@ def test_start_pipeline(test_grpc_connection_established):
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
-            evaluation_matrix=True,
         )
 
         assert ret_full["pipeline_id"] == 42

@@ -22,7 +22,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import TriggerTrainingSetInfo
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -536,80 +535,26 @@ class GRPCHandler:
 
         evaluations: dict[int, EvaluationStatusReporter] = {}
 
-        if pipeline_id is None:
-            # In this case, we evaluate on fixed datasets
-            for dataset in pipeline_config["evaluation"]["datasets"]:
-                dataset_id = dataset["dataset_id"]
-
-                req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
-                fixed_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
-
-                if not fixed_eval_response.evaluation_started:
-                    logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {fixed_eval_response}.")
-                else:
-                    evaluation_id = fixed_eval_response.evaluation_id
-                    logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                    evaluations[evaluation_id] = EvaluationStatusReporter(
-                        self.eval_status_queue, evaluation_id, dataset_id, fixed_eval_response.dataset_size
-                    )
-                    evaluations[evaluation_id].create_tracker()
-
-            return evaluations
-
-        # In case we want to evaluate on trigger training set
-        dataset_id = pipeline_config["data"]["dataset_id"]
-        num_prefetched_partitions = (
-            pipeline_config["training"]["num_prefetched_partitions"]
-            if "num_prefetched_partitions" in pipeline_config["training"]
-            else 1
-        )
-        parallel_prefetch_requests = (
-            pipeline_config["training"]["parallel_prefetch_requests"]
-            if "parallel_prefetch_requests" in pipeline_config["training"]
-            else 1
-        )
-
-        train_eval_dataset = None
         for dataset in pipeline_config["evaluation"]["datasets"]:
-            if dataset["dataset_id"] == dataset_id:
-                train_eval_dataset = dataset
-                break
+            dataset_id = dataset["dataset_id"]
 
-        assert train_eval_dataset is not None  # validated this in the supervisor
+            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
+            response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
 
-        req = GRPCHandler._prepare_evaluation_request(
-            train_eval_dataset,
-            model_id,
-            device,
-            pipeline_id,
-            trigger_id,
-            num_prefetched_partitions,
-            parallel_prefetch_requests,
-        )
-        trigger_eval_response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
-
-        if not trigger_eval_response.evaluation_started:
-            logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {trigger_eval_response}.")
-        else:
-            evaluation_id = trigger_eval_response.evaluation_id
-            logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-            evaluations[evaluation_id] = EvaluationStatusReporter(
-                self.eval_status_queue, evaluation_id, dataset_id, trigger_eval_response.dataset_size
-            )
-            evaluations[evaluation_id].create_tracker()
+            if not response.evaluation_started:
+                logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
+            else:
+                evaluation_id = response.evaluation_id
+                logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
+                evaluations[evaluation_id] = EvaluationStatusReporter(
+                    self.eval_status_queue, evaluation_id, dataset_id, response.dataset_size
+                )
+                evaluations[evaluation_id].create_tracker()
 
         return evaluations
 
     @staticmethod
-    def _prepare_evaluation_request(
-        dataset_config: dict,
-        model_id: int,
-        device: str,
-        pipeline_id: Optional[int] = None,
-        trigger_id: Optional[int] = None,
-        num_prefetched_partitions: Optional[int] = None,
-        parallel_prefetch_requests: Optional[int] = None,
-    ) -> EvaluateModelRequest:
+    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -660,18 +605,6 @@ class GRPCHandler:
         if "tokenizer" in dataset_config:
             tokenizer = dataset_config["tokenizer"]
             start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
-
-        if pipeline_id is not None:
-            assert trigger_id is not None
-            assert num_prefetched_partitions is not None
-            assert parallel_prefetch_requests is not None
-            ttsi = TriggerTrainingSetInfo(
-                pipeline_id=pipeline_id,
-                trigger_id=trigger_id,
-                num_prefetched_partitions=num_prefetched_partitions,
-                parallel_prefetch_requests=parallel_prefetch_requests,
-            )
-            start_evaluation_kwargs["trigger_training_set_info"] = ttsi
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 

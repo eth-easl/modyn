@@ -25,7 +25,7 @@ def get_modyn_config():
             "username": "user",
             "password": "pw",
             "database": "db",
-            "host": "derhorst",
+            "hostname": "derhorst",
             "port": "1337",
         }
     }
@@ -36,7 +36,10 @@ class MockStrategy(AbstractProcessorStrategy):
         pass
 
     def process_training_metadata(
-        self, trigger_id: int, trigger_metadata: PerTriggerMetadata, sample_metadata: PerSampleMetadata
+        self,
+        trigger_id: int,
+        trigger_metadata: PerTriggerMetadata,
+        sample_metadata: PerSampleMetadata,
     ) -> None:
         pass
 
@@ -68,7 +71,8 @@ def test_register_pipeline(test__instantiate_strategy: MagicMock):
 @patch.object(MetadataProcessorManager, "_instantiate_strategy")
 @patch.object(MetadataProcessor, "process_training_metadata")
 def test_processor_training_metadata(
-    metadata_processor_process_training_metadata: MagicMock, test__instantiate_strategy: MagicMock
+    metadata_processor_process_training_metadata: MagicMock,
+    test__instantiate_strategy: MagicMock,
 ):
     manager = MetadataProcessorManager(get_modyn_config())
     test__instantiate_strategy.return_value = MockStrategy()

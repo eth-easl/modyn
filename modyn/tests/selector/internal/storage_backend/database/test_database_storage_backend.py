@@ -20,7 +20,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -74,7 +74,14 @@ def test_get_data_since_trigger():
 
     data_since_trigger_one = [keys for keys, _ in backend.get_data_since_trigger(1)]
     assert len(data_since_trigger_one) == 3  # Validate partitioning
-    assert flatten(data_since_trigger_one) == [13, 14, 15, 16, 17, 18]  # Validate content
+    assert flatten(data_since_trigger_one) == [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+    ]  # Validate content
 
 
 def test_get_trigger_data():
@@ -138,7 +145,13 @@ def test_get_available_labels_with_tail():
             SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
         )
         database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
+            SelectorStateMetadata(
+                pipeline_id=1,
+                sample_key=5,
+                seen_in_trigger_id=1,
+                timestamp=0,
+                label=890,
+            )
         )
         database.session.commit()
 
@@ -176,7 +189,13 @@ def test_get_available_labels_no_tail():
             SelectorStateMetadata(pipeline_id=1, sample_key=4, seen_in_trigger_id=1, timestamp=0, label=0)
         )
         database.session.add(
-            SelectorStateMetadata(pipeline_id=1, sample_key=5, seen_in_trigger_id=1, timestamp=0, label=890)
+            SelectorStateMetadata(
+                pipeline_id=1,
+                sample_key=5,
+                seen_in_trigger_id=1,
+                timestamp=0,
+                label=890,
+            )
         )
         database.session.commit()
 

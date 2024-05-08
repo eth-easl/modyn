@@ -26,7 +26,6 @@ class PipelineOptions:
     start_replay_at: int | None = None
     stop_replay_at: int | None = None
     maximum_triggers: int | None = None
-    evaluation_matrix: bool = False
 
 
 class PipelineLogsConfigs(BaseModel):

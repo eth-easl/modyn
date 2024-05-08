@@ -9,7 +9,6 @@ from time import sleep
 from typing import Generator
 from unittest.mock import MagicMock, patch
 
-import grpc
 import pytest
 import torch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -107,21 +106,16 @@ def get_evaluation_info(
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=get_mock_label_transformer() if label_transformer else ""),
     )
-
     return EvaluationInfo(request, evaluation_id, "model", "{}", False, storage_address, metrics, trained_model_path)
 
 
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
-@patch("modyn.evaluator.internal.dataset.evaluation_dataset.grpc_connection_established", return_value=True)
-@patch.object(grpc, "insecure_channel", return_value=None)
 def get_mock_evaluator(
     query_queue: mp.Queue,
     response_queue: mp.Queue,
     metric_result_queue: mp.Queue,
     trained_model_path: pathlib.Path,
     label_transformer: bool,
-    test_insecure_channel: MagicMock,
-    test_grpc_connection_established: MagicMock,
 ):
     evaluation_info = get_evaluation_info(
         1,
