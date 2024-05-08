@@ -4,7 +4,21 @@ from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import Abs
 from modyn.utils import convert_timestr_to_seconds
 
 
-class AggregatedEvalStrategy(AbstractEvalStrategy):
+class OffsetEvalStrategy(AbstractEvalStrategy):
+    """
+    This evaluation strategy will evaluate the model on the intervals defined by the user provided offsets.
+    The offsets are defined as a list of strings, where each string represents an offset.
+    An offset can be one of the following:
+    - "-inf": the evaluation interval is from the beginning of evaluation dataset to just before this trigger.
+    - "inf": the evaluation interval is from just after this trigger to the end of evaluation dataset.
+    - an integer followed by a time unit (e.g. "100s", "-100s"):
+        If the represented offset is positive, the evaluation interval starts from just after this trigger with length
+         of the offset.
+        If the represented offset is negative, the evaluation interval ends just before this trigger with length of the
+         offset.
+        If the represented offset is zero, the evaluation interval is exactly the interval of the trigger.
+    """
+
     def __init__(self, eval_strategy_config: dict):
         super().__init__(eval_strategy_config)
         self.offsets = eval_strategy_config["offsets"]
