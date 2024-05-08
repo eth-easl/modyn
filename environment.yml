@@ -26,6 +26,7 @@ dependencies:
   - psycopg2
   - sqlalchemy>=2.0
   - pyaml
+  - pydantic
   - numpy
   - pandas
   - bitstring

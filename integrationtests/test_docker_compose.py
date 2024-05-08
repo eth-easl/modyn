@@ -83,7 +83,7 @@ def storage_db_running() -> bool:
     config = get_modyn_config()
     try:
         psycopg2.connect(
-            host=config["storage"]["database"]["host"],
+            host=config["storage"]["database"]["hostname"],
             port=config["storage"]["database"]["port"],
             database=config["storage"]["database"]["database"],
             user=config["storage"]["database"]["username"],
@@ -103,7 +103,7 @@ def metadata_db_running() -> bool:
     config = get_modyn_config()
     try:
         psycopg2.connect(
-            host=config["metadata_database"]["host"],
+            host=config["metadata_database"]["hostname"],
             port=config["metadata_database"]["port"],
             database=config["metadata_database"]["database"],
             user=config["metadata_database"]["username"],

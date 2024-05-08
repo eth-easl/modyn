@@ -23,7 +23,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -41,7 +41,12 @@ def get_config():
 
 def get_config_tail():
     # TODO(MaxiBoether): also test local
-    return {"reset_after_trigger": False, "limit": -1, "tail_triggers": 1, "storage_backend": "database"}
+    return {
+        "reset_after_trigger": False,
+        "limit": -1,
+        "tail_triggers": 1,
+        "storage_backend": "database",
+    }
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -424,7 +429,10 @@ def test__get_data_reset_nolimit_partitions(test__get_all_data: MagicMock, test_
     conf = get_config()
     conf["reset_after_trigger"] = True
 
-    test__get_current_trigger_data.return_value = [([10, 11, 12], {}), ([13, 14, 15], {})]
+    test__get_current_trigger_data.return_value = [
+        ([10, 11, 12], {}),
+        ([13, 14, 15], {}),
+    ]
     strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
 
     assert list(strat._get_data_reset()) == [([10, 11, 12], {}), ([13, 14, 15], {})]
@@ -468,7 +476,9 @@ def test__get_data_reset_largelimit(test__get_all_data: MagicMock, test__get_cur
 @patch.object(NewDataStrategy, "_get_all_data")
 @patch.object(NewDataStrategy, "_handle_limit_no_reset")
 def test__get_data_no_reset_nolimit(
-    test__handle_limit_no_reset: MagicMock, test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock
+    test__handle_limit_no_reset: MagicMock,
+    test__get_all_data: MagicMock,
+    test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
     conf["reset_after_trigger"] = False
@@ -486,7 +496,9 @@ def test__get_data_no_reset_nolimit(
 @patch.object(NewDataStrategy, "_get_all_data")
 @patch.object(NewDataStrategy, "_handle_limit_no_reset")
 def test__get_data_no_reset_limit(
-    test__handle_limit_no_reset: MagicMock, test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock
+    test__handle_limit_no_reset: MagicMock,
+    test__get_all_data: MagicMock,
+    test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
     conf["reset_after_trigger"] = False
@@ -507,7 +519,9 @@ def test__get_data_no_reset_limit(
 @patch.object(NewDataStrategy, "_get_all_data")
 @patch.object(NewDataStrategy, "_handle_limit_no_reset")
 def test__get_data_no_reset_limit_partitions(
-    test__handle_limit_no_reset: MagicMock, test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock
+    test__handle_limit_no_reset: MagicMock,
+    test__get_all_data: MagicMock,
+    test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
     conf["reset_after_trigger"] = False
