@@ -1,6 +1,4 @@
 import json
-import os
-import pathlib
 from unittest.mock import patch
 
 import grpc
@@ -10,6 +8,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modynclient.client.internal.grpc_handler import GRPCHandler
+from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 PIPELINE_ID = 42
 START_PIPELINE_RES = PipelineResponse(pipeline_id=PIPELINE_ID)
@@ -20,10 +19,13 @@ def noop_constructor_mock(self, channel: grpc.Channel) -> None:
     pass
 
 
-def get_simple_config() -> dict:
-    return {
-        "supervisor": {"ip": "127.0.0.1", "port": 42},
-    }
+def get_simple_config() -> ModynClientConfig:
+    return ModynClientConfig(
+        supervisor=Supervisor(
+            ip="127.0.0.1",
+            port=42,
+        )
+    )
 
 
 def get_minimal_pipeline_config() -> dict:

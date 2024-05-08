@@ -20,7 +20,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -47,7 +47,9 @@ def insert_data(strat, base_index=0):
 def insert_data_clustered(strat, per_class):
     for index, number in enumerate(per_class):
         strat.inform_data(
-            range(1000 * index, 1000 * index + number), range(1000 * index, 1000 * index + number), [index] * number
+            range(1000 * index, 1000 * index + number),
+            range(1000 * index, 1000 * index + number),
+            [index] * number,
         )
 
 

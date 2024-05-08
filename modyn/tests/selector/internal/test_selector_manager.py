@@ -20,7 +20,7 @@ def get_modyn_config():
             "username": "user",
             "password": "pw",
             "database": "db",
-            "host": "derhorst",
+            "hostname": "derhorst",
             "port": "1337",
         },
         "selector": {"keys_in_selector_cache": 1000, "trigger_sample_directory": "/does/not/exist"},

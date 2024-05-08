@@ -21,9 +21,6 @@ from zipfile import ZIP_DEFLATED, ZipFile
 import grpc
 import numpy as np
 import torch
-import yaml
-from jsonschema import validate
-from jsonschema.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
@@ -66,22 +63,6 @@ def trigger_available(trigger_type: str) -> bool:
     return trigger_type in available_triggers
 
 
-def validate_yaml(concrete_file: dict, schema_path: pathlib.Path) -> tuple[bool, Optional[ValidationError]]:
-    # We might want to support different permutations here of loaded/unloaded data
-    # Implement as soon as required.
-
-    assert schema_path.is_file(), f"Schema file does not exist: {schema_path}"
-    with open(schema_path, "r", encoding="utf-8") as schema_file:
-        schema = yaml.safe_load(schema_file)
-
-    try:
-        validate(concrete_file, schema)
-    except ValidationError as error:
-        return False, error
-
-    return True, None
-
-
 def current_time_millis() -> int:
     timestamp = time.time() * 1000
     return int(round(timestamp))
@@ -120,7 +101,11 @@ def grpc_common_config() -> list[Any]:
                                 "initialBackoff": "0.5s",
                                 "maxBackoff": "10s",
                                 "backoffMultiplier": 2,
-                                "retryableStatusCodes": ["UNAVAILABLE", "RESOURCE_EXHAUSTED", "DEADLINE_EXCEEDED"],
+                                "retryableStatusCodes": [
+                                    "UNAVAILABLE",
+                                    "RESOURCE_EXHAUSTED",
+                                    "DEADLINE_EXCEEDED",
+                                ],
                             },
                         }
                     ]
@@ -273,7 +258,11 @@ def get_partition_for_worker(worker_id: int, total_workers: int, total_num_eleme
     return start_index, worker_subset_size
 
 
-def calculate_checksum(file_path: pathlib.Path, hash_func_name: str = "blake2b", chunk_num_blocks: int = 128) -> bytes:
+def calculate_checksum(
+    file_path: pathlib.Path,
+    hash_func_name: str = "blake2b",
+    chunk_num_blocks: int = 128,
+) -> bytes:
     """
     Returns the checksum of a file.
 
@@ -295,7 +284,10 @@ def calculate_checksum(file_path: pathlib.Path, hash_func_name: str = "blake2b",
 
 
 def zip_file(
-    file_path: pathlib.Path, zipped_file_path: pathlib.Path, compression: int = ZIP_DEFLATED, remove_file: bool = False
+    file_path: pathlib.Path,
+    zipped_file_path: pathlib.Path,
+    compression: int = ZIP_DEFLATED,
+    remove_file: bool = False,
 ) -> None:
     """
     Zips a file.
@@ -316,7 +308,10 @@ def zip_file(
 
 
 def unzip_file(
-    zipped_file_path: pathlib.Path, file_path: pathlib.Path, compression: int = ZIP_DEFLATED, remove_file: bool = False
+    zipped_file_path: pathlib.Path,
+    file_path: pathlib.Path,
+    compression: int = ZIP_DEFLATED,
+    remove_file: bool = False,
 ) -> None:
     """
     Unzips a file.

@@ -26,7 +26,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -71,7 +71,10 @@ def test_init():
 
     assert isinstance(coreset_strategy, AbstractSelectionStrategy)
     assert isinstance(coreset_strategy.presampling_strategy, RandomPresamplingStrategy)
-    assert isinstance(coreset_strategy.downsampling_scheduler.current_downsampler, NoDownsamplingStrategy)
+    assert isinstance(
+        coreset_strategy.downsampling_scheduler.current_downsampler,
+        NoDownsamplingStrategy,
+    )
 
 
 def test_inform_data():
@@ -111,7 +114,9 @@ def test_dataset_size():
     assert strat._get_trigger_dataset_size() == 6
 
     strat.inform_data(
-        [1110, 1111, 1112, 2110, 2111, 2112], [0, 1, 2, 0, 1, 2], ["dog", "dog", "cat", "dog", "dog", "cat"]
+        [1110, 1111, 1112, 2110, 2111, 2112],
+        [0, 1, 2, 0, 1, 2],
+        ["dog", "dog", "cat", "dog", "dog", "cat"],
     )
 
     assert strat._get_trigger_dataset_size() == 12
@@ -119,7 +124,11 @@ def test_dataset_size():
 
 def test_on_trigger():
     strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
 
     generator = strat._on_trigger()
     assert len(list(generator)[0][0]) == 3  # 50% presampling
@@ -140,7 +149,11 @@ def test_on_trigger_multi_chunks():
     config["presampling_config"]["ratio"] = 40
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 4
 
     generator = strat._on_trigger()
@@ -153,7 +166,11 @@ def test_on_trigger_multi_chunks_unbalanced():
     config = get_config()
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
@@ -168,7 +185,11 @@ def test_on_trigger_multi_chunks_bis():
     config["presampling_config"]["ratio"] = 70
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
@@ -187,7 +208,11 @@ def test_no_presampling():
     config["downsampling_config"]["sample_then_batch"] = True
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
@@ -204,7 +229,11 @@ def test_chunking():
     config["presampling_config"]["ratio"] = 90
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
@@ -222,7 +251,11 @@ def test_chunking_with_stricter_limit():
     config["limit"] = 3  # but the limit is stricter so we get only 3
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 2
 
     generator = strat._on_trigger()
@@ -238,7 +271,11 @@ def test_chunking_with_stricter_presampling():
     config["limit"] = 4
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
@@ -319,7 +356,11 @@ def test_no_presampling_with_limit():
     config["limit"] = 3
     strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
 
-    strat.inform_data([10, 11, 12, 13, 14, 15], [0, 1, 2, 3, 4, 5], ["dog", "dog", "cat", "bird", "snake", "bird"])
+    strat.inform_data(
+        [10, 11, 12, 13, 14, 15],
+        [0, 1, 2, 3, 4, 5],
+        ["dog", "dog", "cat", "bird", "snake", "bird"],
+    )
     strat.maximum_keys_in_memory = 5
 
     generator = strat._on_trigger()
@@ -368,7 +409,12 @@ def test_dataset_size_tail():
 @patch.object(CoresetStrategy, "_on_trigger")
 @patch.object(DownsamplingScheduler, "inform_next_trigger")
 def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: MagicMock):
-    strat = CoresetStrategy({"limit": -1, "reset_after_trigger": False}, get_minimal_modyn_config(), 42, 1000)
+    strat = CoresetStrategy(
+        {"limit": -1, "reset_after_trigger": False},
+        get_minimal_modyn_config(),
+        42,
+        1000,
+    )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
