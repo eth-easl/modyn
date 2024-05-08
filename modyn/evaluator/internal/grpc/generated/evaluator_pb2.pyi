@@ -19,30 +19,30 @@ else:
 
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
-class _EvaluationNotStartReason:
+class _EvaluationAbortedReason:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _EvaluationNotStartReasonEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_EvaluationNotStartReason.ValueType], builtins.type):
+class _EvaluationAbortedReasonEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_EvaluationAbortedReason.ValueType], builtins.type):
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
-    UNKNOWN: _EvaluationNotStartReason.ValueType  # 0
-    MODEL_NOT_EXIST_IN_METADATA: _EvaluationNotStartReason.ValueType  # 1
-    MODEL_IMPORT_FAILURE: _EvaluationNotStartReason.ValueType  # 2
-    MODEL_NOT_EXIST_IN_STORAGE: _EvaluationNotStartReason.ValueType  # 3
-    DATASET_NOT_FOUND: _EvaluationNotStartReason.ValueType  # 4
-    EMPTY_DATASET: _EvaluationNotStartReason.ValueType  # 5
-    DOWNLOAD_MODEL_FAILURE: _EvaluationNotStartReason.ValueType  # 6
+    UNKNOWN: _EvaluationAbortedReason.ValueType  # 0
+    MODEL_NOT_EXIST_IN_METADATA: _EvaluationAbortedReason.ValueType  # 1
+    MODEL_IMPORT_FAILURE: _EvaluationAbortedReason.ValueType  # 2
+    MODEL_NOT_EXIST_IN_STORAGE: _EvaluationAbortedReason.ValueType  # 3
+    DATASET_NOT_FOUND: _EvaluationAbortedReason.ValueType  # 4
+    EMPTY_DATASET: _EvaluationAbortedReason.ValueType  # 5
+    DOWNLOAD_MODEL_FAILURE: _EvaluationAbortedReason.ValueType  # 6
 
-class EvaluationNotStartReason(_EvaluationNotStartReason, metaclass=_EvaluationNotStartReasonEnumTypeWrapper): ...
+class EvaluationAbortedReason(_EvaluationAbortedReason, metaclass=_EvaluationAbortedReasonEnumTypeWrapper): ...
 
-UNKNOWN: EvaluationNotStartReason.ValueType  # 0
-MODEL_NOT_EXIST_IN_METADATA: EvaluationNotStartReason.ValueType  # 1
-MODEL_IMPORT_FAILURE: EvaluationNotStartReason.ValueType  # 2
-MODEL_NOT_EXIST_IN_STORAGE: EvaluationNotStartReason.ValueType  # 3
-DATASET_NOT_FOUND: EvaluationNotStartReason.ValueType  # 4
-EMPTY_DATASET: EvaluationNotStartReason.ValueType  # 5
-DOWNLOAD_MODEL_FAILURE: EvaluationNotStartReason.ValueType  # 6
-global___EvaluationNotStartReason = EvaluationNotStartReason
+UNKNOWN: EvaluationAbortedReason.ValueType  # 0
+MODEL_NOT_EXIST_IN_METADATA: EvaluationAbortedReason.ValueType  # 1
+MODEL_IMPORT_FAILURE: EvaluationAbortedReason.ValueType  # 2
+MODEL_NOT_EXIST_IN_STORAGE: EvaluationAbortedReason.ValueType  # 3
+DATASET_NOT_FOUND: EvaluationAbortedReason.ValueType  # 4
+EMPTY_DATASET: EvaluationAbortedReason.ValueType  # 5
+DOWNLOAD_MODEL_FAILURE: EvaluationAbortedReason.ValueType  # 6
+global___EvaluationAbortedReason = EvaluationAbortedReason
 
 @typing.final
 class DatasetInfo(google.protobuf.message.Message):
@@ -170,20 +170,20 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     DATASET_SIZE_FIELD_NUMBER: builtins.int
-    NOT_START_REASON_FIELD_NUMBER: builtins.int
+    ABORTED_REASON_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
     dataset_size: builtins.int
-    not_start_reason: global___EvaluationNotStartReason.ValueType
+    aborted_reason: global___EvaluationAbortedReason.ValueType
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
         dataset_size: builtins.int = ...,
-        not_start_reason: global___EvaluationNotStartReason.ValueType = ...,
+        aborted_reason: global___EvaluationAbortedReason.ValueType = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started", "not_start_reason", b"not_start_reason"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["aborted_reason", b"aborted_reason", "dataset_size", b"dataset_size", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 
