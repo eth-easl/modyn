@@ -4,7 +4,7 @@ from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import Abs
 from modyn.utils import convert_timestr_to_seconds
 
 
-class CustomEvalStrategy(AbstractEvalStrategy):
+class AggregatedEvalStrategy(AbstractEvalStrategy):
     def __init__(self, eval_strategy_config: dict):
         super().__init__(eval_strategy_config)
         self.granularity = convert_timestr_to_seconds(self.eval_strategy_config["granularity"])
