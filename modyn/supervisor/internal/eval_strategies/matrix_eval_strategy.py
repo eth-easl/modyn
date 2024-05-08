@@ -4,7 +4,7 @@ from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import Abs
 from modyn.utils import convert_timestr_to_seconds
 
 
-class PeriodicalEvalStrategy(AbstractEvalStrategy):
+class MatrixEvalStrategy(AbstractEvalStrategy):
     def __init__(self, eval_strategy_config: dict):
         super().__init__(eval_strategy_config)
         self.eval_every = convert_timestr_to_seconds(self.eval_strategy_config["eval_every"])
@@ -20,5 +20,4 @@ class PeriodicalEvalStrategy(AbstractEvalStrategy):
             yield previous_split, current_split
             if current_split == self.eval_end_at:
                 break
-
             previous_split = current_split
