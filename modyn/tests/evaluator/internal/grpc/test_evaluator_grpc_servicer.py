@@ -15,7 +15,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
     EvaluateModelResponse,
-    EvaluationNotStartReason,
+    EvaluationAbortedReason,
     EvaluationResultRequest,
     EvaluationStatusRequest,
     JsonString,
@@ -180,7 +180,7 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
-        assert response.not_start_reason == EvaluationNotStartReason.MODEL_IMPORT_FAILURE
+        assert response.aborted_reason == EvaluationAbortedReason.MODEL_IMPORT_FAILURE
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -193,20 +193,20 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.not_start_reason == EvaluationNotStartReason.MODEL_NOT_EXIST_IN_METADATA
+        assert resp.aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
-        assert resp.not_start_reason == EvaluationNotStartReason.DATASET_NOT_FOUND
+        assert resp.aborted_reason == EvaluationAbortedReason.DATASET_NOT_FOUND
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.not_start_reason == EvaluationNotStartReason.MODEL_NOT_EXIST_IN_STORAGE
+        assert resp.aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -220,7 +220,7 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-            assert resp.not_start_reason == EvaluationNotStartReason.EMPTY_DATASET
+            assert resp.aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
 
 
 @patch("multiprocessing.Process.start", autospec=True)
@@ -259,7 +259,7 @@ def test_evaluate_model_download_trained_model(
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert resp.not_start_reason == EvaluationNotStartReason.DOWNLOAD_MODEL_FAILURE
+        assert resp.aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
 
 
 @patch(

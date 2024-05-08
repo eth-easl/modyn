@@ -11,7 +11,7 @@ from typing import Any, Optional
 from modyn.common.benchmark import Stopwatch
 
 # pylint: disable-next=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
@@ -162,7 +162,7 @@ class PipelineExecutor:
             response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
             interval_name = f"{previous_split}-{current_split}"
             if not response.evaluation_started:
-                reason = EvaluationNotStartReason.DESCRIPTOR.values_by_number[response.not_start_reason].name
+                reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.aborted_reason].name
                 logger.error(
                     f"Evaluation for model {model_id} on split {previous_split} to {current_split} not started with "
                     f"reason: {reason}."

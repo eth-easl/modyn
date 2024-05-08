@@ -8,7 +8,7 @@ from unittest import mock
 from unittest.mock import MagicMock, call, patch
 
 # pylint: disable=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationNotStartReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval_strategies.periodical_eval_strategy import PeriodicalEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -570,7 +570,7 @@ def test__start_evaluations_failure(
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
     failure_response = EvaluateModelResponse(
-        evaluation_started=False, not_start_reason=EvaluationNotStartReason.EMPTY_DATASET
+        evaluation_started=False, aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
     )
     # the failure response shouldn't affect the following evaluations
     evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
