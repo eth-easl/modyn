@@ -154,4 +154,5 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
             # el[0] is the class/trigger, el[1] is the count
             return [el[1] for el in samples_count]
 
+        assert isinstance(self._storage_backend, DatabaseStorageBackend)
         return self._storage_backend._execute_on_session(_session_callback)

@@ -240,7 +240,11 @@ class FusedJointEmbedding(Embeddings):
 
 class JointSparseEmbedding(Embeddings):
     def __init__(
-        self, categorical_feature_sizes: List[int], embedding_dim: int, device: str = "cuda", hash_indices: bool = False
+        self,
+        categorical_feature_sizes: Sequence[int],
+        embedding_dim: int,
+        device: str = "cuda",
+        hash_indices: bool = False,
     ):
         super().__init__()
         self._categorical_feature_sizes = categorical_feature_sizes

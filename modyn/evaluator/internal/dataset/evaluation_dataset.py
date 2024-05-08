@@ -34,6 +34,8 @@ class EvaluationDataset(IterableDataset):
         storage_address: str,
         evaluation_id: int,
         tokenizer: Optional[str] = None,
+        start_timestamp: int = 0,
+        end_timestamp: int = 0,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -46,6 +48,8 @@ class EvaluationDataset(IterableDataset):
         self._transform: Optional[Callable] = None
         self._storagestub: StorageStub = None
         self._bytes_parser_function: Optional[Callable] = None
+        self._start_timestamp = start_timestamp
+        self._end_timestamp = end_timestamp
 
         # tokenizer for NLP tasks
         self._tokenizer = None
@@ -100,7 +104,11 @@ class EvaluationDataset(IterableDataset):
     def _get_keys_from_storage(self, worker_id: int, total_workers: int) -> Iterable[list[int]]:
         self._info("Getting keys from storage", worker_id)
         req_keys = GetDataPerWorkerRequest(
-            dataset_id=self._dataset_id, worker_id=worker_id, total_workers=total_workers
+            dataset_id=self._dataset_id,
+            worker_id=worker_id,
+            total_workers=total_workers,
+            start_timestamp=self._start_timestamp,
+            end_timestamp=self._end_timestamp,
         )
         resp_keys: GetDataPerWorkerResponse
         for resp_keys in self._storagestub.GetDataPerWorker(req_keys):

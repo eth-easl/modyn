@@ -24,7 +24,6 @@ def noop_constructor_mock(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
-    evaluation_matrix: bool = False,
 ) -> None:
     pass
 
