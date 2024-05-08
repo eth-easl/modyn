@@ -15,7 +15,7 @@ message DatasetInfo {
   int64 end_timestamp = 4;
 }
 
-enum EvaluationNotStartReason {
+enum EvaluationAbortedReason {
   UNKNOWN = 0;
   MODEL_NOT_EXIST_IN_METADATA = 1;
   MODEL_IMPORT_FAILURE = 2;
@@ -51,7 +51,7 @@ message EvaluateModelResponse {
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
   int64 dataset_size = 3;
-  EvaluationNotStartReason not_start_reason = 4;
+  EvaluationAbortedReason aborted_reason = 4;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
