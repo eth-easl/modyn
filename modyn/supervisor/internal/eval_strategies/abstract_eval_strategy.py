@@ -13,6 +13,7 @@ class AbstractEvalStrategy(ABC):
         evaluation interval.
         :param first_timestamp: the timestamp of the first sample in this trigger.
         :param last_timestamp: the timestamp of the last sample in this trigger.
-        :return: an iterable of tuples where each tuple represents a left inclusive, right exclusive evaluation interval.
+        :return: an iterable of tuples where each tuple represents a
+        left inclusive, right exclusive evaluation interval.
         """
         raise NotImplementedError
