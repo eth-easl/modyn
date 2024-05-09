@@ -11,8 +11,8 @@ service Evaluator {
 message DatasetInfo {
   string dataset_id = 1;
   int32 num_dataloaders = 2;
-  int64 start_timestamp = 3;
-  int64 end_timestamp = 4;
+  optional int64 start_timestamp = 3;
+  optional int64 end_timestamp = 4;
 }
 
 enum EvaluationAbortedReason {

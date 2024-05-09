@@ -220,7 +220,7 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-            assert resp.aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+            assert resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
 
 
 @patch("multiprocessing.Process.start", autospec=True)
@@ -259,7 +259,7 @@ def test_evaluate_model_download_trained_model(
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert resp.aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
 
 
 @patch(

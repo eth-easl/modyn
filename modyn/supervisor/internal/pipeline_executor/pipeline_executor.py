@@ -162,7 +162,7 @@ class PipelineExecutor:
             response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
             interval_name = f"{previous_split}-{current_split}"
             if not response.evaluation_started:
-                reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.aborted_reason].name
+                reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
                 logger.error(
                     f"Evaluation for model {model_id} on split {previous_split} to {current_split} not started with "
                     f"reason: {reason}."
