@@ -52,7 +52,7 @@ stateDiagram-v2
                 EVALUATE --> WAIT_FOR_EVALUATION_COMPLETION
                 WAIT_FOR_EVALUATION_COMPLETION --> EVALUATION_COMPLETED
                 EVALUATION_COMPLETED --> STORE_EVALUATION_RESULTS
-                STORE_EVALUATION_RESULTS --> [*]
+                STORE_EVALUATION_RESULTS --> end_execute_trigger[*]
             }
             post_train --> evaluation
             post_train --> [*]
@@ -69,9 +69,14 @@ stateDiagram-v2
             trigger_decision --> INFORM_SELECTOR_NO_TRIGGER
             trigger_decision --> EXECUTE_TRIGGERS_WITHIN_BATCH
 
-            EVALUATE_TRIGGER_ON_BATCH --> INFORM_SELECTOR_AND_TRIGGER
-            EVALUATE_TRIGGER_ON_BATCH --> INFORM_SELECTOR_REMAINING_DATA
-            INFORM_SELECTOR_AND_TRIGGER --> INFORM_SELECTOR_REMAINING_DATA
+            state execute_trigger {
+                [*] --> INFORM_SELECTOR_AND_TRIGGER
+                INFORM_SELECTOR_AND_TRIGGER --> [*]
+            }
+            EXECUTE_TRIGGERS_WITHIN_BATCH --> execute_trigger
+            execute_trigger --> INFORM_SELECTOR_REMAINING_DATA
+
+            INFORM_SELECTOR_NO_TRIGGER --> [*]
             INFORM_SELECTOR_REMAINING_DATA --> [*]
         }
         new_data_batch --> NEW_DATA_HANDLED
@@ -79,7 +84,7 @@ stateDiagram-v2
     }
 
     INFORM_SELECTOR_AND_TRIGGER --> train_and_eval
-    train_and_eval --> EVALUATE_TRIGGER_ON_BATCH
+    train_and_eval --> INFORM_SELECTOR_AND_TRIGGER
     
     DONE --> EXIT
     EXIT --> [*]
