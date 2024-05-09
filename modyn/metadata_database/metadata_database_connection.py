@@ -29,7 +29,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         self.drivername: str = self.modyn_config["metadata_database"]["drivername"]
         self.username: str = self.modyn_config["metadata_database"]["username"]
         self.password: str = self.modyn_config["metadata_database"]["password"]
-        self.host: str = self.modyn_config["metadata_database"]["host"]
+        self.host: str = self.modyn_config["metadata_database"]["hostname"]
         self.port: int = self.modyn_config["metadata_database"]["port"]
         self.database: str = self.modyn_config["metadata_database"]["database"]
         self.hash_partition_modulus: int = (

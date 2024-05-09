@@ -1,11 +1,11 @@
 import json
 import logging
 import multiprocessing as mp
-import os
 import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
+from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
@@ -18,7 +18,8 @@ from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_re
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.utils import PipelineInfo
-from modyn.utils import is_directory_writable, model_available, trigger_available, validate_yaml
+from modyn.utils import is_directory_writable, model_available, trigger_available
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -71,23 +72,6 @@ class Supervisor:
         # TODO(#317): seed per pipeline instead of per system in the future
         if "seed" in self.modyn_config:
             self.grpc.seed_selector(self.modyn_config["seed"])
-
-    def validate_pipeline_config_schema(self, pipeline_config: dict) -> bool:
-        schema_path = (
-            pathlib.Path(os.path.abspath(__file__)).parent.parent.parent / "config" / "schema" / "pipeline-schema.yaml"
-        )
-        valid_yaml, exception = validate_yaml(pipeline_config, schema_path)
-
-        if not valid_yaml:
-            logger.error(
-                f"""Error while validating pipeline configuration file for schema-compliance: {
-                    exception.message if exception else ''
-                }"""
-            )
-            logger.error(exception)
-            return False
-
-        return True
 
     def _validate_evaluation_options(self, evaluation_config: dict) -> bool:
         is_valid = True
@@ -172,9 +156,11 @@ class Supervisor:
         return is_valid
 
     def validate_pipeline_config(self, pipeline_config: dict) -> bool:
-        return self.validate_pipeline_config_schema(pipeline_config) and self.validate_pipeline_config_content(
-            pipeline_config
-        )
+        try:
+            ModynPipelineConfig.model_validate(pipeline_config)
+        except ValidationError:
+            return False
+        return self.validate_pipeline_config_content(pipeline_config)
 
     def dataset_available(self, pipeline_config: dict) -> bool:
         dataset_id = pipeline_config["data"]["dataset_id"]
@@ -232,7 +218,7 @@ class Supervisor:
                     num_workers=num_workers,
                     model_class_name=pipeline_config["model"]["id"],
                     model_config=model_config,
-                    amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
+                    amp=(pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False),
                     selection_strategy=json.dumps(pipeline_config["training"]["selection_strategy"]),
                     full_model_strategy=full_model_strategy,
                     incremental_model_strategy=incremental_model_strategy,
@@ -246,7 +232,7 @@ class Supervisor:
         return StrategyConfig(
             name=strategy_config["name"],
             zip=strategy_config["zip"] if "zip" in strategy_config else None,
-            zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
+            zip_algorithm=(strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None),
             config=(
                 SelectorJsonString(value=json.dumps(strategy_config["config"])) if "config" in strategy_config else None
             ),
@@ -306,7 +292,11 @@ class Supervisor:
             )
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
-                process, exception_queue, pipeline_status_queue, training_status_queue, eval_status_queue
+                process,
+                exception_queue,
+                pipeline_status_queue,
+                training_status_queue,
+                eval_status_queue,
             )
             return pipeline_res_msg(pipeline_id=pipeline_id)
         except Exception:  # pylint: disable=broad-except
