@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, call, patch
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.periodical_eval_strategy import PeriodicalEvalStrategy
+from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import EVALUATION_RESULTS, PipelineExecutor, execute_pipeline
@@ -69,7 +69,7 @@ def get_minimal_pipeline_config() -> dict:
 
 def get_minimal_eval_strategies_config() -> dict:
     return {
-        "name": "PeriodicalEvalStrategy",
+        "name": "MatrixEvalStrategy",
         "config": {
             "eval_every": "100s",
             "eval_start_from": 0,
@@ -592,7 +592,7 @@ def test__start_evaluations_failure(
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
-    with patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake):
+    with patch.object(MatrixEvalStrategy, "get_eval_interval", side_effect=fake):
         pipeline_executor._start_evaluations(0, 0, 70, 100)
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2
@@ -642,7 +642,7 @@ def test__start_evaluations_success(
         patch.object(
             GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
         ) as prepare_evaluation_request_wrap,
-        patch.object(PeriodicalEvalStrategy, "get_eval_interval", side_effect=fake),
+        patch.object(MatrixEvalStrategy, "get_eval_interval", side_effect=fake),
     ):
         model_id = 1
         pipeline_executor._start_evaluations(

@@ -70,7 +70,7 @@ trigger:
     data_points_for_trigger: 100
 evaluation:
   eval_strategy:
-    name: "PeriodicalEvalStrategy"
+    name: "MatrixEvalStrategy"
     config:
       eval_every: 1d
       eval_start_from: 0
