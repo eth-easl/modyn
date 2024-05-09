@@ -4,7 +4,7 @@ import datetime
 import json
 import multiprocessing as mp
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Literal, Optional
@@ -70,39 +70,45 @@ class PipelineOptions(BaseModel):
 
 # TODO: pipeline hierarchy abstraction e.g. main pipeline, new data batch pipeline, eval pipeline, ...
 
+class PipelineBatchState(BaseModel):
+    """Pipeline artifacts shared across stages during the processing of one batch."""
+    data: list[tuple[int, int, int]] = Field(default_factory=list)
+    num_triggers: int = Field(0)
+    triggering_indices: list[int] = Field(0)
+    previous_trigger_idx: int = Field(-1)
+    next_trigger_id: int = Field(-1)
+    remaining_data: list[tuple[int, int, int]] = Field(default_factory=list)
+    evaluations: dict[int, EvaluationStatusReporter] = Field(default_factory=dict)
+    trigger_id: int = Field(-1)
+
 class ExecutionState(PipelineOptions):
-    """Represent the state of the pipeline executor."""
+    """Represent the state of the pipeline executor including artifacts of pipeline stages."""
         
     grpc: GRPCHandler
 
-    previous_model_id: Optional[int] = Field(None)
-
     num_triggers: int = Field(0)
-    current_training_id: Optional[int] = None
     trained_models: list[int] = []
     triggers: list[int] = []
     
-    sw = field(default_factory=Stopwatch)
+    sw = Field(default_factory=Stopwatch)
     
     # Internal state for pipeline steps
     
-    previous_model_id: int  = Field(-1)
+    # RUN_TRAINING, STORE_TRAINED_MODEL
+    previous_model_id: Optional[int] = Field(None)
+    training_id: Optional[int] = None
     
+    # PipelineStage.REPLAY_DATA
     new_data: list[tuple[int, int, int]] = Field(default_factory=list)
-    """Stores the new unprocessed data of new data to be processed in `HANDLE_NEW_DATA`."""
+    """Stores the new unprocessed data to be processed in `HANDLE_NEW_DATA`."""
     
+    # PipelineStage.FETCH_NEW_DATA
     previous_largest_keys: set[int] = Field(default_factory=set)
     
-    # TODO dateclass
-    current_batch: list[tuple[int, int, int]] = Field(default_factory=list)
-    current_batch_num_triggers: int = Field(0)
-    current_batch_triggering_indices: list[int] = Field(0)
-    current_batch_previous_trigger_idx: int = Field(-1)
-    current_batch_next_trigger_id: int = Field(-1)
-    current_batch_remaining_data: list[tuple[int, int, int]] = Field(default_factory=list)
-    current_batch_evaluations: dict[int, EvaluationStatusReporter] = Field(default_factory=dict)
-    Field(default_factory=list)
-    current_trigger_id: int = Field(-1)
+    # new_data_batch_pipeline
+    batch: PipelineBatchState = Field(PipelineBatchState())
+    
+    # INFORM_SELECTOR_AND_TRIGGER
     
     previous_new_data_had_trigger: bool = Field(False)
     previous_batch_had_trigger: bool = Field(False)
