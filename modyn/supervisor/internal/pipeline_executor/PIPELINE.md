@@ -13,9 +13,8 @@
 stateDiagram-v2
     [*] --> INIT
     INIT --> INIT_CLUSTER_CONNECTION
-    INIT_CLUSTER_CONNECTION --> GET_SELECTOR_BATCH_SIZE
     state fork_state <<fork>>
-        GET_SELECTOR_BATCH_SIZE --> fork_state
+        INIT_CLUSTER_CONNECTION --> fork_state
         fork_state --> replay_data
         fork_state --> wait_for_new_data
         state replay_data {
@@ -63,9 +62,15 @@ stateDiagram-v2
         [*] --> HANDLE_NEW_DATA
         HANDLE_NEW_DATA --> new_data_batch
         state new_data_batch {
-            [*] --> HANDLE_TRIGGERS_WITHIN_BATCH
-            HANDLE_TRIGGERS_WITHIN_BATCH --> INFORM_SELECTOR_AND_TRIGGER
-            HANDLE_TRIGGERS_WITHIN_BATCH --> INFORM_SELECTOR_REMAINING_DATA
+            [*] --> EVALUATE_TRIGGER_ON_BATCH
+
+            state trigger_decision <<join>>
+            EVALUATE_TRIGGER_ON_BATCH --> trigger_decision
+            trigger_decision --> INFORM_SELECTOR_NO_TRIGGER
+            trigger_decision --> EXECUTE_TRIGGERS_WITHIN_BATCH
+
+            EVALUATE_TRIGGER_ON_BATCH --> INFORM_SELECTOR_AND_TRIGGER
+            EVALUATE_TRIGGER_ON_BATCH --> INFORM_SELECTOR_REMAINING_DATA
             INFORM_SELECTOR_AND_TRIGGER --> INFORM_SELECTOR_REMAINING_DATA
             INFORM_SELECTOR_REMAINING_DATA --> [*]
         }
@@ -74,7 +79,7 @@ stateDiagram-v2
     }
 
     INFORM_SELECTOR_AND_TRIGGER --> train_and_eval
-    train_and_eval --> HANDLE_TRIGGERS_WITHIN_BATCH
+    train_and_eval --> EVALUATE_TRIGGER_ON_BATCH
     
     DONE --> EXIT
     EXIT --> [*]

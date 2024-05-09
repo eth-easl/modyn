@@ -24,7 +24,6 @@ class PipelineStage(StrEnum):
     # Setup
     INIT = "Initialize pipeline executor"
     INIT_CLUSTER_CONNECTION = "Initialize cluster connection"
-    GET_SELECTOR_BATCH_SIZE = "Get selector batch size"
     
     _FORK_DATA_STRATEGY = "Pipeline fork: data strategy"
     """decide whether to choose replay or fetch new data"""
@@ -39,12 +38,14 @@ class PipelineStage(StrEnum):
     
     # Process new data
     HANDLE_NEW_DATA = "Handle new data"
+
+    # TODO: new
+    EVALUATE_TRIGGER_ON_BATCH = "Evaluate trigger on batch"
+    INFORM_SELECTOR_NO_TRIGGER = "Inform selector about no trigger"
     
-    HANDLE_TRIGGERS_WITHIN_BATCH = "Handle triggers within batch"
+    EXECUTE_TRIGGERS_WITHIN_BATCH = "Handle triggers within batch"
     INFORM_SELECTOR_AND_TRIGGER = "Inform selector and trigger"
-    
-    _FORK_DECIDE_ANOTHER_TRIGGER = "Pipeline fork: decide another trigger"
-    
+        
     INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
     
     NEW_DATA_HANDLED = "New data handled"
