@@ -25,7 +25,7 @@ class StorageDatabaseConnection {
     drivername_ = get_drivername(config);
     username_ = config["storage"]["database"]["username"].as<std::string>();
     password_ = config["storage"]["database"]["password"].as<std::string>();
-    host_ = config["storage"]["database"]["host"].as<std::string>();
+    host_ = config["storage"]["database"]["hostname"].as<std::string>();
     port_ = config["storage"]["database"]["port"].as<std::string>();
     database_ = config["storage"]["database"]["database"].as<std::string>();
     if (config["storage"]["database"]["hash_partition_modulus"]) {

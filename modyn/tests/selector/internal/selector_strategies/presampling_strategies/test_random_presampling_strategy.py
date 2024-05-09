@@ -29,7 +29,7 @@ def get_minimal_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": "0",
             "database": f"{database_path}",
         },
@@ -50,7 +50,10 @@ def setup_and_teardown():
 
 def test_constructor():
     strat = RandomPresamplingStrategy(
-        get_config(), get_minimal_modyn_config(), 10, DatabaseStorageBackend(0, get_minimal_modyn_config(), 123)
+        get_config(),
+        get_minimal_modyn_config(),
+        10,
+        DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
     )
     assert strat.presampling_ratio == 50
     assert strat.requires_trigger_dataset_size
@@ -58,7 +61,10 @@ def test_constructor():
 
 def test_target_size():
     strat = RandomPresamplingStrategy(
-        get_config(), get_minimal_modyn_config(), 10, DatabaseStorageBackend(0, get_minimal_modyn_config(), 123)
+        get_config(),
+        get_minimal_modyn_config(),
+        10,
+        DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
     )
     assert strat.get_target_size(100, None) == 50
     assert strat.get_target_size(20, None) == 10
@@ -76,7 +82,10 @@ def test_target_size():
 
 def test_get_query_wrong():
     strat = RandomPresamplingStrategy(
-        get_config(), get_minimal_modyn_config(), 10, DatabaseStorageBackend(0, get_minimal_modyn_config(), 123)
+        get_config(),
+        get_minimal_modyn_config(),
+        10,
+        DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
     )
 
     # missing size
@@ -98,14 +107,20 @@ def test_constructor_throws_on_invalid_config():
 
     with pytest.raises(ValueError):
         RandomPresamplingStrategy(
-            conf, get_minimal_modyn_config(), 10, DatabaseStorageBackend(0, get_minimal_modyn_config(), 123)
+            conf,
+            get_minimal_modyn_config(),
+            10,
+            DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
         )
 
     conf["ratio"] = 101
 
     with pytest.raises(ValueError):
         RandomPresamplingStrategy(
-            conf, get_minimal_modyn_config(), 10, DatabaseStorageBackend(0, get_minimal_modyn_config(), 123)
+            conf,
+            get_minimal_modyn_config(),
+            10,
+            DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
         )
 
 
@@ -124,7 +139,10 @@ def test_dataset_size_various_scenarios():
 
     # first trigger
     strat = CoresetStrategy(
-        {"presampling_config": conf, "limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 0, 100
+        {"presampling_config": conf, "limit": -1, "reset_after_trigger": True},
+        get_minimal_modyn_config(),
+        0,
+        100,
     )
     presampling_strat: RandomPresamplingStrategy = strat.presampling_strategy
     strat.inform_data(data1, timestamps1, labels1)
