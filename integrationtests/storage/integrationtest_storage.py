@@ -96,7 +96,7 @@ def check_dataset_availability() -> None:
     assert response.available, "Dataset is not available."
 
 
-def check_dataset_size(expected_size: int, start_timestamp=0, end_timestamp=0) -> None:
+def check_dataset_size(expected_size: int, start_timestamp=None, end_timestamp=None) -> None:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
