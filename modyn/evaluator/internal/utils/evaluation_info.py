@@ -29,11 +29,11 @@ class EvaluationInfo:
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
         if request.dataset_info.HasField("start_timestamp"):
-            self.start_timestamp = request.dataset_info.start_timestamp
+            self.start_timestamp: Optional[int] = request.dataset_info.start_timestamp
         else:
             self.start_timestamp = None
         if request.dataset_info.HasField("end_timestamp"):
-            self.end_timestamp = request.dataset_info.end_timestamp
+            self.end_timestamp: Optional[int] = request.dataset_info.end_timestamp
         else:
             self.end_timestamp = None
         self.device = request.device

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Iterable
 
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy

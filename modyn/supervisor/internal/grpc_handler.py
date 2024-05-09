@@ -552,8 +552,11 @@ class GRPCHandler:
 
     @staticmethod
     def prepare_evaluation_request(
-        dataset_config: dict, model_id: int, device: str,
-            start_timestamp: Optional[int] = None, end_timestamp: Optional[int] = None
+        dataset_config: dict,
+        model_id: int,
+        device: str,
+        start_timestamp: Optional[int] = None,
+        end_timestamp: Optional[int] = None,
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 

@@ -147,8 +147,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
             )
             return EvaluateModelResponse(
-                evaluation_started=False,
-                eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
             )
 
         with self._lock:
