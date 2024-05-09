@@ -388,6 +388,17 @@ class TriggerConfig(BaseModel):
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
 
 
+EvalStrategyName = Literal["MatrixEvalStrategy", "OffsetEvalStrategy"]
+
+
+class EvalStrategy(BaseModel):
+    name: EvalStrategyName = Field(description="The name of the evaluation strategy that should be used.")
+    config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Configuration dictionary that will be passed to the evaluation strategy on initialization.",
+    )
+
+
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
@@ -432,6 +443,7 @@ class ResultWriter(BaseModel):
 
 
 class EvaluationConfig(BaseModel):
+    eval_strategy: EvalStrategy = Field(description="The evaluation strategy that should be used.")
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[str] = Field(
         description=(
@@ -440,10 +452,7 @@ class EvaluationConfig(BaseModel):
         ),
         min_length=1,
     )
-    datasets: List[DatasetConfig] = Field(
-        description="An array of all datasets on which the model is evaluated.",
-        min_length=1,
-    )
+    dataset: DatasetConfig = Field(description="The dataset on which the model is evaluated.")
 
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
