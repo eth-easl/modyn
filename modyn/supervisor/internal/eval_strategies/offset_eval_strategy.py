@@ -23,13 +23,14 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         super().__init__(eval_strategy_config)
         self.offsets = eval_strategy_config["offsets"]
 
-    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int, int]]:
+    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int | None, int | None]]:
         for offset in self.offsets:
             if offset == "-inf":
                 yield 0, first_timestamp
             elif offset == "inf":
-                # +1 because the left bound of the evaluation interval is inclusive
-                yield last_timestamp + 1, -1
+                # +1 because the left bound of the returned interval should inclusive, and last_timestamp is included
+                # in the current trigger
+                yield last_timestamp + 1, None
             else:
                 offset = convert_timestr_to_seconds(offset)
                 if offset < 0:

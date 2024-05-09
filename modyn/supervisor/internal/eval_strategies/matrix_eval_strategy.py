@@ -13,7 +13,7 @@ class MatrixEvalStrategy(AbstractEvalStrategy):
         assert self.eval_start_from < self.eval_end_at, "eval_start_from must be less than eval_end_at"
         assert self.eval_every > 0, "eval_every must be greater than 0"
 
-    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int, int]]:
+    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int | None, int | None]]:
         previous_split = self.eval_start_from
         while True:
             current_split = min(previous_split + self.eval_every, self.eval_end_at)

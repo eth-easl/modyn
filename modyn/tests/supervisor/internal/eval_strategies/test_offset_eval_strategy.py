@@ -6,7 +6,7 @@ def test_get_eval_interval():
     eval_strategy = OffsetEvalStrategy(config)
     assert list(eval_strategy.get_eval_interval(0, 0)) == [
         (0, 0),
-        (1, -1),
+        (1, None),
         (0, 1),
         (1, 101),
         (0, 0),
@@ -14,7 +14,7 @@ def test_get_eval_interval():
 
     assert list(eval_strategy.get_eval_interval(40, 70)) == [
         (0, 40),
-        (71, -1),
+        (71, None),
         (40, 71),
         (71, 171),
         (0, 40),
@@ -22,7 +22,7 @@ def test_get_eval_interval():
 
     assert list(eval_strategy.get_eval_interval(100, 100)) == [
         (0, 100),
-        (101, -1),
+        (101, None),
         (100, 101),
         (101, 201),
         (0, 100),
@@ -30,7 +30,7 @@ def test_get_eval_interval():
 
     assert list(eval_strategy.get_eval_interval(130, 200)) == [
         (0, 130),
-        (201, -1),
+        (201, None),
         (130, 201),
         (201, 301),
         (30, 130),
