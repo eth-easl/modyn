@@ -79,6 +79,8 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.triggers: list[int] = []
+        self.last_sample_in_trigger_timestamp: Optional[int] = None
+        self.first_sample_in_trigger_timestamp: Optional[int] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -277,13 +279,28 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
+                if len(triggering_data) > 0:
+                    last_timestamp = triggering_data[-1][1]
+                else:
+                    assert self.last_sample_in_trigger_timestamp is not None
+                    last_timestamp = self.last_sample_in_trigger_timestamp
+
+                if previous_trigger_idx == triggering_idx + 1 and self.first_sample_in_trigger_timestamp is not None:
+                    # the first trigger in this batch; whether the first sample in the trigger is
+                    # the first sample in triggering_data depends on if during the last call
+                    # there is non-empty remaining data
+                    first_timestamp = self.first_sample_in_trigger_timestamp
+                else:
+                    first_timestamp = triggering_data[0][1]
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 self._run_training(trigger_id)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
-
+            self.first_sample_in_trigger_timestamp = None
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
@@ -302,6 +319,8 @@ class PipelineExecutor:
                     self.pipeline_log["supervisor"]["selector_informs"].append(
                         {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
                     )
+                    self.last_sample_in_trigger_timestamp = remaining_data[-1][1]
+                    self.first_sample_in_trigger_timestamp = remaining_data[0][1]
 
             self._persist_pipeline_log()
 
