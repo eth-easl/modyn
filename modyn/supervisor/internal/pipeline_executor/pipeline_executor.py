@@ -153,7 +153,7 @@ class PipelineExecutor:
         )
 
         for i in range(0, new_data_len, self._selector_batch_size):
-            batch = new_data[i: i + self._selector_batch_size]
+            batch = new_data[i : i + self._selector_batch_size]
             batch_size = self._selector_batch_size if i + self._selector_batch_size < new_data_len else new_data_len - i
             self._update_pipeline_stage_and_enqueue_msg(
                 PipelineStage.HANDLE_NEW_DATA,
@@ -261,7 +261,7 @@ class PipelineExecutor:
 
         for i, triggering_idx in enumerate(triggering_indices):
             self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
-            triggering_data = batch[previous_trigger_idx: triggering_idx + 1]
+            triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
 
             # This call informs the selector about the data until (and including)
@@ -279,22 +279,22 @@ class PipelineExecutor:
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
                 if trigger_id > 0:
-                    # since num_samples_in_trigger is not 0, we can be sure that triggering_data is not empty
+                    # since num_samples_in_trigger is not 0, we are sure that triggering_data is not empty
                     first_timestamp = triggering_data[0][1]
                     last_timestamp = triggering_data[-1][1]
                 else:
-                    # now it's the first trigger in this batch. Triggering_data can be empty.
-                    # when it is indeed empty, then there is remaining data in the last batch.
+                    # now trigger_id == 0, it is the first trigger in this batch. Triggering_data can be empty.
+                    # when it is indeed empty, then there is remaining data in the last batch
+                    # because num_samples_in_trigger is not 0.
                     assert len(triggering_data) > 0 or self.remaining_data_range is not None
-                    if len(triggering_data) > 0:
-                        last_timestamp = triggering_data[-1][1]
-                    else:
-                        last_timestamp = self.remaining_data_range[1]
 
                     if self.remaining_data_range is not None:
                         first_timestamp = self.remaining_data_range[0]
+                        last_timestamp = self.remaining_data_range[1] \
+                            if len(triggering_data) == 0 else triggering_data[-1][1]
                     else:
                         first_timestamp = triggering_data[0][1]
+                        last_timestamp = triggering_data[-1][1]
 
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
