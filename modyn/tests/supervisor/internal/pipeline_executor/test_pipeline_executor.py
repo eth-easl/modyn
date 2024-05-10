@@ -362,7 +362,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
-    test_get_number_of_samples.return_value = len(batch)
+    test_get_number_of_samples.side_effect = [0, 0, 4]
 
     pe._handle_triggers_within_batch(batch, triggering_indices)
 
@@ -374,8 +374,8 @@ def test__handle_triggers_within_batch_empty_triggers(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(0), call(1), call(2)]
-    assert test__run_training.call_count == 3
+    run_training_expected_args = [call(2)]
+    assert test__run_training.call_count == 1
     assert test__run_training.call_args_list == run_training_expected_args
 
     assert test_inform_selector.call_count == 1

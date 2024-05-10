@@ -290,8 +290,9 @@ class PipelineExecutor:
 
                     if self.remaining_data_range is not None:
                         first_timestamp = self.remaining_data_range[0]
-                        last_timestamp = self.remaining_data_range[1] \
-                            if len(triggering_data) == 0 else triggering_data[-1][1]
+                        last_timestamp = (
+                            self.remaining_data_range[1] if len(triggering_data) == 0 else triggering_data[-1][1]
+                        )
                     else:
                         first_timestamp = triggering_data[0][1]
                         last_timestamp = triggering_data[-1][1]
@@ -307,7 +308,7 @@ class PipelineExecutor:
             # If no other trigger is coming in this batch,
             # we have to inform the Selector about the remaining data in this batch.
             if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1: ]
+                remaining_data = batch[triggering_idx + 1 :]
                 logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
 
                 if len(remaining_data) > 0:
