@@ -7,13 +7,19 @@ import time
 from typing import Optional
 
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import numpy as np
 import pandas as pd
 import yaml
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from PIL import Image
+
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
+from modyn.metadata_database.metadata_database_connection import (
+    MetadataDatabaseConnection,
+)
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
+from modyn.selector.internal.grpc.generated.selector_pb2 import (
+    JsonString as SelectorJsonString,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
@@ -23,13 +29,14 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
-from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-MODYN_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples"
+MODYN_CONFIG_PATH = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.debug.log/config")
 MODYN_CONFIG_FILE = MODYN_CONFIG_PATH / "modyn_config.yaml"
 
-MODYNCLIENT_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples"
+MODYNCLIENT_CONFIG_PATH = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.debug.log/config/client")
+DATASET_PATH = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.data/test_datasets")
+
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
@@ -159,7 +166,7 @@ class DatasetHelper:
         self,
         dataset_id: str,
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = DATASET_PATH,
         desc: str = "new dataset",
         file_wrapper_config: dict = {"file_extension": ".png", "label_file_extension": ".txt"},
         file_wrapper_type: str = "SingleSampleFileWrapper",
@@ -243,7 +250,7 @@ class ImageDatasetHelper(DatasetHelper):
         self,
         dataset_id: str = "image_dataset",
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = DATASET_PATH,
         desc: str = "Test dataset for integration tests.",
         first_added_images: list = [],
     ) -> None:
@@ -289,7 +296,7 @@ class TinyDatasetHelper(DatasetHelper):
         self,
         dataset_id: str = "tiny_dataset",
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = DATASET_PATH,
         desc: str = "Tiny dataset for integration tests.",
     ) -> None:
         super().__init__(

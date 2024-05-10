@@ -4,6 +4,7 @@ from math import isclose
 
 import grpc
 import yaml
+from zipp import Path
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -19,7 +20,7 @@ from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grp
 from modyn.utils import grpc_connection_established
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+CONFIG_FILE = Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.debug.log/config/modyn_config.yaml")
 
 
 class MetadataProcessorClient:

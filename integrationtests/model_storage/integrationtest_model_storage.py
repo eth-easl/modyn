@@ -25,7 +25,8 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import M
 from modyn.models import ResNet18
 from modyn.utils import calculate_checksum, grpc_connection_established
 
-TEST_MODELS_PATH = pathlib.Path("/app") / "model_storage" / "test_models"
+TEST_MODELS_PATH = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.data/test_models")
+
 
 FILE_NAME_PARENT = "test_parent.modyn"
 MODEL_PARENT = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)

@@ -33,10 +33,10 @@ from torchvision import transforms
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+CONFIG_FILE = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.debug.log/config/modyn_config.yaml")
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
-DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
+DATASET_PATH = pathlib.Path("/Users/robinholzinger/robin/dev/eth/modyn-2/.data/test_dataset")
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the images we added to the dataset ourselves and compare them to the images we get
