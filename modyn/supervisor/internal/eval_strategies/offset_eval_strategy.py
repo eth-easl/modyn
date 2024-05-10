@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Iterable
+from typing import Iterable, Optional
 
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.utils import convert_timestr_to_seconds
@@ -24,7 +23,9 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         super().__init__(eval_strategy_config)
         self.offsets = eval_strategy_config["offsets"]
 
-    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int | None, int | None]]:
+    def get_eval_interval(
+        self, first_timestamp: int, last_timestamp: int
+    ) -> Iterable[tuple[Optional[int], Optional[int]]]:
         for offset in self.offsets:
             if offset == "-inf":
                 yield 0, first_timestamp
