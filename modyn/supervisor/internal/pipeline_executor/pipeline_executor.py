@@ -278,12 +278,12 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
-                if trigger_id > 0:
+                if i > 0:
                     # since num_samples_in_trigger is not 0, we are sure that triggering_data is not empty
                     first_timestamp = triggering_data[0][1]
                     last_timestamp = triggering_data[-1][1]
                 else:
-                    # now trigger_id == 0, it is the first trigger in this batch. Triggering_data can be empty.
+                    # now it is the first trigger in this batch. Triggering_data can be empty.
                     # when it is indeed empty, then there is remaining data in the last batch
                     # because num_samples_in_trigger is not 0.
                     assert len(triggering_data) > 0 or self.remaining_data_range is not None

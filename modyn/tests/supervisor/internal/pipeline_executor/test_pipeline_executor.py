@@ -356,20 +356,18 @@ def test__handle_triggers_within_batch_empty_triggers(
     test__run_training: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-    pe.pipeline_id = 42
-    batch = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7)]
+    # each tuple is (key, timestamp, label)
+    batch = [(10, 1, 5), (11, 2, 5), (12, 3, 5), (13, 4, 5), (14, 5, 5), (15, 6, 5), (16, 7, 5)]
     triggering_indices = [-1, -1, 3]
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
     test_get_number_of_samples.side_effect = [0, 0, 4]
-
     pe._handle_triggers_within_batch(batch, triggering_indices)
-
     inform_selector_and_trigger_expected_args = [
         call(42, []),
         call(42, []),
-        call(42, [(10, 1), (11, 2), (12, 3), (13, 4)]),
+        call(42, [(10, 1, 5), (11, 2, 5), (12, 3, 5), (13, 4, 5)]),
     ]
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
@@ -379,7 +377,75 @@ def test__handle_triggers_within_batch_empty_triggers(
     assert test__run_training.call_args_list == run_training_expected_args
 
     assert test_inform_selector.call_count == 1
-    test_inform_selector.assert_called_once_with(42, [(14, 5), (15, 6), (16, 7)])
+    test_inform_selector.assert_called_once_with(42, [(14, 5, 5), (15, 6, 5), (16, 7, 5)])
+
+
+@patch.object(PipelineExecutor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
+def test__handle_triggers_within_batch_trigger_timespan(
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
+):
+    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
+    test_inform_selector.return_value = {}
+    test_inform_selector_and_trigger.side_effect = [(0, {}), (1, {}), (2, {}), (3, {}), (4, {}), (5, {})]
+
+    # each tuple is (key, timestamp, label)
+    first_batch = [
+        (10, 1, 5),
+        (11, 2, 5),
+        # trigger 0
+        # trigger 1 is empty
+        (12, 3, 5),
+        (13, 4, 5),
+        # trigger 2
+        (14, 5, 5),
+        (15, 6, 5),
+        (16, 7, 5),
+        # remaining data
+    ]
+    triggering_indices = [1, 1, 3]
+    test_get_number_of_samples.side_effect = [2, 0, 2]
+
+    pe._handle_triggers_within_batch(first_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["first_timestamp"] == 1
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["last_timestamp"] == 2
+
+    assert "first_timestamp" not in pe.pipeline_log["supervisor"]["triggers"][1]
+    assert "last_timestamp" not in pe.pipeline_log["supervisor"]["triggers"][1]
+
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["first_timestamp"] == 3
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["last_timestamp"] == 4
+    assert pe.remaining_data_range == (5, 7)
+
+    second_batch = [
+        # trigger 3 covers remaining data from last batch
+        (17, 8, 5),
+        (18, 9, 5),
+        # trigger 4
+        (19, 10, 5),
+        # remaining data
+    ]
+    triggering_indices = [-1, 1]
+    test_get_number_of_samples.side_effect = [3, 2]
+    pe._handle_triggers_within_batch(second_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][3]["first_timestamp"] == 5
+    assert pe.pipeline_log["supervisor"]["triggers"][3]["last_timestamp"] == 7
+    assert pe.pipeline_log["supervisor"]["triggers"][4]["first_timestamp"] == 8
+    assert pe.pipeline_log["supervisor"]["triggers"][4]["last_timestamp"] == 9
+    assert pe.remaining_data_range == (10, 10)
+
+    third_batch = [(20, 11, 5), (21, 12, 5), (22, 13, 5)]  # trigger 5, also includes remaining data from last batch
+    triggering_indices = [2]
+    test_get_number_of_samples.side_effect = [4]
+    pe._handle_triggers_within_batch(third_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][5]["first_timestamp"] == 10
+    assert pe.pipeline_log["supervisor"]["triggers"][5]["last_timestamp"] == 13
+    assert pe.remaining_data_range is None
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
