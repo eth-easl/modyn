@@ -5,18 +5,12 @@ import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
-from pydantic import ValidationError
-
 from modyn.config.schema.pipeline import ModynPipelineConfig
-from modyn.metadata_database.metadata_database_connection import (
-    MetadataDatabaseConnection,
-)
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
-from modyn.selector.internal.grpc.generated.selector_pb2 import (
-    JsonString as SelectorJsonString,
-)
+from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 from modyn.supervisor.internal.evaluation_result_writer import (
     JsonResultWriter,
@@ -24,16 +18,13 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
-from modyn.supervisor.internal.grpc.template_msg import (
-    exit_submsg,
-    pipeline_res_msg,
-    pipeline_stage_msg,
-)
+from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
+from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -307,7 +298,7 @@ class Supervisor:
                 stop_replay_at=stop_replay_at,
                 maximum_triggers=maximum_triggers,
             )
-            process = Process(target=execute_pipeline, args=(pipeline_options))
+            process = Process(target=execute_pipeline, args=pipeline_options)
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,

@@ -9,7 +9,6 @@ from time import sleep
 from typing import Any, Iterable, Optional, Sequence
 
 import grpc
-
 from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
@@ -19,14 +18,10 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    MetricConfiguration,
 )
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    JsonString as EvaluatorJsonString,
-)
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    PythonString as EvaluatorPythonString,
-)
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -49,18 +44,13 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-)
+from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.grpc.enums import IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import id_submsg, pipeline_stage_msg
-from modyn.supervisor.internal.utils import (
-    EvaluationStatusReporter,
-    TrainingStatusReporter,
-)
+from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    CheckpointInfo,
-    Data,
     PythonString,
     StartTrainingRequest,
     StartTrainingResponse,
@@ -71,12 +61,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusRequest,
     TrainingStatusResponse,
 )
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    JsonString as TrainerServerJsonString,
-)
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import (
-    TrainerServerStub,
-)
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.utils import grpc_common_config, grpc_connection_established
 
 logger = logging.getLogger(__name__)

@@ -12,13 +12,8 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import (
-    PipelineExecutor,
-    execute_pipeline,
-)
-from modyn.supervisor.internal.utils.evaluation_status_reporter import (
-    EvaluationStatusReporter,
-)
+from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
+from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
