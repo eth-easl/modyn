@@ -1,10 +1,10 @@
 """setup file for the project."""
+
 # code inspired by https://github.com/navdeep-G/setup.py
 
-import io
 import os
-import pathlib
 import subprocess
+from pathlib import Path
 from pprint import pprint
 
 from setuptools import Extension, find_packages, setup
@@ -35,12 +35,12 @@ EXTRAS = {}
 # Except, perhaps the License and Trove Classifiers!
 # If you do change the License, remember to change the Trove Classifier for that!
 
-here = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = Path(__file__).parent
 
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.md' is present in your MANIFEST.in file!
 try:
-    with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
+    with open(PROJECT_ROOT / "README.md", encoding="utf-8") as f:
         long_description = "\n" + f.read()
 except FileNotFoundError:
     long_description = DESCRIPTION
@@ -49,7 +49,7 @@ except FileNotFoundError:
 about = {}
 project_slug = "modyn"
 
-EXTENSION_BUILD_DIR = pathlib.Path(here) / "libbuild"
+EXTENSION_BUILD_DIR = PROJECT_ROOT / "libbuild"
 
 
 def _get_env_variable(name, default="OFF"):
@@ -97,7 +97,7 @@ class CMakeBuild(build_ext):
 
             pprint(cmake_args)
 
-            if not os.path.exists(EXTENSION_BUILD_DIR):
+            if not EXTENSION_BUILD_DIR.exists():
                 os.makedirs(EXTENSION_BUILD_DIR)
 
             # Config and build the extension
@@ -122,14 +122,14 @@ setup(
     # entry_points is is required for testing the Python scripts
     entry_points={
         "console_scripts": [
-            "_modyn_supervisor=modyn.supervisor.entrypoint:main",
+            "_modyn_supervisor=modyn.supervisor.main:run",
             "_modyn_storage=modyn.storage.storage_entrypoint:main",
-            "_modyn_trainer_server=modyn.trainer_server.trainer_server_entrypoint:main",
-            "_modyn_selector=modyn.selector.selector_entrypoint:main",
-            "_modyn_metadata_processor=modyn.metadata_processor.metadata_processor_entrypoint:main",
-            "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main",
-            "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main",
-            "_modyn_client=modynclient.client.client_entrypoint:main",
+            "_modyn_trainer_server=modyn.trainer_server.main:run",
+            "_modyn_selector=modyn.selector.main:run",
+            "_modyn_metadata_processor=modyn.metadata_processor.main:run",
+            "_modyn_model_storage=modyn.model_storage.main:run",
+            "_modyn_evaluator=modyn.evaluator.main:run",
+            "_modyn_client=modynclient.client.main:run",
         ]
     },
     scripts=[
@@ -139,7 +139,7 @@ setup(
         "modyn/metadata_processor/modyn-metadata-processor",
         "modyn/model_storage/modyn-model-storage",
         "modyn/evaluator/modyn-evaluator",
-        'modynclient/client/modyn-client',
+        "modynclient/client/modyn-client",
     ],
     install_requires=REQUIRED,
     extras_require=EXTRAS,

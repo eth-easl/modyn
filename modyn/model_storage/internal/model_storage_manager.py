@@ -138,7 +138,6 @@ class ModelStorageManager:
         Returns:
             dict: the reconstructed model state. Refers to the same object as model_state.
         """
-
         # we recursively overwrite the model state.
         with MetadataDatabaseConnection(self._modyn_config) as database:
             model: TrainedModel = database.session.get(TrainedModel, model_id)

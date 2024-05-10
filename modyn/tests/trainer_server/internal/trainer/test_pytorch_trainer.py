@@ -748,7 +748,7 @@ def test_train(
         },
     }
     assert status_state == checkpointed_state
-    assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+    assert (trainer._final_checkpoint_path / "model_final.modyn").exists()
     final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
     assert final_state == checkpointed_state
 

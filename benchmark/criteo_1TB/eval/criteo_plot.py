@@ -25,7 +25,7 @@ def plot_accuracy(pipelines_data, ax):
     ax.set_title("Model Performance on Day 10")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     data_path, plot_dir = INIT(sys.argv)
     data = LOAD_DATA(data_path)
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     plot_accuracy(data, ax)
 
     HATCH_WIDTH()
-    #FIG_LEGEND(fig)
+    # FIG_LEGEND(fig)
     Y_GRID(ax)
     HIDE_BORDERS(ax)
 

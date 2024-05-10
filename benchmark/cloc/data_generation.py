@@ -2,28 +2,26 @@
 # We thank the authors for their work and hosting the data.
 # This code requires the pip google-cloud-storage package
 
-import argparse
-import glob
-import logging
 import os
-import pathlib
 import time
 import zipfile
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
-from shutil import copy, which
+from pathlib import Path
+from shutil import copy
+from typing import Annotated, Optional
 
 import torch
+import typer
 from google.cloud import storage
+from modyn.utils.logging import setup_logging
+from modyn.utils.startup import set_start_method_spawn
 from tqdm import tqdm
 
-logging.basicConfig(
-    level=logging.NOTSET,
-    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
 DAY_LENGTH_SECONDS = 24 * 60 * 60
+
+logger = setup_logging(__name__)
+set_start_method_spawn(logger)
+
 
 def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
     zip_path = os.path.join(directory, zip_file)
@@ -36,86 +34,59 @@ def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
             zip_ref.extractall(output_dir)
     except Exception as e:
         logger.error(f"Error while extracing file {zip_path}")
-        logger.error(e) 
-
-def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description=f"CLOC Benchmark Storage Script")
-    parser_.add_argument(
-        "dir", type=pathlib.Path, action="store", help="Path to data directory"
-    )
-    parser_.add_argument(
-        "--dummyyear",
-        action="store_true",
-        help="Add a final dummy year to train also on the last trigger in Modyn",
-    )
-    parser_.add_argument(
-        "--all",
-        action="store_true",
-        help="Store all the available data, including the validation and test sets.",
-    )
-    parser_.add_argument(
-        "--test",
-        action="store_true",
-        help="Enable test mode (just download one zip file)",
-    )
-    parser_.add_argument(
-        "--skip_download",
-        action="store_true",
-        help="Skips the download and only (re)creates labels and timestamps.",
-    )
-    parser_.add_argument(
-        "--skip_unzip",
-        action="store_true",
-        help="Skips the unzipping and only (re)creates labels and timestamps.",
-    )
-    parser_.add_argument(
-        "--skip_labels",
-        action="store_true",
-        help="Skips the labeling",
-    )
-    parser_.add_argument(
-        "--tmpdir", type=pathlib.Path, action="store", help="If given, use a different directory for storing temporary data"
-    )
-    parser_.add_argument(
-        "--keep_zips",
-        action="store_true",
-        help="Keep the downloaded zipfiles.",
-    )
-    return parser_
+        logger.error(e)
 
 
-def main():
-    parser = setup_argparser()
-    args = parser.parse_args()
+def main(
+    dir: Annotated[Path, typer.Argument(help="Path to data directory")],
+    dummy_year: Annotated[
+        bool,
+        typer.Option(help="Add a final dummy year to train also on the last trigger in Modyn"),
+    ] = False,
+    all: Annotated[
+        bool,
+        typer.Option(help="Store all the available data, including the validation and test sets."),
+    ] = False,
+    test: Annotated[bool, typer.Option(help="Enable test mode (just download one zip file)")] = False,
+    skip_download: Annotated[
+        bool,
+        typer.Option(help="Skips the download and only (re)creates labels and timestamps."),
+    ] = False,
+    skip_unzip: Annotated[
+        bool,
+        typer.Option(help="Skips the unzipping and only (re)creates labels and timestamps."),
+    ] = False,
+    skip_labels: Annotated[bool, typer.Option(help="Skips the labeling")] = False,
+    tmpdir: Annotated[
+        Optional[Path],
+        typer.Option(help="Use a different directory for storing temporary data"),
+    ] = None,
+    keep_zips: Annotated[bool, typer.Option(help="Keep the downloaded zipfiles")] = False,
+) -> None:
+    """CLOC data generation script."""
 
-    tmpdir = args.tmpdir if hasattr(args, "tmpdir") else args.dir
+    tmpdir = tmpdir or dir
+    logger.info(f"Final destination is {dir}; download destination is {tmpdir}")
 
-    logger.info(f"Final destination is {args.dir}; download destination is {tmpdir}")
-
-    downloader = CLDatasets(str(args.dir), str(tmpdir), test_mode=args.test, keep_zips = args.keep_zips)
-    if not args.skip_download:
+    downloader = CLDatasets(dir, tmpdir, test_mode=test, keep_zips=keep_zips)
+    if not skip_download:
         logger.info("Starting download")
         downloader.download_dataset()
 
-    if not args.skip_unzip:
+    if not skip_unzip:
         logger.info("Starting extraction")
         downloader.extract()
 
-    if not args.skip_labels:
+    if not skip_labels:
         logger.info("Starting labeling")
-        downloader.convert_labels_and_timestamps(args.all)
+        downloader.convert_labels_and_timestamps(all)
 
     downloader.remove_images_without_label()
 
-    if args.dummyyear:
+    if dummy_year:
         downloader.add_dummy_year()
 
     logger.info("Done.")
-
-
-def is_tool(name):
-    """Check whether `name` is on PATH and marked as executable."""
-    return which(name) is not None
 
 
 class CLDatasets:
@@ -123,7 +94,14 @@ class CLDatasets:
     A class for downloading datasets from Google Cloud Storage.
     """
 
-    def __init__(self, directory: str, tmpdir: str, test_mode: bool = False, unzip: bool = True, keep_zips: bool = False):
+    def __init__(
+        self,
+        directory: Path,
+        tmpdir: Path,
+        test_mode: bool = False,
+        unzip: bool = True,
+        keep_zips: bool = False,
+    ):
         """
         Initialize the CLDatasets object.
 
@@ -141,42 +119,36 @@ class CLDatasets:
         self.example_path = ""
         self.example_label_path = ""
 
-        if not os.path.exists(self.directory):
-            os.makedirs(self.directory)
+        self.directory.mkdir(exist_ok=True)
+        self.tmpdir.mkdir(exist_ok=True)
 
-        if not os.path.exists(self.tmpdir):
-            os.makedirs(self.tmpdir)
-
-
-    def extract(self):
+    def extract(self) -> None:
         if self.unzip:
-            self.unzip_data_files(self.tmpdir + "/CLOC/data")
+            self.unzip_data_files(str(self.tmpdir / "CLOC" / "data"))
 
-    def convert_labels_and_timestamps(self, all_data: bool):
+    def convert_labels_and_timestamps(self, all_data: bool) -> None:
         self.convert_labels_and_timestamps_impl(
-            self.tmpdir + "/CLOC_torchsave_order_files/train_store_loc.torchSave",
-            self.tmpdir + "/CLOC_torchsave_order_files/train_labels.torchSave",
-            self.tmpdir + "/CLOC_torchsave_order_files/train_time.torchSave",
+            self.tmpdir / "CLOC_torchsave_order_files" / "train_store_loc.torchSave",
+            self.tmpdir / "CLOC_torchsave_order_files" / "train_labels.torchSave",
+            self.tmpdir / "CLOC_torchsave_order_files" / "train_time.torchSave",
         )
 
         if all_data:
             logger.info("Converting all data")
             self.convert_labels_and_timestamps_impl(
-                self.tmpdir
-                + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
-                self.tmpdir + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
-                self.tmpdir + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
+                self.tmpdir / "CLOC_torchsave_order_files" / "cross_val_store_loc.torchSave",
+                self.tmpdir / "CLOC_torchsave_order_files" / "cross_val_labels.torchSave",
+                self.tmpdir / "CLOC_torchsave_order_files" / "cross_val_time.torchSave",
             )
 
-
-    def remove_images_without_label(self):
+    def remove_images_without_label(self) -> None:
         print("Removing images without label...")
         removed_files = 0
 
-        image_paths = pathlib.Path(self.directory).glob("**/*.jpg")
+        image_paths = Path(self.directory).glob("**/*.jpg")
         for filename in tqdm(image_paths):
-            file_path = pathlib.Path(filename)
-            label_path = pathlib.Path(file_path.parent / f"{file_path.stem}.label")
+            file_path = Path(filename)
+            label_path = Path(file_path.parent / f"{file_path.stem}.label")
 
             if not label_path.exists():
                 removed_files += 1
@@ -185,8 +157,8 @@ class CLDatasets:
         print(f"Removed {removed_files} images that do not have a label.")
 
     def convert_labels_and_timestamps_impl(
-        self, store_loc_path, labels_path, timestamps_path
-    ):
+        self, store_loc_path: Path, labels_path: Path, timestamps_path: Path
+    ) -> None:
         logger.info("Loading labels and timestamps.")
         store_loc = torch.load(store_loc_path)
         labels = torch.load(labels_path)
@@ -199,26 +171,19 @@ class CLDatasets:
 
         logger.info("Labels and timestamps loaded, applying")
         missing_files = 0
-        for store_location, label, timestamp in tqdm(
-            zip(store_loc, labels, timestamps), total=len(store_loc)
-        ):
-            path = pathlib.Path(
-                self.directory + "/"
-                + store_location.strip().replace("\n", "")
-            )
+        for store_location, label, timestamp in tqdm(zip(store_loc, labels, timestamps), total=len(store_loc)):
+            path = Path(self.directory + "/" + store_location.strip().replace("\n", ""))
 
             if not path.exists():
                 if not self.test_mode:
                     raise FileExistsError(f"Cannot find file {path}")
                 if not warned_once:
-                    logger.warning(
-                        f"Cannot find file {path}, but we are in test mode. Will not repeat this warning."
-                    )
+                    logger.warning(f"Cannot find file {path}, but we are in test mode. Will not repeat this warning.")
                     warned_once = True
                 missing_files += 1
                 continue
 
-            label_path = pathlib.Path(path.parent / f"{path.stem}.label")
+            label_path = Path(path.parent / f"{path.stem}.label")
             with open(label_path, "w+", encoding="utf-8") as file:
                 file.write(str(int(label)))
 
@@ -233,9 +198,9 @@ class CLDatasets:
 
         logger.info(f"missing files for {store_loc_path} = {missing_files}/{len(store_loc)}")
 
-    def add_dummy_year(self):
-        dummy_path = pathlib.Path(self.directory + "/dummy.jpg")
-        dummy_label_path = pathlib.Path(self.directory + "/dummy.label")
+    def add_dummy_year(self) -> None:
+        dummy_path = self.directory / "dummy.jpg"
+        dummy_label_path = self.directory / "dummy.label"
 
         assert not dummy_path.exists() and not dummy_label_path.exists()
 
@@ -246,9 +211,9 @@ class CLDatasets:
 
         os.utime(dummy_path, (dummy_timestamp, dummy_timestamp))
 
-    def download_directory_from_gcloud(self, prefix):
+    def download_directory_from_gcloud(self, prefix: str) -> None:
         bucket_name = "cl-datasets"
-        dl_dir = pathlib.Path(self.tmpdir)
+        dl_dir = Path(self.tmpdir)
         storage_client = storage.Client.create_anonymous_client()
         bucket = storage_client.bucket(bucket_name=bucket_name)
         blobs = bucket.list_blobs(prefix=prefix)  # Get list of files
@@ -266,7 +231,7 @@ class CLDatasets:
 
             file_split = blob.name.split("/")
             directory = "/".join(file_split[0:-1])
-            pathlib.Path(dl_dir / directory).mkdir(parents=True, exist_ok=True)
+            Path(dl_dir / directory).mkdir(parents=True, exist_ok=True)
             target = dl_dir / blob.name
 
             if not target.exists():
@@ -276,7 +241,9 @@ class CLDatasets:
 
         with ThreadPoolExecutor(max_workers=16) as executor, tqdm(total=len(blobs_to_download)) as pbar:
             futures_list = []
-            download_blob = lambda target, blob: blob.download_to_filename(target)
+
+            def download_blob(target, blob):
+                return blob.download_to_filename(target)
 
             for blob in blobs_to_download:
                 future = executor.submit(download_blob, *blob)
@@ -287,7 +254,7 @@ class CLDatasets:
             for future in futures_list:
                 future.result()
 
-    def download_dataset(self):
+    def download_dataset(self) -> None:
         """
         Download the order files from Google Cloud Storage.
         """
@@ -329,5 +296,9 @@ class CLDatasets:
             os.system(remove_command)
 
 
+def run() -> None:
+    typer.run(main)
+
+
 if __name__ == "__main__":
-    main()
+    run()

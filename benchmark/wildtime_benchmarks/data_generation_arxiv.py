@@ -1,18 +1,31 @@
 import os
 import pickle
+from pathlib import Path
+from typing import Annotated
 
+import torch
+import typer
 from benchmark_utils import create_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
+from modyn.utils.logging import setup_logging
 from torch.utils.data import Dataset
 
-logger = setup_logger()
+logger = setup_logging(__name__)
 
 
-def main():
-    parser = setup_argparser_wildtime("Arxiv")
-    args = parser.parse_args()
-
-    logger.info(f"Downloading data to {args.dir}")
-    ArXivDownloader(args.dir).store_data(args.all, args.dummyyear)
+def main(
+    dir: Annotated[Path, typer.Argument(help="Path to data directory")],
+    dummy_year: Annotated[
+        bool,
+        typer.Option(help="Add a final dummy year to train also on the last trigger in Modyn"),
+    ] = False,
+    all: Annotated[
+        bool,
+        typer.Option(help="Store all the available data, including the validation and test sets."),
+    ] = False,
+) -> None:
+    """arxiv data generation script."""
+    logger.info(f"Downloading data to {dir}")
+    ArXivDownloader(dir).store_data(all, dummy_year)
 
 
 # There are some lines in the train dataset that are corrupted, i.e. the csv file wrapper cannot properly read the data.
@@ -36,7 +49,7 @@ class ArXivDownloader(Dataset):
     drive_id = "1H5xzHHgXl8GOMonkb6ojye-Y2yIp436V"
     file_name = "arxiv.pkl"
 
-    def __init__(self,  data_dir):
+    def __init__(self,  data_dir: Path):
         super().__init__()
 
         download_if_not_exists(
@@ -44,7 +57,9 @@ class ArXivDownloader(Dataset):
             destination_dir=data_dir,
             destination_file_name=self.file_name,
         )
-        datasets = pickle.load(open(os.path.join(data_dir, self.file_name), "rb"))
+        with open(os.path.join(data_dir, self.file_name), "rb") as f:
+            datasets = pickle.load(f)
+
         assert self.time_steps == list(sorted(datasets.keys()))
         self._dataset = datasets
         self.path = data_dir
@@ -132,5 +147,9 @@ class ArXivDownloader(Dataset):
         return rows
 
 
+def run() -> None:
+    typer.run(main)
+
+
 if __name__ == "__main__":
-    main()
+    run()

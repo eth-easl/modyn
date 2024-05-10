@@ -1,4 +1,4 @@
 #!/bin/bash
 
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
-python -u $MODYNPATH/model_storage/model_storage_entrypoint.py "$@"
+python -u $MODYNPATH/model_storage/main.py "$@"

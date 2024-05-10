@@ -55,6 +55,7 @@ from modyn.utils import (
     package_available_and_can_be_imported,
     seed_everything,
 )
+from modyn.utils.logging import setup_logging
 
 AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
 
@@ -275,9 +276,7 @@ class PytorchTrainer:
         torch.save(dict_to_save, destination)
 
     def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
-        if path is None:
-            return
-        assert path.exists(), "Cannot load state from non-existing file"
+        assert path and path.exists(), "Cannot load state from non-existing file"
         self._info(f"Loading model state from {path}")
         # We load the weights on the CPU, and `load_state_dict` moves them to GPU
         with open(path, "rb") as state_file:
@@ -324,7 +323,10 @@ class PytorchTrainer:
         return SelectorStub(selector_channel)
 
     def instantiate_downsampler(
-        self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
+        self,
+        strategy_name: str,
+        downsampler_config: dict,
+        per_sample_loss: torch.nn.modules.loss,
     ) -> AbstractRemoteDownsamplingStrategy:
         return instantiate_class(
             "modyn.trainer_server.internal.trainer.remote_downsamplers",
@@ -815,13 +817,8 @@ def train(
     status_query_queue_downsampling: mp.Queue,
     status_response_queue_downsampling: mp.Queue,
 ) -> None:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-        datefmt="%Y-%m-%d:%H:%M:%S",
-    )
+    logger = setup_logging(__name__, logging.DEBUG)
     file_handler = logging.FileHandler(log_path)
-    logger = logging.getLogger(__name__)
     logger.addHandler(file_handler)
 
     try:

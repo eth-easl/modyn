@@ -80,9 +80,7 @@ class TriggerSampleStorage:
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
         self.trigger_sample_directory = trigger_sample_directory
-        if not Path(self.trigger_sample_directory).exists():
-            Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
-            logger.info(f"Created the trigger sample directory {self.trigger_sample_directory}.")
+        Path(self.trigger_sample_directory).mkdir(parents=True, exist_ok=True)
         if sys.maxsize < 2**63 - 1:
             raise RuntimeError("Modyn Selector Implementation requires a 64-bit system.")
 
@@ -120,7 +118,10 @@ class TriggerSampleStorage:
         self._get_worker_samples_impl.restype = ctypes.POINTER(ctypes.c_char)
 
         self._parse_file_impl = self.extension.parse_file
-        self._parse_file_impl.argtypes = [ctypes.POINTER(ctypes.c_char), ctypes.POINTER(ctypes.c_int64)]
+        self._parse_file_impl.argtypes = [
+            ctypes.POINTER(ctypes.c_char),
+            ctypes.POINTER(ctypes.c_int64),
+        ]
         self._parse_file_impl.restype = ctypes.POINTER(ctypes.c_char)
 
         self._release_data_impl = self.extension.release_data

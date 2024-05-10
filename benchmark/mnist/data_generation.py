@@ -1,73 +1,58 @@
-import argparse
-import logging
 import os
-import pathlib
 import random
 import shutil
 import time
+from pathlib import Path
+from typing import Annotated, Literal
 
+import typer
+from modyn.utils.logging import setup_logging
 from PIL import Image
 from torchvision.datasets import MNIST
 
-logging.basicConfig(
-    level=logging.NOTSET,
-    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-    datefmt="%Y-%m-%d:%H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+logger = setup_logging(__name__)
 
 
-def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description="MNIST Benchmark Storage Script")
-    parser_.add_argument(
-        "--dir", type=pathlib.Path, action="store", help="Path to data directory"
-    )
-    parser_.add_argument(
-        "--evaluation",
-        action="store_true",
-        help="Whether to handle training (not present) or evaluation (present) dataset."
-    )
-    parser_.add_argument(
-        "--timestamps",
-        default="RANDOM",
-        const="RANDOM",
-        choices=["ALLZERO", "INCREASING", "RANDOM"],
-        nargs="?",
-        help="Parameter to define the timestamps added to the files. \
-              ALLZERO (which sets the timestamp of all pngs to zero), \
-              INCREASING (which starts at 0 for the first file and then \
-              continually increases +1 per file), RANDOM (which sets it to random). Defaults to RANDOM",
-    )
-    parser_.add_argument(
-        "--action",
-        default="DOWNLOAD",
-        const="DOWNLOAD",
-        choices=["DOWNLOAD", "REMOVE"],
-        nargs="?",
-        help="Define the action taken by the script. \
-              DOWNLOAD (download the MNIST dataset into the given dir) or \
-              REMOVE (delete all files in the given dir)",
-    )
-
-    return parser_
-
-
-def main():
-    parser = setup_argparser()
-    args = parser.parse_args()
-
-    if args.action == "DOWNLOAD":
-        logger.info(f"Downloading data to {args.dir}")
-        _store_data(args.dir, not args.evaluation, args.timestamps)
-    if args.action == "REMOVE":
-        logger.info(f"Removing data in {args.dir}")
-        _remove_data(args.dir)
+def main(
+    dir: Annotated[Path, typer.Argument(help="Path to data directory")],
+    evaluation: Annotated[
+        bool,
+        typer.Option(help="Whether to handle training (not present) or evaluation (present) dataset."),
+    ] = False,
+    timestamps: Annotated[
+        Literal["ALLZERO", "INCREASING", "RANDOM"],
+        typer.Option(
+            help=(
+                "Parameter to define the timestamps added to the files. "
+                "ALLZERO (which sets the timestamp of all pngs to zero), "
+                "INCREASING (which starts at 0 for the first file and then "
+                "continually increases +1 per file), RANDOM (which sets it to random)."
+            ),
+        ),
+    ] = "RANDOM",
+    action: Annotated[
+        Literal["DOWNLOAD", "REMOVE"],
+        typer.Option(
+            help=(
+                "Define the action taken by the script. "
+                "DOWNLOAD (download the MNIST dataset into the given dir) or "
+                "REMOVE (delete all files in the given dir)"
+            ),
+        ),
+    ] = "DOWNLOAD",
+) -> None:
+    """MNIST Benchmark Storage Script"""
+    if action == "DOWNLOAD":
+        logger.info(f"Downloading data to {dir}")
+        _store_data(dir, not evaluation, timestamps)
+    if action == "REMOVE":
+        logger.info(f"Removing data in {dir}")
+        shutil.rmtree(dir)
 
 
-def _store_data(data_dir: pathlib.Path, train: bool, timestamp_option: str):
+def _store_data(data_dir: Path, train: bool, timestamp_option: str) -> None:
     # create directories
-    if not os.path.exists(data_dir):
-        os.mkdir(data_dir)
+    data_dir.mkdir(exist_ok=True)
 
     # The following line forces a download of the mnist dataset.
     mnist = MNIST(str(data_dir), train=train, download=True)
@@ -88,7 +73,7 @@ def _store_data(data_dir: pathlib.Path, train: bool, timestamp_option: str):
             _set_file_timestamp(data_dir / f"{i}.label", timestamp_option, i)
 
 
-def _set_file_timestamp(file: pathlib.Path, timestamp_option: str, current: int):
+def _set_file_timestamp(file: Path, timestamp_option: str, current: int) -> None:
     if timestamp_option == "ALLZERO":
         os.utime(file, (0, 0))
     elif timestamp_option == "INCREASING":
@@ -98,9 +83,9 @@ def _set_file_timestamp(file: pathlib.Path, timestamp_option: str, current: int)
         os.utime(file, (random_timestamp, random_timestamp))
 
 
-def _remove_data(data_dir: pathlib.Path):
-    shutil.rmtree(data_dir)
+def run() -> None:
+    typer.run(main)
 
 
 if __name__ == "__main__":
-    main()
+    run()

@@ -1,23 +1,34 @@
 import os
 import pickle
-from typing import Tuple
+from pathlib import Path
+from typing import Annotated, Tuple
 
 import numpy as np
 import torch
-from benchmark_utils import create_fake_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
+import typer
+from benchmark_utils import create_fake_timestamp, download_if_not_exists
+from modyn.utils.logging import setup_logging
 from torch.utils.data import Dataset
 
-logger = setup_logger()
+logger = setup_logging(__name__)
 
 
-def main():
-    parser = setup_argparser_wildtime("Yearbook")
-    args = parser.parse_args()
+def main(
+    dir: Annotated[Path, typer.Argument(help="Path to Yearbook data directory")],
+    dummy_year: Annotated[
+        bool,
+        typer.Option(help="Add a final dummy year to train also on the last trigger in Modyn"),
+    ] = False,
+    all: Annotated[
+        bool,
+        typer.Option(help="Store all the available data, including the validation and test sets."),
+    ] = False,
+) -> None:
+    """Yearbook data generation script."""
+    logger.info(f"Downloading data to {dir}")
 
-    logger.info(f"Downloading data to {args.dir}")
-
-    downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.all, args.dummyyear)
+    downloader = YearbookDownloader(dir)
+    downloader.store_data(all, dummy_year)
 
 
 class YearbookDownloader(Dataset):
@@ -26,14 +37,15 @@ class YearbookDownloader(Dataset):
     drive_id = "1mPpxoX2y2oijOvW1ymiHEYd7oMu2vVRb"
     file_name = "yearbook.pkl"
 
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: Path):
         super().__init__()
         download_if_not_exists(
             drive_id=self.drive_id,
             destination_dir=data_dir,
             destination_file_name=self.file_name,
         )
-        datasets = pickle.load(open(os.path.join(data_dir, self.file_name), "rb"))
+        with open(os.path.join(data_dir, self.file_name), "rb") as f:
+            datasets = pickle.load(f)
         self._dataset = datasets
         self.data_dir = data_dir
 
@@ -68,8 +80,7 @@ class YearbookDownloader(Dataset):
 
     def store_data(self, create_test_data: bool, add_final_dummy_year: bool) -> None:
         # create directories
-        if not os.path.exists(self.data_dir):
-            os.mkdir(self.data_dir)
+        self.data_dir.mkdir(exist_ok=True)
 
         train_dir = os.path.join(self.data_dir, "train")
         os.makedirs(train_dir, exist_ok=True)
@@ -108,7 +119,7 @@ class YearbookDownloader(Dataset):
         os.remove(os.path.join(self.data_dir, "yearbook.pkl"))
 
     @staticmethod
-    def create_binary_file(data, output_file_name: str, timestamp: int) -> None:
+    def create_binary_file(data: list[tuple], output_file_name: str, timestamp: int) -> None:
         with open(output_file_name, "wb") as f:
             for tensor1, tensor2 in data:
                 features_bytes = tensor1.numpy().tobytes()
@@ -123,5 +134,9 @@ class YearbookDownloader(Dataset):
         os.utime(output_file_name, (timestamp, timestamp))
 
 
+def run() -> None:
+    typer.run(main)
+
+
 if __name__ == "__main__":
-    main()
+    run()

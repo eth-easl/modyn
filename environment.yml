@@ -33,6 +33,7 @@ dependencies:
   - tensorboard
   - scipy
   - pyftpdlib
+  - typer
   - types-psycopg2
   - types-PyYAML
   - transformers

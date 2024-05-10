@@ -143,7 +143,7 @@ class DatabaseConfig(DatabaseMixin):
     )
 
 
-class StorageConfig(BaseModel):
+class StorageConfig(HostnamePortMixin):
     """
     Configuration for modyn's storage engine.
     """

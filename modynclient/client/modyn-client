@@ -1,3 +1,4 @@
 #!/bin/bash
+
 MODYNCLIENTPATH="$(python -c 'import modynclient; print(modynclient.__path__[0])')"
-python -u $MODYNCLIENTPATH/client/client_entrypoint.py "$@"
+python -u $MODYNCLIENTPATH/client/main.py "$@"

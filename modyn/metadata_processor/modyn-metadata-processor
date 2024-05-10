@@ -1,3 +1,4 @@
 #!/bin/bash
+
 MODYNPATH="$(python -c 'import modyn; print(modyn.__path__[0])')"
-python $MODYNPATH/metadata_processor/metadata_processor_entrypoint.py "$@"
+python $MODYNPATH/metadata_processor/main.py "$@"
