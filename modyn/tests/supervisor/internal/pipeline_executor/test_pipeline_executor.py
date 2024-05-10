@@ -396,20 +396,20 @@ def test__handle_triggers_within_batch_trigger_timespan(
 
     # each tuple is (key, timestamp, label)
     first_batch = [
+        # trigger 0
         (10, 1, 5),
         (11, 2, 5),
-        # trigger 0
         # trigger 1 is empty
+        # trigger 2
         (12, 3, 5),
         (13, 4, 5),
-        # trigger 2
+        # remaining data
         (14, 5, 5),
         (15, 6, 5),
         (16, 7, 5),
-        # remaining data
     ]
     triggering_indices = [1, 1, 3]
-    test_get_number_of_samples.side_effect = [2, 0, 2]
+    test_get_number_of_samples.side_effect = [2, 0, 2]  # the size of trigger 0, 1, 2
 
     pe._handle_triggers_within_batch(first_batch, triggering_indices)
     assert pe.pipeline_log["supervisor"]["triggers"][0]["first_timestamp"] == 1
@@ -424,14 +424,14 @@ def test__handle_triggers_within_batch_trigger_timespan(
 
     second_batch = [
         # trigger 3 covers remaining data from last batch
+        # trigger 4
         (17, 8, 5),
         (18, 9, 5),
-        # trigger 4
-        (19, 10, 5),
         # remaining data
+        (19, 10, 5)
     ]
     triggering_indices = [-1, 1]
-    test_get_number_of_samples.side_effect = [3, 2]
+    test_get_number_of_samples.side_effect = [3, 2]  # the size of trigger 3, 4
     pe._handle_triggers_within_batch(second_batch, triggering_indices)
     assert pe.pipeline_log["supervisor"]["triggers"][3]["first_timestamp"] == 5
     assert pe.pipeline_log["supervisor"]["triggers"][3]["last_timestamp"] == 7
@@ -441,7 +441,7 @@ def test__handle_triggers_within_batch_trigger_timespan(
 
     third_batch = [(20, 11, 5), (21, 12, 5), (22, 13, 5)]  # trigger 5, also includes remaining data from last batch
     triggering_indices = [2]
-    test_get_number_of_samples.side_effect = [4]
+    test_get_number_of_samples.side_effect = [4]  # the size of trigger 5
     pe._handle_triggers_within_batch(third_batch, triggering_indices)
     assert pe.pipeline_log["supervisor"]["triggers"][5]["first_timestamp"] == 10
     assert pe.pipeline_log["supervisor"]["triggers"][5]["last_timestamp"] == 13

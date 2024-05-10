@@ -79,6 +79,7 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.triggers: list[int] = []
+        # this is to store the first and last timestamp of remaining data in _handle_triggers_within_batch
         self.remaining_data_range: Optional[tuple[int, int]] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
