@@ -428,7 +428,7 @@ def test__handle_triggers_within_batch_trigger_timespan(
         (17, 8, 5),
         (18, 9, 5),
         # remaining data
-        (19, 10, 5)
+        (19, 10, 5),
     ]
     triggering_indices = [-1, 1]
     test_get_number_of_samples.side_effect = [3, 2]  # the size of trigger 3, 4
