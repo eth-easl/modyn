@@ -144,6 +144,13 @@ def check_data_per_worker() -> None:
         )
         responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
 
+        alternative_request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=3, start_timestamp=0, end_timestamp=split_ts2
+        )
+        alternative_responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(alternative_request))
+
+        assert alternative_responses == responses
+
         assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
 
         response_keys_size = len(responses[0].keys)
