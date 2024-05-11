@@ -12,8 +12,14 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     TensorboardResultWriter,
 )
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.pipeline_executor import (
+    PipelineExecutor,
+    execute_pipeline,
+)
+from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -109,18 +115,20 @@ def teardown():
 def get_non_connecting_pipeline_executor(pipeline_config=None) -> PipelineExecutor:
     if pipeline_config is None:
         pipeline_config = get_minimal_pipeline_config()
-    pipeline_executor = PipelineExecutor(
-        START_TIMESTAMP,
-        PIPELINE_ID,
-        get_minimal_system_config(),
-        pipeline_config,
-        str(EVALUATION_DIRECTORY),
-        SUPPORTED_EVAL_RESULT_WRITERS,
-        PIPELINE_STATUS_QUEUE,
-        TRAINING_STATUS_QUEUE,
-        EVAL_STATUS_QUEUE,
+        
+    pipeline_options = PipelineOptions(
+        start_timestamp=START_TIMESTAMP,
+        pipeline_id=PIPELINE_ID,
+        modyn_config=get_minimal_system_config(),
+        pipeline_config=pipeline_config,
+        eval_directory=str(EVALUATION_DIRECTORY),
+        supervisor_supported_eval_result_writers=SUPPORTED_EVAL_RESULT_WRITERS,
+        exception_queue=EXCEPTION_QUEUE,
+        pipeline_status_queue=PIPELINE_STATUS_QUEUE,
+        training_status_queue=TRAINING_STATUS_QUEUE,
+        eval_status_queue=EVAL_STATUS_QUEUE,
     )
-    return pipeline_executor
+    return PipelineExecutor(pipeline_options)
 
 
 def test_initialization() -> None:

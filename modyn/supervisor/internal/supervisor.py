@@ -279,7 +279,7 @@ class Supervisor:
             start_timestamp = self.grpc.get_time_at_storage()
             pipeline_id = self.register_pipeline(pipeline_config)
             logger.info(f"Pipeline {pipeline_id} registered, start executing.")
-        except Exception:  # pylint: disable=broad-except
+        except Exception as ex:  # pylint: disable=broad-except
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
@@ -289,7 +289,7 @@ class Supervisor:
                 modyn_config=self.modyn_config,
                 pipeline_config=pipeline_config,
                 eval_directory=eval_directory,
-                supported_evaluation_result_writers=self.supported_evaluation_result_writers,
+                supervisor_supported_eval_result_writers=self.supported_evaluation_result_writers,
                 exception_queue=exception_queue,
                 pipeline_status_queue=pipeline_status_queue,
                 training_status_queue=training_status_queue,
@@ -298,7 +298,7 @@ class Supervisor:
                 stop_replay_at=stop_replay_at,
                 maximum_triggers=maximum_triggers,
             )
-            process = Process(target=execute_pipeline, args=pipeline_options)
+            process = Process(target=execute_pipeline, args=(pipeline_options, ))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
@@ -308,8 +308,9 @@ class Supervisor:
                 eval_status_queue,
             )
             return pipeline_res_msg(pipeline_id=pipeline_id)
-        except Exception:  # pylint: disable=broad-except
-            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
+        except Exception as ex:  # pylint: disable=broad-except
+            raise ex
+            # return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
     def get_pipeline_status(self, pipeline_id: int) -> dict[str, Any]:
         ret: dict[str, Any] = {}

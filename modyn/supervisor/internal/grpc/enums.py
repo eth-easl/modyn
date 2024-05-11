@@ -50,6 +50,7 @@ class PipelineStage(StrEnum):
     NEW_DATA_HANDLED = "New data handled"
 
     # Training
+    TRAIN_AND_EVALUATE = "Train and evaluate"
     RUN_TRAINING = "Run training"
 
     WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"

@@ -4,11 +4,6 @@
 
 ### Current pipeline
 
-- control flow not very clear
-- stage dependencies are not modeled explicitly
-- parallel pipeline steps are unclear
-- multiple transitions to the same stage (e.g. WAIT_FOR_TRAINING_COMPLETION) while processing sequentially...
-
 ```mermaid
 stateDiagram-v2
     [*] --> INIT
@@ -40,17 +35,14 @@ stateDiagram-v2
         state post_train <<fork>>
             state training {
                 [*] --> RUN_TRAINING
-                RUN_TRAINING --> WAIT_FOR_TRAINING_COMPLETION
-                WAIT_FOR_TRAINING_COMPLETION --> 
-                TRAINING_COMPLETED
+                RUN_TRAINING --> TRAINING_COMPLETED
                 TRAINING_COMPLETED --> STORE_TRAINED_MODEL
                 STORE_TRAINED_MODEL --> [*]
             }
             training --> post_train
             state evaluation {
                 [*] --> EVALUATE
-                EVALUATE --> WAIT_FOR_EVALUATION_COMPLETION
-                WAIT_FOR_EVALUATION_COMPLETION --> EVALUATION_COMPLETED
+                EVALUATE --> EVALUATION_COMPLETED
                 EVALUATION_COMPLETED --> STORE_EVALUATION_RESULTS
                 STORE_EVALUATION_RESULTS --> end_execute_trigger[*]
             }
@@ -71,7 +63,8 @@ stateDiagram-v2
 
             state execute_trigger {
                 [*] --> INFORM_SELECTOR_AND_TRIGGER
-                INFORM_SELECTOR_AND_TRIGGER --> [*]
+                INFORM_SELECTOR_AND_TRIGGER --> TRAIN_AND_EVALUATE
+                TRAIN_AND_EVALUATE --> [*]
             }
             EXECUTE_TRIGGERS_WITHIN_BATCH --> execute_trigger
             execute_trigger --> INFORM_SELECTOR_REMAINING_DATA
@@ -83,8 +76,8 @@ stateDiagram-v2
         NEW_DATA_HANDLED --> [*]
     }
 
-    INFORM_SELECTOR_AND_TRIGGER --> train_and_eval
-    train_and_eval --> INFORM_SELECTOR_AND_TRIGGER
+    TRAIN_AND_EVALUATE --> train_and_eval
+    train_and_eval --> TRAIN_AND_EVALUATE
     
     DONE --> EXIT
     EXIT --> [*]

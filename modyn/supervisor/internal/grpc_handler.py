@@ -160,9 +160,10 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(
-        self, dataset_id: str, timestamp: int
-    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[tuple[list[tuple[int, int, int]], int]]:
+        """Returns:
+        tuple containing actual data and fetch time in milliseconds
+        """
         assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
@@ -178,7 +179,10 @@ class GRPCHandler:
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+    ) -> Iterable[tuple[list[tuple[int, int, int]], int]]:
+        """Returns:
+        tuple containing actual data and fetch time in milliseconds
+        """
         assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
@@ -433,12 +437,6 @@ class GRPCHandler:
             self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale
         )
         training_reporter.create_tracker()
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.WAIT_FOR_TRAINING_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
-
         blocked_in_a_row = 0
 
         while True:
@@ -611,11 +609,6 @@ class GRPCHandler:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
         logger.debug("wait for evaluation completion")
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.WAIT_FOR_EVALUATION_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
