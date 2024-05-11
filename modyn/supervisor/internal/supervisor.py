@@ -213,7 +213,7 @@ class Supervisor:
             eval_status_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
             start_timestamp = self.grpc.get_time_at_storage()
-            pipeline_id = self.register_pipeline(pipeline_config)
+            pipeline_id = self.register_pipeline(pipeline_config_model)
             logger.info(f"Pipeline {pipeline_id} registered, start executing.")
         except Exception:  # pylint: disable=broad-except
             return pipeline_res_msg(exception="Failed to register pipeline")

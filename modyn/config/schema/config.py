@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List, Literal, Union
 
 from pydantic import BaseModel, Field
@@ -332,7 +333,7 @@ class SupervisorConfig(HostnamePortMixin):
     Configuration for the modyn's supervisor.
     """
 
-    eval_directory: str = Field(description="The directory to store the evaluation results.")
+    eval_directory: str | Path = Field(description="The directory to store the evaluation results.")
 
 
 # ------------------------------------------------------ CONFIG ------------------------------------------------------ #
