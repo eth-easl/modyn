@@ -397,6 +397,11 @@ def test_storage() -> None:
     check_data_per_worker()
     check_dataset_size(30)
     check_dataset_size(10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
+    # a sanity check for 0 as end_timestamp
+    check_dataset_size(0, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1, end_timestamp=0)
+    # this check can be seen as duplicate as the previous one,
+    # but we want to ensure setting start_timestamp as 0 or None has the same effect
+    check_dataset_size(20, start_timestamp=0, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(20, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(
         10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[9] + 1, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1
