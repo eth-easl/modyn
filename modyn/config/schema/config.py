@@ -13,7 +13,7 @@ class HostnamePortMixin(BaseModel):
     """
 
     hostname: str = Field(description="The hostname where the service can be reached.")
-    port: str = Field(description="The port where the service can be reached.")
+    port: int = Field(description="The port where the service can be reached.")
 
 
 class DatabaseMixin(HostnamePortMixin):
@@ -35,9 +35,9 @@ class ProjectConfig(BaseModel):
     Represents the configuration of a project.
     """
 
-    name: str = Field(description="The name of the project.")
-    description: str = Field(description="The description of the project.")
-    version: str = Field(description="The version of the project.")
+    name: str = Field("modyn", description="The name of the project.")
+    description: str | None = Field(None, description="The description of the project.")
+    version: str | None = Field(None, description="The version of the project.")
 
 
 # ------------------------------------------------------ STORAGE ----------------------------------------------------- #
@@ -341,7 +341,7 @@ class SupervisorConfig(HostnamePortMixin):
 class ModynConfig(BaseModel):
     """Configuration for the Modyn system. Please adapt the fields as needed."""
 
-    project: ProjectConfig
+    project: ProjectConfig = Field(default_factory=ProjectConfig)
     storage: StorageConfig
 
     # model is a reserved keyword in Pydantic, so we use modyn_model instead
