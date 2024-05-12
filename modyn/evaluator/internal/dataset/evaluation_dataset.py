@@ -34,8 +34,8 @@ class EvaluationDataset(IterableDataset):
         storage_address: str,
         evaluation_id: int,
         tokenizer: Optional[str] = None,
-        start_timestamp: int = 0,
-        end_timestamp: int = 0,
+        start_timestamp: Optional[int] = None,
+        end_timestamp: Optional[int] = None,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
