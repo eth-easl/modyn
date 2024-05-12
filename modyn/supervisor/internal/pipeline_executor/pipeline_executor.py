@@ -79,7 +79,8 @@ class PipelineExecutor:
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
         self.triggers: list[int] = []
-        # this is to store the first and last timestamp of remaining data in _handle_triggers_within_batch
+        # this is to store the first and last timestamp of the remaining data after handling all triggers in
+        # _handle_triggers_within_batch
         self.remaining_data_range: Optional[tuple[int, int]] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
@@ -183,18 +184,9 @@ class PipelineExecutor:
             {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
         )
 
-        if num_triggers > 0:
-            logger.info(f"There are {num_triggers} triggers in this batch.")
-            self._handle_triggers_within_batch(batch, triggering_indices)
-            return True
-
-        self._sw.start("selector_inform", overwrite=True)
-        selector_log = self.grpc.inform_selector(self.pipeline_id, batch)
-        self.pipeline_log["supervisor"]["selector_informs"].append(
-            {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
-        )
-
-        return False
+        logger.info(f"There are {num_triggers} triggers in this batch.")
+        self._handle_triggers_within_batch(batch, triggering_indices)
+        return num_triggers > 0
 
     def _run_training(self, trigger_id: int) -> None:
         """Run training for trigger on GPU and block until done."""
@@ -255,6 +247,29 @@ class PipelineExecutor:
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
 
+    def _get_trigger_timespan(
+        self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
+    ) -> tuple[int, int]:
+        if is_first_triggering_data:
+            # now it is the first trigger in this batch. Triggering_data can be empty.
+            # when it is indeed empty, then there is remaining data in the last batch
+            # because num_samples_in_trigger is not 0.
+            assert len(triggering_data) > 0 or self.remaining_data_range is not None
+
+            if self.remaining_data_range is not None:
+                first_timestamp = self.remaining_data_range[0]
+                last_timestamp = self.remaining_data_range[1] if len(triggering_data) == 0 else triggering_data[-1][1]
+            else:
+                first_timestamp = triggering_data[0][1]
+                last_timestamp = triggering_data[-1][1]
+        else:
+            assert len(triggering_data) > 0
+            # since num_samples_in_trigger is not 0, we are sure that triggering_data is not empty
+            first_timestamp = triggering_data[0][1]
+            last_timestamp = triggering_data[-1][1]
+
+        return first_timestamp, last_timestamp
+
     def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
@@ -279,60 +294,46 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
-                if i > 0:
-                    # since num_samples_in_trigger is not 0, we are sure that triggering_data is not empty
-                    first_timestamp = triggering_data[0][1]
-                    last_timestamp = triggering_data[-1][1]
-                else:
-                    # now it is the first trigger in this batch. Triggering_data can be empty.
-                    # when it is indeed empty, then there is remaining data in the last batch
-                    # because num_samples_in_trigger is not 0.
-                    assert len(triggering_data) > 0 or self.remaining_data_range is not None
-
-                    if self.remaining_data_range is not None:
-                        first_timestamp = self.remaining_data_range[0]
-                        last_timestamp = (
-                            self.remaining_data_range[1] if len(triggering_data) == 0 else triggering_data[-1][1]
-                        )
-                    else:
-                        first_timestamp = triggering_data[0][1]
-                        last_timestamp = triggering_data[-1][1]
-
+                first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
+                # reset the remaining data range since we have processed it now
+                self.remaining_data_range = None
                 self._run_training(trigger_id)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
-            # If no other trigger is coming in this batch,
-            # we have to inform the Selector about the remaining data in this batch.
-            if i == len(triggering_indices) - 1:
-                remaining_data = batch[triggering_idx + 1 :]
-                logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
-
-                if len(remaining_data) > 0:
-                    # These data points will be included in the next trigger
-                    # because we inform the Selector about them,
-                    # just like other batches with no trigger at all are included.
-                    self._update_pipeline_stage_and_enqueue_msg(
-                        PipelineStage.INFORM_SELECTOR_REMAINING_DATA, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                    )
-                    self._sw.start("selector_inform", overwrite=True)
-                    selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
-                    self.pipeline_log["supervisor"]["selector_informs"].append(
-                        {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
-                    )
-                    self.remaining_data_range = (remaining_data[0][1], remaining_data[-1][1])
-                else:
-                    self.remaining_data_range = None
-
             self._persist_pipeline_log()
 
             self.num_triggers = self.num_triggers + 1
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
                 break
+
+        # we have to inform the Selector about the remaining data in this batch.
+        if len(triggering_indices) == 0:
+            remaining_data = batch
+        else:
+            remaining_data = batch[triggering_indices[-1] + 1 :]
+
+        logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
+        if len(remaining_data) > 0:
+            # These data points will be included in the next trigger
+            # because we inform the Selector about them,
+            # just like other batches with no trigger at all are included.
+            self._sw.start("selector_inform", overwrite=True)
+            selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
+            self.pipeline_log["supervisor"]["selector_informs"].append(
+                {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
+            )
+            if self.remaining_data_range is not None:
+                # extend the range from last time
+                self.remaining_data_range = (self.remaining_data_range[0], remaining_data[-1][1])
+            else:
+                self.remaining_data_range = (remaining_data[0][1], remaining_data[-1][1])
+        else:
+            self.remaining_data_range = None
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)

@@ -390,6 +390,12 @@ def test__handle_triggers_within_batch_trigger_timespan(
     test_inform_selector_and_trigger: MagicMock,
     test__run_training: MagicMock,
 ):
+    def reset_state():
+        test_get_number_of_samples.reset_mock()
+        test_inform_selector_and_trigger.reset_mock()
+        test__run_training.reset_mock()
+        test_inform_selector.reset_mock()
+
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     test_inform_selector.return_value = {}
     test_inform_selector_and_trigger.side_effect = [(0, {}), (1, {}), (2, {}), (3, {}), (4, {}), (5, {})]
@@ -421,6 +427,7 @@ def test__handle_triggers_within_batch_trigger_timespan(
     assert pe.pipeline_log["supervisor"]["triggers"][2]["first_timestamp"] == 3
     assert pe.pipeline_log["supervisor"]["triggers"][2]["last_timestamp"] == 4
     assert pe.remaining_data_range == (5, 7)
+    reset_state()
 
     second_batch = [
         # trigger 3 covers remaining data from last batch
@@ -438,6 +445,7 @@ def test__handle_triggers_within_batch_trigger_timespan(
     assert pe.pipeline_log["supervisor"]["triggers"][4]["first_timestamp"] == 8
     assert pe.pipeline_log["supervisor"]["triggers"][4]["last_timestamp"] == 9
     assert pe.remaining_data_range == (10, 10)
+    reset_state()
 
     third_batch = [(20, 11, 5), (21, 12, 5), (22, 13, 5)]  # trigger 5, also includes remaining data from last batch
     triggering_indices = [2]
@@ -446,6 +454,88 @@ def test__handle_triggers_within_batch_trigger_timespan(
     assert pe.pipeline_log["supervisor"]["triggers"][5]["first_timestamp"] == 10
     assert pe.pipeline_log["supervisor"]["triggers"][5]["last_timestamp"] == 13
     assert pe.remaining_data_range is None
+
+
+@patch.object(PipelineExecutor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
+def test__handle_triggers_within_batch_trigger_timespan_across_batch(
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
+):
+    def reset_state():
+        test_get_number_of_samples.reset_mock()
+        test_inform_selector_and_trigger.reset_mock()
+        test__run_training.reset_mock()
+        test_inform_selector.reset_mock()
+
+    pe = get_non_connecting_pipeline_executor()
+    test_inform_selector.return_value = {}
+    test_inform_selector_and_trigger.side_effect = [(0, {}), (1, {}), (2, {})]
+
+    # each tuple is (key, timestamp, label)
+    first_batch = [
+        # trigger 0
+        (10, 1, 5),
+        (11, 2, 5),
+    ]
+    triggering_indices = []
+    pe._handle_triggers_within_batch(first_batch, triggering_indices)
+    assert pe.remaining_data_range == (1, 2)
+    test_get_number_of_samples.assert_not_called()
+    test_inform_selector_and_trigger.assert_not_called()
+    test__run_training.assert_not_called()
+    test_inform_selector.assert_called_once_with(PIPELINE_ID, first_batch)
+
+    reset_state()
+    second_batch = [
+        # trigger 1
+        (12, 3, 5),
+        (13, 4, 5),
+    ]
+    triggering_indices = [-1]
+    test_get_number_of_samples.side_effect = [2]  # the size of trigger 0
+    pe._handle_triggers_within_batch(second_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["first_timestamp"] == 1
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["last_timestamp"] == 2
+    assert pe.remaining_data_range == (3, 4)
+    test_get_number_of_samples.assert_called_once_with(PIPELINE_ID, 0)
+    test_inform_selector_and_trigger.assert_called_once_with(42, [])
+    test__run_training.assert_called_once_with(0)
+    test_inform_selector.assert_called_once_with(PIPELINE_ID, second_batch)
+
+    reset_state()
+    third_batch = [
+        # still trigger 1's data
+        (14, 5, 5),
+        (15, 6, 5),
+        (16, 7, 5),
+    ]
+    triggering_indices = []
+    pe._handle_triggers_within_batch(third_batch, triggering_indices)
+    assert pe.remaining_data_range == (3, 7)
+    reset_state()
+
+    fourth_batch = [
+        # still trigger 1's data
+        (17, 8, 5),
+        (18, 9, 5),
+        # trigger 2
+        (19, 10, 5),
+        (20, 11, 5),
+    ]
+
+    triggering_indices = [1, 3]
+    test_get_number_of_samples.side_effect = [7, 2]
+    pe._handle_triggers_within_batch(fourth_batch, triggering_indices)
+    assert pe.remaining_data_range is None
+    assert pe.pipeline_log["supervisor"]["triggers"][1]["first_timestamp"] == 3
+    assert pe.pipeline_log["supervisor"]["triggers"][1]["last_timestamp"] == 9
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["first_timestamp"] == 10
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["last_timestamp"] == 11
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
