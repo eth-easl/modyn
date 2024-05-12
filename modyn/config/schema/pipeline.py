@@ -166,8 +166,8 @@ class _BaseSelectionStrategy(BaseModel):
             "that this option is not related to Downsampling strategy, where weights are computed during training."
         ),
     )
-    tail_triggers: int = Field(
-        0,
+    tail_triggers: int | None = Field(
+        None,
         description=(
             "For the training iteration, just use data from this trigger and the previous tail_triggers. "
             "reset_after_trigger is equivalent to tail_triggers = 0. Omit this parameter if you want to use every "

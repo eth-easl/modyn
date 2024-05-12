@@ -253,8 +253,9 @@ def test_start_pipeline_throws_on_invalid_system_config(
     test_trainer_server_available,
     test_dataset_available,
     dummy_pipeline_config: ModynPipelineConfig,
+    minimal_system_config: ModynConfig,
 ) -> None:
-    sup = Supervisor({})
+    sup = Supervisor(minimal_system_config)
     sup.init_cluster_connection()
     res = sup.start_pipeline(dummy_pipeline_config.model_copy(), EVALUATION_DIRECTORY)
     assert res["pipeline_id"] == -1

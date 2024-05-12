@@ -4,6 +4,8 @@ import os
 import pathlib
 from unittest.mock import MagicMock, patch
 
+import pytest
+from modyn.config.schema.config import ModynConfig, SupervisorConfig
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (  # noqa: E402, E501, E611;
     GetPipelineStatusRequest,
     GetPipelineStatusResponse,
@@ -15,13 +17,14 @@ from modyn.supervisor.internal.grpc.supervisor_grpc_servicer import SupervisorGR
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
 
+EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 
-def get_minimal_modyn_config():
-    return {
-        "supervisor": {
-            "eval_directory": str(pathlib.Path(os.path.realpath(__file__)).parent),
-        }
-    }
+
+@pytest.fixture
+def minimal_system_config(dummy_system_config: ModynConfig) -> ModynConfig:
+    config = dummy_system_config.model_copy()
+    config.supervisor = SupervisorConfig(hostname="localhost", port=50051, eval_directory=EVALUATION_DIRECTORY)
+    return config
 
 
 def noop_constructor_mock(self, modyn_config: dict) -> None:
@@ -74,10 +77,9 @@ def noop_init_metadata_db(self) -> None:
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
-def test_init():
-    modyn_config = get_minimal_modyn_config()
-    sup = Supervisor(modyn_config)
-    servicer = SupervisorGRPCServicer(sup, modyn_config)
+def test_init(minimal_system_config: ModynConfig):
+    sup = Supervisor(minimal_system_config)
+    servicer = SupervisorGRPCServicer(sup, minimal_system_config.model_dump(by_alias=True))
     assert servicer._supervisor == sup
 
 
@@ -85,10 +87,9 @@ def test_init():
 @patch.object(GRPCHandler, "init_cluster_connection", noop)
 @patch.object(Supervisor, "init_metadata_db", noop_init_metadata_db)
 @patch.object(Supervisor, "start_pipeline", return_value={"pipeline_id": 1})
-def test_start_pipeline(test_start_pipeline: MagicMock):
-    modyn_config = get_minimal_modyn_config()
-    sup = Supervisor(modyn_config)
-    servicer = SupervisorGRPCServicer(sup, modyn_config)
+def test_start_pipeline(test_start_pipeline: MagicMock, minimal_system_config: ModynConfig):
+    sup = Supervisor(minimal_system_config)
+    servicer = SupervisorGRPCServicer(sup, minimal_system_config.model_dump(by_alias=True))
 
     pipeline_config = get_minimal_pipeline_config()
     request = StartPipelineRequest(
@@ -101,7 +102,9 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
     response: PipelineResponse = servicer.start_pipeline(request, None)
     assert response.pipeline_id == 1
 
-    test_start_pipeline.assert_called_once_with(pipeline_config, modyn_config["supervisor"]["eval_directory"], 0, 1, 2)
+    test_start_pipeline.assert_called_once_with(
+        pipeline_config, minimal_system_config.supervisor.eval_directory, 0, 1, 2
+    )
 
 
 @patch.object(GRPCHandler, "__init__", noop_constructor_mock)
@@ -115,10 +118,9 @@ def test_start_pipeline(test_start_pipeline: MagicMock):
         "pipeline_stage": [{"stage": "test", "msg_type": "test", "log": False}],
     },
 )
-def test_get_pipeline_status(test_get_pipeline_status: MagicMock):
-    modyn_config = get_minimal_modyn_config()
-    sup = Supervisor(modyn_config)
-    servicer = SupervisorGRPCServicer(sup, modyn_config)
+def test_get_pipeline_status(test_get_pipeline_status: MagicMock, minimal_system_config: ModynConfig):
+    sup = Supervisor(minimal_system_config)
+    servicer = SupervisorGRPCServicer(sup, minimal_system_config.model_dump(by_alias=True))
 
     request = GetPipelineStatusRequest(pipeline_id=42)
 

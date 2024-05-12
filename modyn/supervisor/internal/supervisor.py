@@ -50,7 +50,7 @@ class Supervisor:
         self._pipeline_process_dict: dict[int, PipelineInfo] = {}
         self._manager = Manager()
         self._next_pipeline_lock = self._manager.Lock()
-        self.grpc = GRPCHandler(self.modyn_config)
+        self.grpc = GRPCHandler(self.modyn_config.model_dump(by_alias=True))
         self.init_metadata_db()
 
     def __getstate__(self) -> dict:
@@ -68,7 +68,7 @@ class Supervisor:
     # -------------------------------------------------- Connections ------------------------------------------------- #
 
     def init_metadata_db(self) -> None:
-        with MetadataDatabaseConnection(self.modyn_config) as database:
+        with MetadataDatabaseConnection(self.modyn_config.model_dump(by_alias=True)) as database:
             database.create_tables()
 
     def init_cluster_connection(self) -> None:
@@ -166,7 +166,7 @@ class Supervisor:
             incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
 
         with self._next_pipeline_lock:
-            with MetadataDatabaseConnection(self.modyn_config) as database:
+            with MetadataDatabaseConnection(self.modyn_config.model_dump(by_alias=True)) as database:
                 pipeline_id = database.register_pipeline(
                     num_workers=num_workers,
                     model_class_name=pipeline_config.modyn_model.id,

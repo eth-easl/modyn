@@ -133,7 +133,7 @@ def get_model_strategy(strategy_config: dict) -> StrategyConfig:
         name=strategy_config["name"],
         zip=strategy_config["zip"] if "zip" in strategy_config else None,
         zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
-        config=SelectorJsonString(value=json.dumps(strategy_config["config"])) if "config" in strategy_config else None,
+        config=SelectorJsonString(value=json.dumps(strategy_config)),
     )
 
 
