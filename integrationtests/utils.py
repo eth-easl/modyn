@@ -26,17 +26,15 @@ from modyn.utils import grpc_connection_established
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-MODYN_CONFIG_PATH = (
-   pathlib.Path(os.getenv("MODYN_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples"))
+MODYN_CONFIG_PATH = pathlib.Path(
+    os.getenv("MODYN_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples")
 )
 MODYN_CONFIG_FILE = MODYN_CONFIG_PATH / "modyn_config.yaml"
 
-MODYNCLIENT_CONFIG_PATH = (
-   pathlib.Path(os.getenv("MODYNCLIENT_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples"))
+MODYNCLIENT_CONFIG_PATH = pathlib.Path(
+    os.getenv("MODYNCLIENT_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples")
 )
-MODYN_DATASET_PATH = (
-    pathlib.Path(os.getenv("MODYN_DATASET_PATH", pathlib.Path("/app") / "storage" / "datasets"))
-)
+MODYN_DATASET_PATH = pathlib.Path(os.getenv("MODYN_DATASET_PATH", pathlib.Path("/app") / "storage" / "datasets"))
 
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
