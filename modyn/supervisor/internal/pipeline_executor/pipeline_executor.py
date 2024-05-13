@@ -147,7 +147,7 @@ class PipelineExecutor:
 
         self.pipeline_log[EVALUATION_RESULTS][trigger_id] = {}
 
-        for previous_split, current_split in eval_strategy.get_eval_interval(
+        for previous_split, current_split in eval_strategy.get_eval_intervals(
             first_timestamp=trigger_set_first_timestamp,
             last_timestamp=trigger_set_last_timestamp,
         ):
@@ -253,7 +253,7 @@ class PipelineExecutor:
         self._handle_triggers_within_batch(batch, triggering_indices)
         return num_triggers > 0
 
-    def _run_training(self, trigger_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int) -> None:
+    def _run_training(self, trigger_id: int) -> int:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
         self._update_pipeline_stage_and_enqueue_msg(
@@ -295,10 +295,8 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.triggers.append(trigger_id)
+        return model_id
 
-        # Start evaluation
-        if "evaluation" in self.pipeline_config:
-            self._start_evaluations(trigger_id, model_id, trigger_set_first_timestamp, trigger_set_last_timestamp)
 
     def _get_trigger_timespan(
         self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
@@ -347,15 +345,18 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
+                self._update_pipeline_stage_and_enqueue_msg(
+                    PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                )
                 first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 # reset the remaining data range since we have processed it now
                 self.remaining_data_range = None
-                self._run_training(trigger_id, first_timestamp, last_timestamp)  # Blocks until training is done.
-                self._update_pipeline_stage_and_enqueue_msg(
-                    PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                )
+                model_id = self._run_training(trigger_id)  # Blocks until training is done.
+                # Start evaluation
+                if "evaluation" in self.pipeline_config:
+                    self._start_evaluations(trigger_id, model_id, first_timestamp, last_timestamp)
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
             self._persist_pipeline_log()
@@ -388,7 +389,7 @@ class PipelineExecutor:
         else:
             self.remaining_data_range = None
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> JsonResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:

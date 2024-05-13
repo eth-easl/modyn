@@ -345,11 +345,7 @@ def test__handle_triggers_within_batch(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [
-        call(0, 1, 2),
-        call(1, 3, 4),
-        call(2, 5, 6),
-    ]
+    run_training_expected_args = [call(0), call(1), call(2)]
     assert test__run_training.call_count == 3
     assert test__run_training.call_args_list == run_training_expected_args
 
@@ -384,7 +380,7 @@ def test__handle_triggers_within_batch_empty_triggers(
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(2, 1, 4)]
+    run_training_expected_args = [call(2)]
     assert test__run_training.call_count == 1
     assert test__run_training.call_args_list == run_training_expected_args
 
@@ -562,7 +558,7 @@ def test__run_training(
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
-    pe._run_training(21, 20, 70)
+    pe._run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
 
@@ -584,13 +580,13 @@ def test__run_training_set_num_samples_to_pass(
     pipeline_config["training"]["num_samples_to_pass"] = [73]
     pe = get_non_connecting_pipeline_executor(pipeline_config)
     pe.pipeline_id = 42
-    pe._run_training(trigger_id=21, trigger_set_first_timestamp=0, trigger_set_last_timestamp=0)
+    pe._run_training(trigger_id=21)
     test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
     test_start_training.reset_mock()
 
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
-    pe._run_training(trigger_id=22, trigger_set_first_timestamp=0, trigger_set_last_timestamp=0)
+    pe._run_training(trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
@@ -748,7 +744,7 @@ def test__start_evaluations_failure(
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
-    with patch.object(MatrixEvalStrategy, "get_eval_interval", side_effect=fake):
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake):
         pipeline_executor._start_evaluations(0, 0, 70, 100)
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2
@@ -798,7 +794,7 @@ def test__start_evaluations_success(
         patch.object(
             GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
         ) as prepare_evaluation_request_wrap,
-        patch.object(MatrixEvalStrategy, "get_eval_interval", side_effect=fake),
+        patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake),
     ):
         model_id = 1
         pipeline_executor._start_evaluations(
