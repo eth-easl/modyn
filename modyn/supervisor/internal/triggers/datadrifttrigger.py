@@ -63,6 +63,7 @@ class DataDriftTrigger(Trigger):
         self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, trigger_config)
 
     def _init_dataloader_info(self) -> None:
+        assert self.pipeline_id is not None
         assert self.pipeline_config is not None
         assert self.modyn_config is not None
 
@@ -113,8 +114,10 @@ class DataDriftTrigger(Trigger):
         )
 
     def _init_model_downloader(self) -> None:
+        assert self.pipeline_id is not None
         assert self.pipeline_config is not None
         assert self.modyn_config is not None
+        assert self.base_dir is not None
 
         self.model_downloader = ModelDownloader(
             self.modyn_config,
@@ -180,6 +183,7 @@ class DataDriftTrigger(Trigger):
         )
 
         current_keys, _, _ = zip(*self.data_cache[idx_start:idx_end])  # type: ignore
+        current_keys: list[int] = list(current_keys)
         current_dataloader = prepare_trigger_dataloader_fixed_keys(
             self.previous_trigger_id + 1,
             self.dataloader_info,

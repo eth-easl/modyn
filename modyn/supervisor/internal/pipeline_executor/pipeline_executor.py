@@ -114,7 +114,8 @@ class PipelineExecutor:
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
         self.trigger.init_trigger(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
-        self.trigger.inform_previous_model(self.previous_model_id)
+        if self.previous_model_id is not None:
+            self.trigger.inform_previous_model(self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
@@ -280,14 +281,18 @@ class PipelineExecutor:
 
         return first_timestamp, last_timestamp
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> int:
+    def _handle_triggers_within_batch(
+        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
+    ) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
         num_triggers = 0
-        last_trigger_id: Optional[int] = None
+
+        triggering_idx_list = []
 
         for i, triggering_idx in enumerate(triggering_indices):
+            triggering_idx_list.append(triggering_idx)
             num_triggers += 1
             self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
@@ -299,7 +304,6 @@ class PipelineExecutor:
             # that all data until that point has been processed by the selector.
             self._sw.start("selector_inform", overwrite=True)
             trigger_id, selector_log = self.grpc.inform_selector_and_trigger(self.pipeline_id, triggering_data)
-            last_trigger_id = trigger_id
             self.pipeline_log["supervisor"]["triggers"][trigger_id] = {
                 "total_selector_time": self._sw.stop(),
                 "selector_log": selector_log,
@@ -326,13 +330,13 @@ class PipelineExecutor:
                 return num_triggers
 
         # we have to inform the Selector about the remaining data in this batch.
-        if len(triggering_indices) == 0:
+        if len(triggering_idx_list) == 0:
             remaining_data = batch
         else:
-            remaining_data = batch[triggering_indices[-1] + 1 :]
+            remaining_data = batch[triggering_idx_list[-1] + 1 :]
 
         logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
-        if len(remaining_data) > 0 and last_trigger_id is not None:
+        if len(remaining_data) > 0:
             # These data points will be included in the next trigger
             # because we inform the Selector about them,
             # just like other batches with no trigger at all are included.

@@ -103,4 +103,5 @@ class ModelDownloader:
             identifier=self.pipeline_id,
             base_directory=self.base_dir,
         )
+        assert trained_model_path is not None
         self._load_state(trained_model_path)
