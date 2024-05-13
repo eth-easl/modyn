@@ -8,7 +8,7 @@
 
 namespace modyn::storage {
 
-enum FilesystemWrapperType { INVALID_FSW, LOCAL };
+enum FilesystemWrapperType : uint8_t { INVALID_FSW, LOCAL };
 
 class FilesystemWrapper {
  public:

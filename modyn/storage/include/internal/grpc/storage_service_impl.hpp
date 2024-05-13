@@ -186,6 +186,126 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     return {StatusCode::OK, "Data retrieved."};
   }
 
+  template <typename WriterT>
+  Status GetDataPerWorker_Impl(  // NOLINT (readability-identifier-naming)
+      ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request, WriterT* writer) {
+    soci::session session = storage_database_connection_.get_session();
+    try {
+      // Check if the dataset exists
+      const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+
+      if (dataset_id == -1) {
+        SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+        session.close();
+        return {StatusCode::OK, "Dataset does not exist."};
+      }
+
+      // -1 means no timestamp filtering, see get_timestamp_condition
+      const int64_t start_timestamp = request->has_start_timestamp() ? request->start_timestamp() : -1;
+      const int64_t end_timestamp = request->has_end_timestamp() ? request->end_timestamp() : -1;
+
+      SPDLOG_INFO(
+          fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers with"
+                      " start = {} and end = {}.",
+                      request->dataset_id(), dataset_id, request->worker_id(), request->total_workers(),
+                      start_timestamp, end_timestamp));
+
+      const int64_t total_keys =
+          get_number_of_samples_in_dataset_with_range(dataset_id, session, start_timestamp, end_timestamp);
+
+      if (total_keys > 0) {
+        int64_t start_index = 0;
+        int64_t limit = 0;
+        std::tie(start_index, limit) =
+            get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
+
+        std::string query;
+        if (start_timestamp == -1 && end_timestamp == -1) {
+          query =
+              fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id LIMIT {} OFFSET {}",
+                          dataset_id, limit, start_index);
+        } else {
+          const std::string timestamp_condition = get_timestamp_condition(start_timestamp, end_timestamp);
+          query = fmt::format(
+              "SELECT samples.sample_id "
+              "FROM samples INNER JOIN files "
+              "ON samples.file_id = files.file_id AND samples.dataset_id = files.dataset_id "
+              "WHERE samples.dataset_id = {} AND {} "
+              "ORDER BY sample_id LIMIT {} OFFSET {}",
+              dataset_id, timestamp_condition, limit, start_index);
+        }
+        const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
+        CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
+
+        std::vector<SampleRecord> records;
+        std::vector<SampleRecord> record_buf;
+        record_buf.reserve(sample_batch_size_);
+
+        while (true) {
+          records = cursor_handler.yield_per(sample_batch_size_);
+
+          if (records.empty()) {
+            break;
+          }
+
+          const uint64_t obtained_records = records.size();
+          ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size_, "Received too many samples");
+
+          if (static_cast<int64_t>(records.size()) == sample_batch_size_) {
+            // If we obtained a full buffer, we can emit a response directly
+            modyn::storage::GetDataPerWorkerResponse response;
+            for (const auto& record : records) {
+              response.add_keys(record.id);
+            }
+
+            writer->Write(response);
+          } else {
+            // If not, we append to our record buf
+            record_buf.insert(record_buf.end(), records.begin(), records.end());
+            // If our record buf is big enough, emit a message
+            if (static_cast<int64_t>(records.size()) >= sample_batch_size_) {
+              modyn::storage::GetDataPerWorkerResponse response;
+
+              // sample_batch_size is signed int...
+              for (int64_t record_idx = 0; record_idx < sample_batch_size_; ++record_idx) {
+                const SampleRecord& record = record_buf[record_idx];
+                response.add_keys(record.id);
+              }
+
+              // Now, delete first sample_batch_size elements from vector as we are sending them
+              record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size_);
+
+              ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
+                     "The record buffer should never have more than 2*sample_batch_size elements!");
+
+              writer->Write(response);
+            }
+          }
+        }
+        cursor_handler.close_cursor();
+
+        if (!record_buf.empty()) {
+          ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
+                 "We should have written this buffer before!");
+
+          modyn::storage::GetDataPerWorkerResponse response;
+          for (const auto& record : record_buf) {
+            response.add_keys(record.id);
+          }
+          writer->Write(response);
+        }
+      }
+
+    } catch (const std::exception& e) {
+      SPDLOG_ERROR("Error in GetDataPerWorker: {}", e.what());
+      session.close();
+      return {StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
+    }
+
+    session.close();
+    return {StatusCode::OK, "Data retrieved."};
+  }
+
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   void send_sample_data_from_keys(WriterT* writer, const std::vector<int64_t>& request_keys,
                                   const DatasetData& dataset_data) {
@@ -420,7 +540,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::use(dataset_data.dataset_id);
 
       int64_t current_file_id = sample_fileids[0];
-      int64_t current_file_start_idx = 0;
+      uint64_t current_file_start_idx = 0;
       std::string current_file_path;
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
@@ -475,12 +595,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           file_wrapper->set_file_path(current_file_path);
-          current_file_start_idx = static_cast<int64_t>(sample_idx);
+          current_file_start_idx = sample_idx;
         }
       }
 
       // Send leftovers
-      const std::vector<uint64_t> file_indexes(sample_indices.begin() + current_file_start_idx, sample_indices.end());
+      const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+                                               sample_indices.end());
       const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
       // Protobuf expects the data as std::string...
       std::vector<std::string> stringified_data;
@@ -491,8 +612,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       modyn::storage::GetResponse response;
       response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
-      response.mutable_keys()->Assign(sample_keys.begin() + current_file_start_idx, sample_keys.end());
-      response.mutable_labels()->Assign(sample_labels.begin() + current_file_start_idx, sample_labels.end());
+      response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
+                                      sample_keys.end());
+      response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                        sample_labels.end());
 
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);
@@ -518,6 +641,35 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
                                                 sample_batch_size);
     session.close();
+  }
+
+  static std::string get_timestamp_condition(const int64_t start_timestamp = -1, const int64_t end_timestamp = -1) {
+    std::string timestamp_filter;
+    if (start_timestamp >= 0 && end_timestamp == -1) {
+      timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
+    } else if (start_timestamp == -1 && end_timestamp >= 0) {
+      timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
+    } else if (start_timestamp >= 0 && end_timestamp >= 0) {
+      timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
+    } else if (start_timestamp == -1 && end_timestamp == -1) {
+      // No limit on timestamps, return an always true condition
+      timestamp_filter = "1 = 1";
+    } else {
+      FAIL(fmt::format("Invalid timestamps: start = {}, end = {}", start_timestamp, end_timestamp));
+    }
+    return timestamp_filter;
+  }
+
+  static int64_t get_number_of_samples_in_dataset_with_range(const int64_t dataset_id, soci::session& session,
+                                                             const int64_t start_timestamp = -1,
+                                                             const int64_t end_timestamp = -1) {
+    int64_t total_keys = 0;
+    const std::string timestamp_condition = get_timestamp_condition(start_timestamp, end_timestamp);
+    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
+                   timestamp_condition,
+        soci::into(total_keys), soci::use(dataset_id);
+
+    return total_keys;
   }
 
   static std::tuple<int64_t, int64_t> get_partition_for_worker(int64_t worker_id, int64_t total_workers,

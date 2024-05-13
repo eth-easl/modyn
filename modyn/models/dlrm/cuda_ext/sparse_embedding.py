@@ -16,6 +16,7 @@
 # mypy: ignore-errors
 
 import copy
+from typing import Sequence
 
 import torch
 from apex import amp
@@ -57,7 +58,7 @@ class JointSparseEmbedding(nn.Module):
         device (torch.device): where to create the embedding. Default "cuda"
     """
 
-    def __init__(self, categorical_feature_sizes, embedding_dim, device="cuda"):
+    def __init__(self, categorical_feature_sizes: Sequence[int], embedding_dim: int, device: str = "cuda"):
         super(JointSparseEmbedding, self).__init__()
         self.embedding_dim = embedding_dim
         self.categorical_feature_sizes = copy.copy(categorical_feature_sizes)

@@ -11,7 +11,7 @@ def get_minimal_modyn_config() -> dict:
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": 0,
             "database": ":memory:",
         }

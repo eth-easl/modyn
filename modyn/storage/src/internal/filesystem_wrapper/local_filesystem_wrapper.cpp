@@ -66,22 +66,15 @@ uint64_t LocalFilesystemWrapper::get_file_size(const std::string& path) {
   return static_cast<int64_t>(std::filesystem::file_size(path));
 }
 
-template <typename TP>
-std::time_t to_time_t(TP tp) {
-  using namespace std::chrono;
-  auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now() + system_clock::now());
-  return system_clock::to_time_t(sctp);
-}
-
 int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   ASSERT(is_valid_path(path), fmt::format("Invalid path: {}", path));
   ASSERT(exists(path), fmt::format("Path does not exist: {}", path));
   static_assert(sizeof(int64_t) >= sizeof(std::time_t), "Cannot cast time_t to int64_t");
 
-  const auto modified_time = std::filesystem::last_write_time(path);
-  const auto cftime = to_time_t(modified_time);
-  return static_cast<int64_t>(cftime);
-
+  // there is no portable way to get the modified time of a file in C++17 and earlier
+  struct stat file_attribute {};
+  stat(path.c_str(), &file_attribute);
+  return static_cast<int64_t>(file_attribute.st_mtime);
   /* C++20 version, not supported by compilers yet */
   /*
     const auto modified_time = std::filesystem::last_write_time(path);

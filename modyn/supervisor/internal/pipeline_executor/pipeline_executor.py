@@ -9,7 +9,7 @@ from time import sleep
 from typing import Any, Generator, Optional
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter, LogResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -35,7 +35,6 @@ class PipelineExecutor:
         start_replay_at: Optional[int] = None,
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
-        evaluation_matrix: bool = False,
     ) -> None:
         self.stage = PipelineStage.INIT
 
@@ -60,7 +59,6 @@ class PipelineExecutor:
         self.start_replay_at = start_replay_at
         self.stop_replay_at = stop_replay_at
         self.maximum_triggers = maximum_triggers
-        self.evaluation_matrix = evaluation_matrix
 
         self._sw = Stopwatch()
         self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
@@ -80,8 +78,10 @@ class PipelineExecutor:
 
         self.num_triggers = 0
         self.current_training_id: Optional[int] = None
-        self.trained_models: list[int] = []
         self.triggers: list[int] = []
+        # this is to store the first and last timestamp of the remaining data after handling all triggers in
+        # _handle_triggers_within_batch
+        self.remaining_data_range: Optional[tuple[int, int]] = None
 
     def _update_pipeline_stage_and_enqueue_msg(
         self, stage: PipelineStage, msg_type: MsgType, submsg: Optional[dict[str, Any]] = None, log: bool = False
@@ -125,18 +125,6 @@ class PipelineExecutor:
 
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
-
-    def build_evaluation_matrix(self) -> None:
-        self.pipeline_log["evaluation_matrix"] = {}
-        for model in self.trained_models:
-            self.pipeline_log["evaluation_matrix"][model] = {}
-            for trigger in self.triggers:
-                logger.info(f"Evaluating model {model} on trigger {trigger} for matrix.")
-                evaluations = self.grpc.start_evaluation(model, self.pipeline_config, self.pipeline_id, trigger)
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-                eval_result_writer: LogResultWriter = self._init_evaluation_writer("log", trigger)
-                self.grpc.store_evaluation_results([eval_result_writer], evaluations)
-                self.pipeline_log["evaluation_matrix"][model][trigger] = eval_result_writer.results
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
@@ -218,8 +206,15 @@ class PipelineExecutor:
         logger.info(f"Running training for trigger {trigger_id}")
 
         self._sw.start("train", overwrite=True)
+        num_samples_to_pass_per_trigger = self.pipeline_config["training"].get("num_samples_to_pass", [])
+        current_trigger_index = len(self.triggers)
+        if current_trigger_index <= len(num_samples_to_pass_per_trigger) - 1:
+            num_samples_to_pass = num_samples_to_pass_per_trigger[current_trigger_index]
+        else:
+            num_samples_to_pass = None
+
         self.current_training_id = self.grpc.start_training(
-            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model_id
+            self.pipeline_id, trigger_id, self.pipeline_config, self.previous_model_id, num_samples_to_pass
         )
 
         self.stage = PipelineStage.WAIT_FOR_TRAINING_COMPLETION
@@ -244,11 +239,10 @@ class PipelineExecutor:
         if self.pipeline_config["training"]["use_previous_model"]:
             self.previous_model_id = model_id
 
-        self.trained_models.append(model_id)
         self.triggers.append(trigger_id)
 
         # Start evaluation
-        if "evaluation" in self.pipeline_config and not self.evaluation_matrix:
+        if "evaluation" in self.pipeline_config:
             self._update_pipeline_stage_and_enqueue_msg(
                 PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
             )
@@ -263,9 +257,30 @@ class PipelineExecutor:
             writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
             self.grpc.store_evaluation_results(writers, evaluations)
 
-    def _handle_triggers_within_batch(
-        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
-    ) -> int:
+    def _get_trigger_timespan(
+        self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
+    ) -> tuple[int, int]:
+        if is_first_triggering_data:
+            # now it is the first trigger in this batch. Triggering_data can be empty.
+            # when it is indeed empty, then there is remaining data in the last batch
+            # because num_samples_in_trigger is not 0.
+            assert len(triggering_data) > 0 or self.remaining_data_range is not None
+
+            if self.remaining_data_range is not None:
+                first_timestamp = self.remaining_data_range[0]
+                last_timestamp = self.remaining_data_range[1] if len(triggering_data) == 0 else triggering_data[-1][1]
+            else:
+                first_timestamp = triggering_data[0][1]
+                last_timestamp = triggering_data[-1][1]
+        else:
+            assert len(triggering_data) > 0
+            # since num_samples_in_trigger is not 0, we are sure that triggering_data is not empty
+            first_timestamp = triggering_data[0][1]
+            last_timestamp = triggering_data[-1][1]
+
+        return first_timestamp, last_timestamp
+
+    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
@@ -294,7 +309,11 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
-                self.trigger.inform_previous_trigger_and_data_points(trigger_id, num_samples_in_trigger)
+                first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
+                self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
+                # reset the remaining data range since we have processed it now
+                self.remaining_data_range = None
                 self._run_training(trigger_id)  # Blocks until training is done.
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
@@ -329,7 +348,31 @@ class PipelineExecutor:
         self._persist_pipeline_log()
         return num_triggers_in_batch
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+        # we have to inform the Selector about the remaining data in this batch.
+        if len(triggering_indices) == 0:
+            remaining_data = batch
+        else:
+            remaining_data = batch[triggering_indices[-1] + 1 :]
+
+        logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
+        if len(remaining_data) > 0:
+            # These data points will be included in the next trigger
+            # because we inform the Selector about them,
+            # just like other batches with no trigger at all are included.
+            self._sw.start("selector_inform", overwrite=True)
+            selector_log = self.grpc.inform_selector(self.pipeline_id, remaining_data)
+            self.pipeline_log["supervisor"]["selector_informs"].append(
+                {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
+            )
+            if self.remaining_data_range is not None:
+                # extend the range from last time
+                self.remaining_data_range = (self.remaining_data_range[0], remaining_data[-1][1])
+            else:
+                self.remaining_data_range = (remaining_data[0][1], remaining_data[-1][1])
+        else:
+            self.remaining_data_range = None
+
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:
@@ -424,9 +467,6 @@ class PipelineExecutor:
         logger.info(f"[pipeline {self.pipeline_id}] Start executing, experiment mode {self.experiment_mode}.")
         if self.experiment_mode:
             self.replay_data()
-
-            if self.evaluation_matrix:
-                self.build_evaluation_matrix()
         else:
             self.wait_for_new_data(self.start_timestamp)
 
@@ -450,7 +490,6 @@ def execute_pipeline(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
-    evaluation_matrix: bool = False,
 ) -> None:
     try:
         pipeline = PipelineExecutor(
@@ -466,7 +505,6 @@ def execute_pipeline(
             start_replay_at,
             stop_replay_at,
             maximum_triggers,
-            evaluation_matrix,
         )
         pipeline.init_cluster_connection()
         pipeline.execute()

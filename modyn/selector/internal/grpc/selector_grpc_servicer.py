@@ -155,12 +155,12 @@ class SelectorGRPCServicer(SelectorServicer):
             downsampler_config,
         ) = self.selector_manager.get_selection_strategy_remote(pipeline_id)
 
-        downsampler_config = json.dumps(downsampler_config)
+        downsampler_config_str = json.dumps(downsampler_config)
 
         return SelectionStrategyResponse(
             downsampling_enabled=downsampling_enabled,
             strategy_name=name,
-            downsampler_config=JsonString(value=downsampler_config),
+            downsampler_config=JsonString(value=downsampler_config_str),
         )
 
     def seed_selector(  # pylint: disable-next=unused-argument

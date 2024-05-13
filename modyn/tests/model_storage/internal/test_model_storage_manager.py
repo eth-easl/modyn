@@ -27,7 +27,7 @@ def get_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": 0,
             "database": f"{DATABASE}",
         },
@@ -46,7 +46,14 @@ def setup_and_teardown():
         inc_model_strategy.zip = False
         inc_model_strategy.config = json.dumps({"operator": "sub"})
         database.register_pipeline(
-            1, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy, inc_model_strategy, 5
+            1,
+            "ResNet18",
+            json.dumps({"num_classes": 10}),
+            True,
+            "{}",
+            full_model_strategy,
+            inc_model_strategy,
+            5,
         )
     yield
 
@@ -98,10 +105,16 @@ def test__reconstruct_model(base_model_state_mock: MagicMock):
     mock_model = MockModel()
     model_state = mock_model.state_dict()
     full_model_strategy = PyTorchFullModel(
-        zipping_dir=pathlib.Path("ftp"), zip_activated=False, zip_algorithm_name="", config={}
+        zipping_dir=pathlib.Path("ftp"),
+        zip_activated=False,
+        zip_algorithm_name="",
+        config={},
     )
     incremental_model_strategy = WeightsDifference(
-        zipping_dir=pathlib.Path("ftp"), zip_activated=False, zip_algorithm_name="", config={}
+        zipping_dir=pathlib.Path("ftp"),
+        zip_activated=False,
+        zip_algorithm_name="",
+        config={},
     )
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -113,13 +126,19 @@ def test__reconstruct_model(base_model_state_mock: MagicMock):
 
         difference_model_file_name = "difference.model"
         incremental_model_strategy.store_model(
-            get_mock_model_after().state_dict(), model_state, temp_directory_path / difference_model_file_name
+            get_mock_model_after().state_dict(),
+            model_state,
+            temp_directory_path / difference_model_file_name,
         )
 
         with MetadataDatabaseConnection(get_modyn_config()) as database:
             prev_model_id = database.add_trained_model(15, 3, prev_model_file_name, "model.metadata")
             curr_model_id = database.add_trained_model(
-                15, 4, difference_model_file_name, "model.metadata", parent_model=prev_model_id
+                15,
+                4,
+                difference_model_file_name,
+                "model.metadata",
+                parent_model=prev_model_id,
             )
 
         reconstructed_state = manager._reconstruct_model_state(curr_model_id, manager.get_model_storage_policy(1))
@@ -146,7 +165,11 @@ def test__handle_new_model_full():
         assert loaded_state["_weight"].item() == 1
 
 
-@patch.object(ModelStorageManager, "_reconstruct_model_state", return_value=MockModel().state_dict())
+@patch.object(
+    ModelStorageManager,
+    "_reconstruct_model_state",
+    return_value=MockModel().state_dict(),
+)
 @patch.object(ModelStorageManager, "_determine_parent_model_id", return_value=101)
 def test__handle_new_model_incremental(previous_model_mock, reconstruct_model_mock: MagicMock):
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
@@ -155,7 +178,11 @@ def test__handle_new_model_incremental(previous_model_mock, reconstruct_model_mo
         temp_file_path = pathlib.Path(temporary_file.name)
 
         parent_id = manager._handle_new_model(
-            5, 4, get_mock_model_after().state_dict(), temp_file_path, manager.get_model_storage_policy(1)
+            5,
+            4,
+            get_mock_model_after().state_dict(),
+            temp_file_path,
+            manager.get_model_storage_policy(1),
         )
 
         assert parent_id == 101
@@ -186,7 +213,14 @@ def test_get_model_storage_policy():
         inc_model_strategy.zip = True
         inc_model_strategy.config = json.dumps({"operator": "sub"})
         complex_pipeline = database.register_pipeline(
-            75, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy, inc_model_strategy, 10
+            75,
+            "ResNet18",
+            json.dumps({"num_classes": 10}),
+            True,
+            "{}",
+            full_model_strategy,
+            inc_model_strategy,
+            10,
         )
 
     manager = ModelStorageManager(get_modyn_config(), pathlib.Path("storage"), pathlib.Path("ftp"))
@@ -203,7 +237,10 @@ def test_get_model_storage_policy():
     assert complex_policy.incremental_model_strategy.zip
 
 
-@patch("modyn.model_storage.internal.model_storage_manager.current_time_millis", return_value=100)
+@patch(
+    "modyn.model_storage.internal.model_storage_manager.current_time_millis",
+    return_value=100,
+)
 @patch.object(ModelStorageManager, "_get_base_model_state", return_value=MockModel().state_dict())
 def test_store_model(base_model_mock, current_time_mock):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -217,7 +254,8 @@ def test_store_model(base_model_mock, current_time_mock):
         policy.full_model_strategy.store_model(MockModel().state_dict(), temp_directory_path / "before.model")
 
         torch.save(
-            {"model": get_mock_model_after().state_dict(), "metadata": True}, temp_directory_path / "model.modyn"
+            {"model": get_mock_model_after().state_dict(), "metadata": True},
+            temp_directory_path / "model.modyn",
         )
 
         model_id = manager.store_model(1, 129, temp_directory_path / "model.modyn")
@@ -248,7 +286,12 @@ def test_store_model_resnet():
 
     with MetadataDatabaseConnection(get_modyn_config()) as database:
         pipeline_id = database.register_pipeline(
-            1, "ResNet18", json.dumps({"num_classes": 10}), True, "{}", full_model_strategy
+            1,
+            "ResNet18",
+            json.dumps({"num_classes": 10}),
+            True,
+            "{}",
+            full_model_strategy,
         )
 
     resnet = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)
@@ -256,7 +299,10 @@ def test_store_model_resnet():
         temp_directory_path = pathlib.Path(temp_dir)
         manager = ModelStorageManager(get_modyn_config(), temp_directory_path, temp_directory_path)
 
-        torch.save({"model": resnet.model.state_dict(), "metadata": True}, temp_directory_path / "model.modyn")
+        torch.save(
+            {"model": resnet.model.state_dict(), "metadata": True},
+            temp_directory_path / "model.modyn",
+        )
 
         model_id = manager.store_model(pipeline_id, 1, temp_directory_path / "model.modyn")
         loaded_state = manager.load_model(model_id, True)

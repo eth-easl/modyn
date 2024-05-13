@@ -19,7 +19,7 @@ class ResNet18:
 
 class ResNet18Modyn(ResNet, CoresetSupportingModule):
     def __init__(self, model_configuration: dict[str, Any]) -> None:
-        super().__init__(BasicBlock, [2, 2, 2, 2], **model_configuration)
+        super().__init__(BasicBlock, [2, 2, 2, 2], **model_configuration)  # type: ignore
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         x = self.conv1(x)

@@ -18,21 +18,22 @@ dependencies:
   - pip
   - tqdm
   - conda-forge::enlighten
-  - protobuf
   - pip:
-    - grpcio==1.59.0
+    - grpcio>=1.63
+    - protobuf==5.26.*
+    - types-protobuf==5.26.*
     - evidently
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
   - pyaml
+  - pydantic
   - numpy
   - pandas
   - bitstring
   - tensorboard
   - scipy
   - pyftpdlib
-  - types-protobuf
   - types-psycopg2
   - types-PyYAML
   - transformers

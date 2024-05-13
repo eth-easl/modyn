@@ -11,8 +11,7 @@
 #include <fstream>
 
 #include "gmock/gmock.h"
-#include "internal/database/storage_database_connection.hpp"
-#include "internal/filesystem_wrapper/mock_filesystem_wrapper.hpp"
+#include "modyn/utils/utils.hpp"
 #include "storage_test_utils.hpp"
 #include "test_utils.hpp"
 
@@ -96,6 +95,7 @@ class StorageServiceImplTest : public ::testing::Test {
     label_file2 << "2";
     label_file2.close();
     ASSERT(!label_file2.is_open(), "Could not close label file");
+    session.close();
   }
 
   void TearDown() override {
@@ -107,6 +107,32 @@ class StorageServiceImplTest : public ::testing::Test {
     }
   }
 };
+
+std::tuple<int64_t, int64_t> add_non_existing_sample(const YAML::Node& config, const std::string& database_root_dir) {
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+  const std::string sql_expression = fmt::format(
+      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
+      "1)",
+      database_root_dir);
+  session << sql_expression;
+
+  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
+  if (!session.get_last_insert_id("files", inserted_file_id)) {
+    FAIL("Failed to insert file into database");
+  }
+
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
+      soci::use(inserted_file_id);
+  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
+      -1;
+  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
+    FAIL("Failed to insert sample into database");
+  }
+  session.close();
+  return {inserted_file_id, inserted_sample_id_ll};
+}
 
 TEST_F(StorageServiceImplTest, TestCheckAvailability) {
   ServerContext context;
@@ -175,8 +201,8 @@ TEST_F(StorageServiceImplTest, TestDeleteDataset) {
 
   dataset_exists = 0;
   session << "SELECT COUNT(*) FROM datasets WHERE name = 'test_dataset'", soci::into(dataset_exists);
-
   ASSERT_FALSE(dataset_exists);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestDeleteData) {
@@ -231,6 +257,7 @@ TEST_F(StorageServiceImplTest, TestDeleteData) {
   session << "SELECT COUNT(*) FROM samples WHERE dataset_id = 1", soci::into(number_of_samples);
 
   ASSERT_EQ(number_of_samples, 1);
+  session.close();
 }
 
 // NOLINTNEXTLINE (readability-function-cognitive-complexity)
@@ -299,27 +326,9 @@ TEST_F(StorageServiceImplTest, TestGetDataInInterval) {  // NOLINT(readability-f
   grpc::internal::Call call;
   modyn::storage::MockServerWriter<modyn::storage::GetDataInIntervalResponse> writer(&call, &context);
 
-  const StorageDatabaseConnection connection(config);
-  soci::session session =
-      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  const std::string sql_expression = fmt::format(
-      "INSERT INTO files (dataset_id, path, updated_at, number_of_samples) VALUES (1, '{}/non_existing.txt', 200, "
-      "1)",
-      tmp_dir_);
-  session << sql_expression;
-
-  long long inserted_file_id = -1;  // NOLINT google-runtime-int (soci needs ll)
-  if (!session.get_last_insert_id("files", inserted_file_id)) {
-    FAIL("Failed to insert file into database");
-  }
-
-  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, :file, 0, 0)",
-      soci::use(inserted_file_id);
-  long long inserted_sample_id_ll =  // NOLINT google-runtime-int (soci needs ll)
-      -1;
-  if (!session.get_last_insert_id("samples", inserted_sample_id_ll)) {
-    FAIL("Failed to insert sample into database");
-  }
+  long long inserted_file_id = -1;       // NOLINT google-runtime-int (soci needs ll)
+  long long inserted_sample_id_ll = -1;  // NOLINT google-runtime-int (soci needs ll)
+  std::tie(inserted_file_id, inserted_sample_id_ll) = add_non_existing_sample(config, tmp_dir_);
 
   auto inserted_sample_id = static_cast<uint64_t>(inserted_sample_id_ll);
 
@@ -405,13 +414,13 @@ TEST_F(StorageServiceImplTest, TestDeleteDataErrorHandling) {
   const StorageDatabaseConnection connection(config);
   soci::session session =
       connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
-  session
-      << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";  // Assuming no file
-                                                                                                    // with this id
+  session << "INSERT INTO samples (dataset_id, file_id, sample_index, label) VALUES (1, 99999, 0, 0)";
+  // Assuming no file with this id
   request.clear_keys();
   request.add_keys(0);
   status = storage_service.DeleteData(&context, &request, &response);
   ASSERT_FALSE(response.success());
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetPartitionForWorker) {
@@ -439,6 +448,45 @@ TEST_F(StorageServiceImplTest, TestGetPartitionForWorker) {
   ASSERT_EQ(std::get<1>(result), 3);
 }
 
+TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInDatasetWithRange) {
+  const YAML::Node config = YAML::LoadFile("config.yaml");
+
+  const StorageDatabaseConnection connection(config);
+  soci::session session =
+      connection.get_session();  // NOLINT misc-const-correctness  (the soci::session cannot be const)
+
+  int64_t result;
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 100));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 0, 101));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 1));
+  ASSERT_EQ(result, 2);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 1, 0));
+  ASSERT_EQ(result, 0);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 2));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 2, 101));
+  ASSERT_EQ(result, 1);
+
+  ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 70, 50));
+  ASSERT_EQ(result, 0);
+
+  ASSERT_THROW(StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, -70, 50),
+               modyn::utils::ModynException);
+  ASSERT_THROW(StorageServiceImpl::get_number_of_samples_in_dataset_with_range(1, session, 70, -50),
+               modyn::utils::ModynException);
+  session.close();
+}
+
 TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInFile) {
   const YAML::Node config = YAML::LoadFile("config.yaml");
 
@@ -458,9 +506,9 @@ TEST_F(StorageServiceImplTest, TestGetNumberOfSamplesInFile) {
       "100, 10)",
       tmp_dir_);
   session << sql_expression;
-
   ASSERT_NO_THROW(result = StorageServiceImpl::get_number_of_samples_in_file(3, session, 1));
   ASSERT_EQ(result, 10);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIds) {
@@ -498,6 +546,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIds) {
   ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 2);
   ASSERT_EQ(result[1], 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileCount) {
@@ -522,6 +571,7 @@ TEST_F(StorageServiceImplTest, TestGetFileCount) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_count(session, 1, 2, -1));
   ASSERT_EQ(result, 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
@@ -553,6 +603,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsGivenNumberOfFiles) {
   ASSERT_NO_THROW(result = StorageServiceImpl::get_file_ids_given_number_of_files(session, 1, 2, -1, 1));
   ASSERT_EQ(result.size(), 1);
   ASSERT_EQ(result[0], 1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetId) {
@@ -568,6 +619,7 @@ TEST_F(StorageServiceImplTest, TestGetDatasetId) {
 
   ASSERT_NO_THROW(result = StorageServiceImpl::get_dataset_id(session, "non_existent_dataset"));
   ASSERT_EQ(result, -1);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
@@ -611,6 +663,7 @@ TEST_F(StorageServiceImplTest, TestGetFileIdsForSamples) {
   ASSERT_EQ(result[1], 2);
   ASSERT_EQ(result[2], 3);
   ASSERT_EQ(result[3], 4);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetFileIdsPerThread) {
@@ -739,6 +792,7 @@ TEST_F(StorageServiceImplTest, TestGetSamplesCorrespondingToFiles) {
   ASSERT_EQ(result.size(), 2);
   ASSERT_EQ(result[0], 6);
   ASSERT_EQ(result[1], 7);
+  session.close();
 }
 
 TEST_F(StorageServiceImplTest, TestGetDatasetData) {
@@ -763,4 +817,5 @@ TEST_F(StorageServiceImplTest, TestGetDatasetData) {
   ASSERT_EQ(result.base_path, "");
   ASSERT_EQ(result.filesystem_wrapper_type, FilesystemWrapperType::INVALID_FSW);
   ASSERT_EQ(result.file_wrapper_type, FileWrapperType::INVALID_FW);
+  session.close();
 }

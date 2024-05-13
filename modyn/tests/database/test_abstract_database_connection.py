@@ -7,7 +7,7 @@ def get_minimal_modyn_config() -> dict:
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": 0,
             "database": ":memory:",
         }
@@ -22,7 +22,7 @@ class TestAbstractDatabaseConnection(AbstractDatabaseConnection):
         self.drivername = config["test_database"]["drivername"]
         self.username = config["test_database"]["username"]
         self.password = config["test_database"]["password"]
-        self.host = config["test_database"]["host"]
+        self.host = config["test_database"]["hostname"]
         self.port = config["test_database"]["port"]
         self.database = config["test_database"]["database"]
 

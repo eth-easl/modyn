@@ -63,6 +63,10 @@ message GetDataPerWorkerRequest {
   string dataset_id = 1;
   int32 worker_id = 2;
   int32 total_workers = 3;
+  // value unset means no limit
+  // start_timestamp is inclusive, end_timestamp is exclusive
+  optional int64 start_timestamp = 4;
+  optional int64 end_timestamp = 5;
 }
 
 message GetDataPerWorkerResponse {
@@ -71,6 +75,10 @@ message GetDataPerWorkerResponse {
 
 message GetDatasetSizeRequest {
   string dataset_id = 1;
+  // value unset means no limit
+  // start_timestamp is inclusive, end_timestamp is exclusive
+  optional int64 start_timestamp = 2;
+  optional int64 end_timestamp = 3;
 }
 
 message GetDatasetSizeResponse {

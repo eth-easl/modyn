@@ -31,7 +31,7 @@ def wait_for_pipeline(pipeline_id: int) -> str:
 
 
 def parse_grpc_res(msg: Message) -> dict:
-    return MessageToDict(msg, preserving_proto_field_name=True, including_default_value_fields=True)
+    return MessageToDict(msg, preserving_proto_field_name=True, always_print_fields_with_no_presence=True)
 
 
 def assert_pipeline_exit_without_error(res: dict) -> None:
@@ -56,7 +56,6 @@ def test_mnist() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -79,7 +78,6 @@ def test_one_experiment_pipeline() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -102,7 +100,6 @@ def test_two_experiment_pipelines() -> None:
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )
@@ -115,7 +112,6 @@ def test_two_experiment_pipelines() -> None:
                 start_replay_at=0,
                 stop_replay_at=100000,
                 maximum_triggers=1,
-                evaluation_matrix=False,
             )
         )
     )

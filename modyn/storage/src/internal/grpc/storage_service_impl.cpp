@@ -30,6 +30,12 @@ Status StorageServiceImpl::GetDataInInterval(  // NOLINT readability-identifier-
   return GetDataInInterval_Impl<ServerWriter<modyn::storage::GetDataInIntervalResponse>>(context, request, writer);
 }
 
+Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
+    ServerContext* context, const modyn::storage::GetDataPerWorkerRequest* request,
+    ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
+  return GetDataPerWorker_Impl<ServerWriter<modyn::storage::GetDataPerWorkerResponse>>(context, request, writer);
+}
+
 Status StorageServiceImpl::CheckAvailability(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::DatasetAvailableRequest* request,
     modyn::storage::DatasetAvailableResponse* response) {
@@ -96,7 +102,7 @@ Status StorageServiceImpl::DeleteDataset(  // NOLINT readability-identifier-nami
     int64_t filesystem_wrapper_type;
 
     soci::session session = storage_database_connection_.get_session();
-    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
     SPDLOG_INFO(fmt::format("Received DeleteDataset Request for dataset {}", dataset_id));
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
@@ -261,124 +267,24 @@ Status StorageServiceImpl::DeleteData(  // NOLINT readability-identifier-naming
   }
 }
 
-Status StorageServiceImpl::GetDataPerWorker(  // NOLINT readability-identifier-naming
-    ServerContext* /*context*/, const modyn::storage::GetDataPerWorkerRequest* request,
-    ServerWriter<::modyn::storage::GetDataPerWorkerResponse>* writer) {
-  try {
-    soci::session session = storage_database_connection_.get_session();
-
-    // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
-
-    if (dataset_id == -1) {
-      SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
-      return {StatusCode::OK, "Dataset does not exist."};
-    }
-    SPDLOG_INFO(
-        fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers",
-                    request->dataset_id(), dataset_id, request->worker_id(), request->total_workers()));
-
-    int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
-        soci::into(total_keys), soci::use(dataset_id);
-
-    if (total_keys > 0) {
-      int64_t start_index = 0;
-      int64_t limit = 0;
-      std::tie(start_index, limit) =
-          get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
-
-      const std::string query =
-          fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id OFFSET {} LIMIT {}",
-                      dataset_id, start_index, limit);
-      const std::string cursor_name = fmt::format("pw_cursor_{}_{}", dataset_id, request->worker_id());
-      CursorHandler cursor_handler(session, storage_database_connection_.get_drivername(), query, cursor_name, 1);
-
-      std::vector<SampleRecord> records;
-      std::vector<SampleRecord> record_buf;
-      record_buf.reserve(sample_batch_size_);
-
-      while (true) {
-        records = cursor_handler.yield_per(sample_batch_size_);
-
-        if (records.empty()) {
-          break;
-        }
-
-        const uint64_t obtained_records = records.size();
-        ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size_, "Received too many samples");
-
-        if (static_cast<int64_t>(records.size()) == sample_batch_size_) {
-          // If we obtained a full buffer, we can emit a response directly
-          modyn::storage::GetDataPerWorkerResponse response;
-          for (const auto& record : records) {
-            response.add_keys(record.id);
-          }
-
-          writer->Write(response);
-        } else {
-          // If not, we append to our record buf
-          record_buf.insert(record_buf.end(), records.begin(), records.end());
-          // If our record buf is big enough, emit a message
-          if (static_cast<int64_t>(records.size()) >= sample_batch_size_) {
-            modyn::storage::GetDataPerWorkerResponse response;
-
-            // sample_batch_size is signed int...
-            for (int64_t record_idx = 0; record_idx < sample_batch_size_; ++record_idx) {
-              const SampleRecord& record = record_buf[record_idx];
-              response.add_keys(record.id);
-            }
-
-            // Now, delete first sample_batch_size elements from vector as we are sending them
-            record_buf.erase(record_buf.begin(), record_buf.begin() + sample_batch_size_);
-
-            ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
-                   "The record buffer should never have more than 2*sample_batch_size elements!");
-
-            writer->Write(response);
-          }
-        }
-      }
-      cursor_handler.close_cursor();
-      session.close();
-
-      if (!record_buf.empty()) {
-        ASSERT(static_cast<int64_t>(record_buf.size()) < sample_batch_size_,
-               "We should have written this buffer before!");
-
-        modyn::storage::GetDataPerWorkerResponse response;
-        for (const auto& record : record_buf) {
-          response.add_keys(record.id);
-        }
-
-        writer->Write(response);
-      }
-    }
-
-    return {StatusCode::OK, "Data retrieved."};
-  } catch (const std::exception& e) {
-    SPDLOG_ERROR("Error in GetDataPerWorker: {}", e.what());
-    return {StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
-  }
-}
-
 Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-naming
     ServerContext* /*context*/, const modyn::storage::GetDatasetSizeRequest* request,
     modyn::storage::GetDatasetSizeResponse* response) {
+  soci::session session = storage_database_connection_.get_session();
   try {
-    soci::session session = storage_database_connection_.get_session();
-
     // Check if the dataset exists
-    int64_t dataset_id = get_dataset_id(session, request->dataset_id());
+    const int64_t dataset_id = get_dataset_id(session, request->dataset_id());
 
     if (dataset_id == -1) {
       SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
+      session.close();
       return {StatusCode::OK, "Dataset does not exist."};
     }
 
-    int64_t total_keys = 0;
-    session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id",
-        soci::into(total_keys), soci::use(dataset_id);
+    const int64_t start_timestamp = request->has_start_timestamp() ? request->start_timestamp() : -1;
+    const int64_t end_timestamp = request->has_end_timestamp() ? request->end_timestamp() : -1;
+    const int64_t total_keys =
+        get_number_of_samples_in_dataset_with_range(dataset_id, session, start_timestamp, end_timestamp);
 
     session.close();
 
@@ -386,6 +292,7 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
     response->set_success(true);
     return {StatusCode::OK, "Dataset size retrieved."};
   } catch (const std::exception& e) {
+    session.close();
     SPDLOG_ERROR("Error in GetDatasetSize: {}", e.what());
     return {StatusCode::OK, fmt::format("Error in GetDatasetSize: {}", e.what())};
   }
@@ -409,7 +316,7 @@ StorageServiceImpl::get_keys_per_thread(const std::vector<int64_t>& keys, uint64
       threads = number_of_keys;
     }
 
-    const auto subset_size = static_cast<uint64_t>(number_of_keys / threads);
+    const auto subset_size = number_of_keys / threads;
     for (uint64_t thread_id = 0; thread_id < threads; ++thread_id) {
       // These need to be signed because we add them to iterators.
       const auto start_index = static_cast<int64_t>(thread_id * subset_size);

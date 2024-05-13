@@ -88,7 +88,6 @@ def noop_constructor_mock(
     start_replay_at: Optional[int] = None,
     stop_replay_at: Optional[int] = None,
     maximum_triggers: Optional[int] = None,
-    evaluation_matrix: bool = False,
 ) -> None:
     pass
 
@@ -107,13 +106,15 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
-def get_non_connecting_pipeline_executor() -> PipelineExecutor:
+def get_non_connecting_pipeline_executor(pipeline_config=None) -> PipelineExecutor:
+    if pipeline_config is None:
+        pipeline_config = get_minimal_pipeline_config()
     pipeline_executor = PipelineExecutor(
         START_TIMESTAMP,
         PIPELINE_ID,
         get_minimal_system_config(),
-        get_minimal_pipeline_config(),
-        EVALUATION_DIRECTORY,
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
         SUPPORTED_EVAL_RESULT_WRITERS,
         PIPELINE_STATUS_QUEUE,
         TRAINING_STATUS_QUEUE,
@@ -355,30 +356,186 @@ def test__handle_triggers_within_batch_empty_triggers(
     test__run_training: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-    pe.pipeline_id = 42
-    batch = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7)]
+    # each tuple is (key, timestamp, label)
+    batch = [(10, 1, 5), (11, 2, 5), (12, 3, 5), (13, 4, 5), (14, 5, 5), (15, 6, 5), (16, 7, 5)]
     triggering_indices = [-1, -1, 3]
     trigger_ids = [(0, {}), (1, {}), (2, {})]
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
-    test_get_number_of_samples.return_value = len(batch)
-
+    test_get_number_of_samples.side_effect = [0, 0, 4]
     pe._handle_triggers_within_batch(batch, triggering_indices)
-
     inform_selector_and_trigger_expected_args = [
         call(42, []),
         call(42, []),
-        call(42, [(10, 1), (11, 2), (12, 3), (13, 4)]),
+        call(42, [(10, 1, 5), (11, 2, 5), (12, 3, 5), (13, 4, 5)]),
     ]
     assert test_inform_selector_and_trigger.call_count == 3
     assert test_inform_selector_and_trigger.call_args_list == inform_selector_and_trigger_expected_args
 
-    run_training_expected_args = [call(0), call(1), call(2)]
-    assert test__run_training.call_count == 3
+    run_training_expected_args = [call(2)]
+    assert test__run_training.call_count == 1
     assert test__run_training.call_args_list == run_training_expected_args
 
     assert test_inform_selector.call_count == 1
-    test_inform_selector.assert_called_once_with(42, [(14, 5), (15, 6), (16, 7)])
+    test_inform_selector.assert_called_once_with(42, [(14, 5, 5), (15, 6, 5), (16, 7, 5)])
+
+
+@patch.object(PipelineExecutor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
+def test__handle_triggers_within_batch_trigger_timespan(
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
+):
+    def reset_state():
+        test_get_number_of_samples.reset_mock()
+        test_inform_selector_and_trigger.reset_mock()
+        test__run_training.reset_mock()
+        test_inform_selector.reset_mock()
+
+    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
+    test_inform_selector.return_value = {}
+    test_inform_selector_and_trigger.side_effect = [(0, {}), (1, {}), (2, {}), (3, {}), (4, {}), (5, {})]
+
+    # each tuple is (key, timestamp, label)
+    first_batch = [
+        # trigger 0
+        (10, 1, 5),
+        (11, 2, 5),
+        # trigger 1 is empty
+        # trigger 2
+        (12, 3, 5),
+        (13, 4, 5),
+        # remaining data
+        (14, 5, 5),
+        (15, 6, 5),
+        (16, 7, 5),
+    ]
+    triggering_indices = [1, 1, 3]
+    test_get_number_of_samples.side_effect = [2, 0, 2]  # the size of trigger 0, 1, 2
+
+    pe._handle_triggers_within_batch(first_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["first_timestamp"] == 1
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["last_timestamp"] == 2
+
+    assert "first_timestamp" not in pe.pipeline_log["supervisor"]["triggers"][1]
+    assert "last_timestamp" not in pe.pipeline_log["supervisor"]["triggers"][1]
+
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["first_timestamp"] == 3
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["last_timestamp"] == 4
+    assert pe.remaining_data_range == (5, 7)
+    reset_state()
+
+    second_batch = [
+        # trigger 3 covers remaining data from last batch
+        # trigger 4
+        (17, 8, 5),
+        (18, 9, 5),
+        # remaining data
+        (19, 10, 5),
+    ]
+    triggering_indices = [-1, 1]
+    test_get_number_of_samples.side_effect = [3, 2]  # the size of trigger 3, 4
+    pe._handle_triggers_within_batch(second_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][3]["first_timestamp"] == 5
+    assert pe.pipeline_log["supervisor"]["triggers"][3]["last_timestamp"] == 7
+    assert pe.pipeline_log["supervisor"]["triggers"][4]["first_timestamp"] == 8
+    assert pe.pipeline_log["supervisor"]["triggers"][4]["last_timestamp"] == 9
+    assert pe.remaining_data_range == (10, 10)
+    reset_state()
+
+    third_batch = [(20, 11, 5), (21, 12, 5), (22, 13, 5)]  # trigger 5, also includes remaining data from last batch
+    triggering_indices = [2]
+    test_get_number_of_samples.side_effect = [4]  # the size of trigger 5
+    pe._handle_triggers_within_batch(third_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][5]["first_timestamp"] == 10
+    assert pe.pipeline_log["supervisor"]["triggers"][5]["last_timestamp"] == 13
+    assert pe.remaining_data_range is None
+
+
+@patch.object(PipelineExecutor, "_run_training")
+@patch.object(GRPCHandler, "inform_selector_and_trigger")
+@patch.object(GRPCHandler, "inform_selector")
+@patch.object(GRPCHandler, "get_number_of_samples")
+def test__handle_triggers_within_batch_trigger_timespan_across_batch(
+    test_get_number_of_samples: MagicMock,
+    test_inform_selector: MagicMock,
+    test_inform_selector_and_trigger: MagicMock,
+    test__run_training: MagicMock,
+):
+    def reset_state():
+        test_get_number_of_samples.reset_mock()
+        test_inform_selector_and_trigger.reset_mock()
+        test__run_training.reset_mock()
+        test_inform_selector.reset_mock()
+
+    pe = get_non_connecting_pipeline_executor()
+    test_inform_selector.return_value = {}
+    test_inform_selector_and_trigger.side_effect = [(0, {}), (1, {}), (2, {})]
+
+    # each tuple is (key, timestamp, label)
+    first_batch = [
+        # trigger 0
+        (10, 1, 5),
+        (11, 2, 5),
+    ]
+    triggering_indices = []
+    pe._handle_triggers_within_batch(first_batch, triggering_indices)
+    assert pe.remaining_data_range == (1, 2)
+    test_get_number_of_samples.assert_not_called()
+    test_inform_selector_and_trigger.assert_not_called()
+    test__run_training.assert_not_called()
+    test_inform_selector.assert_called_once_with(PIPELINE_ID, first_batch)
+
+    reset_state()
+    second_batch = [
+        # trigger 1
+        (12, 3, 5),
+        (13, 4, 5),
+    ]
+    triggering_indices = [-1]
+    test_get_number_of_samples.side_effect = [2]  # the size of trigger 0
+    pe._handle_triggers_within_batch(second_batch, triggering_indices)
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["first_timestamp"] == 1
+    assert pe.pipeline_log["supervisor"]["triggers"][0]["last_timestamp"] == 2
+    assert pe.remaining_data_range == (3, 4)
+    test_get_number_of_samples.assert_called_once_with(PIPELINE_ID, 0)
+    test_inform_selector_and_trigger.assert_called_once_with(42, [])
+    test__run_training.assert_called_once_with(0)
+    test_inform_selector.assert_called_once_with(PIPELINE_ID, second_batch)
+
+    reset_state()
+    third_batch = [
+        # still trigger 1's data
+        (14, 5, 5),
+        (15, 6, 5),
+        (16, 7, 5),
+    ]
+    triggering_indices = []
+    pe._handle_triggers_within_batch(third_batch, triggering_indices)
+    assert pe.remaining_data_range == (3, 7)
+    reset_state()
+
+    fourth_batch = [
+        # still trigger 1's data
+        (17, 8, 5),
+        (18, 9, 5),
+        # trigger 2
+        (19, 10, 5),
+        (20, 11, 5),
+    ]
+
+    triggering_indices = [1, 3]
+    test_get_number_of_samples.side_effect = [7, 2]
+    pe._handle_triggers_within_batch(fourth_batch, triggering_indices)
+    assert pe.remaining_data_range is None
+    assert pe.pipeline_log["supervisor"]["triggers"][1]["first_timestamp"] == 3
+    assert pe.pipeline_log["supervisor"]["triggers"][1]["last_timestamp"] == 9
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["first_timestamp"] == 10
+    assert pe.pipeline_log["supervisor"]["triggers"][2]["last_timestamp"] == 11
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -399,9 +556,31 @@ def test__run_training(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None)
+    test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, None)
     test_store_trained_model.assert_called_once()
     test_start_evaluation.assert_not_called()
+
+
+@patch.object(GRPCHandler, "store_trained_model", return_value=101)
+@patch.object(GRPCHandler, "start_training", return_value=1337)
+@patch.object(GRPCHandler, "wait_for_training_completion")
+def test__run_training_set_num_samples_to_pass(
+    test_wait_for_training_completion: MagicMock,
+    test_start_training: MagicMock,
+    test_store_trained_model: MagicMock,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    pipeline_config["training"]["num_samples_to_pass"] = [73]
+    pe = get_non_connecting_pipeline_executor(pipeline_config)
+    pe.pipeline_id = 42
+    pe._run_training(trigger_id=21)
+    test_start_training.assert_called_once_with(42, 21, pipeline_config, None, 73)
+    test_start_training.reset_mock()
+
+    # the next time _run_training is called, the num_samples_to_pass should be set to 0
+    # because the next trigger is out of the range of `num_samples_to_pass`
+    pe._run_training(trigger_id=22)
+    test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -433,7 +612,7 @@ def test__run_training_with_evaluation(
     assert pe.current_training_id == 1337
 
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None)
+    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, None)
     test_store_trained_model.assert_called_once()
 
     test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)

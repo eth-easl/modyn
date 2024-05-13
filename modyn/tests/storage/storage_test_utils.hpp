@@ -10,8 +10,8 @@ namespace modyn::storage {
 
 class StorageTestUtils {
  public:
-  static YAML::Node get_dummy_file_wrapper_config();
-  static std::string get_dummy_file_wrapper_config_inline();
+  static YAML::Node get_dummy_file_wrapper_config(const std::string& byteorder = "little");
+  static std::string get_dummy_file_wrapper_config_inline(const std::string& byteorder = "little");
 };
 
 template <typename T>
@@ -30,9 +30,11 @@ class MockServerWriter : public grpc::ServerWriterInterface<T> {
   };
 
   // NOLINTNEXTLINE(readability-identifier-naming)
-  inline bool Write(const T& msg) { return Write(msg, grpc::WriteOptions()); }
+  bool Write(const T& msg) { return Write(msg, grpc::WriteOptions()); }
 
   std::vector<T> get_responses() { return responses_; }
+
+  void clear_responses() { responses_.clear(); }
 
  private:
   grpc::internal::Call* const call_ = nullptr;

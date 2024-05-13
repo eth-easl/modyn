@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 
-def k_center_greedy(matrix, budget: int, metric, device, print_freq: int = 20):
+def k_center_greedy(matrix, budget: int, metric, device, print_freq: int | None = 20):
     if type(matrix) == torch.Tensor:
         assert matrix.dim() == 2
     elif type(matrix) == np.ndarray:
