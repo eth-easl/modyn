@@ -31,7 +31,7 @@ def noop_exit(self, exc_type, exc_val, exc_tb) -> None:
 @patch.object(SupervisorGRPCServer, "__enter__", noop_enter)
 @patch.object(SupervisorGRPCServer, "__exit__", noop_exit)
 def test_supervisor_server_script_runs(script_runner):
-    ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_SYSTEM_CONFIG))
+    ret = script_runner.run("_modyn_supervisor", str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
     assert ret.success
 
 
@@ -39,5 +39,5 @@ def test_supervisor_server_script_runs(script_runner):
 @patch.object(SupervisorGRPCServer, "__enter__", noop_enter)
 @patch.object(SupervisorGRPCServer, "__exit__", noop_exit)
 def test_supervisor_server_fails_on_non_existing_system_config(script_runner):
-    ret = script_runner.run("_modyn_supervisor", str(NO_FILE))
+    ret = script_runner.run("_modyn_supervisor", str(NO_FILE), env=os.environ)
     assert not ret.success

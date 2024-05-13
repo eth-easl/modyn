@@ -3,7 +3,6 @@ import multiprocessing as mp
 import os
 
 
-
 def set_start_method_spawn(logger: logging.Logger) -> None:
     # At the top because the FTP Server or other dependencies otherwise set fork.
     try:

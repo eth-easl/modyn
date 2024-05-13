@@ -36,19 +36,19 @@ def noop_poll_pipeline_status(self) -> None:
 @patch.object(Client, "start_pipeline", return_value=True)
 @patch.object(Client, "poll_pipeline_status", noop_poll_pipeline_status)
 def test_modyn_client_script_runs(script_runner):
-    ret = script_runner.run("_modyn_client", str(EXAMPLE_PIPELINE), str(EXAMPLE_SYSTEM_CONFIG))
+    ret = script_runner.run("_modyn_client", str(EXAMPLE_PIPELINE), str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
     assert ret.success
 
 
 @patch.object(Client, "__init__", noop_constructor_mock)
 def test_supervisor_script_fails_on_non_existing_system_config(script_runner):
     assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run("_modyn_client", str(EXAMPLE_PIPELINE), str(NO_FILE))
+    ret = script_runner.run("_modyn_client", str(EXAMPLE_PIPELINE), str(NO_FILE), env=os.environ)
     assert not ret.success
 
 
 @patch.object(Client, "__init__", noop_constructor_mock)
 def test_supervisor_script_fails_on_non_existing_pipeline_config(script_runner):
     assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run("_modyn_client", str(NO_FILE), str(EXAMPLE_SYSTEM_CONFIG))
+    ret = script_runner.run("_modyn_client", str(NO_FILE), str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
     assert not ret.success
