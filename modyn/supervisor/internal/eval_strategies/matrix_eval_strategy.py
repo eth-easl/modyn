@@ -13,13 +13,17 @@ class MatrixEvalStrategy(AbstractEvalStrategy):
     In case the range from `eval_start_from` to `eval_end_at` is not divisible by `eval_every`, the last interval will
     be smaller than `eval_every`.
     """
+
     def __init__(self, eval_strategy_config: dict):
         super().__init__(eval_strategy_config)
         self.eval_every = convert_timestr_to_seconds(self.eval_strategy_config["eval_every"])
         self.eval_start_from = self.eval_strategy_config["eval_start_from"]
         self.eval_end_at = self.eval_strategy_config["eval_end_at"]
-        assert self.eval_start_from < self.eval_end_at, "eval_start_from must be less than eval_end_at"
-        assert self.eval_every > 0, "eval_every must be greater than 0"
+        if self.eval_start_from >= self.eval_end_at:
+            raise ValueError("eval_start_from must be less than eval_end_at")
+
+        if self.eval_every <= 0:
+            raise ValueError("eval_every must be greater than 0")
 
     def get_eval_intervals(
         self, first_timestamp: int, last_timestamp: int

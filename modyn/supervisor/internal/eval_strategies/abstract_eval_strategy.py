@@ -12,6 +12,7 @@ class AbstractEvalStrategy(ABC):
     an iterable of tuples via its `get_eval_intervals` method. Each tuple represents an evaluation interval to slice the
     evaluation dataset.
     """
+
     def __init__(self, eval_strategy_config: dict):
         self.eval_strategy_config = eval_strategy_config
 
