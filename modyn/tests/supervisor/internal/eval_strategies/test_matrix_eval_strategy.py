@@ -20,27 +20,30 @@ def test_initialization() -> None:
 def test_init_fails_if_invalid() -> None:
     config = get_minimal_eval_strategies_config()
     config["eval_every"] = "0s"
-    with pytest.raises(AssertionError, match="eval_every must be greater than 0"):
+    with pytest.raises(ValueError, match="eval_every must be greater than 0"):
         MatrixEvalStrategy(config)
     config["eval_every"] = "10s"
     config["eval_start_from"] = 400
-    with pytest.raises(AssertionError, match="eval_start_from must be less than eval_end_at"):
+    with pytest.raises(ValueError, match="eval_start_from must be less than eval_end_at"):
         MatrixEvalStrategy(config)
 
 
-def test_get_eval_interval() -> None:
+def test_get_eval_intervals() -> None:
     config = get_minimal_eval_strategies_config()
     eval_strategy = MatrixEvalStrategy(config)
-    assert list(eval_strategy.get_eval_interval(0, 0)) == [
+    assert list(eval_strategy.get_eval_intervals(0, 0)) == [
         (0, 100),
         (100, 200),
         (200, 300),
     ]
 
     config["eval_start_from"] = 50
+    config["eval_every"] = "60s"
     eval_strategy = MatrixEvalStrategy(config)
-    assert list(eval_strategy.get_eval_interval(0, 0)) == [
-        (50, 150),
-        (150, 250),
-        (250, 300),
+    assert list(eval_strategy.get_eval_intervals(0, 0)) == [
+        (50, 110),
+        (110, 170),
+        (170, 230),
+        (230, 290),
+        (290, 300),
     ]

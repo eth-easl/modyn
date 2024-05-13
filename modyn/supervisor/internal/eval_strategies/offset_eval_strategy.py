@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Iterable
+from typing import Iterable, Optional
 
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.utils import convert_timestr_to_seconds
@@ -25,21 +23,25 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         super().__init__(eval_strategy_config)
         self.offsets = eval_strategy_config["offsets"]
 
-    def get_eval_interval(self, first_timestamp: int, last_timestamp: int) -> Iterable[tuple[int | None, int | None]]:
+    def get_eval_intervals(
+        self, first_timestamp: int, last_timestamp: int
+    ) -> Iterable[tuple[Optional[int], Optional[int]]]:
         for offset in self.offsets:
             if offset == "-inf":
                 yield 0, first_timestamp
             elif offset == "inf":
-                # +1 because the left bound of the returned interval should inclusive, and last_timestamp is included
-                # in the current trigger
+                # +1 because the samples with timestamp `last_timestamp` are included in the current trigger,
+                # and here we want to return an interval on the data with timestamp greater than `last_timestamp`.
                 yield last_timestamp + 1, None
             else:
                 offset = convert_timestr_to_seconds(offset)
                 if offset < 0:
                     yield max(first_timestamp + offset, 0), first_timestamp
                 elif offset > 0:
+                    # +1 for the same reason as above
                     yield last_timestamp + 1, last_timestamp + offset + 1
                 else:
-                    # offset == 0. +1 because the right bound of the evaluation interval is exclusive,
-                    # we want to include samples with `last_timestamp` as its timestamp in evaluation dataset
+                    # now offset == 0. We want to return the same interval as the trigger's interval.
+                    # +1 because the right bound of the returned interval should be exclusive.
+                    # we want to include samples with timestamp `last_timestamp` from evaluation dataset.
                     yield first_timestamp, last_timestamp + 1
