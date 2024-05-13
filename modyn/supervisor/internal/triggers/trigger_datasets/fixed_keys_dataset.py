@@ -109,8 +109,10 @@ class FixedKeysDataset(IterableDataset):
         if worker_info is None:
             # Non-multi-threaded data loading. We use worker_id 0.
             worker_id = 0
+            num_workers = 1
         else:
             worker_id = worker_info.id
+            num_workers = worker_info.num_workers
 
         if self._first_call:
             self._first_call = False
@@ -125,7 +127,7 @@ class FixedKeysDataset(IterableDataset):
         assert self._transform is not None
 
         total_samples = len(self._keys)
-        keys_per_worker = int(math.ceil(total_samples / worker_info.num_workers))
+        keys_per_worker = int(math.ceil(total_samples / num_workers))
         worker_keys = self._keys[worker_id * keys_per_worker : min(total_samples, (worker_id + 1) * keys_per_worker)]
 
         # TODO(#175): we might want to do/accelerate prefetching here.

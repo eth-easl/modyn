@@ -26,7 +26,6 @@ class DataDriftTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, trigger_config: dict):
-        self.trigger_config = trigger_config
         self.pipeline_id: Optional[int] = None
         self.pipeline_config: Optional[dict] = None
         self.modyn_config: Optional[dict] = None
@@ -45,24 +44,27 @@ class DataDriftTrigger(Trigger):
         self.evidently_column_mapping_name = "data"
         self.metrics: Optional[list] = None
 
-        self.data_cache: list[tuple[int, int, int]] = []
-        self.leftover_data_points = 0
-
         self.exp_output_dir: Optional[pathlib.Path] = None
         self.drift_dir: Optional[pathlib.Path] = None
 
+        self.data_cache: list[tuple[int, int, int]] = []
+        self.leftover_data_points = 0
+
+        if len(trigger_config) > 0:
+            self._parse_trigger_config(trigger_config)
+
         super().__init__(trigger_config)
 
-    def _parse_trigger_config(self) -> None:
-        if "data_points_for_detection" in self.trigger_config.keys():
-            self.detection_interval = self.trigger_config["data_points_for_detection"]
-        assert self.detection_interval > 0, "data_points_for_trigger needs to be at least 1"
+    def _parse_trigger_config(self, trigger_config) -> None:
+        if "data_points_for_detection" in trigger_config.keys():
+            self.detection_interval = trigger_config["data_points_for_detection"]
+        assert self.detection_interval > 0, "data_points_for_detection needs to be at least 1"
 
-        if "sample_size" in self.trigger_config.keys():
-            self.sample_size = self.trigger_config["sample_size"]
+        if "sample_size" in trigger_config.keys():
+            self.sample_size = trigger_config["sample_size"]
         assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
 
-        self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, self.trigger_config)
+        self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, trigger_config)
 
     def _init_dataloader_info(self) -> None:
         assert self.pipeline_config is not None
@@ -139,9 +141,6 @@ class DataDriftTrigger(Trigger):
         self.pipeline_config = pipeline_config
         self.modyn_config = modyn_config
         self.base_dir = base_dir
-
-        if len(self.trigger_config) > 0:
-            self._parse_trigger_config()
 
         self._init_dataloader_info()
         self._init_model_downloader()
