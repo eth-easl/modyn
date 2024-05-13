@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 def get_evidently_metrics(
     column_mapping_name: str, trigger_config: Optional[dict] = None
 ) -> list[EmbeddingsDriftMetric]:
-    """Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
+    """This function instantiates an Evidently metric given metric configuration.
+    If we want to support multiple metrics in the future, we can change the code to looping through the configurations.
+
+    Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
     model, distance, mmd, ratio
     If metric_name not given, we use the default 'model' metric.
     Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
@@ -131,10 +134,9 @@ def get_embeddings(model_downloader: ModelDownloader, dataloader: DataLoader) ->
     return all_embeddings
 
 
-def get_embeddings_evidently_format(
-    model_downloader: ModelDownloader, dataloader: torch.utils.data.DataLoader
-) -> pd.DataFrame:
-    embeddings_numpy = get_embeddings(model_downloader, dataloader).cpu().detach().numpy()
-    embeddings_df = pd.DataFrame(embeddings_numpy).astype("float64")
-    embeddings_df.columns = ["col_" + str(x) for x in embeddings_df.columns]
-    return embeddings_df
+def convert_tensor_to_df(t: torch.Tensor, column_name_prefix: Optional[str] = None) -> pd.DataFrame:
+    matrix_numpy = t.cpu().detach().numpy()
+    df = pd.DataFrame(matrix_numpy).astype("float64")
+    if column_name_prefix is not None:
+        df.columns = [column_name_prefix + str(x) for x in df.columns]
+    return df

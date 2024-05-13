@@ -133,7 +133,6 @@ def test_init_trigger() -> None:
         assert trigger.pipeline_config == pipeline_config
         assert trigger.modyn_config == modyn_config
         assert trigger.base_dir == BASEDIR
-        assert trigger.drift_dir is not None
         assert isinstance(trigger.dataloader_info, DataLoaderInfo)
         assert isinstance(trigger.model_downloader, ModelDownloader)
 

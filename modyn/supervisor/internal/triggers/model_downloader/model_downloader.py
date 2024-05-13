@@ -20,7 +20,7 @@ from modyn.utils.utils import grpc_connection_established
 logger = logging.getLogger(__name__)
 
 
-# TODO(366) Unify similar code in trainer_server and evaluator. Create common.utils.ModelDownloader
+# TODO(433) Unify similar code in trainer_server and evaluator. Create common.utils.ModelDownloader
 class ModelDownloader:
     def __init__(
         self,

@@ -1,6 +1,4 @@
-import json
 import logging
-import os
 import pathlib
 from typing import Generator, Optional
 
@@ -13,7 +11,8 @@ from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
-    get_embeddings_evidently_format,
+    convert_tensor_to_df,
+    get_embeddings,
     get_evidently_metrics,
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
@@ -43,9 +42,6 @@ class DataDriftTrigger(Trigger):
         self.sample_size: Optional[int] = None
         self.evidently_column_mapping_name = "data"
         self.metrics: Optional[list] = None
-
-        self.exp_output_dir: Optional[pathlib.Path] = None
-        self.drift_dir: Optional[pathlib.Path] = None
 
         self.data_cache: list[tuple[int, int, int]] = []
         self.leftover_data_points = 0
@@ -128,14 +124,6 @@ class DataDriftTrigger(Trigger):
             f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
         )
 
-    def _create_dirs(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.base_dir is not None
-
-        self.exp_output_dir = self.base_dir / str(self.pipeline_id) / "datadrift"
-        self.drift_dir = self.exp_output_dir / "drift_results"
-        os.makedirs(self.drift_dir, exist_ok=True)
-
     def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
         self.pipeline_id = pipeline_id
         self.pipeline_config = pipeline_config
@@ -144,13 +132,14 @@ class DataDriftTrigger(Trigger):
 
         self._init_dataloader_info()
         self._init_model_downloader()
-        self._create_dirs()
 
     def run_detection(self, reference_embeddings_df: pd.DataFrame, current_embeddings_df: pd.DataFrame) -> bool:
         assert self.dataloader_info is not None
-        assert self.drift_dir is not None
 
         # Run Evidently detection
+        # ColumnMapping is {mapping name: column indices},
+        # an Evidently way of identifying (sub)columns to use in the detection.
+        # e.g. {"even columns": [0,2,4]}.
         column_mapping = ColumnMapping(embeddings={self.evidently_column_mapping_name: reference_embeddings_df.columns})
 
         # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
@@ -168,12 +157,15 @@ class DataDriftTrigger(Trigger):
             + f"[Result] {result_print}"
         )
 
-        with open(self.drift_dir / f"drift_{self.previous_trigger_id}.json", "w", encoding="utf-8") as f:
-            json.dump(result, f)
-
         return result["metrics"][0]["result"]["drift_detected"]
 
     def detect_drift(self, idx_start: int, idx_end: int) -> bool:
+        """Compare current data against reference data.
+        current data: all untriggered samples in the sliding window in inform().
+        reference data: the training samples of the previous trigger.
+        Get the dataloaders, download the embedding encoder model if necessary,
+        compute embeddings of current and reference data, then run detection on the embeddings.
+        """
         assert self.previous_trigger_id is not None
         assert self.previous_data_points is not None and self.previous_data_points > 0
         assert self.previous_model_id is not None
@@ -196,23 +188,36 @@ class DataDriftTrigger(Trigger):
         )
 
         # Download previous model as embedding encoder
-        # TODO(366) Support custom model as embedding encoder
+        # TODO(417) Support custom model as embedding encoder
         if self.model_updated:
             self.model_downloader.download(self.previous_model_id)
             self.model_updated = False
 
         # Compute embeddings
-        reference_embeddings_df = get_embeddings_evidently_format(self.model_downloader, reference_dataloader)
-        current_embeddings_df = get_embeddings_evidently_format(self.model_downloader, current_dataloader)
+        reference_embeddings = get_embeddings(self.model_downloader, reference_dataloader)
+        current_embeddings = get_embeddings(self.model_downloader, current_dataloader)
+        reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
+        current_embeddings_df = convert_tensor_to_df(current_embeddings, "col_")
 
         drift_detected = self.run_detection(reference_embeddings_df, current_embeddings_df)
 
         return drift_detected
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
-        """
+        """The DataDriftTrigger takes a batch of new data as input. It adds the new data to its data_cache.
+        Then, it iterates through the data_cache with a sliding window of current data for drift detection.
+        The sliding window is determined by two pointers: detection_idx_start and detection_idx_end.
+        We fix the start pointer and advance the end pointer by detection_interval in every iteration.
+        In every iteration we run data drift detection on the sliding window of current data.
+        Note, if we have remaining untriggered data from the previous batch of new data,
+        we include all of them in the first drift detection.
+        The remaining untriggered data has been processed in the previous new data batch,
+        so there's no need to run detection only on remaining data in this batch.
+        If a retraining is triggered, all data in the sliding window becomes triggering data. Advance the start ptr.
+        After traversing the data_cache, we remove all the triggered data from the cache
+        and record the number of remaining untriggered samples.
         Use Generator here because this data drift trigger
-        needs to wait for the previous trigger to finish and get the model
+        needs to wait for the previous trigger to finish and get the model.
         """
         # add new data to data_cache
         self.data_cache.extend(new_data)
@@ -239,6 +244,7 @@ class DataDriftTrigger(Trigger):
 
             if triggered:
                 trigger_data_points = detection_idx_end - detection_idx_start
+                # Index of the last sample of the trigger. Index is relative to the new_data list.
                 trigger_idx = len(new_data) - (untriggered_data_points - trigger_data_points) - 1
 
                 # update bookkeeping and sliding window

@@ -27,11 +27,13 @@ class Trigger(ABC):
                      triggering_indices (list[int]): List of all indices that trigger training
         """
 
-    @abstractmethod
+    # pylint: disable=unnecessary-pass
     def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
         """The supervisor informs the Trigger about the previous trigger_id
-        and data points in the previous trigger"""
+        and data points in the previous trigger."""
+        pass
 
-    @abstractmethod
+    # pylint: disable=unnecessary-pass
     def inform_previous_model(self, previous_model_id: int) -> None:
         """The supervisor informs the Trigger about the model_id of the previous trigger"""
+        pass

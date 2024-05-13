@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-# TODO(366): Unify with similar classes in trainer_server and evaluator
+# TODO(415): Unify with similar classes in trainer_server and evaluator
 class DataLoaderInfo:
     def __init__(
         self,

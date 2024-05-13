@@ -29,9 +29,3 @@ class DataAmountTrigger(Trigger):
         self.remaining_data_points = (self.remaining_data_points + len(new_data)) % self.data_points_for_trigger
 
         yield from triggering_indices
-
-    def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
-        pass
-
-    def inform_previous_model(self, previous_model_id: int) -> None:
-        pass

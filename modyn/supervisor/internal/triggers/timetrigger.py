@@ -57,9 +57,3 @@ class TimeTrigger(Trigger):
             self.next_trigger_at += self.trigger_every_s
 
         yield from triggering_indices
-
-    def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
-        pass
-
-    def inform_previous_model(self, previous_model_id: int) -> None:
-        pass
