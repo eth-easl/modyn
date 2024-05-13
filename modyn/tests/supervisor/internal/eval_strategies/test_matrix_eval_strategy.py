@@ -20,11 +20,11 @@ def test_initialization() -> None:
 def test_init_fails_if_invalid() -> None:
     config = get_minimal_eval_strategies_config()
     config["eval_every"] = "0s"
-    with pytest.raises(AssertionError, match="eval_every must be greater than 0"):
+    with pytest.raises(ValueError, match="eval_every must be greater than 0"):
         MatrixEvalStrategy(config)
     config["eval_every"] = "10s"
     config["eval_start_from"] = 400
-    with pytest.raises(AssertionError, match="eval_start_from must be less than eval_end_at"):
+    with pytest.raises(ValueError, match="eval_start_from must be less than eval_end_at"):
         MatrixEvalStrategy(config)
 
 
