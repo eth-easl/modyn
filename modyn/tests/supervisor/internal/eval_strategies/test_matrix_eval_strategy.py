@@ -28,19 +28,22 @@ def test_init_fails_if_invalid() -> None:
         MatrixEvalStrategy(config)
 
 
-def test_get_eval_interval() -> None:
+def test_get_eval_intervals() -> None:
     config = get_minimal_eval_strategies_config()
     eval_strategy = MatrixEvalStrategy(config)
-    assert list(eval_strategy.get_eval_interval(0, 0)) == [
+    assert list(eval_strategy.get_eval_intervals(0, 0)) == [
         (0, 100),
         (100, 200),
         (200, 300),
     ]
 
     config["eval_start_from"] = 50
+    config["eval_every"] = "60s"
     eval_strategy = MatrixEvalStrategy(config)
-    assert list(eval_strategy.get_eval_interval(0, 0)) == [
-        (50, 150),
-        (150, 250),
-        (250, 300),
+    assert list(eval_strategy.get_eval_intervals(0, 0)) == [
+        (50, 110),
+        (110, 170),
+        (170, 230),
+        (230, 290),
+        (290, 300),
     ]
