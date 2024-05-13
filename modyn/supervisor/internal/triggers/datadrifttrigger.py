@@ -183,13 +183,12 @@ class DataDriftTrigger(Trigger):
         )
 
         current_keys, _, _ = zip(*self.data_cache[idx_start:idx_end])  # type: ignore
-        current_keys: list[int] = list(current_keys)
         current_dataloader = prepare_trigger_dataloader_fixed_keys(
             self.previous_trigger_id + 1,
             self.dataloader_info,
             current_keys,
             sample_size=self.sample_size,
-        )
+        ) # type: ignore
 
         # Download previous model as embedding encoder
         # TODO(417) Support custom model as embedding encoder
