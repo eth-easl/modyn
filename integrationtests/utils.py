@@ -26,10 +26,18 @@ from modyn.utils import grpc_connection_established
 from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-MODYN_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples"
+MODYN_CONFIG_PATH = (
+   pathlib.Path(os.getenv("MODYN_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modyn" / "config" / "examples"))
+)
 MODYN_CONFIG_FILE = MODYN_CONFIG_PATH / "modyn_config.yaml"
 
-MODYNCLIENT_CONFIG_PATH = SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples"
+MODYNCLIENT_CONFIG_PATH = (
+   pathlib.Path(os.getenv("MODYNCLIENT_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples"))
+)
+MODYN_DATASET_PATH = (
+    pathlib.Path(os.getenv("MODYN_DATASET_PATH", pathlib.Path("/app") / "storage" / "datasets"))
+)
+
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
@@ -159,7 +167,7 @@ class DatasetHelper:
         self,
         dataset_id: str,
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = MODYN_DATASET_PATH,
         desc: str = "new dataset",
         file_wrapper_config: dict = {"file_extension": ".png", "label_file_extension": ".txt"},
         file_wrapper_type: str = "SingleSampleFileWrapper",
@@ -243,7 +251,7 @@ class ImageDatasetHelper(DatasetHelper):
         self,
         dataset_id: str = "image_dataset",
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = MODYN_DATASET_PATH,
         desc: str = "Test dataset for integration tests.",
         first_added_images: list = [],
     ) -> None:
@@ -289,7 +297,7 @@ class TinyDatasetHelper(DatasetHelper):
         self,
         dataset_id: str = "tiny_dataset",
         dataset_size: int = 10,
-        dataset_dir: pathlib.Path = pathlib.Path("/app") / "storage" / "datasets",
+        dataset_dir: pathlib.Path = MODYN_DATASET_PATH,
         desc: str = "Tiny dataset for integration tests.",
     ) -> None:
         super().__init__(

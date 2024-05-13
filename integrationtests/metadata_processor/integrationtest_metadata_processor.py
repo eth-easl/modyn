@@ -1,11 +1,16 @@
-import os
-import pathlib
 from math import isclose
 
 import grpc
 import yaml
-from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
+
+from integrationtests.utils import MODYN_CONFIG_FILE
+from modyn.metadata_database.metadata_database_connection import (
+    MetadataDatabaseConnection,
+)
+from modyn.metadata_database.models import (
+    SampleTrainingMetadata,
+    TriggerTrainingMetadata,
+)
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable-next=no-name-in-module
@@ -15,11 +20,10 @@ from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 imp
     TrainingMetadataRequest,
     TrainingMetadataResponse,
 )
-from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import MetadataProcessorStub
+from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
+    MetadataProcessorStub,
+)
 from modyn.utils import grpc_connection_established
-
-SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
 
 
 class MetadataProcessorClient:
@@ -32,7 +36,7 @@ class MetadataProcessorClient:
 
 
 def get_modyn_config() -> dict:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config

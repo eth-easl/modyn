@@ -9,8 +9,11 @@ import time
 from typing import Iterable
 
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
+from PIL import Image
+
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
+from integrationtests.utils import MODYN_CONFIG_FILE, MODYN_DATASET_PATH
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DeleteDataRequest,
@@ -28,15 +31,14 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
 from modyn.utils.utils import flatten
-from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
-DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
+DATASET_PATH = MODYN_DATASET_PATH / "test_dataset"
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the images we added to the dataset ourselves and compare them to the images we get
@@ -48,7 +50,7 @@ IMAGE_UPDATED_TIME_STAMPS = []
 
 
 def get_modyn_config() -> dict:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config
@@ -321,7 +323,6 @@ def test_storage() -> None:
 
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
-    response = None
     for i in range(20):
         keys = []
         labels = []
@@ -335,7 +336,7 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert len(keys) == 10, f"Not all images were returned."
+    assert len(keys) == 10, "Not all images were returned."
 
     first_image_keys = keys
 
