@@ -77,20 +77,22 @@ LimitResetStrategy = Literal["lastX", "sampleUAR"]
 class PresamplingConfig(BaseModel):
     """Config for the presampling strategy of CoresetStrategy. If missing, no presampling is applied."""
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
-        description="Strategy used to presample the data."
-    )
-    ratio: float = Field(
+    strategy: Literal[
+        "Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "LabelBalancedPresamplingStrategy", "No"
+    ] = Field(description="Strategy used to presample the data.")
+    ratio: int = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
         min=0,
         max=100,
     )
+    force_column_balancing: bool = Field(False)
+    force_required_target_size: bool = Field(False)
 
 
 class DownsamplingConfig(BaseModel):
     """Config for the downsampling strategy of SelectionStrategy."""
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
+    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "Loss", "No"] = Field(
         description="Strategy used to downsample the data. Available strategies: Loss, Gradnorm, No (no downsampling)."
     )
     sample_then_batch: bool = Field(
@@ -100,13 +102,13 @@ class DownsamplingConfig(BaseModel):
             "the datapoints are first divided into batches and then sampled."
         ),
     )
-    ratio: float = Field(
+    ratio: int = Field(
         description="Ratio post_sampling_size/pre_sampling_size. E.g. with 160 records and a ratio of 50 we keep 80.",
         min=0,
         max=100,
     )
-    period: int = Field(
-        1,
+    period: int | None = Field(
+        None,
         description=(
             "In multi-epoch training and sample_then_batch, how frequently the data is selected. "
             "`1` selects every epoch. To select once per trigger, set this parameter to 0."
@@ -206,8 +208,8 @@ class CoresetSelectionStrategy(_BaseSelectionStrategy):
         None,
         description=("Config for the presampling strategy. If missing, no presampling is applied."),
     )
-    downsampling_config: DownsamplingConfig | MultiDownsamplingConfig = Field(
-        description="Configurates the downsampling with one or multiple strategies."
+    downsampling_config: DownsamplingConfig | MultiDownsamplingConfig | None = Field(
+        None, description="Configurates the downsampling with one or multiple strategies."
     )
 
 
