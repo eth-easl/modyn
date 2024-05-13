@@ -167,7 +167,7 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     worker_id: builtins.int
     total_workers: builtins.int
     start_timestamp: builtins.int
-    """value unset or set with default value means no limit
+    """value unset means no limit
     start_timestamp is inclusive, end_timestamp is exclusive
     """
     end_timestamp: builtins.int
@@ -177,10 +177,15 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         worker_id: builtins.int = ...,
         total_workers: builtins.int = ...,
-        start_timestamp: builtins.int = ...,
-        end_timestamp: builtins.int = ...,
+        start_timestamp: builtins.int | None = ...,
+        end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
 
 global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
 
@@ -209,7 +214,7 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     start_timestamp: builtins.int
-    """value unset or set with default value means no limit
+    """value unset means no limit
     start_timestamp is inclusive, end_timestamp is exclusive
     """
     end_timestamp: builtins.int
@@ -217,10 +222,15 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
         self,
         *,
         dataset_id: builtins.str = ...,
-        start_timestamp: builtins.int = ...,
-        end_timestamp: builtins.int = ...,
+        start_timestamp: builtins.int | None = ...,
+        end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
 
 global___GetDatasetSizeRequest = GetDatasetSizeRequest
 

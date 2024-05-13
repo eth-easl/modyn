@@ -96,7 +96,7 @@ def check_dataset_availability() -> None:
     assert response.available, "Dataset is not available."
 
 
-def check_dataset_size(expected_size: int, start_timestamp=0, end_timestamp=0) -> None:
+def check_dataset_size(expected_size: int, start_timestamp=None, end_timestamp=None) -> None:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -143,6 +143,13 @@ def check_data_per_worker() -> None:
             dataset_id="test_dataset", worker_id=worker_id, total_workers=3, end_timestamp=split_ts2
         )
         responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        alternative_request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=3, start_timestamp=0, end_timestamp=split_ts2
+        )
+        alternative_responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(alternative_request))
+
+        assert alternative_responses == responses
 
         assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
 
@@ -397,6 +404,11 @@ def test_storage() -> None:
     check_data_per_worker()
     check_dataset_size(30)
     check_dataset_size(10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
+    # a sanity check for 0 as end_timestamp
+    check_dataset_size(0, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1, end_timestamp=0)
+    # this check can be seen as duplicate as the previous one,
+    # but we want to ensure setting start_timestamp as 0 or None has the same effect
+    check_dataset_size(20, start_timestamp=0, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(20, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(
         10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[9] + 1, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1

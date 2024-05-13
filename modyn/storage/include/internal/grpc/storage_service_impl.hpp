@@ -200,8 +200,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         return {StatusCode::OK, "Dataset does not exist."};
       }
 
-      const int64_t start_timestamp = request->start_timestamp();
-      const int64_t end_timestamp = request->end_timestamp();
+      // -1 means no timestamp filtering, see get_timestamp_condition
+      const int64_t start_timestamp = request->has_start_timestamp() ? request->start_timestamp() : -1;
+      const int64_t end_timestamp = request->has_end_timestamp() ? request->end_timestamp() : -1;
 
       SPDLOG_INFO(
           fmt::format("Received GetDataPerWorker Request for dataset {} (id = {}) and worker {} out of {} workers with"
@@ -219,7 +220,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             get_partition_for_worker(request->worker_id(), request->total_workers(), total_keys);
 
         std::string query;
-        if (start_timestamp == 0 && end_timestamp == 0) {
+        if (start_timestamp == -1 && end_timestamp == -1) {
           query =
               fmt::format("SELECT sample_id FROM samples WHERE dataset_id = {} ORDER BY sample_id LIMIT {} OFFSET {}",
                           dataset_id, limit, start_index);
@@ -642,15 +643,15 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     session.close();
   }
 
-  static std::string get_timestamp_condition(const int64_t start_timestamp, const int64_t end_timestamp) {
+  static std::string get_timestamp_condition(const int64_t start_timestamp = -1, const int64_t end_timestamp = -1) {
     std::string timestamp_filter;
-    if (start_timestamp > 0 && end_timestamp == 0) {
+    if (start_timestamp >= 0 && end_timestamp == -1) {
       timestamp_filter = fmt::format("updated_at >= {}", start_timestamp);
-    } else if (start_timestamp == 0 && end_timestamp > 0) {
+    } else if (start_timestamp == -1 && end_timestamp >= 0) {
       timestamp_filter = fmt::format("updated_at < {}", end_timestamp);
-    } else if (start_timestamp > 0 && end_timestamp > 0) {
+    } else if (start_timestamp >= 0 && end_timestamp >= 0) {
       timestamp_filter = fmt::format("updated_at >= {} AND updated_at < {}", start_timestamp, end_timestamp);
-    } else if (start_timestamp == 0 && end_timestamp == 0) {
+    } else if (start_timestamp == -1 && end_timestamp == -1) {
       // No limit on timestamps, return an always true condition
       timestamp_filter = "1 = 1";
     } else {
@@ -660,8 +661,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   }
 
   static int64_t get_number_of_samples_in_dataset_with_range(const int64_t dataset_id, soci::session& session,
-                                                             const int64_t start_timestamp = 0,
-                                                             const int64_t end_timestamp = 0) {
+                                                             const int64_t start_timestamp = -1,
+                                                             const int64_t end_timestamp = -1) {
     int64_t total_keys = 0;
     const std::string timestamp_condition = get_timestamp_condition(start_timestamp, end_timestamp);
     session << "SELECT COALESCE(SUM(number_of_samples), 0) FROM files WHERE dataset_id = :dataset_id AND " +
