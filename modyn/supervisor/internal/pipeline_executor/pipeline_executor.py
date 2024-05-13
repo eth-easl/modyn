@@ -297,7 +297,6 @@ class PipelineExecutor:
         self.triggers.append(trigger_id)
         return model_id
 
-
     def _get_trigger_timespan(
         self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
     ) -> tuple[int, int]:
