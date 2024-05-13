@@ -10,5 +10,5 @@ def set_start_method_spawn(logger: logging.Logger) -> None:
             mp.set_start_method("spawn")
     except RuntimeError as error:
         if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
-            logger.error("Start method is already set to {}", mp.get_start_method())
-        raise error
+            logger.error(f"Start method is already set to {mp.get_start_method()}")
+            raise error
