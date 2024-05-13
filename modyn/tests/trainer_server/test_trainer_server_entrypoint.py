@@ -26,12 +26,12 @@ def noop_run(self) -> None:
 @patch.object(TrainerServer, "__init__", noop_constructor_mock)
 @patch.object(TrainerServer, "run", noop_run)
 def test_trainer_server_script_runs(script_runner):
-    ret = script_runner.run("_modyn_trainer_server", str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
+    ret = script_runner.run("_modyn_trainer_server", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
 @patch.object(TrainerServer, "__init__", noop_constructor_mock)
 @patch.object(TrainerServer, "run", noop_run)
 def test_trainer_server_fails_on_non_existing_system_config(script_runner):
-    ret = script_runner.run("_modyn_trainer_server", str(NO_FILE), env=os.environ)
+    ret = script_runner.run("_modyn_trainer_server", str(NO_FILE))
     assert not ret.success

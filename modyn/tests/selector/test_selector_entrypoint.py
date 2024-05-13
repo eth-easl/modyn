@@ -31,7 +31,7 @@ def noop_exit(self, exc_type, exc_val, exc_tb) -> None:
 @patch.object(SelectorGRPCServer, "__enter__", noop_enter)
 @patch.object(SelectorGRPCServer, "__exit__", noop_exit)
 def test_trainer_server_script_runs(script_runner):
-    ret = script_runner.run("_modyn_selector", str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
+    ret = script_runner.run("_modyn_selector", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
@@ -39,5 +39,5 @@ def test_trainer_server_script_runs(script_runner):
 @patch.object(SelectorGRPCServer, "__enter__", noop_enter)
 @patch.object(SelectorGRPCServer, "__exit__", noop_exit)
 def test_trainer_server_fails_on_non_existing_system_config(script_runner):
-    ret = script_runner.run("_modyn_selector", str(NO_FILE), env=os.environ)
+    ret = script_runner.run("_modyn_selector", str(NO_FILE))
     assert not ret.success

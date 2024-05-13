@@ -6,7 +6,9 @@ import os
 import pathlib
 from unittest.mock import patch
 
-from modyn.metadata_processor.internal.grpc.metadata_processor_server import MetadataProcessorServer
+from modyn.metadata_processor.internal.grpc.metadata_processor_server import (
+    MetadataProcessorServer,
+)
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
@@ -26,12 +28,12 @@ def noop_run(self) -> None:
 @patch.object(MetadataProcessorServer, "__init__", noop_constructor_mock)
 @patch.object(MetadataProcessorServer, "run", noop_run)
 def test_processor_script_runs(script_runner):
-    ret = script_runner.run("_modyn_metadata_processor", str(EXAMPLE_SYSTEM_CONFIG), env=os.environ)
+    ret = script_runner.run("_modyn_metadata_processor", str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 
 
 @patch.object(MetadataProcessorServer, "__init__", noop_constructor_mock)
 def test_processor_script_fails_on_non_existing_system_config(script_runner):
     assert not NO_FILE.is_file(), "File that shouldn't exist exists."
-    ret = script_runner.run("_modyn_metadata_processor", str(NO_FILE), env=os.environ)
+    ret = script_runner.run("_modyn_metadata_processor", str(NO_FILE))
     assert not ret.success
