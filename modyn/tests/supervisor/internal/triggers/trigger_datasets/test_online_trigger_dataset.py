@@ -6,8 +6,8 @@ from unittest.mock import patch
 from modyn.supervisor.internal.triggers.trigger_datasets import OnlineTriggerDataset
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
+NUM_SAMPLES = 10
 
-NUM_SAMPLES=10
 
 def get_mock_bytes_parser():
     return "def bytes_parser_function(x):\n\treturn x"

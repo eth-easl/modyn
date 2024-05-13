@@ -1,19 +1,14 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
-import platform
 import math
+import platform
 from unittest.mock import patch
 
 import grpc
 import pytest
 import torch
-from modyn.supervisor.internal.triggers.trigger_datasets import FixedKeysDataset
 from modyn.models.tokenizers import DistilBertTokenizerTransform
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
-    GetDataPerWorkerRequest,
-    GetDataPerWorkerResponse,
-    GetRequest,
-    GetResponse,
-)
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, GetResponse
+from modyn.supervisor.internal.triggers.trigger_datasets import FixedKeysDataset
 from torchvision import transforms
 
 DATASET_ID = "MNIST"
@@ -83,7 +78,10 @@ def test_init():
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_grpc(test_insecure_channel, test_grpc_connection_established):
     fixed_keys_dataset = FixedKeysDataset(
@@ -101,7 +99,10 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established):
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_established):
     fixed_keys_dataset = FixedKeysDataset(
@@ -182,7 +183,10 @@ def test__setup_composed_transform(serialized_transforms, transforms_list):
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_dataset_iter(test_insecure_channel, test_grpc_connection_established):
     fixed_keys_dataset = FixedKeysDataset(
@@ -201,7 +205,10 @@ def test_dataset_iter(test_insecure_channel, test_grpc_connection_established):
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_dataset_iter_with_parsing(test_insecure_channel, test_grpc_connection_established):
     fixed_keys_dataset = FixedKeysDataset(
@@ -220,7 +227,10 @@ def test_dataset_iter_with_parsing(test_insecure_channel, test_grpc_connection_e
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_dataloader_dataset(test_insecure_channel, test_grpc_connection_established):
     fixed_keys_dataset = FixedKeysDataset(
@@ -242,7 +252,10 @@ def test_dataloader_dataset(test_insecure_channel, test_grpc_connection_establis
 
 
 @patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    return_value=True,
+)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connection_established):
     if platform.system() == "Darwin":

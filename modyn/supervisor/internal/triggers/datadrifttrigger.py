@@ -55,7 +55,7 @@ class DataDriftTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def _parse_trigger_config(self, trigger_config) -> None:
+    def _parse_trigger_config(self, trigger_config: dict) -> None:
         if "data_points_for_detection" in trigger_config.keys():
             self.detection_interval = trigger_config["data_points_for_detection"]
         assert self.detection_interval > 0, "data_points_for_detection needs to be at least 1"

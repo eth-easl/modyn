@@ -1,8 +1,8 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
-from unittest.mock import patch, MagicMock
-import pathlib
 import os
+import pathlib
 from typing import Optional
+from unittest.mock import patch
 
 import pytest
 from modyn.supervisor.internal.triggers import DataDriftTrigger
@@ -12,7 +12,6 @@ from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
 SAMPLE = (10, 1, 1)
-
 
 
 def get_minimal_training_config() -> dict:
@@ -47,8 +46,10 @@ def get_minimal_evaluation_config() -> dict:
         ],
     }
 
+
 def get_minimal_trigger_config() -> dict:
     return {}
+
 
 def get_minimal_pipeline_config() -> dict:
     return {
@@ -68,8 +69,10 @@ def get_simple_system_config() -> dict:
         "model_storage": {"hostname": "test", "port": 42},
     }
 
+
 def noop(self) -> None:
     pass
+
 
 def noop_model_downloader_constructor_mock(
     self,
@@ -80,6 +83,7 @@ def noop_model_downloader_constructor_mock(
     model_storage_address: str,
 ) -> None:
     pass
+
 
 def noop_dataloader_info_constructor_mock(
     self,
@@ -153,7 +157,7 @@ def test_inform_previous_model_id() -> None:
 def test_inform_always_drift(test_detect_drift) -> None:
     trigger = DataDriftTrigger({"data_points_for_detection": 1})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
@@ -162,7 +166,7 @@ def test_inform_always_drift(test_detect_drift) -> None:
 
     trigger = DataDriftTrigger({"data_points_for_detection": 2})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
@@ -171,7 +175,7 @@ def test_inform_always_drift(test_detect_drift) -> None:
 
     trigger = DataDriftTrigger({"data_points_for_detection": 5})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
@@ -183,7 +187,7 @@ def test_inform_always_drift(test_detect_drift) -> None:
 def test_inform_no_drift(test_detect_no_drift) -> None:
     trigger = DataDriftTrigger({"data_points_for_detection": 1})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
@@ -192,7 +196,7 @@ def test_inform_no_drift(test_detect_no_drift) -> None:
 
     trigger = DataDriftTrigger({"data_points_for_detection": 2})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
@@ -201,7 +205,7 @@ def test_inform_no_drift(test_detect_no_drift) -> None:
 
     trigger = DataDriftTrigger({"data_points_for_detection": 5})
     num_triggers = 0
-    for t in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
+    for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
         trigger.inform_previous_trigger_and_data_points(num_triggers, 42)
         trigger.inform_previous_model(num_triggers)
