@@ -757,8 +757,8 @@ def test__start_evaluations_success(
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
 def test__start_evaluations_failure(
-        test_store_evaluation_results,
-        test_wait_for_evaluation_completion,
+    test_store_evaluation_results,
+    test_wait_for_evaluation_completion,
 ):
     pipeline_config = get_minimal_pipeline_config()
     evaluation_config = get_minimal_evaluation_config()
