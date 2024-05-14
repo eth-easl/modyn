@@ -186,7 +186,7 @@ class DataDriftTrigger(Trigger):
         current_dataloader = prepare_trigger_dataloader_fixed_keys(
             self.previous_trigger_id + 1,
             self.dataloader_info,
-            current_keys,   # type: ignore
+            current_keys,  # type: ignore
             sample_size=self.sample_size,
         )
 
