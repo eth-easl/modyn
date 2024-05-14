@@ -280,13 +280,11 @@ class PipelineExecutor:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
-        num_triggers = 0
 
         triggering_idx_list = []
 
         for i, triggering_idx in enumerate(triggering_indices):
             triggering_idx_list.append(triggering_idx)
-            num_triggers += 1
             self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
@@ -317,10 +315,11 @@ class PipelineExecutor:
                 )
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
+            self._persist_pipeline_log()
 
             self.num_triggers = self.num_triggers + 1
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
-                return num_triggers
+                return len(triggering_idx_list)
 
         # we have to inform the Selector about the remaining data in this batch.
         if len(triggering_idx_list) == 0:
@@ -346,7 +345,7 @@ class PipelineExecutor:
         else:
             self.remaining_data_range = None
 
-        return num_triggers
+        return len(triggering_idx_list)
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
