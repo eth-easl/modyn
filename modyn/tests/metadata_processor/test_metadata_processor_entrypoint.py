@@ -6,9 +6,7 @@ import os
 import pathlib
 from unittest.mock import patch
 
-from modyn.metadata_processor.internal.grpc.metadata_processor_server import (
-    MetadataProcessorServer,
-)
+from modyn.metadata_processor.internal.grpc.metadata_processor_server import MetadataProcessorServer
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
