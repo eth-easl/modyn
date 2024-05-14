@@ -6,7 +6,7 @@ import pathlib
 import sys
 import traceback
 from time import sleep
-from typing import Any, Optional
+from typing import Any, Generator, Optional
 
 from modyn.common.benchmark import Stopwatch
 
@@ -119,6 +119,9 @@ class PipelineExecutor:
 
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         self.trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
+        self.trigger.init_trigger(self.pipeline_id, self.pipeline_config, self.modyn_config, self.eval_directory)
+        if self.previous_model_id is not None:
+            self.trigger.inform_previous_model(self.previous_model_id)
 
         assert self.trigger is not None, "Error during trigger initialization"
 
@@ -241,15 +244,15 @@ class PipelineExecutor:
 
     def _handle_new_data_batch(self, batch: list[tuple[int, int, int]]) -> bool:
         self._sw.start("trigger_inform", overwrite=True)
-        triggering_indices = self.trigger.inform(batch)
-        num_triggers = len(triggering_indices)
-        self.pipeline_log["supervisor"]["num_triggers"] += len(triggering_indices)
+        triggering_indices: Generator[int, None, None] = self.trigger.inform(batch)
+        num_triggers = self._handle_triggers_within_batch(batch, triggering_indices)
+
+        logger.info(f"There are {num_triggers} triggers in this batch.")
+        self.pipeline_log["supervisor"]["num_triggers"] += num_triggers
         self.pipeline_log["supervisor"]["trigger_batch_times"].append(
             {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
         )
 
-        logger.info(f"There are {num_triggers} triggers in this batch.")
-        self._handle_triggers_within_batch(batch, triggering_indices)
         return num_triggers > 0
 
     def _run_training(self, trigger_id: int) -> int:
@@ -287,6 +290,7 @@ class PipelineExecutor:
         # We store the trained model for evaluation in any case.
         self._sw.start("store_trained_model", overwrite=True)
         model_id = self.grpc.store_trained_model(self.current_training_id)
+        self.trigger.inform_previous_model(model_id)
         self.pipeline_log["supervisor"]["triggers"][trigger_id]["store_trained_model_time"] = self._sw.stop()
 
         # Only if the pipeline actually wants to continue the training on it, we set previous model.
@@ -319,12 +323,17 @@ class PipelineExecutor:
 
         return first_timestamp, last_timestamp
 
-    def _handle_triggers_within_batch(self, batch: list[tuple[int, int, int]], triggering_indices: list[int]) -> None:
+    def _handle_triggers_within_batch(
+        self, batch: list[tuple[int, int, int]], triggering_indices: Generator[int, None, None]
+    ) -> int:
         previous_trigger_idx = 0
         logger.info("Handling triggers within batch.")
         self._update_pipeline_stage_and_enqueue_msg(PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.GENERAL)
 
+        triggering_idx_list = []
+
         for i, triggering_idx in enumerate(triggering_indices):
+            triggering_idx_list.append(triggering_idx)
             self._update_pipeline_stage_and_enqueue_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL)
             triggering_data = batch[previous_trigger_idx : triggering_idx + 1]
             previous_trigger_idx = triggering_idx + 1
@@ -346,6 +355,7 @@ class PipelineExecutor:
                 self._update_pipeline_stage_and_enqueue_msg(
                     PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
                 )
+                self.trigger.inform_previous_trigger_and_data_points(trigger_id, num_samples_in_trigger)
                 first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
@@ -361,13 +371,13 @@ class PipelineExecutor:
 
             self.num_triggers = self.num_triggers + 1
             if self.maximum_triggers is not None and self.num_triggers >= self.maximum_triggers:
-                break
+                return len(triggering_idx_list)
 
         # we have to inform the Selector about the remaining data in this batch.
-        if len(triggering_indices) == 0:
+        if len(triggering_idx_list) == 0:
             remaining_data = batch
         else:
-            remaining_data = batch[triggering_indices[-1] + 1 :]
+            remaining_data = batch[triggering_idx_list[-1] + 1 :]
 
         logger.info(f"There are {len(remaining_data)} data points remaining after the trigger.")
         if len(remaining_data) > 0:
@@ -386,6 +396,7 @@ class PipelineExecutor:
                 self.remaining_data_range = (remaining_data[0][1], remaining_data[-1][1])
         else:
             self.remaining_data_range = None
+        return len(triggering_idx_list)
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> JsonResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
