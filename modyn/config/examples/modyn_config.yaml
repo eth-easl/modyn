@@ -198,6 +198,7 @@ selector:
   insertion_threads: 16
   trigger_sample_directory: "/tmp/trigger_samples"
   local_storage_directory: "/tmp/local_storage"
+  local_storage_max_samples_in_file: 1000000
   cleanup_storage_directories_after_shutdown: true
   ignore_existing_trigger_samples: false
 
