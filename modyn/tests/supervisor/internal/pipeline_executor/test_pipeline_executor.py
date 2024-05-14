@@ -548,11 +548,9 @@ def test__handle_triggers_within_batch_trigger_timespan_across_batch(
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
 def test__run_training(
     test_wait_for_training_completion: MagicMock,
-    test_start_evaluation: MagicMock,
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
 ):
@@ -565,7 +563,6 @@ def test__run_training(
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
     test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, None)
     test_store_trained_model.assert_called_once()
-    test_start_evaluation.assert_not_called()
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -746,10 +743,7 @@ def test__start_evaluations_failure(
 
     with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake_get_eval_intervals):
         pipeline_executor._start_evaluations(
-            trigger_id=0,
-            model_id=0,
-            trigger_set_first_timestamp= 70,
-            trigger_set_last_timestamp=100
+            trigger_id=0, model_id=0, trigger_set_first_timestamp=70, trigger_set_last_timestamp=100
         )
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2

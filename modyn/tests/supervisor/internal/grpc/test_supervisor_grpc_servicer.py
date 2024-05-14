@@ -60,7 +60,7 @@ def get_minimal_pipeline_config() -> dict:
                 "dataloader_workers": 2,
                 "batch_size": 64,
                 "metrics": [{"name": "Accuracy"}],
-            }
+            },
         },
     }
 

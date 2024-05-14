@@ -8,7 +8,6 @@ from unittest.mock import patch
 import grpc
 import pytest
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    EvaluateModelResponse,
     EvaluationData,
     EvaluationResultRequest,
     EvaluationResultResponse,
@@ -87,7 +86,7 @@ def get_minimal_pipeline_config() -> dict:
                 "dataloader_workers": 2,
                 "batch_size": 64,
                 "metrics": [{"name": "Accuracy"}],
-            }
+            },
         },
     }
 

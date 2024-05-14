@@ -13,7 +13,6 @@ from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
-    EvaluateModelResponse,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
