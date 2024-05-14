@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
-from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
 from torch.utils.data import DataLoader
 
@@ -98,38 +98,38 @@ def prepare_trigger_dataloader_fixed_keys(
     return DataLoader(train_set, batch_size=dataloader_info.batch_size, num_workers=dataloader_info.num_dataloaders)
 
 
-def get_embeddings(model_downloader: ModelDownloader, dataloader: DataLoader) -> torch.Tensor:
+def get_embeddings(embedding_encoder: EmbeddingEncoder, dataloader: DataLoader) -> torch.Tensor:
     """
-    input: model_downloader with downloaded model
+    input: embedding_encoder with downloaded model
     output: embeddings Tensor
     """
-    assert model_downloader._model is not None
+    assert embedding_encoder._model is not None
     all_embeddings: Optional[torch.Tensor] = None
 
-    model_downloader._model.model.eval()
-    model_downloader._model.model.embedding_recorder.start_recording()
+    embedding_encoder._model.model.eval()
+    embedding_encoder._model.model.embedding_recorder.start_recording()
 
     with torch.no_grad():
         for batch in dataloader:
             data: Union[torch.Tensor, dict]
             if isinstance(batch[1], torch.Tensor):
-                data = batch[1].to(model_downloader._device)
+                data = batch[1].to(embedding_encoder.device)
             elif isinstance(batch[1], dict):
                 data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
                 for name, tensor in batch[1].items():
-                    data[name] = tensor.to(model_downloader._device)
+                    data[name] = tensor.to(embedding_encoder.device)
             else:
                 raise ValueError(f"data type {type(batch[1])} not supported")
 
-            with torch.autocast(model_downloader._device_type, enabled=model_downloader._amp):
-                model_downloader._model.model(data)
-                embeddings = model_downloader._model.model.embedding_recorder.embedding
+            with torch.autocast(embedding_encoder.device_type, enabled=embedding_encoder.amp):
+                embedding_encoder._model.model(data)
+                embeddings = embedding_encoder._model.model.embedding_recorder.embedding
                 if all_embeddings is None:
                     all_embeddings = embeddings
                 else:
                     all_embeddings = torch.cat((all_embeddings, embeddings), 0)
 
-    model_downloader._model.model.embedding_recorder.end_recording()
+    embedding_encoder._model.model.embedding_recorder.end_recording()
 
     return all_embeddings
 

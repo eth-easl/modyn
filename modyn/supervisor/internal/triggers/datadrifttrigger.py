@@ -5,7 +5,7 @@ from typing import Generator, Optional
 import pandas as pd
 from evidently import ColumnMapping
 from evidently.report import Report
-from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
 
 # pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.triggers.trigger import Trigger
@@ -36,7 +36,8 @@ class DataDriftTrigger(Trigger):
         self.model_updated: bool = False
 
         self.dataloader_info: Optional[DataLoaderInfo] = None
-        self.model_downloader: Optional[ModelDownloader] = None
+        self.encoder_downloader: Optional[EmbeddingEncoderDownloader] = None
+        self.embedding_encoder: Optional[EmbeddingEncoder] = None
 
         self.detection_interval: int = 1000
         self.sample_size: Optional[int] = None
@@ -113,16 +114,15 @@ class DataDriftTrigger(Trigger):
             tokenizer=tokenizer,
         )
 
-    def _init_model_downloader(self) -> None:
+    def _init_encoder_downloader(self) -> None:
         assert self.pipeline_id is not None
         assert self.pipeline_config is not None
         assert self.modyn_config is not None
         assert self.base_dir is not None
 
-        self.model_downloader = ModelDownloader(
+        self.encoder_downloader = EmbeddingEncoderDownloader(
             self.modyn_config,
             self.pipeline_id,
-            self.pipeline_config["training"]["device"],
             self.base_dir,
             f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
         )
@@ -134,7 +134,7 @@ class DataDriftTrigger(Trigger):
         self.base_dir = base_dir
 
         self._init_dataloader_info()
-        self._init_model_downloader()
+        self._init_encoder_downloader()
 
     def run_detection(self, reference_embeddings_df: pd.DataFrame, current_embeddings_df: pd.DataFrame) -> bool:
         assert self.dataloader_info is not None
@@ -173,7 +173,8 @@ class DataDriftTrigger(Trigger):
         assert self.previous_data_points is not None and self.previous_data_points > 0
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
-        assert self.model_downloader is not None
+        assert self.encoder_downloader is not None
+        assert self.pipeline_config is not None
 
         reference_dataloader = prepare_trigger_dataloader_by_trigger(
             self.previous_trigger_id,
@@ -193,12 +194,15 @@ class DataDriftTrigger(Trigger):
         # Download previous model as embedding encoder
         # TODO(417) Support custom model as embedding encoder
         if self.model_updated:
-            self.model_downloader.download(self.previous_model_id)
+            self.embedding_encoder = self.encoder_downloader.setup_encoder(
+                self.previous_model_id, self.pipeline_config["training"]["device"]
+            )
             self.model_updated = False
 
         # Compute embeddings
-        reference_embeddings = get_embeddings(self.model_downloader, reference_dataloader)
-        current_embeddings = get_embeddings(self.model_downloader, current_dataloader)
+        assert self.embedding_encoder is not None
+        reference_embeddings = get_embeddings(self.embedding_encoder, reference_dataloader)
+        current_embeddings = get_embeddings(self.embedding_encoder, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
         current_embeddings_df = convert_tensor_to_df(current_embeddings, "col_")
 

@@ -1,11 +1,8 @@
-import io
-import json
 import logging
 import pathlib
 from typing import Optional
 
 import grpc
-import torch
 from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
@@ -13,36 +10,25 @@ from modyn.metadata_database.models import TrainedModel
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
-from modyn.models.coreset_methods_support import CoresetSupportingModule
-from modyn.utils import dynamic_module_import
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder
 from modyn.utils.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
 
-# TODO(433) Unify similar code in trainer_server and evaluator. Create common.utils.ModelDownloader
-class ModelDownloader:
+class EmbeddingEncoderDownloader:
     def __init__(
         self,
         modyn_config: dict,
         pipeline_id: int,
-        device: str,
         base_dir: pathlib.Path,
         model_storage_address: str,
     ):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
-        self._device = device
-        self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self.base_dir = base_dir
         assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
-
         self._model_storage_stub = self.connect_to_model_storage(model_storage_address)
-
-        self.model_configuration_dict: Optional[dict] = None
-        self.model_handler = None
-        self._amp: Optional[bool] = None
-        self._model = None
 
     @staticmethod
     def connect_to_model_storage(model_storage_address: str) -> ModelStorageStub:
@@ -54,41 +40,18 @@ class ModelDownloader:
             )
         return ModelStorageStub(model_storage_channel)
 
-    def _load_state(self, path: pathlib.Path) -> None:
-        assert path.exists(), "Cannot load state from non-existing file"
-        assert self._model is not None
-
-        logger.info(f"Loading model state from {path}")
-        with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
-
-        assert "model" in checkpoint
-        self._model.model.load_state_dict(checkpoint["model"])
-
-        # delete trained model from disk
-        path.unlink()
-
-    def configure(self, model_id: int) -> None:
+    def configure(self, model_id: int, device: str) -> Optional[EmbeddingEncoder]:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
-                return
+                return None
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
-        self._amp = amp
-        model_module = dynamic_module_import("modyn.models")
-        self.model_handler = getattr(model_module, model_class_name)
-        assert self.model_handler is not None
 
-        self.model_configuration_dict = json.loads(model_config)
-        self._model = self.model_handler(self.model_configuration_dict, self._device, amp)
+        embedding_encoder = EmbeddingEncoder(model_id, model_class_name, model_config, device, amp)
+        return embedding_encoder
 
-        assert self._model is not None
-        assert isinstance(self._model.model, CoresetSupportingModule)
-
-    def download(self, model_id: int) -> None:
-        self.configure(model_id)
-
+    def download(self, model_id: int) -> pathlib.Path:
         fetch_request = FetchModelRequest(model_id=model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
@@ -104,4 +67,11 @@ class ModelDownloader:
             base_directory=self.base_dir,
         )
         assert trained_model_path is not None
-        self._load_state(trained_model_path)
+        return trained_model_path
+
+    def setup_encoder(self, model_id: int, device: str) -> EmbeddingEncoder:
+        embedding_encoder = self.configure(model_id, device)
+        assert embedding_encoder is not None
+        trained_model_path = self.download(model_id)
+        embedding_encoder._load_state(trained_model_path)
+        return embedding_encoder

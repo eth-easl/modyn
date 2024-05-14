@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 from modyn.supervisor.internal.triggers import DataDriftTrigger
-from modyn.supervisor.internal.triggers.model_downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -74,11 +74,10 @@ def noop(self) -> None:
     pass
 
 
-def noop_model_downloader_constructor_mock(
+def noop_embedding_encoder_downloader_constructor_mock(
     self,
     modyn_config: dict,
     pipeline_id: int,
-    device: str,
     base_dir: pathlib.Path,
     model_storage_address: str,
 ) -> None:
@@ -120,7 +119,7 @@ def test_init_fails_if_invalid() -> None:
         DataDriftTrigger({"sample_size": 0})
 
 
-@patch.object(ModelDownloader, "__init__", noop_model_downloader_constructor_mock)
+@patch.object(EmbeddingEncoderDownloader, "__init__", noop_embedding_encoder_downloader_constructor_mock)
 @patch.object(DataLoaderInfo, "__init__", noop_dataloader_info_constructor_mock)
 def test_init_trigger() -> None:
     trigger = DataDriftTrigger(get_minimal_trigger_config())
@@ -134,7 +133,7 @@ def test_init_trigger() -> None:
         assert trigger.modyn_config == modyn_config
         assert trigger.base_dir == BASEDIR
         assert isinstance(trigger.dataloader_info, DataLoaderInfo)
-        assert isinstance(trigger.model_downloader, ModelDownloader)
+        assert isinstance(trigger.encoder_downloader, EmbeddingEncoderDownloader)
 
 
 def test_inform_previous_trigger_and_data_points() -> None:
