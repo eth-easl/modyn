@@ -4,10 +4,9 @@
 
 import os
 
-from .amounttrigger import DataAmountTrigger  # noqa: F401
-from .datadrifttrigger import DataDriftTrigger  # noqa: F401
-from .timetrigger import TimeTrigger  # noqa: F401
-from .trigger import Trigger  # noqa: F401
+from .dataloader_info import DataLoaderInfo  # noqa: F401
+from .fixed_keys_dataset import FixedKeysDataset  # noqa: F401
+from .online_trigger_dataset import OnlineTriggerDataset  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

@@ -301,7 +301,12 @@ def test__handle_new_data_batch_no_triggers(test_inform_selector: MagicMock):
     pe.pipeline_id = 42
     batch = [(10, 1), (11, 2)]
 
-    with patch.object(pe.trigger, "inform", return_value=[]) as inform_mock:
+    with patch.object(pe.trigger, "inform") as inform_mock:
+
+        def fake(self):
+            yield from []
+
+        inform_mock.side_effect = fake
         assert not pe._handle_new_data_batch(batch)
 
         inform_mock.assert_called_once_with(batch)
