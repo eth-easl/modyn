@@ -14,6 +14,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
     EvaluateModelResponse,
+    EvaluationAbortedReason,
     EvaluationResultRequest,
     EvaluationStatusRequest,
     JsonString,
@@ -39,7 +40,7 @@ def get_modyn_config():
             "drivername": "sqlite",
             "username": "",
             "password": "",
-            "host": "",
+            "hostname": "",
             "port": 0,
             "database": f"{DATABASE}",
         },
@@ -178,6 +179,7 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
+        assert response.eval_aborted_reason == EvaluationAbortedReason.MODEL_IMPORT_FAILURE
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -186,20 +188,24 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         req = get_evaluate_model_request()
+        # only model_id 1 and 2 exist in metadatabase, see setup_and_teardown
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.DATASET_NOT_FOUND
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
 
 
 @patch(

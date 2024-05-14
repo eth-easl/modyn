@@ -21,7 +21,7 @@ void TestUtils::create_dummy_yaml() {
   out << "    database: test.db" << '\n';
   out << "    username: ''" << '\n';
   out << "    password: ''" << '\n';
-  out << "    host: ''" << '\n';
+  out << "    hostname: ''" << '\n';
   out << "    port: ''" << '\n';
   out.close();
 }
@@ -34,7 +34,7 @@ YAML::Node TestUtils::get_dummy_config() {
   config["storage"]["database"]["database"] = "test.db";
   config["storage"]["database"]["username"] = "";
   config["storage"]["database"]["password"] = "";
-  config["storage"]["database"]["host"] = "";
+  config["storage"]["database"]["hostname"] = "";
   config["storage"]["database"]["port"] = "";
   return config;
 }
