@@ -736,8 +736,10 @@ def test__start_evaluations_success(
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
     pipeline_executor.current_training_id = 0
 
+    intervals = [(0, 100), (100, 200), (None, None), (None, 200), (None, 0), (200, None), (0, None), (0, 0)]
+
     def fake(first_timestamp: int, last_timestamp: int):
-        yield from [(0, 100), (100, 200), (200, 300)]
+        yield from intervals
 
     with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake):
         model_id = 1
@@ -745,12 +747,13 @@ def test__start_evaluations_success(
             trigger_id=0, model_id=model_id, trigger_set_first_timestamp=20, trigger_set_last_timestamp=70
         )
         device = evaluation_config["device"]
+        assert evaluator_stub_mock.evaluate_model.call_count == len(intervals)
+
         expected_calls = [
-            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 0, 100)),
-            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 100, 200)),
-            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 200, 300)),
+            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, start_ts, end_ts))
+            for start_ts, end_ts in intervals
         ]
-        assert evaluator_stub_mock.evaluate_model.call_count == 3
+
         assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls
 
 
