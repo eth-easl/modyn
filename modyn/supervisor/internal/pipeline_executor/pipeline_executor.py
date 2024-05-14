@@ -130,7 +130,7 @@ class PipelineExecutor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
-    # pylint: disable=unused-argument, too-many-locals
+    # pylint: disable=too-many-locals
     def _start_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:
@@ -155,7 +155,7 @@ class PipelineExecutor:
             request = GRPCHandler.prepare_evaluation_request(
                 eval_dataset_config,
                 model_id,
-                self.pipeline_config["training"]["device"],
+                self.pipeline_config["evaluation"]["device"],
                 previous_split,
                 current_split,
             )
@@ -181,7 +181,7 @@ class PipelineExecutor:
                 evaluation = {response.evaluation_id: reporter}
                 assert self.current_training_id is not None, "Training ID not set."
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                # it doesn't make sense to have a result writer here, but we temporarily keep it for the results
+
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
                 self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results

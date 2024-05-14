@@ -7,7 +7,7 @@ import platform
 import tempfile
 from time import sleep
 from unittest import mock
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
@@ -123,14 +123,11 @@ def get_mock_evaluation_transformer():
     )
 
 
-def get_evaluate_model_request(start_timestamp = None, end_timestamp = None):
+def get_evaluate_model_request(start_timestamp=None, end_timestamp=None):
     return EvaluateModelRequest(
         model_id=1,
         dataset_info=DatasetInfo(
-            dataset_id="MNIST",
-            num_dataloaders=1,
-            start_timestamp=start_timestamp,
-            end_timestamp=end_timestamp
+            dataset_id="MNIST", num_dataloaders=1, start_timestamp=start_timestamp, end_timestamp=end_timestamp
         ),
         device="cpu",
         batch_size=4,
@@ -232,7 +229,7 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 def test_evaluate_model_download_trained_model(
-        test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
+    test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
 ):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
@@ -251,12 +248,7 @@ def test_evaluate_model_correct_time_range_used(
     test_connect_to_model_storage, test_download_trained_model, test_mp_start
 ):
     # (start_timestamp, end_timestamp, expected_dataset_size)
-    test_cases = [
-        (None, None, 400),
-        (1000, None, 200),
-        (None, 2000, 300),
-        (1000, 2000, 100)
-    ]
+    test_cases = [(None, None, 400), (1000, None, 200), (None, 2000, 300), (1000, 2000, 100)]
 
     def fake_get_dataset_size(request: GetDatasetSizeRequest):
         if request.HasField("start_timestamp") and request.HasField("end_timestamp"):
