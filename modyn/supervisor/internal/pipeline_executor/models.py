@@ -9,18 +9,15 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal, Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field, model_validator
-from typing_extensions import override
-
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import (
-    EvaluationStatusReporter,
-)
+from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import override
 
 
 @dataclass
@@ -92,25 +89,6 @@ class PipelineBatchState:
 
 
 @dataclass
-class NewDataState:
-    """Pipeline artifacts shared across stages during the processing of new data."""
-
-    # PipelineStage.REPLAY_DATA, PipelineStage.FETCH_NEW_DATA
-    data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
-    """Stores the new unprocessed data to be processed in `HANDLE_NEW_DATA`."""
-
-    fetch_time: int = -1
-    """milliseconds the last data fetch took"""
-
-    # PipelineStage.REPLAY_DATA
-
-    # PipelineStage.FETCH_NEW_DATA
-
-    had_trigger: bool = False
-    """Whether the current new data arrival caused at least one trigger."""
-
-
-@dataclass
 class ExecutionState(PipelineOptions):
     """Represent the state of the pipeline executor including artifacts of pipeline stages."""
 
@@ -122,9 +100,9 @@ class ExecutionState(PipelineOptions):
     """The unix timestamp of the last sample seen and processed by the pipeline executor."""
 
     # this is to store the first and last timestamp of the remaining data after handling all triggers
-    remaining_data: list[tuple[int, int]] = dataclasses.field(default_factory=list)
+    remaining_data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
     remaining_data_range: Optional[tuple[int, int]] = None
-    
+
     triggers: list[int] = dataclasses.field(default_factory=list)
     current_training_id: int | None = None
     trained_models: list[int] = dataclasses.field(default_factory=list)
@@ -137,26 +115,10 @@ class ExecutionState(PipelineOptions):
     previous_model_id: Optional[int] = None
 
     previous_largest_keys: set[int] = dataclasses.field(default_factory=set)
-    
+
     @property
     def maximum_triggers_reached(self) -> bool:
         return self.maximum_triggers is not None and len(self.triggers) >= self.maximum_triggers
-
-
-@dataclass
-class RegisteredStage:
-    """Represent a registered pipeline stage that includes a callable function and the next stage."""
-
-    stage: PipelineStage
-    func: Callable
-    next: PipelineStage | None = None
-    """If next stage if None, the next stage will be decided by the return value of the current stage's `func`.
-
-    If both are None, the pipeline ends.
-    """
-
-    log: bool = True
-    track: bool = False
 
 
 class ConfigLogs(BaseModel):
@@ -177,6 +139,7 @@ class StageInfo(BaseModel):
             A DataFrame if the stage should collect data, else None.
         """
         return None
+
 
 class FetchDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed in the new data.")
@@ -209,7 +172,7 @@ class EvaluateTriggerInfo(StageInfo):
 class _TriggerLogMixin(StageInfo):
     trigger_i: int
     """The index of the trigger in the list of all triggers of this batch."""
-    
+
     trigger_index: int
     """The index in the dataset where the trigger was initiated."""
 
@@ -224,9 +187,10 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame(
-            [self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger], 
-            columns=["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"]
+            [self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger],
+            columns=["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"],
         )
+
 
 class TriggerExecutionInfo(_TriggerLogMixin):
     first_timestamp: int | None
@@ -235,12 +199,12 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame(
-            [self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp], 
-            columns=["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"]
+            [self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp],
+            columns=["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"],
         )
 
 
-class _TrainInfoMixin(_TriggerLogMixin):
+class _TrainInfoMixin(StageInfo):
     trigger_id: int
     training_id: int
 
@@ -268,7 +232,7 @@ class StoreModelInfo(_TrainInfoMixin):
 
 
 class EvaluationInfo(StoreModelInfo):
-    pass
+    evaluations: dict[int, EvaluationStatusReporter]
 
 
 class SelectorInformLog(StageInfo):

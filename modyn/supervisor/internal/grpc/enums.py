@@ -20,16 +20,17 @@ class PipelineStatus(StrEnum):
 
 class PipelineType(StrEnum):
     MAIN = "main"
-    
+
     REPLAY_DATA = "replay_data"
     SERVER_ONLINE = "wait_for_new_data"
-    
+
     NEW_DATA = "new_data"
     NEW_BATCH = "new_data"
-    
+
     TRIGGER = "trigger"
     TRAINING = "training"
     EVALUATION = "evaluation"
+
 
 class PipelineStage(StrEnum):
     """For a state transition graph checkout the `PIPELINE.md` file."""
