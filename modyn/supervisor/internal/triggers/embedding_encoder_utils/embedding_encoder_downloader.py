@@ -21,6 +21,7 @@ class EmbeddingEncoderDownloader:
     Given a model_id and a device, it creates an EmbeddingEncoder,
     downloads model parameters and loads model state.
     """
+
     def __init__(
         self,
         modyn_config: dict,

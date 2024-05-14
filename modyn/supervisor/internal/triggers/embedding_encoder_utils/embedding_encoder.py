@@ -14,6 +14,7 @@ class EmbeddingEncoder:
     """The EmbeddingEncoder stores a model and its metadata.
     DataDriftTrigger uses EmbeddingEncoder to run the model.
     """
+
     def __init__(
         self,
         model_id: int,
