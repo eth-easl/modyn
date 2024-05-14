@@ -708,56 +708,6 @@ def test_execute_pipeline(
 
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
-def test__start_evaluations_failure(
-    test_store_evaluation_results,
-    test_wait_for_evaluation_completion,
-):
-    pipeline_config = get_minimal_pipeline_config()
-    evaluation_config = get_minimal_evaluation_config()
-    pipeline_config["evaluation"] = evaluation_config
-    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
-    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
-    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
-    failure_response = EvaluateModelResponse(
-        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-    )
-    # we let the second evaluation fail; it shouldn't affect the following evaluations
-    evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
-
-    pipeline_executor = PipelineExecutor(
-        START_TIMESTAMP,
-        PIPELINE_ID,
-        get_minimal_system_config(),
-        pipeline_config,
-        str(EVALUATION_DIRECTORY),
-        SUPPORTED_EVAL_RESULT_WRITERS,
-        PIPELINE_STATUS_QUEUE,
-        TRAINING_STATUS_QUEUE,
-        EVAL_STATUS_QUEUE,
-    )
-    pipeline_executor.grpc.evaluator = evaluator_stub_mock
-    pipeline_executor.current_training_id = 0
-
-    def fake_get_eval_intervals(first_timestamp: int, last_timestamp: int):
-        yield from [(0, 100), (100, 200), (200, 300)]
-
-    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake_get_eval_intervals):
-        pipeline_executor._start_evaluations(
-            trigger_id=0, model_id=0, trigger_set_first_timestamp=70, trigger_set_last_timestamp=100
-        )
-        assert evaluator_stub_mock.evaluate_model.call_count == 3
-        assert test_store_evaluation_results.call_count == 2
-        assert test_wait_for_evaluation_completion.call_count == 2
-
-        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{0}-{100}"] != {}
-        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{100}-{200}"] == {
-            "failure_reason": "EMPTY_DATASET"
-        }
-        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{200}-{300}"] != {}
-
-
-@patch.object(GRPCHandler, "wait_for_evaluation_completion")
-@patch.object(GRPCHandler, "store_evaluation_results")
 def test__start_evaluations_success(
     test_store_evaluation_results,
     test_wait_for_evaluation_completion,
@@ -802,3 +752,53 @@ def test__start_evaluations_success(
         ]
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls
+
+
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "store_evaluation_results")
+def test__start_evaluations_failure(
+        test_store_evaluation_results,
+        test_wait_for_evaluation_completion,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    evaluation_config = get_minimal_evaluation_config()
+    pipeline_config["evaluation"] = evaluation_config
+    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
+    failure_response = EvaluateModelResponse(
+        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+    )
+    # we let the second evaluation fail; it shouldn't affect the third evaluation
+    evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
+
+    pipeline_executor = PipelineExecutor(
+        START_TIMESTAMP,
+        PIPELINE_ID,
+        get_minimal_system_config(),
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
+        SUPPORTED_EVAL_RESULT_WRITERS,
+        PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
+    )
+    pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.current_training_id = 0
+
+    def fake_get_eval_intervals(first_timestamp: int, last_timestamp: int):
+        yield from [(0, 100), (100, 200), (200, 300)]
+
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake_get_eval_intervals):
+        pipeline_executor._start_evaluations(
+            trigger_id=0, model_id=0, trigger_set_first_timestamp=70, trigger_set_last_timestamp=100
+        )
+        assert evaluator_stub_mock.evaluate_model.call_count == 3
+        assert test_store_evaluation_results.call_count == 2
+        assert test_wait_for_evaluation_completion.call_count == 2
+
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{0}-{100}"] != {}
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{100}-{200}"] == {
+            "failure_reason": "EMPTY_DATASET"
+        }
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{200}-{300}"] != {}
