@@ -1,4 +1,3 @@
-import pathlib
 from typing import Generator, Optional
 
 from modyn.supervisor.internal.triggers.trigger import Trigger
@@ -25,7 +24,6 @@ class TimeTrigger(Trigger):
             raise ValueError(f"trigger_every must be > 0, but is {self.trigger_every_s}")
 
         super().__init__(trigger_config)
-
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:

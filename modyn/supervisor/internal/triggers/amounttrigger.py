@@ -1,4 +1,3 @@
-import pathlib
 from typing import Generator
 
 from modyn.supervisor.internal.triggers.trigger import Trigger
@@ -16,7 +15,6 @@ class DataAmountTrigger(Trigger):
         self.remaining_data_points = 0
 
         super().__init__(trigger_config)
-
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
