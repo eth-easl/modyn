@@ -189,13 +189,6 @@ class PipelineExecutor:
             {"batch_size": len(batch), "time": self._sw.stop("trigger_inform"), "num_triggers": num_triggers}
         )
 
-        if num_triggers == 0:
-            self._sw.start("selector_inform", overwrite=True)
-            selector_log = self.grpc.inform_selector(self.pipeline_id, batch)
-            self.pipeline_log["supervisor"]["selector_informs"].append(
-                {"total_selector_time": self._sw.stop(), "selector_log": selector_log}
-            )
-
         return num_triggers > 0
 
     def _run_training(self, trigger_id: int) -> None:
@@ -353,7 +346,6 @@ class PipelineExecutor:
         else:
             self.remaining_data_range = None
 
-        self._persist_pipeline_log()
         return num_triggers
 
     def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:

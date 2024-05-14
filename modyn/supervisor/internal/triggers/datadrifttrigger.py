@@ -188,7 +188,7 @@ class DataDriftTrigger(Trigger):
             self.dataloader_info,
             current_keys,
             sample_size=self.sample_size,
-        ) # type: ignore
+        )  # type: ignore
 
         # Download previous model as embedding encoder
         # TODO(417) Support custom model as embedding encoder
