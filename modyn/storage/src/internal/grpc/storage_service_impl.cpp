@@ -281,8 +281,10 @@ Status StorageServiceImpl::GetDatasetSize(  // NOLINT readability-identifier-nam
       return {StatusCode::OK, "Dataset does not exist."};
     }
 
-    const int64_t total_keys = get_number_of_samples_in_dataset_with_range(
-        dataset_id, session, request->start_timestamp(), request->end_timestamp());
+    const int64_t start_timestamp = request->has_start_timestamp() ? request->start_timestamp() : -1;
+    const int64_t end_timestamp = request->has_end_timestamp() ? request->end_timestamp() : -1;
+    const int64_t total_keys =
+        get_number_of_samples_in_dataset_with_range(dataset_id, session, start_timestamp, end_timestamp);
 
     session.close();
 

@@ -48,12 +48,12 @@ class AbstractSelectionStrategy(ABC):
         self.reset_after_trigger: bool = config["reset_after_trigger"]
 
         # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
-        if "uses_weights" in config:
+        if config.get("uses_weights", None):
             self.uses_weights = config["uses_weights"]
         else:
             self.uses_weights = False
 
-        if "tail_triggers" in config:
+        if config.get("tail_triggers", None):
             self.tail_triggers = config["tail_triggers"]
             if self.tail_triggers < 0 or not isinstance(config["tail_triggers"], int):
                 raise ValueError("Tail trigger must be an integer greater than 0")

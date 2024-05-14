@@ -56,10 +56,7 @@ stateDiagram-v2
         state new_data_batch {
             [*] --> EVALUATE_TRIGGER_ON_BATCH
 
-            state trigger_decision <<join>>
-            EVALUATE_TRIGGER_ON_BATCH --> trigger_decision
-            trigger_decision --> INFORM_SELECTOR_NO_TRIGGER
-            trigger_decision --> EXECUTE_TRIGGERS_WITHIN_BATCH
+            EVALUATE_TRIGGER_ON_BATCH --> EXECUTE_TRIGGERS_WITHIN_BATCH
 
             state execute_trigger {
                 [*] --> INFORM_SELECTOR_AND_TRIGGER
@@ -69,7 +66,6 @@ stateDiagram-v2
             EXECUTE_TRIGGERS_WITHIN_BATCH --> execute_trigger
             execute_trigger --> INFORM_SELECTOR_REMAINING_DATA
 
-            INFORM_SELECTOR_NO_TRIGGER --> [*]
             INFORM_SELECTOR_REMAINING_DATA --> [*]
         }
         new_data_batch --> NEW_DATA_HANDLED

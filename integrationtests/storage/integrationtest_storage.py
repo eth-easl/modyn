@@ -11,6 +11,7 @@ from typing import Iterable
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
+from integrationtests.utils import MODYN_CONFIG_FILE, MODYN_DATASET_PATH
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
     DeleteDataRequest,
@@ -33,10 +34,10 @@ from PIL import Image
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-CONFIG_FILE = SCRIPT_PATH.parent.parent.parent / "modyn" / "config" / "examples" / "modyn_config.yaml"
+
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
-DATASET_PATH = pathlib.Path("/app") / "storage" / "datasets" / "test_dataset"
+DATASET_PATH = MODYN_DATASET_PATH / "test_dataset"
 
 # Because we have no mapping of file to key (happens in the storage service), we have to keep
 # track of the images we added to the dataset ourselves and compare them to the images we get
@@ -48,7 +49,7 @@ IMAGE_UPDATED_TIME_STAMPS = []
 
 
 def get_modyn_config() -> dict:
-    with open(CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config
@@ -96,7 +97,7 @@ def check_dataset_availability() -> None:
     assert response.available, "Dataset is not available."
 
 
-def check_dataset_size(expected_size: int, start_timestamp=0, end_timestamp=0) -> None:
+def check_dataset_size(expected_size: int, start_timestamp=None, end_timestamp=None) -> None:
     storage_channel = connect_to_storage()
 
     storage = StorageStub(storage_channel)
@@ -143,6 +144,13 @@ def check_data_per_worker() -> None:
             dataset_id="test_dataset", worker_id=worker_id, total_workers=3, end_timestamp=split_ts2
         )
         responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(request))
+
+        alternative_request = GetDataPerWorkerRequest(
+            dataset_id="test_dataset", worker_id=worker_id, total_workers=3, start_timestamp=0, end_timestamp=split_ts2
+        )
+        alternative_responses: list[GetDataPerWorkerResponse] = list(storage.GetDataPerWorker(alternative_request))
+
+        assert alternative_responses == responses
 
         assert len(responses) == 1, f"Received batched response or no response, shouldn't happen: {responses}"
 
@@ -321,7 +329,6 @@ def test_storage() -> None:
 
     add_images_to_dataset(0, 10, FIRST_ADDED_IMAGES)  # Add images to the dataset.
 
-    response = None
     for i in range(20):
         keys = []
         labels = []
@@ -335,7 +342,7 @@ def test_storage() -> None:
         time.sleep(1)
 
     assert len(responses) > 0, "Did not get any response from Storage"
-    assert len(keys) == 10, f"Not all images were returned."
+    assert len(keys) == 10, "Not all images were returned."
 
     first_image_keys = keys
 
@@ -397,6 +404,11 @@ def test_storage() -> None:
     check_data_per_worker()
     check_dataset_size(30)
     check_dataset_size(10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
+    # a sanity check for 0 as end_timestamp
+    check_dataset_size(0, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1, end_timestamp=0)
+    # this check can be seen as duplicate as the previous one,
+    # but we want to ensure setting start_timestamp as 0 or None has the same effect
+    check_dataset_size(20, start_timestamp=0, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(20, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1)
     check_dataset_size(
         10, start_timestamp=IMAGE_UPDATED_TIME_STAMPS[9] + 1, end_timestamp=IMAGE_UPDATED_TIME_STAMPS[19] + 1

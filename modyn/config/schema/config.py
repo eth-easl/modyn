@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List, Literal, Union
 
 from pydantic import BaseModel, Field
@@ -13,7 +14,7 @@ class HostnamePortMixin(BaseModel):
     """
 
     hostname: str = Field(description="The hostname where the service can be reached.")
-    port: str = Field(description="The port where the service can be reached.")
+    port: int = Field(description="The port where the service can be reached.")
 
 
 class DatabaseMixin(HostnamePortMixin):
@@ -35,9 +36,9 @@ class ProjectConfig(BaseModel):
     Represents the configuration of a project.
     """
 
-    name: str = Field(description="The name of the project.")
-    description: str = Field(description="The description of the project.")
-    version: str = Field(description="The version of the project.")
+    name: str = Field("modyn", description="The name of the project.")
+    description: str | None = Field(None, description="The description of the project.")
+    version: str | None = Field(None, description="The version of the project.")
 
 
 # ------------------------------------------------------ STORAGE ----------------------------------------------------- #
@@ -143,7 +144,7 @@ class DatabaseConfig(DatabaseMixin):
     )
 
 
-class StorageConfig(BaseModel):
+class StorageConfig(HostnamePortMixin):
     """
     Configuration for modyn's storage engine.
     """
@@ -332,7 +333,7 @@ class SupervisorConfig(HostnamePortMixin):
     Configuration for the modyn's supervisor.
     """
 
-    eval_directory: str = Field(description="The directory to store the evaluation results.")
+    eval_directory: str | Path = Field(description="The directory to store the evaluation results.")
 
 
 # ------------------------------------------------------ CONFIG ------------------------------------------------------ #
@@ -341,7 +342,7 @@ class SupervisorConfig(HostnamePortMixin):
 class ModynConfig(BaseModel):
     """Configuration for the Modyn system. Please adapt the fields as needed."""
 
-    project: ProjectConfig
+    project: ProjectConfig = Field(default_factory=ProjectConfig)
     storage: StorageConfig
 
     # model is a reserved keyword in Pydantic, so we use modyn_model instead

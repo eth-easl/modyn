@@ -14,14 +14,14 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
     def _build_downsampling_params(self) -> dict:
         config = super()._build_downsampling_params()
 
-        if "submodular_function" not in self.downsampling_config:
+        if self.downsampling_config.get("submodular_function"):
             raise ValueError(
                 f"Please specify the submodular function used to select the datapoints. "
                 f"Available functions: {SUBMODULAR_FUNCTIONS}, param submodular_function"
             )
         config["submodular_function"] = self.downsampling_config["submodular_function"]
 
-        if "submodular_optimizer" in self.downsampling_config:
+        if self.downsampling_config.get("submodular_optimizer"):
             config["submodular_optimizer"] = self.downsampling_config["submodular_optimizer"]
 
         config["selection_batch"] = self.downsampling_config.get("selection_batch", 64)

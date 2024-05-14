@@ -12,11 +12,14 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Optional, override
 
 import pandas as pd
+from pydantic import BaseModel, Field, model_validator
+
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
-from pydantic import BaseModel, Field, model_validator
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 
 
 @dataclass
@@ -131,6 +134,9 @@ class ExecutionState(PipelineOptions):
     # new_data_batch_pipeline
     batch: PipelineBatchState = dataclasses.field(default_factory=PipelineBatchState)
 
+    # this is to store the first and last timestamp of the remaining data after handling all triggers
+    remaining_data_range: Optional[tuple[int, int]] = None
+
     # INFORM_SELECTOR_AND_TRIGGER
     previous_batch_had_trigger: bool = False
 
@@ -201,6 +207,9 @@ class _TriggerLogMixin(StageInfo):
 class SelectorInformTriggerLog(_TriggerLogMixin):
     selector_log: dict[str, Any]
 
+    first_timestamp: int
+    last_timestamp: int
+    
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame([self.trigger_index, self.trigger_id], columns=["trigger_index", "trigger_id"])
