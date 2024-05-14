@@ -164,7 +164,6 @@ class _BaseSelectionStrategyConfig(BaseModel):
 
 
 class FreshnessSamplingStrategyConfig(_BaseSelectionStrategyConfig):
-
     unused_data_ratio: float = Field(
         0.0,
         description=(
@@ -175,7 +174,6 @@ class FreshnessSamplingStrategyConfig(_BaseSelectionStrategyConfig):
 
 
 class NewDataSelectionStrategyConfig(_BaseSelectionStrategyConfig):
-
     limit_reset: LimitResetStrategy = Field(
         description=(
             "Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true."
