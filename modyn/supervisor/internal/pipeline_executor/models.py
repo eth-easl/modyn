@@ -9,17 +9,15 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, override
+from typing import Any, Callable, Literal, Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field, model_validator
-
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import (
-    EvaluationStatusReporter,
-)
+from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import override
 
 
 @dataclass
@@ -209,7 +207,7 @@ class SelectorInformTriggerLog(_TriggerLogMixin):
 
     first_timestamp: int
     last_timestamp: int
-    
+
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame([self.trigger_index, self.trigger_id], columns=["trigger_index", "trigger_id"])

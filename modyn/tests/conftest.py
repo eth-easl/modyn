@@ -1,8 +1,10 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
+
 from modyn.config.schema.config import (
     DatabaseConfig,
+    DatasetsConfig,
     EvaluatorConfig,
     MetadataDatabaseConfig,
     ModelStorageConfig,
@@ -10,6 +12,7 @@ from modyn.config.schema.config import (
     SelectorConfig,
     StorageConfig,
     TrainingServerConfig,
+    DatasetBinaryFileWrapperConfig
 )
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
@@ -128,7 +131,25 @@ def dummy_system_config(
     )
 
 
-# ----------------------------------------------------- Pipeline ----------------------------------------------------- #
+@pytest.fixture
+def dummy_dataset_config() -> DatasetConfig:
+    return DatasetsConfig(
+        name='test',
+        description="",
+        version="",
+        base_path="",
+        filesystem_wrapper_type="BinaryFilesystemWrapper",
+        file_wrapper_type="BinaryFileWrapper",
+        file_wrapper_config=DatasetBinaryFileWrapperConfig(
+            file_extension=".bin",
+            byteorder="little",
+            record_size=8,
+            label_size=4,
+        ),
+        selector_batch_size=128,
+    )
+
+    # ----------------------------------------------------- Pipeline ----------------------------------------------------- #
 
 
 @pytest.fixture

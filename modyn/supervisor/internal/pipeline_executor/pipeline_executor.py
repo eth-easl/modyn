@@ -10,20 +10,9 @@ from time import sleep
 from typing import Any, Callable
 
 import pandas as pd
-
 from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
-from modyn.supervisor.internal.grpc.enums import (
-    CounterAction,
-    IdType,
-    MsgType,
-    PipelineStage,
-)
-from modyn.supervisor.internal.grpc.template_msg import (
-    counter_submsg,
-    dataset_submsg,
-    id_submsg,
-    pipeline_stage_msg,
-)
+from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
+from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.utils import dynamic_module_import
@@ -119,7 +108,7 @@ class PipelineExecutor:
 
     def execute(
         self, pipeline: dict[PipelineStage, RegisteredStage], initial_stage: PipelineStage = PipelineStage.INIT
-    ) -> None:
+    ) -> Any:
         """Coordinates all pipelines stages until the pipeline execution is finished.
 
         Measures the time for each stage and logs the pipeline state.
@@ -218,10 +207,10 @@ class PipelineExecutor:
                 dataset_id, self.state.start_replay_at, self.state.stop_replay_at
             )
 
-        for self.state.new_data, self.state.new_data.fetch_time in replay_data_generator:
+        for self.state.new_data.data, self.state.new_data.fetch_time in replay_data_generator:
             # update pipeline current_sample_idx and current_sample_time
             self.state.current_sample_time = min(
-                (timestamp for (_, timestamp, _) in self.state.new_data), default=self.state.current_sample_time
+                (timestamp for (_, timestamp, _) in self.state.new_data.data), default=self.state.current_sample_time
             )
 
             # Run new data subpipeline
@@ -258,27 +247,31 @@ class PipelineExecutor:
         largest_keys = set()
         replay_data_generator = self.grpc.get_new_data_since(dataset_id, self.state.new_data.max_timestamp)
 
-        for self.state.new_data, self.state.new_data.fetch_time in replay_data_generator:
+        for self.state.new_data.data, self.state.new_data.fetch_time in replay_data_generator:
             # Since get_new_data_since is inclusive, we have to expect more yet unprocessed samples
             # with `new_data_max_timestamp` alongside already processed samples with `new_data_max_timestamp`.
             # We memorize the already processed samples to avoid processing them again. Using set to get O(1) lookup.
-            self.state.new_data = [
+            self.state.new_data.data = [
                 (key, timestamp, label)
-                for (key, timestamp, label) in self.state.new_data
+                for (key, timestamp, label) in self.state.new_data.data
                 if key not in self.state.previous_largest_keys
             ]
             self.state.new_data.max_timestamp = (
-                max((timestamp for (_, timestamp, _) in self.state.new_data))
-                if len(self.state.new_data) > 0
+                max((timestamp for (_, timestamp, _) in self.state.new_data.data))
+                if len(self.state.new_data.data) > 0
                 else self.state.new_data.max_timestamp
             )
             largest_keys.update(
-                {key for (key, timestamp, _) in self.state.new_data if timestamp == self.state.new_data.max_timestamp}
+                {
+                    key
+                    for (key, timestamp, _) in self.state.new_data.data
+                    if timestamp == self.state.new_data.max_timestamp
+                }
             )
 
             # update pipeline current_sample_idx and current_sample_time
             self.state.current_sample_time = min(
-                (timestamp for (_, timestamp, _) in self.state.new_data), default=self.state.current_sample_time
+                (timestamp for (_, timestamp, _) in self.state.new_data.data), default=self.state.current_sample_time
             )
 
             # process batch: writes new_data_had_trigger
@@ -342,7 +335,7 @@ class PipelineExecutor:
                 else new_data_len - i
             )
             if batch_size > 0:
-                self.state.current_sample_time = batch[0]  # update sample time
+                self.state.current_sample_time = batch[0][1]  # update sample time
             self.state.pipeline_status_queue.put(
                 pipeline_stage_msg(
                     PipelineStage.HANDLE_NEW_DATA,
@@ -373,19 +366,19 @@ class PipelineExecutor:
     @register_stage(new_data_pipeline, PipelineStage.NEW_DATA_HANDLED, then=None)
     def _new_data_handled(self, log: StageLog) -> None:
         self.state.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.NEW_DATA_HANDLED, MsgType.GENERAL))
-        self.logs.materialize(self.state.log_directory, mode="intermediate")
+        self.logs.materialize(self.state.log_directory, mode="increment")
 
         # end of `new_data_pipeline`
 
     # Process new data batch
 
     @register_stage(
-        new_data_batch_pipeline, 
-        PipelineStage.EVALUATE_TRIGGER_ON_BATCH, 
-        then=PipelineStage.EXECUTE_TRIGGERS_WITHIN_BATCH, 
-        track=True
+        new_data_batch_pipeline,
+        PipelineStage.EVALUATE_TRIGGER_ON_BATCH,
+        then=PipelineStage.EXECUTE_TRIGGERS_WITHIN_BATCH,
+        track=True,
     )
-    def _evaluate_trigger_policies(self, log: StageLog) -> PipelineStage:
+    def _evaluate_trigger_policies(self, log: StageLog) -> None:
         """Evaluate trigger policy and inform selector."""
 
         # Evaluate trigger policy
@@ -431,11 +424,13 @@ class PipelineExecutor:
             if self.state.remaining_data_range is not None:
                 # extend the range from last time
                 self.state.remaining_data_range = (
-                    self.state.remaining_data_range[0], self.state.batch.remaining_data[-1][1]
+                    self.state.remaining_data_range[0],
+                    self.state.batch.remaining_data[-1][1],
                 )
             else:
                 self.state.remaining_data_range = (
-                    self.state.batch.remaining_data[0][1], self.state.remaining_data_range[-1][1]
+                    self.state.batch.remaining_data[0][1],
+                    self.state.batch.remaining_data[-1][1],
                 )
             return PipelineStage.INFORM_SELECTOR_REMAINING_DATA
 
@@ -444,7 +439,7 @@ class PipelineExecutor:
     @register_stage(new_data_pipeline, PipelineStage.INFORM_SELECTOR_REMAINING_DATA, then=None, track=True)
     def _inform_selector_remaining_data(self, log: StageLog) -> None:
         """Inform selector about remaining data."""
-        
+
         # These data points will be included in the next trigger because we inform the Selector about them,
         # just like other batches with no trigger at all are included.
         selector_log = self.grpc.inform_selector(self.state.pipeline_id, self.state.batch.remaining_data)
@@ -453,7 +448,6 @@ class PipelineExecutor:
         log.info = SelectorInformLog(selector_log=selector_log, seen_trigger=self.state.batch.previous_trigger_idx)
 
         # end of `new_data_pipeline`
-
 
     # Execute trigger within batch
 
@@ -504,9 +498,10 @@ class PipelineExecutor:
                     id_submsg(IdType.TRIGGER, self.state.batch.trigger_id),
                 )
             )
-
-            self.execute(evaluation_pipeline, PipelineStage.EVALUATE)
             self.state.remaining_data_range = None
+
+            if self.state.pipeline_config.evaluation:
+                self.execute(evaluation_pipeline, PipelineStage.EVALUATE)
 
         else:
             logger.info(f"Skipping training on empty trigger {self.state.batch.trigger_index}]")
@@ -523,8 +518,6 @@ class PipelineExecutor:
                 PipelineStage.RUN_TRAINING, MsgType.ID, id_submsg(IdType.TRIGGER, self.state.batch.trigger_id)
             )
         )
-        first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
-
         num_samples_to_pass_per_trigger = self.state.pipeline_config.training.num_samples_to_pass or []
         current_trigger_index = len(self.state.triggers)
         if current_trigger_index <= len(num_samples_to_pass_per_trigger) - 1:
@@ -596,6 +589,7 @@ class PipelineExecutor:
 
     @register_stage(evaluation_pipeline, PipelineStage.EVALUATE, then=PipelineStage.EVALUATION_COMPLETED, track=True)
     def _evaluate(self, log: StageLog) -> None:
+        assert self.state.training_id
         model_id = self.state.trained_models[-1]
 
         self.state.pipeline_status_queue.put(
@@ -628,6 +622,7 @@ class PipelineExecutor:
         track=True,
     )
     def _store_evaluation_results(self, log: StageLog) -> None:
+        assert self.state.pipeline_config.evaluation
         self.state.pipeline_status_queue.put(
             pipeline_stage_msg(
                 PipelineStage.STORE_EVALUATION_RESULTS,
@@ -666,7 +661,7 @@ class PipelineExecutor:
         return trigger
 
     # pipeline run
-    
+
     def _get_trigger_timespan(
         self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
     ) -> tuple[int, int]:
@@ -679,9 +674,7 @@ class PipelineExecutor:
             if self.state.remaining_data_range is not None:
                 first_timestamp = self.state.remaining_data_range[0]
                 last_timestamp = (
-                    self.state.remaining_data_range[1]
-                    if len(triggering_data) == 0
-                    else triggering_data[-1][1]
+                    self.state.remaining_data_range[1] if len(triggering_data) == 0 else triggering_data[-1][1]
                 )
             else:
                 first_timestamp = triggering_data[0][1]

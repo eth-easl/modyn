@@ -6,6 +6,10 @@ import shutil
 from typing import Optional
 from unittest.mock import MagicMock, call, patch
 
+import pytest
+
+from modyn.config.schema.config import DatasetsConfig, ModynConfig, SupervisorConfig
+from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.evaluation_result_writer import (
     AbstractEvaluationResultWriter,
     JsonResultWriter,
@@ -16,10 +20,11 @@ from modyn.supervisor.internal.pipeline_executor import (
     PipelineExecutor,
     execute_pipeline,
 )
-from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
+from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions, StageLog
 from modyn.supervisor.internal.utils.evaluation_status_reporter import (
     EvaluationStatusReporter,
 )
+from modyn.tests.supervisor.internal.test_supervisor import minimal_system_config
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -31,54 +36,21 @@ PIPELINE_STATUS_QUEUE = mp.Queue()
 TRAINING_STATUS_QUEUE = mp.Queue()
 EVAL_STATUS_QUEUE = mp.Queue()
 
+@pytest.fixture
+def minimal_system_config(dummy_system_config: ModynConfig) -> ModynConfig:
+    config = dummy_system_config.model_copy()
+    config.supervisor = SupervisorConfig(hostname="localhost", port=50051, eval_directory=EVALUATION_DIRECTORY)
+    return config
 
-def get_minimal_training_config() -> dict:
-    return {
-        "gpus": 1,
-        "device": "cpu",
-        "dataloader_workers": 1,
-        "use_previous_model": True,
-        "initial_model": "random",
-        "learning_rate": 0.1,
-        "batch_size": 42,
-        "optimizers": [
-            {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
-        ],
-        "optimization_criterion": {"name": "CrossEntropyLoss"},
-        "checkpointing": {"activated": False},
-        "selection_strategy": {"name": "NewDataStrategy", "maximum_keys_in_memory": 10},
-    }
+@pytest.fixture
+def minimal_pipeline_config(dummy_pipeline_config: ModynPipelineConfig) -> ModynPipelineConfig:
+    config = dummy_pipeline_config.model_copy()
+    return config
 
 
-def get_minimal_evaluation_config() -> dict:
-    return {
-        "device": "cpu",
-        "datasets": [
-            {
-                "dataset_id": "MNIST_eval",
-                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                "dataloader_workers": 2,
-                "batch_size": 64,
-                "metrics": [{"name": "Accuracy"}],
-            }
-        ],
-    }
-
-
-def get_minimal_pipeline_config() -> dict:
-    return {
-        "pipeline": {"name": "Test"},
-        "model": {"id": "ResNet18"},
-        "model_storage": {"full_model_strategy": {"name": "PyTorchFullModel"}},
-        "training": get_minimal_training_config(),
-        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
-        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
-    }
-
-
-def get_minimal_system_config() -> dict:
-    return {}
-
+@pytest.fixture
+def dummy_stage_log() -> StageLog:
+    return StageLog(id="dummy", start=0, sample_idx=1, sample_time=1000)
 
 def noop_constructor_mock(
     self,
@@ -112,14 +84,11 @@ def teardown():
     shutil.rmtree(EVALUATION_DIRECTORY)
 
 
-def get_non_connecting_pipeline_executor(pipeline_config=None) -> PipelineExecutor:
-    if pipeline_config is None:
-        pipeline_config = get_minimal_pipeline_config()
-        
+def get_non_connecting_pipeline_executor(system_config: ModynConfig, pipeline_config: ModynPipelineConfig) -> PipelineExecutor:
     pipeline_options = PipelineOptions(
         start_timestamp=START_TIMESTAMP,
         pipeline_id=PIPELINE_ID,
-        modyn_config=get_minimal_system_config(),
+        modyn_config=system_config,
         pipeline_config=pipeline_config,
         eval_directory=str(EVALUATION_DIRECTORY),
         supervisor_supported_eval_result_writers=SUPPORTED_EVAL_RESULT_WRITERS,
@@ -131,30 +100,20 @@ def get_non_connecting_pipeline_executor(pipeline_config=None) -> PipelineExecut
     return PipelineExecutor(pipeline_options)
 
 
-def test_initialization() -> None:
-    get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
+def test_initialization(minimal_system_config: ModynConfig, minimal_pipeline_config: ModynPipelineConfig) -> None:
+    get_non_connecting_pipeline_executor(minimal_system_config, minimal_pipeline_config)  # pylint: disable=no-value-for-parameter
 
 
-def test_get_dataset_selector_batch_size_given():
-    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-
-    pe.pipeline_config = get_minimal_pipeline_config()
-    pe.modyn_config = {
-        "storage": {
-            "datasets": [{"name": "test", "selector_batch_size": 2048}, {"name": "test1", "selector_batch_size": 128}]
-        }
-    }
-    pe.get_dataset_selector_batch_size()
-    assert pe._selector_batch_size == 2048
-
-
-def test_get_dataset_selector_batch_size_not_given():
-    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-
-    pe.pipeline_config = get_minimal_pipeline_config()
-    pe.modyn_config = {"storage": {"datasets": [{"name": "test"}]}}
-    pe.get_dataset_selector_batch_size()
-    assert pe._selector_batch_size == 128
+def test_get_dataset_selector_batch_size_given(
+    minimal_system_config: ModynConfig, 
+    minimal_pipeline_config: ModynPipelineConfig,
+    dummy_dataset_config: DatasetsConfig,
+):
+    dataset1 = dummy_dataset_config.model_copy()
+    dataset1.selector_batch_size = 2048
+    minimal_system_config.storage.datasets = [dataset1]
+    pe = get_non_connecting_pipeline_executor(minimal_system_config, minimal_pipeline_config)
+    pe.state.selector_batch_size == 2048
 
 
 def test_shutdown_trainer():
@@ -164,11 +123,19 @@ def test_shutdown_trainer():
 
 @patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 42, 0), (11, 43, 1)], {})])
 @patch.object(PipelineExecutor, "_handle_new_data", return_value=False, side_effect=KeyboardInterrupt)
-def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
+def test_fetch_new_data(
+    test__handle_new_data: MagicMock,
+    test_get_new_data_since: MagicMock,
+    minimal_system_config: ModynConfig,
+    minimal_pipeline_config: ModynPipelineConfig,
+    dummy_stage_log: StageLog,
+):
     # This is a simple test and does not the inclusivity filtering!
-    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
+    pe = get_non_connecting_pipeline_executor(minimal_system_config, minimal_pipeline_config)  # pylint: disable=no-value-for-parameter
 
-    pe.wait_for_new_data(21)
+    pe.state.new_data.max_timestamp = 21
+    pe._fetch_new_data(dummy_stage_log)
+    
     test_get_new_data_since.assert_called_once_with("test", 21)
     test__handle_new_data.assert_called_once_with([(10, 42, 0), (11, 43, 1)])
 
@@ -178,6 +145,8 @@ def test_wait_for_new_data(test__handle_new_data: MagicMock, test_get_new_data_s
 def test_wait_for_new_data_batched(test__handle_new_data: MagicMock, test_get_new_data_since: MagicMock):
     # This is a simple test and does not the inclusivity filtering!
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
+
+    
 
     pe.wait_for_new_data(21)
     test_get_new_data_since.assert_called_once_with("test", 21)

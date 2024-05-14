@@ -197,6 +197,7 @@ class Supervisor:
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
     ) -> dict:
+        # pylint: disable-msg=too-many-locals
         pipeline_config_model = self.validate_pipeline_config(pipeline_config)
         if not pipeline_config_model:
             return pipeline_res_msg(exception="Invalid pipeline configuration")
@@ -216,7 +217,7 @@ class Supervisor:
             start_timestamp = self.grpc.get_time_at_storage()
             pipeline_id = self.register_pipeline(pipeline_config_model)
             logger.info(f"Pipeline {pipeline_id} registered, start executing.")
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
@@ -224,8 +225,8 @@ class Supervisor:
                 start_timestamp=start_timestamp,
                 pipeline_id=pipeline_id,
                 modyn_config=self.modyn_config,
-                pipeline_config=pipeline_config,
-                eval_directory=eval_directory,
+                pipeline_config=pipeline_config_model,
+                eval_directory=pathlib.Path(eval_directory),
                 supervisor_supported_eval_result_writers=self.supported_evaluation_result_writers,
                 exception_queue=exception_queue,
                 pipeline_status_queue=pipeline_status_queue,
@@ -235,7 +236,7 @@ class Supervisor:
                 stop_replay_at=stop_replay_at,
                 maximum_triggers=maximum_triggers,
             )
-            process = Process(target=execute_pipeline, args=(pipeline_options, ))
+            process = Process(target=execute_pipeline, args=(pipeline_options,))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
