@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingEncoderDownloader:
+    """The embedding encoder downloader provides a simple interface setup_encoder() to the DataDriftTrigger.
+    Given a model_id and a device, it creates an EmbeddingEncoder,
+    downloads model parameters and loads model state.
+    """
     def __init__(
         self,
         modyn_config: dict,

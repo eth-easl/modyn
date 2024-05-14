@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingEncoder:
+    """The EmbeddingEncoder stores a model and its metadata.
+    DataDriftTrigger uses EmbeddingEncoder to run the model.
+    """
     def __init__(
         self,
         model_id: int,
@@ -33,6 +36,7 @@ class EmbeddingEncoder:
 
         self._model = self.model_handler(self.model_configuration_dict, device, amp)
         assert self._model is not None
+        # The model must be able to record embeddings.
         assert isinstance(self._model.model, CoresetSupportingModule)
 
     def _load_state(self, path: pathlib.Path) -> None:
