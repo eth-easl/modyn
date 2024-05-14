@@ -11,70 +11,52 @@ stateDiagram-v2
     state fork_state <<fork>>
         INIT_CLUSTER_CONNECTION --> fork_state
         fork_state --> replay_data
-        fork_state --> wait_for_new_data
+        fork_state --> serve_online_data
         state replay_data {
             [*] --> REPLAY_DATA
-            REPLAY_DATA_DONE --> [*]
+            REPLAY_DATA --> [*]
         }
-        REPLAY_DATA --> new_data
-        new_data --> REPLAY_DATA_DONE
-        state wait_for_new_data {
+        REPLAY_DATA --> process_new_data
+        process_new_data --> REPLAY_DATA
+        state serve_online_data {
             [*] --> FETCH_NEW_DATA
             FETCH_NEW_DATA --> WAIT_FOR_NEW_DATA
             WAIT_FOR_NEW_DATA --> FETCH_NEW_DATA
             WAIT_FOR_NEW_DATA --> [*]
         }
-        state join_state <<join>>
-        replay_data --> join_state
-        wait_for_new_data --> join_state
-        join_state --> DONE
-    FETCH_NEW_DATA --> new_data
-    new_data --> FETCH_NEW_DATA
-    state train_and_eval {
-        [*] --> training
-        state post_train <<fork>>
-            state training {
-                [*] --> RUN_TRAINING
-                RUN_TRAINING --> TRAINING_COMPLETED
-                TRAINING_COMPLETED --> STORE_TRAINED_MODEL
-                STORE_TRAINED_MODEL --> [*]
-            }
-            training --> post_train
-            state evaluation {
-                [*] --> EVALUATE
-                EVALUATE --> EVALUATION_COMPLETED
-                EVALUATION_COMPLETED --> STORE_EVALUATION_RESULTS
-                STORE_EVALUATION_RESULTS --> end_execute_trigger[*]
-            }
-            post_train --> evaluation
-            post_train --> [*]
-        evaluation --> [*]
-    }
-    state new_data {
-        [*] --> HANDLE_NEW_DATA
-        HANDLE_NEW_DATA --> new_data_batch
-        state new_data_batch {
-            [*] --> EVALUATE_TRIGGER_ON_BATCH
-
-            EVALUATE_TRIGGER_ON_BATCH --> EXECUTE_TRIGGERS_WITHIN_BATCH
-
-            state execute_trigger {
+    replay_data --> DONE
+    serve_online_data --> DONE
+    state process_new_data {
+        state process_new_data_batch {
+            [*] --> EVALUATE_TRIGGER_POLICIES
+            EVALUATE_TRIGGER_POLICIES --> EXECUTE_TRIGGERS
+            state execute_single_trigger {
                 [*] --> INFORM_SELECTOR_AND_TRIGGER
-                INFORM_SELECTOR_AND_TRIGGER --> TRAIN_AND_EVALUATE
-                TRAIN_AND_EVALUATE --> [*]
+                INFORM_SELECTOR_AND_TRIGGER --> training
+                state train_and_store_model {
+                    [*] --> TRAIN
+                    TRAIN --> TRAINING_COMPLETED
+                    TRAINING_COMPLETED --> STORE_TRAINED_MODEL
+                    STORE_TRAINED_MODEL --> [*]
+                }
+                state evaluation {
+                    [*] --> EVALUATE
+                    EVALUATE --> EVALUATION_COMPLETED
+                    EVALUATION_COMPLETED --> STORE_EVALUATION_RESULTS
+                    STORE_EVALUATION_RESULTS --> [*]
+                }
+                train_and_store_model --> evaluation
             }
-            EXECUTE_TRIGGERS_WITHIN_BATCH --> execute_trigger
-            execute_trigger --> INFORM_SELECTOR_REMAINING_DATA
+            EXECUTE_TRIGGERS --> execute_single_trigger
+            execute_single_trigger --> INFORM_SELECTOR_REMAINING_DATA
 
             INFORM_SELECTOR_REMAINING_DATA --> [*]
         }
-        new_data_batch --> NEW_DATA_HANDLED
-        NEW_DATA_HANDLED --> [*]
+        [*] --> process_new_data_batch
+        process_new_data_batch --> [*]
     }
-
-    TRAIN_AND_EVALUATE --> train_and_eval
-    train_and_eval --> TRAIN_AND_EVALUATE
-    
+    FETCH_NEW_DATA --> process_new_data
+    process_new_data --> FETCH_NEW_DATA
     DONE --> EXIT
     EXIT --> [*]
 ```

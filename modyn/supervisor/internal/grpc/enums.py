@@ -18,6 +18,19 @@ class PipelineStatus(StrEnum):
     NOTFOUND = "not found"
 
 
+class PipelineType(StrEnum):
+    MAIN = "main"
+    
+    REPLAY_DATA = "replay_data"
+    SERVER_ONLINE = "wait_for_new_data"
+    
+    NEW_DATA = "new_data"
+    NEW_BATCH = "new_data"
+    
+    TRIGGER = "trigger"
+    TRAINING = "training"
+    EVALUATION = "evaluation"
+
 class PipelineStage(StrEnum):
     """For a state transition graph checkout the `PIPELINE.md` file."""
 
@@ -25,42 +38,39 @@ class PipelineStage(StrEnum):
     INIT = "Initialize pipeline executor"
     INIT_CLUSTER_CONNECTION = "Initialize cluster connection"
 
-    _FORK_DATA_STRATEGY = "Pipeline fork: data strategy"
-    """decide whether to choose replay or fetch new data"""
-
     # Replay Data
     REPLAY_DATA = "Replay data"
     REPLAY_DATA_DONE = "Replay data done"
 
     # Wait for new data
+    SERVE_ONLINE_DATA = "Serve online data"
     FETCH_NEW_DATA = "Fetch new data"
     WAIT_FOR_NEW_DATA = "Wait for new data"
 
     # Process new data
-    HANDLE_NEW_DATA = "Handle new data"
+    PROCESS_NEW_DATA = "Process new data"
 
-    EVALUATE_TRIGGER_ON_BATCH = "Evaluate trigger on batch"
+    PROCESS_NEW_DATA_BATCH = "Process new data batch"
+    EVALUATE_TRIGGER_POLICIES = "Evaluate trigger on batch"
     INFORM_SELECTOR_NO_TRIGGER = "Inform selector about no trigger"
 
-    EXECUTE_TRIGGERS_WITHIN_BATCH = "Handle triggers within batch"
+    # Trigger
+    EXECUTE_TRIGGERS = "Execute triggers within batch"
+    EXECUTE_SINGLE_TRIGGER = "Execute single trigger"
     INFORM_SELECTOR_AND_TRIGGER = "Inform selector and trigger"
-
     INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
 
     NEW_DATA_HANDLED = "New data handled"
 
     # Training
-    TRAIN_AND_EVALUATE = "Train and evaluate"
-    RUN_TRAINING = "Run training"
+    TRAIN_AND_STORE_MODEL = "Train and store model"
+    TRAIN = "Run training"
 
     WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"
     """Implements busy waiting for training completion."""
 
     TRAINING_COMPLETED = "Training completed 🚀"
     STORE_TRAINED_MODEL = "Store trained model"
-
-    _FORK_DECIDE_EVALUATION = "Pipeline fork: decide evaluation"
-    """decide whether to choose evaluate the trained model or not"""
 
     # Evaluation
     EVALUATE = "Run evaluation"
