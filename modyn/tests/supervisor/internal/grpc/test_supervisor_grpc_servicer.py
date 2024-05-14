@@ -54,15 +54,13 @@ def get_minimal_pipeline_config() -> dict:
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
         "evaluation": {
             "device": "cpu",
-            "datasets": [
-                {
-                    "dataset_id": "MNIST_eval",
-                    "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                    "dataloader_workers": 2,
-                    "batch_size": 64,
-                    "metrics": [{"name": "Accuracy"}],
-                }
-            ],
+            "dataset": {
+                "dataset_id": "MNIST_eval",
+                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                "dataloader_workers": 2,
+                "batch_size": 64,
+                "metrics": [{"name": "Accuracy"}],
+            }
         },
     }
 

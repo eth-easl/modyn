@@ -147,25 +147,25 @@ class PipelineExecutor:
 
         self.pipeline_log[EVALUATION_RESULTS][trigger_id] = {}
 
-        for previous_split, current_split in eval_strategy.get_eval_intervals(
+        for interval_start, interval_end in eval_strategy.get_eval_intervals(
             first_timestamp=trigger_set_first_timestamp,
             last_timestamp=trigger_set_last_timestamp,
         ):
-            logger.info(f"Evaluation Starts for model {model_id} on split {previous_split} to {current_split}.")
+            logger.info(f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}.")
             request = GRPCHandler.prepare_evaluation_request(
                 eval_dataset_config,
                 model_id,
                 self.pipeline_config["evaluation"]["device"],
-                previous_split,
-                current_split,
+                interval_start,
+                interval_end,
             )
             self._sw.start("evaluate_model", overwrite=True)
             response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-            interval_name = f"{previous_split}-{current_split}"
+            interval_name = f"{interval_start}-{interval_end}"
             if not response.evaluation_started:
                 reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
                 logger.error(
-                    f"Evaluation for model {model_id} on split {previous_split} to {current_split} not started with "
+                    f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
                     f"reason: {reason}."
                 )
                 self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = {
@@ -173,7 +173,7 @@ class PipelineExecutor:
                 }
                 self._sw.stop("evaluate_model")
             else:
-                logger.info(f"Evaluation started for model {model_id} on split {previous_split} to {current_split}.")
+                logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
                 reporter = EvaluationStatusReporter(
                     self.eval_status_queue, response.evaluation_id, eval_dataset_id, response.dataset_size
                 )
@@ -181,7 +181,6 @@ class PipelineExecutor:
                 evaluation = {response.evaluation_id: reporter}
                 assert self.current_training_id is not None, "Training ID not set."
                 self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-
                 eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
                 self.grpc.store_evaluation_results([eval_result_writer], evaluation)
                 self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results

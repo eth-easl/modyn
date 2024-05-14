@@ -238,14 +238,14 @@ def test_evaluate_model_download_trained_model(
         assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
 
 
-@patch("multiprocessing.Process.start", autospec=True)
+@patch.object(EvaluatorGRPCServicer, "_run_evaluation")
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
     return_value=pathlib.Path("downloaded_model.modyn"),
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 def test_evaluate_model_correct_time_range_used(
-    test_connect_to_model_storage, test_download_trained_model, test_mp_start
+    test_connect_to_model_storage, test_download_trained_model, test__run_evaluation
 ):
     # (start_timestamp, end_timestamp, expected_dataset_size)
     test_cases = [(None, None, 400), (1000, None, 200), (None, 2000, 300), (1000, 2000, 100)]

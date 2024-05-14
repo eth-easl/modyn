@@ -524,32 +524,6 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(self, model_id: int, pipeline_config: dict) -> dict[int, EvaluationStatusReporter]:
-        assert self.evaluator is not None
-        assert self.eval_status_queue is not None
-        if not self.connected_to_evaluator:
-            raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
-        device = pipeline_config["evaluation"]["device"]
-
-        evaluations: dict[int, EvaluationStatusReporter] = {}
-
-        for dataset in pipeline_config["evaluation"]["datasets"]:
-            dataset_id = dataset["dataset_id"]
-            req = GRPCHandler.prepare_evaluation_request(dataset, model_id, device)
-            response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
-
-            if not response.evaluation_started:
-                logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
-            else:
-                evaluation_id = response.evaluation_id
-                logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.eval_status_queue, evaluation_id, dataset_id, response.dataset_size
-                )
-                evaluations[evaluation_id].create_tracker()
-
-        return evaluations
-
     @staticmethod
     def prepare_evaluation_request(
         dataset_config: dict,

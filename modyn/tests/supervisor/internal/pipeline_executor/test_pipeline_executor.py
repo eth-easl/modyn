@@ -724,7 +724,7 @@ def test__start_evaluations_failure(
     failure_response = EvaluateModelResponse(
         evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
     )
-    # the failure response shouldn't affect the following evaluations
+    # we let the second evaluation fail; it shouldn't affect the following evaluations
     evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
 
     pipeline_executor = PipelineExecutor(
@@ -741,11 +741,16 @@ def test__start_evaluations_failure(
     pipeline_executor.grpc.evaluator = evaluator_stub_mock
     pipeline_executor.current_training_id = 0
 
-    def fake(first_timestamp: int, last_timestamp: int):
+    def fake_get_eval_intervals(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
-    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake):
-        pipeline_executor._start_evaluations(0, 0, 70, 100)
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake_get_eval_intervals):
+        pipeline_executor._start_evaluations(
+            trigger_id=0,
+            model_id=0,
+            trigger_set_first_timestamp= 70,
+            trigger_set_last_timestamp=100
+        )
         assert evaluator_stub_mock.evaluate_model.call_count == 3
         assert test_store_evaluation_results.call_count == 2
         assert test_wait_for_evaluation_completion.call_count == 2
@@ -790,24 +795,16 @@ def test__start_evaluations_success(
     def fake(first_timestamp: int, last_timestamp: int):
         yield from [(0, 100), (100, 200), (200, 300)]
 
-    with (
-        patch.object(
-            GRPCHandler, "prepare_evaluation_request", wraps=pipeline_executor.grpc.prepare_evaluation_request
-        ) as prepare_evaluation_request_wrap,
-        patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake),
-    ):
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake):
         model_id = 1
         pipeline_executor._start_evaluations(
             trigger_id=0, model_id=model_id, trigger_set_first_timestamp=20, trigger_set_last_timestamp=70
         )
+        device = evaluation_config["device"]
+        expected_calls = [
+            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 0, 100)),
+            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 100, 200)),
+            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, 200, 300)),
+        ]
         assert evaluator_stub_mock.evaluate_model.call_count == 3
-
-        prepare_evaluation_request_wrap.assert_any_call(
-            eval_dataset_config, model_id, evaluation_config["device"], 0, 100
-        )
-        prepare_evaluation_request_wrap.assert_any_call(
-            eval_dataset_config, model_id, evaluation_config["device"], 100, 200
-        )
-        prepare_evaluation_request_wrap.assert_any_call(
-            eval_dataset_config, model_id, evaluation_config["device"], 200, 300
-        )
+        assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls

@@ -81,15 +81,13 @@ def get_minimal_pipeline_config() -> dict:
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
         "evaluation": {
             "device": "cpu",
-            "datasets": [
-                {
-                    "dataset_id": "MNIST_eval",
-                    "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                    "dataloader_workers": 2,
-                    "batch_size": 64,
-                    "metrics": [{"name": "Accuracy"}],
-                }
-            ],
+            "dataset": {
+                "dataset_id": "MNIST_eval",
+                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                "dataloader_workers": 2,
+                "batch_size": 64,
+                "metrics": [{"name": "Accuracy"}],
+            }
         },
     }
 
@@ -422,34 +420,12 @@ def test_store_trained_model(test_connection_established):
         assert model_id == 42
 
 
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-def test_start_evaluation(test_connection_established):
-    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
-    handler.init_cluster_connection()
-    assert handler.evaluator is not None
-
-    model_id = 10
-    pipeline_config = get_minimal_pipeline_config()
-
-    with patch.object(
-        handler.evaluator,
-        "evaluate_model",
-        return_value=EvaluateModelResponse(evaluation_started=True, evaluation_id=12, dataset_size=1000),
-    ) as avail_method:
-        evaluations = handler.start_evaluation(model_id, pipeline_config)
-
-        assert len(evaluations) == 1
-        assert evaluations[12].dataset_id == "MNIST_eval"
-        assert evaluations[12].dataset_size == 1000
-        avail_method.assert_called_once()
-
-
 def test_prepare_evaluation_request():
     pipeline_config = get_minimal_pipeline_config()
-    dataset_config = pipeline_config["evaluation"]["datasets"][0]
+    dataset_config = pipeline_config["evaluation"]["dataset"]
     dataset_config["tokenizer"] = "DistilBertTokenizerTransform"
     request = GRPCHandler.prepare_evaluation_request(
-        pipeline_config["evaluation"]["datasets"][0], 23, "cpu", start_timestamp=42, end_timestamp=43
+        pipeline_config["evaluation"]["dataset"], 23, "cpu", start_timestamp=42, end_timestamp=43
     )
 
     assert request.model_id == 23
