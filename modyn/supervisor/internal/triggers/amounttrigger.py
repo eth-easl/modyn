@@ -17,8 +17,6 @@ class DataAmountTrigger(Trigger):
 
         super().__init__(trigger_config)
 
-    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
-        pass
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"

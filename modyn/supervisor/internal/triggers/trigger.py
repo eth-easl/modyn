@@ -7,11 +7,12 @@ class Trigger(ABC):
     def __init__(self, trigger_config: dict) -> None:
         assert trigger_config is not None, "trigger_config cannot be None."
 
-    @abstractmethod
+    # pylint: disable=unnecessary-pass
     def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
         """The supervisor initializes the concrete Trigger with Trigger-type-specific configurations
         base_dir: the base directory to store Trigger outputs. A location at the supervisor.
         """
+        pass
 
     @abstractmethod
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
