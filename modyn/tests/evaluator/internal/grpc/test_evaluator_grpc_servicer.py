@@ -223,6 +223,19 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             assert resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
 
 
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_download_trained_model(
+        test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
+):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
+        assert not resp.evaluation_started
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+
+
 @patch("multiprocessing.Process.start", autospec=True)
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
@@ -247,19 +260,6 @@ def test_evaluate_model_correct_time_range_used(
             assert storage_stub_mock.GetDatasetSize.call_args_list == [
                 call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=100, end_timestamp=200))
             ]
-
-
-@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
-@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_download_trained_model(
-    test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
-):
-    with tempfile.TemporaryDirectory() as modyn_temp:
-        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-        resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
-        assert not resp.evaluation_started
-        assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
 
 
 @patch(
