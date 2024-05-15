@@ -54,7 +54,7 @@ def wait_for_evaluation(evaluation_id: int, evaluator: EvaluatorStub) -> Evaluat
     return evaluator.get_evaluation_result(req)
 
 
-def prepare_dataset(dataset_helper: ImageDatasetHelper):
+def prepare_dataset(dataset_helper: ImageDatasetHelper) -> tuple[int, int, int, int, int]:
     dataset_helper.add_images_to_dataset(start_number=0, end_number=5)
     split_ts1 = int(time.time()) + 1
     # we want to make sure the split_ts properly splits the dataset
@@ -154,7 +154,7 @@ def evaluate_model(
     return evaluator.evaluate_model(request)
 
 
-def test_evaluator(dataset_helper: ImageDatasetHelper):
+def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     def validate_eval_result(eval_result_resp: EvaluationResultResponse):
         assert eval_result_resp.valid
         assert len(eval_result_resp.evaluation_data) == 1
@@ -177,7 +177,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper):
         (split_ts1, None, split2_size + split3_size),
         (split_ts2, None, split3_size),
         (None, None, split1_size + split2_size + split3_size),
-        (0, split_ts1, split1_size), # test that 0 is has the same effect as None for start_timestamp
+        (0, split_ts1, split1_size), # test that 0 has the same effect as None for start_timestamp
     ]
     for start_ts, end_ts, expected_size in test_cases:
         print(f"Testing model with start_timestamp={start_ts}, end_timestamp={end_ts}")
