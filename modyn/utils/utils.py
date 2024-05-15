@@ -68,11 +68,6 @@ def current_time_millis() -> int:
     return int(round(timestamp))
 
 
-def current_time_micros() -> int:
-    timestamp = time.time_ns()
-    return int(round(timestamp / 1000))
-
-
 def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:
     """Establishes a connection to a given GRPC channel. Returns the connection status.
 
