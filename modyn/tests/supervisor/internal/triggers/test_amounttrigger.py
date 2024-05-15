@@ -19,24 +19,24 @@ def test_init_fails_if_invalid() -> None:
 def test_inform() -> None:
     trigger = DataAmountTrigger({"data_points_for_trigger": 1})
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([]) == []
-    assert trigger.inform([(10, 1)]) == [0]
-    assert trigger.inform([(10, 1), (10, 1)]) == [0, 1]
-    assert trigger.inform([(10, 1), (10, 1), (10, 1)]) == [0, 1, 2]
+    assert list(trigger.inform([])) == []
+    assert list(trigger.inform([(10, 1)])) == [0]
+    assert list(trigger.inform([(10, 1), (10, 1)])) == [0, 1]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1)])) == [0, 1, 2]
 
     trigger = DataAmountTrigger({"data_points_for_trigger": 2})
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([(10, 1)]) == []
-    assert trigger.inform([(10, 1)]) == [0]
-    assert trigger.inform([(10, 1), (10, 1)]) == [1]
-    assert trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1)]) == [1, 3]
-    assert trigger.inform([(10, 1), (10, 1), (10, 1)]) == [1]
-    assert trigger.inform([(10, 1)]) == [0]
-    assert trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1), (10, 1)]) == [1, 3]
-    assert trigger.inform([(10, 1)]) == [0]
+    assert list(trigger.inform([(10, 1)])) == []
+    assert list(trigger.inform([(10, 1)])) == [0]
+    assert list(trigger.inform([(10, 1), (10, 1)])) == [1]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1)])) == [1, 3]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1)])) == [1]
+    assert list(trigger.inform([(10, 1)])) == [0]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1), (10, 1)])) == [1, 3]
+    assert list(trigger.inform([(10, 1)])) == [0]
 
     trigger = DataAmountTrigger({"data_points_for_trigger": 5})
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    assert trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1)]) == []
-    assert trigger.inform([(10, 1), (10, 1), (10, 1)]) == [0]
-    assert trigger.inform([(10, 1), (10, 1), (10, 1)]) == [2]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1), (10, 1)])) == []
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1)])) == [0]
+    assert list(trigger.inform([(10, 1), (10, 1), (10, 1)])) == [2]

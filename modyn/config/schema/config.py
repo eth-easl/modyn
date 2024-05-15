@@ -66,8 +66,7 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
         )
     )
     ignore_first_line: bool = Field(
-        False,
-        description="If the first line is the table header, you can skip it setting this parameter to True.",
+        False, description="If the first line is the table header, you can skip it setting this parameter to True."
     )
     encoding: str = Field("utf-8", description="Encoding of the CSV files.")
     validate_file_content: bool = Field(
@@ -125,12 +124,10 @@ class DatasetsConfig(BaseModel):
         ),
     )
     file_watcher_interval: int | None = Field(
-        None,
-        description="The interval in seconds in which the file watcher checks for new files.",
+        None, description="The interval in seconds in which the file watcher checks for new files."
     )
     selector_batch_size: int = Field(
-        True,
-        description="The number of samples per which we check for triggers and inform the selector.",
+        True, description="The number of samples per which we check for triggers and inform the selector."
     )
 
 
@@ -186,8 +183,7 @@ class StorageConfig(HostnamePortMixin):
     )
 
     force_fallback_insert: bool = Field(
-        False,
-        description="Enforces fallback insert functionality instead of potentially optimized techniques.",
+        False, description="Enforces fallback insert functionality instead of potentially optimized techniques."
     )
     file_watcher_watchdog_sleep_time_s: int = Field(
         3,
@@ -232,15 +228,9 @@ class MetadataDatabaseConfig(DatabaseConfig):
     """
 
     hash_partition_modulus: int | None = Field(
-        None,
-        description="The modulus to use for the hash partitioning of the metadata.",
+        None, description="The modulus to use for the hash partitioning of the metadata."
     )
-    seed: float | None = Field(
-        None,
-        description="If provided, this number is used to seed the database.",
-        ge=-1,
-        le=1,
-    )
+    seed: float | None = Field(None, description="If provided, this number is used to seed the database.", ge=-1, le=1)
 
 
 # ----------------------------------------------------- SELECTOR ----------------------------------------------------- #
@@ -272,6 +262,10 @@ class SelectorConfig(HostnamePortMixin):
     )
     local_storage_directory: str = Field(
         description="The directory where selection strategies that use the local storage backend persist data to."
+    )
+    local_storage_max_samples_in_file: int = Field(
+        1000000,
+        description=("The maximum amount of samples to be persisted in a single file for the local storage backend."),
     )
     cleanup_storage_directories_after_shutdown: bool = Field(
         False,

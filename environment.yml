@@ -22,6 +22,7 @@ dependencies:
     - grpcio>=1.63
     - protobuf==5.26.*
     - types-protobuf==5.26.*
+    - evidently
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0

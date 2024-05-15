@@ -64,8 +64,6 @@ protobuf_generate(
     IMPORT_DIRS ../../protos
     PROTOC_OUT_DIR "${PROTO_BINARY_DIR}")
 
-message(STATUS "Proto generated files in ${PROTO_BINARY_DIR}: ${PROTO_GENERATED_FILES}")
-
 target_include_directories(modyn-storage-proto PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
 
 if (MODYN_USES_LOCAL_GRPC)
