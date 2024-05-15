@@ -448,7 +448,7 @@ class DatasetConfig(BaseModel):
         description="function used to transform the label which are tensors of integers",
     )
     batch_size: int = Field(description="The batch size to be used during evaluation.", ge=1)
-    dataloader_workers: float = Field(
+    dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
     )
     metrics: List[Metric] = Field(

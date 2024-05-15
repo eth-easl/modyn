@@ -76,7 +76,7 @@ class PipelineBatchState:
     data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
     remaining_data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
 
-    triggering_indices: list[int] = dataclasses.field(default_factory=list)
+    triggering_indexes: list[int] = dataclasses.field(default_factory=list)
     previous_trigger_idx: int = 0
 
     trigger_index: int = -1
@@ -95,8 +95,8 @@ class ExecutionState(PipelineOptions):
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
-    current_sample_index: int = Field(0)
-    current_sample_time: int = Field(0)  # unix timestamp
+    current_sample_index: int = 0
+    current_sample_time: int = 0  # unix timestamp
     """The unix timestamp of the last sample seen and processed by the pipeline executor."""
 
     # this is to store the first and last timestamp of the remaining data after handling all triggers
@@ -143,30 +143,30 @@ class StageInfo(BaseModel):
 
 class FetchDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed in the new data.")
-    trigger_indices: list[int] = Field(..., description="Indices of triggers in the new data.")
+    trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     @override
     def online_df(self) -> pd.DataFrame | None:
-        return pd.DataFrame([self.num_samples, str(self.trigger_indices)], columns=["num_samples", "trigger_indices"])
+        return pd.DataFrame([(self.num_samples, str(self.trigger_indexes))], columns=["num_samples", "trigger_indexes"])
 
 
 class ProcessNewDataInfo(StageInfo):
     fetch_time: int = Field(..., description="Time in milliseconds the fetch took")
     num_samples: int = Field(..., description="Number of samples processed")
-    trigger_indices: list[int] = Field(..., description="Indices of triggers in the new data.")
+    trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     @override
     def online_df(self) -> pd.DataFrame | None:
-        return pd.DataFrame([self.fetch_time, self.num_samples], columns=["fetch_time", "num_samples"])
+        return pd.DataFrame([(self.fetch_time, self.num_samples)], columns=["fetch_time", "num_samples"])
 
 
 class EvaluateTriggerInfo(StageInfo):
     batch_size: int
-    trigger_indices: list[int]
+    trigger_indexes: list[int]
 
     @override
     def online_df(self) -> pd.DataFrame | None:
-        return pd.DataFrame([self.batch_size, list(self.trigger_indices)], columns=["batch_size", "trigger_indices"])
+        return pd.DataFrame([(self.batch_size, list(self.trigger_indexes))], columns=["batch_size", "trigger_indexes"])
 
 
 class _TriggerLogMixin(StageInfo):
@@ -187,7 +187,7 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame(
-            [self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger],
+            [(self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)],
             columns=["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"],
         )
 
@@ -199,7 +199,7 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame(
-            [self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp],
+            [(self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)],
             columns=["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"],
         )
 
@@ -214,35 +214,34 @@ class TrainingInfo(_TrainInfoMixin):
 
     @override
     def online_df(self) -> pd.DataFrame | None:
-        return pd.DataFrame(
-            [self.trigger_index, self.trigger_id, self.training_id],
-            columns=["trigger_index", "trigger_id", "training_id"],
-        )
+        return pd.DataFrame([(self.trigger_id, self.training_id)], columns=["trigger_id", "training_id"])
 
 
 class StoreModelInfo(_TrainInfoMixin):
-    model_id: int
+    id_model: int  # model_ prefix not allowed in pydantic
 
     @override
     def online_df(self) -> pd.DataFrame | None:
         return pd.DataFrame(
-            [self.trigger_index, self.trigger_id, self.training_id, self.model_id],
-            columns=["trigger_index", "trigger_id", "training_id", "model_id"],
+            [(self.trigger_id, self.training_id, self.id_model)],
+            columns=["trigger_id", "training_id", "id_model"],
         )
 
 
 class EvaluationInfo(StoreModelInfo):
-    evaluations: dict[int, EvaluationStatusReporter]
+    pass
 
 
 class SelectorInformLog(StageInfo):
-    selector_log: dict[str, Any]
+    selector_log: dict[str, Any] | None
     remaining_data: bool
     trigger_indexes: list[int]
 
     @override
     def online_df(self) -> pd.DataFrame | None:
-        return pd.DataFrame([self.remaining_data, self.trigger_indexes], columns=["remaining_data", "trigger_indexes"])
+        return pd.DataFrame(
+            [(self.remaining_data, self.trigger_indexes)], columns=["remaining_data", "trigger_indexes"]
+        )
 
 
 class StageLog(BaseModel):
@@ -265,10 +264,11 @@ class StageLog(BaseModel):
         extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
         """
         df = pd.DataFrame(
-            [self.id, self.duration, self.sample_time], columns=["id", "duration", "sample_idx", "sample_time"]
+            [(self.id, self.duration, self.sample_idx, self.sample_time)],
+            columns=["id", "duration", "sample_idx", "sample_time"],
         )
         info_df = self.info.online_df() if self.info else None
-        if info_df and extended:
+        if info_df is not None and extended:
             # add additional columns
             df = pd.concat([df, info_df], axis=1)
 

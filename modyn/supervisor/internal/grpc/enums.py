@@ -22,7 +22,7 @@ class PipelineType(StrEnum):
     MAIN = "main"
 
     REPLAY_DATA = "replay_data"
-    SERVER_ONLINE = "wait_for_new_data"
+    SERVE_ONLINE = "wait_for_new_data"
 
     NEW_DATA = "new_data"
     NEW_BATCH = "new_data"
