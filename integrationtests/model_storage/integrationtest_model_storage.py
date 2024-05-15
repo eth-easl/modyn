@@ -4,7 +4,7 @@ import json
 import logging
 import pathlib
 import shutil
-from typing import Optional
+from typing import Optional, Tuple
 
 import grpc
 import torch
@@ -83,7 +83,9 @@ def insert_triggers_into_database(
     full_strategy: ModelStorageStrategyConfig,
     inc_strategy: Optional[ModelStorageStrategyConfig],
     full_model_interval: Optional[int],
-) -> (int, int):
+) -> Tuple[int, int, int]:
+    parrent_trigger_id = 0
+    child_trigger_id = 1
     with MetadataDatabaseConnection(modyn_config) as database:
         pipeline_id = database.register_pipeline(
             2,
@@ -96,13 +98,13 @@ def insert_triggers_into_database(
             full_model_interval,
         )
 
-        trigger_parent = Trigger(trigger_id=0, pipeline_id=pipeline_id)
-        trigger_child = Trigger(trigger_id=1, pipeline_id=pipeline_id)
+        trigger_parent = Trigger(trigger_id=parrent_trigger_id, pipeline_id=pipeline_id)
+        trigger_child = Trigger(trigger_id=child_trigger_id, pipeline_id=pipeline_id)
         database.session.add(trigger_parent)
         database.session.add(trigger_child)
         database.session.commit()
 
-    return pipeline_id, trigger_parent.trigger_id, trigger_child.trigger_id
+    return pipeline_id, parrent_trigger_id, child_trigger_id
 
 
 def delete_data_from_database(modyn_config: dict, pipeline_id: int):

@@ -1,10 +1,12 @@
 import json
 import pathlib
+import shutil
 import time
+from typing import Optional
 
 import torch
 from integrationtests.utils import ImageDatasetHelper, connect_to_server, get_modyn_config
-from modyn.common.ftp import upload_file
+from modyn.common.ftp import upload_file, delete_file
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -64,8 +66,9 @@ def prepare_dataset(dataset_helper: ImageDatasetHelper):
     return split_ts1, split_ts2, 5, 7, 10
 
 
-def prepare_model():
+def prepare_model() -> int:
     model_file_name = "test_model.modyn"
+    trigger_id = 0
     pathlib.Path(TEST_MODELS_PATH).mkdir(parents=True, exist_ok=True)
     model = ResNet18(model_configuration={"num_classes": 10}, device="cpu", amp=False)
     torch.save({"model": model.model.state_dict(), "metadata": True}, TEST_MODELS_PATH / model_file_name)
@@ -91,7 +94,7 @@ def prepare_model():
             None,
         )
 
-        trigger = Trigger(trigger_id=0, pipeline_id=pipeline_id)
+        trigger = Trigger(trigger_id=trigger_id, pipeline_id=pipeline_id)
         database.session.add(trigger)
         database.session.commit()
 
@@ -99,7 +102,7 @@ def prepare_model():
     model_storage = ModelStorageStub(model_storage_channel)
     register_model_request = RegisterModelRequest(
         pipeline_id=pipeline_id,
-        trigger_id=trigger.trigger_id,
+        trigger_id=trigger_id,
         hostname=MODYN_CONFIG["trainer_server"]["hostname"],
         port=int(MODYN_CONFIG["trainer_server"]["ftp_port"]),
         model_path=model_file_name,
@@ -107,19 +110,24 @@ def prepare_model():
     )
     register_response: RegisterModelResponse = model_storage.RegisterModel(register_model_request)
     assert register_response.success, "Could not register the model"
-    return register_response.model_id, pipeline_id, trigger.trigger_id
+    return register_response.model_id
 
 
 def evaluate_model(
-    model_id: int, start_timestamp: int, end_timestamp: int, evaluator: EvaluatorStub
+    model_id: int, start_timestamp: Optional[int], end_timestamp: Optional[int], evaluator: EvaluatorStub
 ) -> EvaluateModelResponse:
-    eval_transform_function = "import torch\n"
-    "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n\t"
-    "return torch.argmax(model_output, dim=-1)"
+    eval_transform_function = (
+        "import torch\n"
+        "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n\t"
+        "return torch.argmax(model_output, dim=-1)"
+    )
 
-    bytes_parser = "from PIL import Image\nimport io\n"
-    "def bytes_parser_function(data: memoryview) -> Image:\n\t"
-    "return Image.open(io.BytesIO(data)).convert('RGB')"
+    bytes_parser = (
+        "from PIL import Image\n"
+        "import io\n"
+        "def bytes_parser_function(data: memoryview) -> Image:\n\t"
+        "return Image.open(io.BytesIO(data)).convert('RGB')"
+    )
 
     request = EvaluateModelRequest(
         model_id=model_id,
@@ -147,21 +155,38 @@ def evaluate_model(
 
 
 def test_evaluator(dataset_helper: ImageDatasetHelper):
+    def validate_eval_result(eval_result_resp: EvaluationResultResponse):
+        assert eval_result_resp.valid
+        assert len(eval_result_resp.evaluation_data) == 1
+        assert eval_result_resp.evaluation_data[0].metric == "Accuracy"
+
     evaluator_channel = connect_to_server("evaluator")
     evaluator = EvaluatorStub(evaluator_channel)
     split_ts1, split_ts2, split1_size, split2_size, split3_size = prepare_dataset(dataset_helper)
-    model_id, pipeline_id, trigger_id = prepare_model()
+    model_id = prepare_model()
+    eval_model_resp = evaluate_model(model_id, split_ts2, split_ts1, evaluator)
+    assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
+    assert eval_model_resp.dataset_size == 0
+    assert eval_model_resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
 
-    response = evaluate_model(model_id, split_ts2, split_ts1, evaluator)
-    assert not response.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
-    assert response.dataset_size == 0
-    assert response.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+    # (start_timestamp, end_timestamp, expected_dataset_size)
+    test_cases = [
+        (None, split_ts1, split1_size),
+        (None, split_ts2, split1_size + split2_size),
+        (split_ts1, split_ts2, split2_size),
+        (split_ts1, None, split2_size + split3_size),
+        (split_ts2, None, split3_size),
+        (None, None, split1_size + split2_size + split3_size),
+        (0, split_ts1, split1_size), # test that 0 is has the same effect as None for start_timestamp
+    ]
+    for start_ts, end_ts, expected_size in test_cases:
+        print(f"Testing model with start_timestamp={start_ts}, end_timestamp={end_ts}")
+        eval_model_resp = evaluate_model(model_id, start_ts, end_ts, evaluator)
+        assert eval_model_resp.evaluation_started
+        assert eval_model_resp.dataset_size == expected_size
 
-    response = evaluate_model(model_id, split_ts1, split_ts2, evaluator)
-    assert response.evaluation_started
-    assert response.dataset_size == split2_size
-
-    wait_for_evaluation(response.evaluation_id, evaluator)
+        eval_result_resp = wait_for_evaluation(eval_model_resp.evaluation_id, evaluator)
+        validate_eval_result(eval_result_resp)
 
 
 if __name__ == "__main__":
@@ -172,3 +197,11 @@ if __name__ == "__main__":
     finally:
         dataset_helper.cleanup_dataset_dir()
         dataset_helper.cleanup_storage_database()
+        delete_file(
+            MODYN_CONFIG["trainer_server"]["hostname"],
+            int(MODYN_CONFIG["trainer_server"]["ftp_port"]),
+            "modyn",
+            "modyn",
+            "test_model.modyn",
+        )
+        shutil.rmtree(TEST_MODELS_PATH)
