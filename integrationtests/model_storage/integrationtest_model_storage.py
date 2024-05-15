@@ -102,7 +102,7 @@ def insert_triggers_into_database(
         database.session.add(trigger_child)
         database.session.commit()
 
-        return pipeline_id, trigger_parent.trigger_id, trigger_child.trigger_id
+    return pipeline_id, trigger_parent.trigger_id, trigger_child.trigger_id
 
 
 def delete_data_from_database(modyn_config: dict, pipeline_id: int):
