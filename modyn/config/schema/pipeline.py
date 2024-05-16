@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
+from modyn.utils import validate_timestr
+from pydantic import BaseModel, Field, NonNegativeInt, ValidationError, field_validator, model_validator
+from pydantic_core.core_schema import FieldValidationInfo
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
@@ -417,19 +420,6 @@ class TriggerConfig(BaseModel):
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
-
-
-EvalStrategyName = Literal["MatrixEvalStrategy", "OffsetEvalStrategy"]
-
-
-class EvalStrategy(BaseModel):
-    name: EvalStrategyName = Field(description="The name of the evaluation strategy that should be used.")
-    config: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Configuration dictionary that will be passed to the evaluation strategy on initialization.",
-    )
-
-
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
@@ -437,6 +427,64 @@ class Metric(BaseModel):
         None,
         description="A function used to transform the model output before evaluation.",
     )
+
+
+class MatrixEvalStrategyConfig(BaseModel):
+    eval_every: str = Field(
+        description="The interval length for the evaluation "
+        "specified by an integer followed by a time unit (e.g. '100s')."
+    )
+    eval_start_from: NonNegativeInt = Field(
+        description="The timestamp from which the evaluation should start (inclusive). This timestamp is in seconds."
+    )
+    eval_end_at: NonNegativeInt = Field(
+        description="The timestamp at which the evaluation should end (exclusive). This timestamp is in seconds."
+    )
+
+    @field_validator("eval_every")
+    @classmethod
+    def validate_eval_every(cls, value: str) -> str:
+        if not validate_timestr(value):
+            raise ValidationError("eval_every must be a valid time string")
+        return value
+
+    @field_validator("eval_end_at")
+    @classmethod
+    def eval_end_at_must_be_larger(cls, value: NonNegativeInt, info: FieldValidationInfo) -> NonNegativeInt:
+        if value <= info.data["eval_start_from"]:
+            raise ValidationError("eval_end_at must be larger than eval_start_from")
+        return value
+
+
+class OffsetEvalStrategyConfig(BaseModel):
+    offsets: List[str] = Field(
+        description=(
+            "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
+            "OffsetEvalStrategy."
+        )
+    )
+
+    @field_validator("offsets")
+    @classmethod
+    def validate_offsets(cls, value: List[str]) -> List[str]:
+        for offset in value:
+            if offset not in [OffsetEvalStrategy.NEGATIVE_INFINITY, OffsetEvalStrategy.INFINITY]:
+                if not validate_timestr(offset):
+                    raise ValidationError(f"offset {offset} must be a valid time string")
+        return value
+
+
+class MatrixEvalStrategyModel(BaseModel):
+    name: Literal["MatrixEvalStrategy"]
+    config: MatrixEvalStrategyConfig
+
+
+class OffsetEvalStrategyModel(BaseModel):
+    name: Literal["OffsetEvalStrategy"]
+    config: OffsetEvalStrategyConfig
+
+
+EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
 class DatasetConfig(BaseModel):
@@ -459,7 +507,7 @@ class DatasetConfig(BaseModel):
         description="function used to transform the label which are tensors of integers",
     )
     batch_size: int = Field(description="The batch size to be used during evaluation.", ge=1)
-    dataloader_workers: float = Field(
+    dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
     )
     metrics: List[Metric] = Field(
@@ -477,7 +525,7 @@ ResultWriterType = Literal["json", "tensorboard", "log"]
 
 
 class EvaluationConfig(BaseModel):
-    eval_strategy: EvalStrategy = Field(description="The evaluation strategy that should be used.")
+    eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[ResultWriterType] = Field(
         ["json"],

@@ -134,8 +134,12 @@ class PipelineExecutor:
             json.dump(self.pipeline_log, logfile, indent=4)
 
     def _start_single_evaluation(
-        self, model_id: int, trigger_id: int, eval_dataset_config: dict,
-            interval_start: Optional[int], interval_end: Optional[int]
+        self,
+        model_id: int,
+        trigger_id: int,
+        eval_dataset_config: dict,
+        interval_start: Optional[int],
+        interval_end: Optional[int],
     ) -> None:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         eval_dataset_id = eval_dataset_config["dataset_id"]
