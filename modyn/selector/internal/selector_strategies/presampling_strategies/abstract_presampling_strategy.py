@@ -13,7 +13,7 @@ class AbstractPresamplingStrategy(ABC):
         self.pipeline_id = pipeline_id
         self._storage_backend = storage_backend
 
-        if "ratio" not in presampling_config:
+        if presampling_config.get("ratio") is None:
             raise ValueError("Please specify the presampling ratio.")
         self.presampling_ratio = presampling_config["ratio"]
 
