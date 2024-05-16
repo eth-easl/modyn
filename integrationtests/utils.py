@@ -35,6 +35,7 @@ MODYNCLIENT_CONFIG_PATH = pathlib.Path(
     os.getenv("MODYNCLIENT_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples")
 )
 MODYN_DATASET_PATH = pathlib.Path(os.getenv("MODYN_DATASET_PATH", pathlib.Path("/app") / "storage" / "datasets"))
+MODYN_MODELS_PATH = pathlib.Path(os.getenv("MODYN_MODELS_PATH", pathlib.Path("/app") / "model_storage"))
 
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
@@ -139,7 +140,7 @@ def get_model_strategy(strategy_config: dict) -> StrategyConfig:
         name=strategy_config["name"],
         zip=strategy_config["zip"] if "zip" in strategy_config else None,
         zip_algorithm=strategy_config["zip_algorithm"] if "zip_algorithm" in strategy_config else None,
-        config=SelectorJsonString(value=json.dumps(strategy_config["config"])) if "config" in strategy_config else None,
+        config=SelectorJsonString(value=json.dumps(strategy_config)),
     )
 
 
