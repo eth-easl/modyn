@@ -133,13 +133,55 @@ class PipelineExecutor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
+    def _start_single_evaluation(
+        self, model_id: int, trigger_id, eval_dataset_config: dict, interval_start: int, interval_end: int
+    ) -> None:
+        eval_dataset_id = eval_dataset_config["dataset_id"]
+        logger.info(
+            f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}"
+            f" of dataset {eval_dataset_id}."
+        )
+        request = GRPCHandler.prepare_evaluation_request(
+            eval_dataset_config,
+            model_id,
+            self.pipeline_config["evaluation"]["device"],
+            interval_start,
+            interval_end,
+        )
+        self._sw.start("evaluate_model", overwrite=True)
+        response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+        interval_name = f"{interval_start}-{interval_end}"
+        if not response.evaluation_started:
+            reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
+            logger.error(
+                f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
+                f"reason: {reason}."
+            )
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = {
+                "failure_reason": reason,
+            }
+            self._sw.stop("evaluate_model")
+        else:
+            logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
+            reporter = EvaluationStatusReporter(
+                self.eval_status_queue, response.evaluation_id, eval_dataset_id, response.dataset_size
+            )
+            reporter.create_tracker()
+            evaluation = {response.evaluation_id: reporter}
+            assert self.current_training_id is not None, "Training ID not set."
+            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+            eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
+            self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
+                "evaluate_model"
+            )
+
     # pylint: disable=too-many-locals
     def _start_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
-        eval_dataset_config = self.pipeline_config["evaluation"]["dataset"]
-        eval_dataset_id = eval_dataset_config["dataset_id"]
         eval_strategy_config = self.pipeline_config["evaluation"]["eval_strategy"]
         eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config["name"])(
@@ -150,46 +192,12 @@ class PipelineExecutor:
 
         self.pipeline_log[EVALUATION_RESULTS][trigger_id] = {}
 
-        for interval_start, interval_end in eval_strategy.get_eval_intervals(
-            first_timestamp=trigger_set_first_timestamp,
-            last_timestamp=trigger_set_last_timestamp,
-        ):
-            logger.info(f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}.")
-            request = GRPCHandler.prepare_evaluation_request(
-                eval_dataset_config,
-                model_id,
-                self.pipeline_config["evaluation"]["device"],
-                interval_start,
-                interval_end,
-            )
-            self._sw.start("evaluate_model", overwrite=True)
-            response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-            interval_name = f"{interval_start}-{interval_end}"
-            if not response.evaluation_started:
-                reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
-                logger.error(
-                    f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
-                    f"reason: {reason}."
-                )
-                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = {
-                    "failure_reason": reason,
-                }
-                self._sw.stop("evaluate_model")
-            else:
-                logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
-                reporter = EvaluationStatusReporter(
-                    self.eval_status_queue, response.evaluation_id, eval_dataset_id, response.dataset_size
-                )
-                reporter.create_tracker()
-                evaluation = {response.evaluation_id: reporter}
-                assert self.current_training_id is not None, "Training ID not set."
-                self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
-                eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
-                self.grpc.store_evaluation_results([eval_result_writer], evaluation)
-                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results
-                self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
-                    "evaluate_model"
-                )
+        for eval_dataset_config in self.pipeline_config["evaluation"]["datasets"]:
+            for interval_start, interval_end in eval_strategy.get_eval_intervals(
+                first_timestamp=trigger_set_first_timestamp,
+                last_timestamp=trigger_set_last_timestamp,
+            ):
+                self._start_single_evaluation(model_id, trigger_id, eval_dataset_config, interval_start, interval_end)
 
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file

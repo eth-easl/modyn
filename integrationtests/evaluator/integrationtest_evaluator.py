@@ -6,7 +6,7 @@ from typing import Optional
 
 import torch
 from integrationtests.utils import ImageDatasetHelper, connect_to_server, get_modyn_config
-from modyn.common.ftp import upload_file, delete_file
+from modyn.common.ftp import delete_file, upload_file
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -177,7 +177,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
         (split_ts1, None, split2_size + split3_size),
         (split_ts2, None, split3_size),
         (None, None, split1_size + split2_size + split3_size),
-        (0, split_ts1, split1_size), # test that 0 has the same effect as None for start_timestamp
+        (0, split_ts1, split1_size),  # test that 0 has the same effect as None for start_timestamp
     ]
     for start_ts, end_ts, expected_size in test_cases:
         print(f"Testing model with start_timestamp={start_ts}, end_timestamp={end_ts}")

@@ -46,13 +46,15 @@ def get_minimal_training_config() -> dict:
 def get_minimal_evaluation_config() -> dict:
     return {
         "device": "cpu",
-        "dataset": {
-            "dataset_id": "MNIST_eval",
-            "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-            "dataloader_workers": 2,
-            "batch_size": 64,
-            "metrics": [{"name": "Accuracy"}],
-        },
+        "datasets": [
+            {
+                "dataset_id": "MNIST_eval",
+                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                "dataloader_workers": 2,
+                "batch_size": 64,
+                "metrics": [{"name": "Accuracy"}],
+            }
+        ],
     }
 
 
@@ -719,7 +721,7 @@ def test__start_evaluations_success(
 ):
     pipeline_config = get_minimal_pipeline_config()
     evaluation_config = get_minimal_evaluation_config()
-    eval_dataset_config = evaluation_config["dataset"]
+    eval_dataset_config = evaluation_config["datasets"][0]
     pipeline_config["evaluation"] = evaluation_config
     evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])

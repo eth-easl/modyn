@@ -450,7 +450,10 @@ class EvaluationConfig(BaseModel):
         ),
         min_length=1,
     )
-    dataset: DatasetConfig = Field(description="The dataset on which the model is evaluated.")
+    datasets: List[DatasetConfig] = Field(
+        description="An array of all datasets on which the model is evaluated.",
+        min_length=1,
+    )
 
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #

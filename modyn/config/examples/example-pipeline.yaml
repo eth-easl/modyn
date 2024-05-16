@@ -77,28 +77,28 @@ evaluation:
       eval_end_at: 1715094374
   device: "cpu"
   result_writers: ["json", "tensorboard"]
-  dataset:
-    dataset_id: mnist
-    transformations: ["transforms.ToTensor()",
-                      "transforms.Normalize((0.1307,), (0.3081,))"]
-    bytes_parser_function: |
-      from PIL import Image
-      import io
-      def bytes_parser_function(data: bytes) -> Image:
-        return Image.open(io.BytesIO(data))
-    batch_size: 64
-    dataloader_workers: 2
-    metrics:
-      - name: "Accuracy"
-        evaluation_transformer_function: |
-          import torch
-          def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
-            return torch.argmax(model_output, dim=-1)
-      - name: "F1-score"
-        config:
-          num_classes: 10
-          average: "macro"
-        evaluation_transformer_function: |
-          import torch
-          def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
-            return torch.argmax(model_output, dim=-1)
+  datasets:
+    - dataset_id: mnist
+      transformations: ["transforms.ToTensor()",
+                        "transforms.Normalize((0.1307,), (0.3081,))"]
+      bytes_parser_function: |
+        from PIL import Image
+        import io
+        def bytes_parser_function(data: bytes) -> Image:
+          return Image.open(io.BytesIO(data))
+      batch_size: 64
+      dataloader_workers: 2
+      metrics:
+        - name: "Accuracy"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)
+        - name: "F1-score"
+          config:
+            num_classes: 10
+            average: "macro"
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)

@@ -51,13 +51,15 @@ def get_minimal_training_config() -> dict:
 def get_minimal_evaluation_config() -> dict:
     return {
         "device": "cpu",
-        "dataset": {
-            "dataset_id": "MNIST_eval",
-            "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-            "dataloader_workers": 2,
-            "batch_size": 64,
-            "metrics": [{"name": "Accuracy"}],
-        },
+        "datasets": [
+            {
+                "dataset_id": "MNIST_eval",
+                "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+                "dataloader_workers": 2,
+                "batch_size": 64,
+                "metrics": [{"name": "Accuracy"}],
+            }
+        ],
     }
 
 
@@ -224,14 +226,19 @@ def test__validate_training_options():
 def test__validate_evaluation_options():
     sup = Supervisor(get_minimal_system_config())
 
+    # Check that evaluation with identical dataset_ids gets rejected
+    evaluation_config = get_minimal_evaluation_config()
+    evaluation_config["datasets"].append({"dataset_id": "MNIST_eval", "batch_size": 3, "dataloader_workers": 3})
+    assert not sup._validate_evaluation_options(evaluation_config)
+
     # Check that evaluation with an invalid batch size gets rejected
     evaluation_config = get_minimal_evaluation_config()
-    evaluation_config["dataset"]["batch_size"] = -1
+    evaluation_config["datasets"][0]["batch_size"] = -1
     assert not sup._validate_evaluation_options(evaluation_config)
 
     # Check that evaluation with an invalid dataloader amount gets rejected
     evaluation_config = get_minimal_evaluation_config()
-    evaluation_config["dataset"]["dataloader_workers"] = -1
+    evaluation_config["datasets"][0]["dataloader_workers"] = -1
     assert not sup._validate_evaluation_options(evaluation_config)
 
     # Check that evaluation with invalid evaluation writer gets rejected
