@@ -183,7 +183,6 @@ class PipelineExecutor:
                 "evaluate_model"
             )
 
-    # pylint: disable=too-many-locals
     def _start_evaluations(
         self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
     ) -> None:

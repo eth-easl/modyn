@@ -2,7 +2,7 @@ import json
 import pathlib
 import shutil
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 from integrationtests.utils import ImageDatasetHelper, connect_to_server, get_modyn_config
@@ -54,7 +54,7 @@ def wait_for_evaluation(evaluation_id: int, evaluator: EvaluatorStub) -> Evaluat
     return evaluator.get_evaluation_result(req)
 
 
-def prepare_dataset(dataset_helper: ImageDatasetHelper) -> tuple[int, int, int, int, int]:
+def prepare_dataset(dataset_helper: ImageDatasetHelper) -> Tuple[int, int, int, int, int]:
     dataset_helper.add_images_to_dataset(start_number=0, end_number=5)
     split_ts1 = int(time.time()) + 1
     # we want to make sure the split_ts properly splits the dataset
@@ -177,7 +177,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
         (split_ts1, None, split2_size + split3_size),
         (split_ts2, None, split3_size),
         (None, None, split1_size + split2_size + split3_size),
-        (0, split_ts1, split1_size),  # test that 0 has the same effect as None for start_timestamp
+        (0, split_ts1, split1_size),  # verify that 0 has the same effect as None for start_timestamp
     ]
     for start_ts, end_ts, expected_size in test_cases:
         print(f"Testing model with start_timestamp={start_ts}, end_timestamp={end_ts}")

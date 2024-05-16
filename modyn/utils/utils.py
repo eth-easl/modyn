@@ -9,6 +9,7 @@ import math
 import os
 import pathlib
 import random
+import re
 import sys
 import tempfile
 import time
@@ -118,12 +119,10 @@ def grpc_common_config() -> list[Any]:
 
 
 def validate_timestr(timestr: str) -> bool:
-    if timestr[-1] not in SECONDS_PER_UNIT:
+    pattern = r"-?(\d+)([a-z])"
+    match = re.fullmatch(pattern, timestr)
+    if match is None or match.group(2) not in SECONDS_PER_UNIT:
         return False
-
-    if not timestr[:-1].isdigit():
-        return False
-
     return True
 
 

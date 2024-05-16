@@ -5,8 +5,8 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
-from pydantic import BaseModel, Field, NonNegativeInt, ValidationError, field_validator, model_validator
-from pydantic_core.core_schema import FieldValidationInfo
+from pydantic import BaseModel, Field, NonNegativeInt, field_validator, model_validator
+from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
@@ -371,12 +371,12 @@ class TrainingConfig(BaseModel):
     def validate_num_samples_to_pass(cls, data: "TrainingConfig") -> "TrainingConfig":
         if data.initial_model == "pretrained":
             if not data.use_previous_model:
-                raise ValidationError(
+                raise ValueError(
                     "Cannot have use_previous_model == False and use a pretrained initial model."
                     "Initial model would get lost after first trigger."
                 )
             if not data.initial_model_id:
-                raise ValidationError("Initial model set to pretrained, but no initial_model_id given")
+                raise ValueError("Initial model set to pretrained, but no initial_model_id given")
         return data
 
 
@@ -445,15 +445,14 @@ class MatrixEvalStrategyConfig(BaseModel):
     @classmethod
     def validate_eval_every(cls, value: str) -> str:
         if not validate_timestr(value):
-            raise ValidationError("eval_every must be a valid time string")
+            raise ValueError("eval_every must be a valid time string")
         return value
 
-    @field_validator("eval_end_at")
-    @classmethod
-    def eval_end_at_must_be_larger(cls, value: NonNegativeInt, info: FieldValidationInfo) -> NonNegativeInt:
-        if value <= info.data["eval_start_from"]:
-            raise ValidationError("eval_end_at must be larger than eval_start_from")
-        return value
+    @model_validator(mode="after")
+    def eval_end_at_must_be_larger(self) -> Self:
+        if self.eval_start_from >= self.eval_end_at:
+            raise ValueError("eval_end_at must be larger than eval_start_from")
+        return self
 
 
 class OffsetEvalStrategyConfig(BaseModel):
@@ -461,7 +460,8 @@ class OffsetEvalStrategyConfig(BaseModel):
         description=(
             "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
             "OffsetEvalStrategy."
-        )
+        ),
+        min_length=1,
     )
 
     @field_validator("offsets")
@@ -470,7 +470,7 @@ class OffsetEvalStrategyConfig(BaseModel):
         for offset in value:
             if offset not in [OffsetEvalStrategy.NEGATIVE_INFINITY, OffsetEvalStrategy.INFINITY]:
                 if not validate_timestr(offset):
-                    raise ValidationError(f"offset {offset} must be a valid time string")
+                    raise ValueError(f"offset {offset} must be a valid time string")
         return value
 
 
@@ -547,7 +547,7 @@ class EvaluationConfig(BaseModel):
     def validate_dataset_ids(cls, data: "EvaluationConfig") -> "EvaluationConfig":
         dataset_ids = [dataset.dataset_id for dataset in data.datasets]
         if len(set(dataset_ids)) != len(dataset_ids):
-            raise ValidationError("Dataset ids must be unique in evaluation")
+            raise ValueError("Dataset ids must be unique in evaluation")
         return data
 
 
