@@ -131,14 +131,10 @@ class MultiDownsamplingConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_downsampling_thresholds(
-        cls,
-        data: "MultiDownsamplingConfig",
-    ) -> "MultiDownsamplingConfig":
-        if len(data.downsampling_thresholds) != len(data.downsampling_list) - 1:
+    def validate_downsampling_thresholds(self) -> Self:
+        if len(self.downsampling_thresholds) != len(self.downsampling_list) - 1:
             raise ValueError("The downsampling_thresholds list should have one less item than the downsampling_list.")
-        return data
+        return self
 
 
 StorageBackend = Literal["database", "local"]
@@ -280,11 +276,10 @@ class LrSchedulerConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_optimizers(cls, data: "LrSchedulerConfig") -> "LrSchedulerConfig":
-        if data.source == "PyTorch" and len(data.optimizers) != 1:
+    def validate_optimizers(self) -> Self:
+        if self.source == "PyTorch" and len(self.optimizers) != 1:
             raise ValueError("In case a PyTorch LR scheduler is used, the optimizers list should have only one item.")
-        return data
+        return self
 
 
 class TrainingConfig(BaseModel):
@@ -367,17 +362,16 @@ class TrainingConfig(BaseModel):
         return value
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_num_samples_to_pass(cls, data: "TrainingConfig") -> "TrainingConfig":
-        if data.initial_model == "pretrained":
-            if not data.use_previous_model:
+    def validate_pretrained(self) -> Self:
+        if self.initial_model == "pretrained":
+            if not self.use_previous_model:
                 raise ValueError(
                     "Cannot have use_previous_model == False and use a pretrained initial model."
                     "Initial model would get lost after first trigger."
                 )
-            if not data.initial_model_id:
+            if not self.initial_model_id:
                 raise ValueError("Initial model set to pretrained, but no initial_model_id given")
-        return data
+        return self
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
@@ -539,16 +533,6 @@ class EvaluationConfig(BaseModel):
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,
     )
-
-    # Additional validation
-
-    @model_validator(mode="after")
-    @classmethod
-    def validate_dataset_ids(cls, data: "EvaluationConfig") -> "EvaluationConfig":
-        dataset_ids = [dataset.dataset_id for dataset in data.datasets]
-        if len(set(dataset_ids)) != len(dataset_ids):
-            raise ValueError("Dataset ids must be unique in evaluation")
-        return data
 
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
