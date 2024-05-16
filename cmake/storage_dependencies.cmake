@@ -66,7 +66,6 @@ endforeach()
 
 
 ################### gRPC ####################
-set(MODYN_GRPC_CPP_PLUGIN "grpc_cpp_plugin")  # default, without gRPC:: prefix
 set(MODYN_USES_LOCAL_GRPC false)
 if(MODYN_TRY_LOCAL_GRPC)
   set(protobuf_MODULE_COMPATIBLE true)
@@ -83,9 +82,9 @@ if(MODYN_TRY_LOCAL_GRPC)
         message(STATUS "Found protobuf!")
         include_directories(${PROTOBUF_INCLUDE_DIRS})
         set(MODYN_USES_LOCAL_GRPC true)
-        set(MODYN_GRPC_CPP_PLUGIN "gRPC::grpc_cpp_plugin")
-        if (NOT TARGET gRPC::grpc_cpp_plugin)
-          message(FATAL "grpc_cpp_plugin was not defined as a target!")
+        if (NOT TARGET grpc_cpp_plugin)
+          message(STATUS "Since grpc_cpp_plugin was not defined as a target, we define it manually.")
+          add_executable(grpc_cpp_plugin ALIAS gRPC::grpc_cpp_plugin) 
         endif()
       else()
         message(FATAL "Did not find Protobuf, please run cmake in a clean build directory with -DMODYN_TRY_LOCAL_GRPC=Off or install protobuf on your system.")
