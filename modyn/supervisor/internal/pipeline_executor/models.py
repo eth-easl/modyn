@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import logging
 import multiprocessing as mp
 import os
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ from modyn.supervisor.internal.utils.evaluation_status_reporter import Evaluatio
 from pydantic import BaseModel, Field, model_validator
 from typing_extensions import override
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class PipelineOptions:
@@ -54,13 +56,15 @@ class PipelineOptions:
 
     @cached_property
     def selector_batch_size(self) -> int:
-        dataset_id = self.pipeline_config.data.dataset_id
-
         for dataset in self.modyn_config.storage.datasets:
-            if dataset.name == dataset_id:
+            if dataset.name == self.dataset_id:
                 return dataset.selector_batch_size
 
-        assert False, f"Dataset with id {dataset_id} not found in storage configuration."
+        logger.info(
+            f"Dataset with id {self.dataset_id} not found in storage configuration. "
+            "Using default 128 for selector_batch_size."
+        )
+        return 128
 
     @model_validator(mode="after")
     def validate_replay(self) -> PipelineOptions:

@@ -6,7 +6,7 @@ import sys
 import traceback
 from datetime import datetime
 from time import sleep
-from typing import Callable, TypeVar
+from typing import Callable, Generator, TypeVar
 
 import pandas as pd
 from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
@@ -117,7 +117,7 @@ class PipelineExecutor:
         # pipeline controllers objects
         self.trigger = self._setup_trigger()
         self.grpc = GRPCHandler(
-            self.state.modyn_config,
+            self.state.modyn_config.model_dump(by_alias=True),
             self.state.pipeline_status_queue,
             self.state.training_status_queue,
             self.state.eval_status_queue,
@@ -361,15 +361,15 @@ class PipelineExecutor:
         """
 
         # Evaluate trigger policy and inform selector
-        trigger_indexes = self._evaluate_trigger_policies(s, self.logs, batch)
+        lazy_trigger_indexes = self._evaluate_trigger_policies(s, self.logs, batch)
 
         # Execute triggers within batch (training & evaluation subpipelines)
-        self._execute_triggers(s, self.logs, batch, trigger_indexes)
+        executed_triggers = self._execute_triggers(s, self.logs, batch, lazy_trigger_indexes)
 
         # Inform selector about remaining data
-        self._inform_selector_remaining_data(s, self.logs, batch, trigger_indexes)
+        self._inform_selector_remaining_data(s, self.logs, batch, executed_triggers)
 
-        return trigger_indexes
+        return executed_triggers
 
     @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EVALUATE_TRIGGER_POLICIES, track=True)
     def _evaluate_trigger_policies(
@@ -381,29 +381,34 @@ class PipelineExecutor:
             List of indexes of data points that caused a trigger.
         """
         # Evaluate trigger policy
-        trigger_indexes = self.trigger.inform(batch)
+        lazy_trigger_indexes = self.trigger.inform(batch)
 
         # add log data
-        log.info = EvaluateTriggerInfo(batch_size=len(batch), trigger_indexes=trigger_indexes)
+        log.info = EvaluateTriggerInfo(batch_size=len(batch), trigger_indexes=lazy_trigger_indexes)
 
-        return trigger_indexes
+        return lazy_trigger_indexes
 
     @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EXECUTE_TRIGGERS, track=True)
     def _execute_triggers(
-        self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]], trigger_indexes: list[int]
-    ) -> None:
+        self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]], trigger_indexes: Generator[int]
+    ) -> list[int]:
         """Evaluate trigger policy, start training after trigger and inform selector.
 
         Args:
             s: Execution state of the pipeline executor.
+            
+        Returns:
+            The list of the actually processed triggers
         """
         logger.info(f"Processing {len(s.triggers)} triggers in this batch.")
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.EXECUTE_TRIGGERS, MsgType.GENERAL))
 
         previous_trigger_index = 0
         trigger_index = -1
+        processed_trigger_indexes: list[int] = []
         for i, trigger_index in enumerate(trigger_indexes):
             # Run training and evaluation subpipelines
+            processed_trigger_indexes.append(trigger_index)
             trigger_data = batch[previous_trigger_index : trigger_index + 1]
             previous_trigger_index = trigger_index + 1
 
@@ -412,6 +417,8 @@ class PipelineExecutor:
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break
+            
+        return processed_trigger_indexes
 
     @pipeline_stage(PipelineType.NEW_DATA, PipelineStage.INFORM_SELECTOR_REMAINING_DATA, track=True)
     def _inform_selector_remaining_data(
@@ -512,8 +519,7 @@ class PipelineExecutor:
         # and then also notifies it about the triggering. This means the next training call on trigger_id will
         # guarantee that all data until that point has been processed by the selector.
         trigger_id, selector_log = self.grpc.inform_selector_and_trigger(s.pipeline_id, trigger_data)
-
-        num_samples_in_trigger = self.grpc.get_number_of_samples(s.pipeline_id, trigger_index)
+        num_samples_in_trigger = self.grpc.get_number_of_samples(s.pipeline_id, trigger_id)
 
         # add log data
         log.info = SelectorInformTriggerInfo(
@@ -558,7 +564,11 @@ class PipelineExecutor:
             num_samples_to_pass = None
 
         s.current_training_id = self.grpc.start_training(
-            s.pipeline_id, trigger_id, s.pipeline_config, s.previous_model_id, num_samples_to_pass
+            s.pipeline_id,
+            trigger_id,
+            s.pipeline_config.model_dump(by_alias=True),
+            s.previous_model_id,
+            num_samples_to_pass
         )
         trainer_log = self.grpc.wait_for_training_completion(s.current_training_id, s.pipeline_id, trigger_id)
 
