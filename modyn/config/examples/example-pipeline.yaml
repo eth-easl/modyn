@@ -37,7 +37,6 @@ training:
     name: "CrossEntropyLoss"
   lr_scheduler:
     name: "StepLR"
-    custom: True
     optimizers: ["default"]
     config:
       step_size: 10
