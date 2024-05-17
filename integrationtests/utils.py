@@ -63,7 +63,6 @@ def get_minimal_pipeline_config(
             "use_previous_model": True,
             "initial_model": "random",
             "initial_pass": {"activated": False},
-            "learning_rate": 0.1,
             "batch_size": 42,
             "optimizers": [
                 {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},

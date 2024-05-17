@@ -5,10 +5,16 @@ from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
-from pydantic import BaseModel, Field, NonNegativeInt, field_validator, model_validator
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
+
+
+class BaseModel(PydanticBaseModel):
+    class Config:
+        extra = "forbid"
 
 
 class Pipeline(BaseModel):
@@ -258,7 +264,7 @@ class OptimizationCriterion(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
 
 
-LrSchedulerSource = Literal["PyTorch", "custom"]
+LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class LrSchedulerConfig(BaseModel):
@@ -312,7 +318,6 @@ class TrainingConfig(BaseModel):
         description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
     )
     batch_size: float = Field(description="The batch size to be used during training.", ge=1)
-    learning_rate: float = Field(0.1, description="The learning rate to be used during training.")
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
