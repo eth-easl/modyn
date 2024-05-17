@@ -22,7 +22,6 @@ def get_minimal_pipeline_config() -> dict:
             "use_previous_model": True,
             "initial_model": "random",
             "initial_pass": {"activated": False},
-            "learning_rate": 0.1,
             "batch_size": 42,
             "optimizers": [
                 {"name": "default1", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
@@ -38,6 +37,14 @@ def get_minimal_pipeline_config() -> dict:
 
 def get_minimal_evaluation_config() -> dict:
     return {
+        "eval_strategy": {
+            "name": "MatrixEvalStrategy",
+            "config": {
+                "eval_every": "100s",
+                "eval_start_from": 0,
+                "eval_end_at": 300,
+            },
+        },
         "device": "cpu",
         "datasets": [
             {
