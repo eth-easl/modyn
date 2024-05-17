@@ -4,16 +4,15 @@ import os
 import pathlib
 import shutil
 from typing import Optional
+from unittest import mock
 from unittest.mock import MagicMock, call, patch
 
-from modyn.supervisor.internal.evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-    JsonResultWriter,
-    TensorboardResultWriter,
-)
+# pylint: disable=no-name-in-module
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.pipeline_executor import EVALUATION_RESULTS, PipelineExecutor, execute_pipeline
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -67,6 +66,17 @@ def get_minimal_pipeline_config() -> dict:
         "training": get_minimal_training_config(),
         "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
         "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
+    }
+
+
+def get_minimal_eval_strategies_config() -> dict:
+    return {
+        "name": "MatrixEvalStrategy",
+        "config": {
+            "eval_every": "100s",
+            "eval_start_from": 0,
+            "eval_end_at": 300,
+        },
     }
 
 
@@ -545,17 +555,14 @@ def test__handle_triggers_within_batch_trigger_timespan_across_batch(
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "wait_for_training_completion")
 def test__run_training(
     test_wait_for_training_completion: MagicMock,
-    test_start_evaluation: MagicMock,
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
 ):
     pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
     pe.pipeline_id = 42
-
     pe._run_training(21)
     assert pe.previous_model_id == 101
     assert pe.current_training_id == 1337
@@ -563,7 +570,6 @@ def test__run_training(
     test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
     test_start_training.assert_called_once_with(42, 21, get_minimal_pipeline_config(), None, None)
     test_store_trained_model.assert_called_once()
-    test_start_evaluation.assert_not_called()
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -586,48 +592,6 @@ def test__run_training_set_num_samples_to_pass(
     # because the next trigger is out of the range of `num_samples_to_pass`
     pe._run_training(trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, pipeline_config, 101, None)
-
-
-@patch.object(GRPCHandler, "store_trained_model", return_value=101)
-@patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "store_evaluation_results")
-@patch.object(GRPCHandler, "wait_for_evaluation_completion")
-@patch.object(GRPCHandler, "start_evaluation")
-@patch.object(GRPCHandler, "wait_for_training_completion")
-def test__run_training_with_evaluation(
-    test_wait_for_training_completion: MagicMock,
-    test_start_evaluation: MagicMock,
-    test_wait_for_evaluation_completion: MagicMock,
-    test_store_evaluation_results: MagicMock,
-    test_start_training: MagicMock,
-    test_store_trained_model: MagicMock,
-):
-    evaluations = {1: EvaluationStatusReporter(TRAINING_STATUS_QUEUE, EVAL_ID, "MNIST_eval", 1000)}
-    test_start_evaluation.return_value = evaluations
-    pe = get_non_connecting_pipeline_executor()  # pylint: disable=no-value-for-parameter
-    evaluation_pipeline_config = get_minimal_pipeline_config()
-    evaluation_pipeline_config["evaluation"] = get_minimal_evaluation_config()
-    evaluation_pipeline_config["evaluation"]["result_writers"] = ["json"]
-    pe.pipeline_config = evaluation_pipeline_config
-
-    pe.pipeline_id = 42
-
-    pe._run_training(21)
-    assert pe.previous_model_id == 101
-    assert pe.current_training_id == 1337
-
-    test_wait_for_training_completion.assert_called_once_with(1337, 42, 21)
-    test_start_training.assert_called_once_with(42, 21, evaluation_pipeline_config, None, None)
-    test_store_trained_model.assert_called_once()
-
-    test_start_evaluation.assert_called_once_with(101, evaluation_pipeline_config)
-    test_wait_for_evaluation_completion.assert_called_once_with(1337, evaluations)
-    test_store_evaluation_results.assert_called_once()
-    assert len(test_store_evaluation_results.call_args[0][0]) == 1
-    result_writer: AbstractEvaluationResultWriter = test_store_evaluation_results.call_args[0][0][0]
-    assert result_writer.eval_directory == EVALUATION_DIRECTORY
-    assert result_writer.pipeline_id == 42
-    assert result_writer.trigger_id == 21
 
 
 @patch.object(GRPCHandler, "get_data_in_interval", return_value=[([(10, 1), (11, 2)], 0)])
@@ -747,3 +711,104 @@ def test_execute_pipeline(
 
     test_init_cluster_connection.assert_called_once()
     test_execute.assert_called_once()
+
+
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "store_evaluation_results")
+def test__start_evaluations_success(
+    test_store_evaluation_results,
+    test_wait_for_evaluation_completion,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    evaluation_config = get_minimal_evaluation_config()
+    eval_dataset_config = evaluation_config["datasets"][0]
+    pipeline_config["evaluation"] = evaluation_config
+    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+    evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+        evaluation_started=True, evaluation_id=42, dataset_size=10
+    )
+
+    pipeline_executor = PipelineExecutor(
+        START_TIMESTAMP,
+        PIPELINE_ID,
+        get_minimal_system_config(),
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
+        SUPPORTED_EVAL_RESULT_WRITERS,
+        PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
+    )
+    pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.current_training_id = 0
+
+    intervals = [(0, 100), (100, 200), (None, None), (None, 200), (None, 0), (200, None), (0, None), (0, 0)]
+
+    def fake(first_timestamp: int, last_timestamp: int):
+        yield from intervals
+
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake):
+        model_id = 1
+        pipeline_executor._start_evaluations(
+            trigger_id=0, model_id=model_id, trigger_set_first_timestamp=20, trigger_set_last_timestamp=70
+        )
+        device = evaluation_config["device"]
+        assert evaluator_stub_mock.evaluate_model.call_count == len(intervals)
+
+        expected_calls = [
+            call(GRPCHandler.prepare_evaluation_request(eval_dataset_config, model_id, device, start_ts, end_ts))
+            for start_ts, end_ts in intervals
+        ]
+
+        assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls
+
+
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "store_evaluation_results")
+def test__start_evaluations_failure(
+    test_store_evaluation_results,
+    test_wait_for_evaluation_completion,
+):
+    pipeline_config = get_minimal_pipeline_config()
+    evaluation_config = get_minimal_evaluation_config()
+    pipeline_config["evaluation"] = evaluation_config
+    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
+    failure_response = EvaluateModelResponse(
+        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+    )
+    # we let the second evaluation fail; it shouldn't affect the third evaluation
+    evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
+
+    pipeline_executor = PipelineExecutor(
+        START_TIMESTAMP,
+        PIPELINE_ID,
+        get_minimal_system_config(),
+        pipeline_config,
+        str(EVALUATION_DIRECTORY),
+        SUPPORTED_EVAL_RESULT_WRITERS,
+        PIPELINE_STATUS_QUEUE,
+        TRAINING_STATUS_QUEUE,
+        EVAL_STATUS_QUEUE,
+    )
+    pipeline_executor.grpc.evaluator = evaluator_stub_mock
+    pipeline_executor.current_training_id = 0
+
+    def fake_get_eval_intervals(first_timestamp: int, last_timestamp: int):
+        yield from [(0, 100), (100, 200), (200, 300)]
+
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=fake_get_eval_intervals):
+        pipeline_executor._start_evaluations(
+            trigger_id=0, model_id=0, trigger_set_first_timestamp=70, trigger_set_last_timestamp=100
+        )
+        assert evaluator_stub_mock.evaluate_model.call_count == 3
+        assert test_store_evaluation_results.call_count == 2
+        assert test_wait_for_evaluation_completion.call_count == 2
+
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{0}-{100}"] != {}
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{100}-{200}"] == {
+            "failure_reason": "EMPTY_DATASET"
+        }
+        assert pipeline_executor.pipeline_log[EVALUATION_RESULTS][0][f"{200}-{300}"] != {}

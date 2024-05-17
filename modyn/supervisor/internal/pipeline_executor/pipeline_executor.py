@@ -9,15 +9,21 @@ from time import sleep
 from typing import Any, Generator, Optional
 
 from modyn.common.benchmark import Stopwatch
-from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
+
+# pylint: disable-next=no-name-in-module
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
+from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
+EVALUATION_RESULTS = "evaluation_results"
 
 
 class PipelineExecutor:
@@ -61,7 +67,7 @@ class PipelineExecutor:
         self.maximum_triggers = maximum_triggers
 
         self._sw = Stopwatch()
-        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.log"
+        self._pipeline_log_file = self.eval_directory / f"pipeline_{self.pipeline_id}.json"
         self.pipeline_log: dict[str, Any] = {
             "configuration": {"pipeline_config": self.pipeline_config, "modyn_config": self.modyn_config},
             "supervisor": {
@@ -127,6 +133,77 @@ class PipelineExecutor:
         with open(self._pipeline_log_file, "w", encoding="utf-8") as logfile:
             json.dump(self.pipeline_log, logfile, indent=4)
 
+    def _start_single_evaluation(
+        self,
+        model_id: int,
+        trigger_id: int,
+        eval_dataset_config: dict,
+        interval_start: Optional[int],
+        interval_end: Optional[int],
+    ) -> None:
+        assert self.grpc.evaluator is not None, "Evaluator not initialized."
+        eval_dataset_id = eval_dataset_config["dataset_id"]
+        logger.info(
+            f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}"
+            f" of dataset {eval_dataset_id}."
+        )
+        request = GRPCHandler.prepare_evaluation_request(
+            eval_dataset_config,
+            model_id,
+            self.pipeline_config["evaluation"]["device"],
+            interval_start,
+            interval_end,
+        )
+        self._sw.start("evaluate_model", overwrite=True)
+        response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+        interval_name = f"{interval_start}-{interval_end}"
+        if not response.evaluation_started:
+            reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
+            logger.error(
+                f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
+                f"reason: {reason}."
+            )
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = {
+                "failure_reason": reason,
+            }
+            self._sw.stop("evaluate_model")
+        else:
+            logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
+            reporter = EvaluationStatusReporter(
+                self.eval_status_queue, response.evaluation_id, eval_dataset_id, response.dataset_size
+            )
+            reporter.create_tracker()
+            evaluation = {response.evaluation_id: reporter}
+            assert self.current_training_id is not None, "Training ID not set."
+            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluation)
+            eval_result_writer: JsonResultWriter = self._init_evaluation_writer("json", 0)
+            self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name] = eval_result_writer.results
+            self.pipeline_log[EVALUATION_RESULTS][trigger_id][interval_name]["evaluation_time"] = self._sw.stop(
+                "evaluate_model"
+            )
+
+    def _start_evaluations(
+        self, trigger_id: int, model_id: int, trigger_set_first_timestamp: int, trigger_set_last_timestamp: int
+    ) -> None:
+        assert self.grpc.evaluator is not None, "Evaluator not initialized."
+        eval_strategy_config = self.pipeline_config["evaluation"]["eval_strategy"]
+        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
+        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config["name"])(
+            eval_strategy_config["config"]
+        )
+        if EVALUATION_RESULTS not in self.pipeline_log:
+            self.pipeline_log[EVALUATION_RESULTS] = {}
+
+        self.pipeline_log[EVALUATION_RESULTS][trigger_id] = {}
+
+        for eval_dataset_config in self.pipeline_config["evaluation"]["datasets"]:
+            for interval_start, interval_end in eval_strategy.get_eval_intervals(
+                first_timestamp=trigger_set_first_timestamp,
+                last_timestamp=trigger_set_last_timestamp,
+            ):
+                self._start_single_evaluation(model_id, trigger_id, eval_dataset_config, interval_start, interval_end)
+
     def get_dataset_selector_batch_size(self) -> None:
         # system configuration already validated, so the dataset_id will be present in the configuration file
         dataset_id = self.pipeline_config["data"]["dataset_id"]
@@ -191,7 +268,7 @@ class PipelineExecutor:
 
         return num_triggers > 0
 
-    def _run_training(self, trigger_id: int) -> None:
+    def _run_training(self, trigger_id: int) -> int:
         """Run training for trigger on GPU and block until done."""
         assert self.pipeline_id is not None, "_run_training called without a registered pipeline."
         self._update_pipeline_stage_and_enqueue_msg(
@@ -234,22 +311,7 @@ class PipelineExecutor:
             self.previous_model_id = model_id
 
         self.triggers.append(trigger_id)
-
-        # Start evaluation
-        if "evaluation" in self.pipeline_config:
-            self._update_pipeline_stage_and_enqueue_msg(
-                PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-            )
-            # TODO(#300) Add evaluator to pipeline log
-            evaluations = self.grpc.start_evaluation(model_id, self.pipeline_config)
-            self.grpc.wait_for_evaluation_completion(self.current_training_id, evaluations)
-
-            self._update_pipeline_stage_and_enqueue_msg(
-                PipelineStage.STORE_EVALUATION_RESULTS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-            )
-            writer_names: set[str] = set(self.pipeline_config["evaluation"]["result_writers"])
-            writers = [self._init_evaluation_writer(name, trigger_id) for name in writer_names]
-            self.grpc.store_evaluation_results(writers, evaluations)
+        return model_id
 
     def _get_trigger_timespan(
         self, is_first_triggering_data: bool, triggering_data: list[tuple[int, int, int]]
@@ -303,16 +365,19 @@ class PipelineExecutor:
 
             num_samples_in_trigger = self.grpc.get_number_of_samples(self.pipeline_id, trigger_id)
             if num_samples_in_trigger > 0:
+                self._update_pipeline_stage_and_enqueue_msg(
+                    PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
+                )
                 self.trigger.inform_previous_trigger_and_data_points(trigger_id, num_samples_in_trigger)
                 first_timestamp, last_timestamp = self._get_trigger_timespan(i == 0, triggering_data)
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["first_timestamp"] = first_timestamp
                 self.pipeline_log["supervisor"]["triggers"][trigger_id]["last_timestamp"] = last_timestamp
                 # reset the remaining data range since we have processed it now
                 self.remaining_data_range = None
-                self._run_training(trigger_id)  # Blocks until training is done.
-                self._update_pipeline_stage_and_enqueue_msg(
-                    PipelineStage.HANDLE_TRIGGERS_WITHIN_BATCH, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id)
-                )
+                model_id = self._run_training(trigger_id)  # Blocks until training is done.
+                # Start evaluation
+                if "evaluation" in self.pipeline_config:
+                    self._start_evaluations(trigger_id, model_id, first_timestamp, last_timestamp)
             else:
                 logger.info(f"Skipping training on empty trigger {trigger_id}]")
             self._persist_pipeline_log()
@@ -344,10 +409,9 @@ class PipelineExecutor:
                 self.remaining_data_range = (remaining_data[0][1], remaining_data[-1][1])
         else:
             self.remaining_data_range = None
-
         return len(triggering_idx_list)
 
-    def _init_evaluation_writer(self, name: str, trigger_id: int) -> LogResultWriter:
+    def _init_evaluation_writer(self, name: str, trigger_id: int) -> JsonResultWriter:
         return self.supervisor_supported_eval_result_writers[name](self.pipeline_id, trigger_id, self.eval_directory)
 
     def replay_data(self) -> None:

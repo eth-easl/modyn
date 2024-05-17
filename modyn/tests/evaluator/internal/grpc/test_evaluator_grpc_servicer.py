@@ -6,6 +6,7 @@ import pathlib
 import platform
 import tempfile
 from time import sleep
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -122,10 +123,12 @@ def get_mock_evaluation_transformer():
     )
 
 
-def get_evaluate_model_request():
+def get_evaluate_model_request(start_timestamp=None, end_timestamp=None):
     return EvaluateModelRequest(
         model_id=1,
-        dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
+        dataset_info=DatasetInfo(
+            dataset_id="MNIST", num_dataloaders=1, start_timestamp=start_timestamp, end_timestamp=end_timestamp
+        ),
         device="cpu",
         batch_size=4,
         metrics=[
@@ -206,6 +209,76 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert resp.eval_aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+
+
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
+    storage_stub_mock = mock.Mock(spec=["GetDatasetSize"])
+    storage_stub_mock.GetDatasetSize.return_value = GetDatasetSizeResponse(success=True, num_keys=0)
+    with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
+        with tempfile.TemporaryDirectory() as modyn_temp:
+            evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+            req = get_evaluate_model_request()
+            resp = evaluator.evaluate_model(req, None)
+            assert not resp.evaluation_started
+            assert evaluator._next_evaluation_id == 0
+            assert resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+
+
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_download_trained_model(
+    test_connect_to_model_storage, test_connect_to_storage, test_download_trained_model
+):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
+        assert not resp.evaluation_started
+        assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+
+
+@patch.object(EvaluatorGRPCServicer, "_run_evaluation")
+@patch(
+    "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
+    return_value=pathlib.Path("downloaded_model.modyn"),
+)
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_evaluate_model_correct_time_range_used(
+    test_connect_to_model_storage, test_download_trained_model, test__run_evaluation
+):
+    # (start_timestamp, end_timestamp, expected_dataset_size)
+    test_cases = [(None, None, 400), (1000, None, 200), (None, 2000, 300), (1000, 2000, 100)]
+
+    def fake_get_dataset_size(request: GetDatasetSizeRequest):
+        if request.HasField("start_timestamp") and request.HasField("end_timestamp"):
+            resp = GetDatasetSizeResponse(success=True, num_keys=100)
+        elif request.HasField("start_timestamp") and not request.HasField("end_timestamp"):
+            resp = GetDatasetSizeResponse(success=True, num_keys=200)
+        elif not request.HasField("start_timestamp") and request.HasField("end_timestamp"):
+            resp = GetDatasetSizeResponse(success=True, num_keys=300)
+        else:
+            resp = GetDatasetSizeResponse(success=True, num_keys=400)
+        return resp
+
+    storage_stub_mock = mock.Mock(spec=["GetDatasetSize"])
+    storage_stub_mock.GetDatasetSize.side_effect = fake_get_dataset_size
+
+    with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
+        with tempfile.TemporaryDirectory() as modyn_temp:
+            for start_timestamp, end_timestamp, expected_dataset_size in test_cases:
+                evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+                req = get_evaluate_model_request(start_timestamp, end_timestamp)
+                resp = evaluator.evaluate_model(req, None)
+                assert resp.evaluation_started
+                assert resp.dataset_size == expected_dataset_size
+
+                storage_stub_mock.GetDatasetSize.assert_called_once_with(
+                    GetDatasetSizeRequest(
+                        dataset_id="MNIST", start_timestamp=start_timestamp, end_timestamp=end_timestamp
+                    )
+                )
+                storage_stub_mock.GetDatasetSize.reset_mock()
 
 
 @patch(

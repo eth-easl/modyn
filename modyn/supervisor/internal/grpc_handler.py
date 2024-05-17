@@ -13,7 +13,6 @@ from modyn.common.benchmark import Stopwatch
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
-    EvaluateModelResponse,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
@@ -524,37 +523,14 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
-    def start_evaluation(
-        self, model_id: int, pipeline_config: dict, pipeline_id: Optional[int] = None, trigger_id: Optional[int] = None
-    ) -> dict[int, EvaluationStatusReporter]:
-        assert self.eval_status_queue is not None
-        assert self.evaluator is not None
-        if not self.connected_to_evaluator:
-            raise ConnectionError("Tried to start evaluation at evaluator, but there is no gRPC connection.")
-        device = pipeline_config["evaluation"]["device"]
-
-        evaluations: dict[int, EvaluationStatusReporter] = {}
-
-        for dataset in pipeline_config["evaluation"]["datasets"]:
-            dataset_id = dataset["dataset_id"]
-
-            req = GRPCHandler._prepare_evaluation_request(dataset, model_id, device)
-            response: EvaluateModelResponse = self.evaluator.evaluate_model(req)
-
-            if not response.evaluation_started:
-                logger.error(f"Starting evaluation for dataset {dataset_id} did go wrong: {response}.")
-            else:
-                evaluation_id = response.evaluation_id
-                logger.info(f"Started evaluation {evaluation_id} on dataset {dataset_id}.")
-                evaluations[evaluation_id] = EvaluationStatusReporter(
-                    self.eval_status_queue, evaluation_id, dataset_id, response.dataset_size
-                )
-                evaluations[evaluation_id].create_tracker()
-
-        return evaluations
-
     @staticmethod
-    def _prepare_evaluation_request(dataset_config: dict, model_id: int, device: str) -> EvaluateModelRequest:
+    def prepare_evaluation_request(
+        dataset_config: dict,
+        model_id: int,
+        device: str,
+        start_timestamp: Optional[int] = None,
+        end_timestamp: Optional[int] = None,
+    ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
 
         if "transformations" in dataset_config:
@@ -593,7 +569,12 @@ class GRPCHandler:
 
         start_evaluation_kwargs = {
             "model_id": model_id,
-            "dataset_info": DatasetInfo(dataset_id=dataset_id, num_dataloaders=dataloader_workers),
+            "dataset_info": DatasetInfo(
+                dataset_id=dataset_id,
+                num_dataloaders=dataloader_workers,
+                start_timestamp=start_timestamp,
+                end_timestamp=end_timestamp,
+            ),
             "device": device,
             "batch_size": batch_size,
             "metrics": metrics,

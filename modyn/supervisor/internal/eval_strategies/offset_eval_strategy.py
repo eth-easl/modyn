@@ -5,6 +5,8 @@ from modyn.utils import convert_timestr_to_seconds
 
 
 class OffsetEvalStrategy(AbstractEvalStrategy):
+    INFINITY = "inf"
+    NEGATIVE_INFINITY = "-inf"
     """
     This evaluation strategy will evaluate the model on the intervals defined by the user provided offsets.
     The offsets are defined as a list of strings, where each string represents an offset.
@@ -27,9 +29,9 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         self, first_timestamp: int, last_timestamp: int
     ) -> Iterable[tuple[Optional[int], Optional[int]]]:
         for offset in self.offsets:
-            if offset == "-inf":
+            if offset == OffsetEvalStrategy.NEGATIVE_INFINITY:
                 yield 0, first_timestamp
-            elif offset == "inf":
+            elif offset == OffsetEvalStrategy.INFINITY:
                 # +1 because the samples with timestamp `last_timestamp` are included in the current trigger,
                 # and here we want to return an interval on the data with timestamp greater than `last_timestamp`.
                 yield last_timestamp + 1, None

@@ -82,6 +82,8 @@ def test_validate_timestr():
     assert validate_timestr("10m")
     assert validate_timestr("10h")
     assert validate_timestr("10d")
+    assert validate_timestr("-10d")
+    assert validate_timestr("0d")
     assert not validate_timestr("10")
     assert not validate_timestr("10x")
     assert not validate_timestr("10s10m")
