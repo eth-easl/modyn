@@ -5,6 +5,7 @@
 import os
 
 from .amounttrigger import DataAmountTrigger  # noqa: F401
+from .datadrifttrigger import DataDriftTrigger  # noqa: F401
 from .timetrigger import TimeTrigger  # noqa: F401
 from .trigger import Trigger  # noqa: F401
 

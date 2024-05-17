@@ -1,10 +1,12 @@
 # pylint: disable=unused-argument,redefined-outer-name
+import datetime
 import multiprocessing as mp
 import os
 import pathlib
 import shutil
+import time
 from dataclasses import dataclass
-from typing import overload
+from typing import Generator, overload
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
@@ -15,7 +17,7 @@ from modyn.supervisor.internal.evaluation_result_writer import (
     JsonResultWriter,
     TensorboardResultWriter,
 )
-from modyn.supervisor.internal.grpc.enums import PipelineStage
+from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineType
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
 from modyn.supervisor.internal.pipeline_executor.models import (
@@ -23,8 +25,10 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     ExecutionState,
     PipelineLogs,
     PipelineOptions,
+    StageInfo,
     StageLog,
 )
+from modyn.supervisor.internal.pipeline_executor.pipeline_executor import pipeline_stage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
@@ -136,6 +140,89 @@ def teardown():
 
 def test_initialization(non_connecting_pipeline_executor: PipelineExecutor) -> None:
     assert non_connecting_pipeline_executor.state.stage == PipelineStage.INIT
+
+
+def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> None:
+
+    class TestStageLogInfo(StageInfo):
+        name: str
+
+    class TestPipelineExecutor(PipelineExecutor):
+
+        @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT, log=True, track=True)
+        def _stage_func(self, s: ExecutionState, log: StageLog) -> int:
+            time.sleep(0.1)
+            log.info = TestStageLogInfo(name="test")
+
+            return 1
+
+    pe = TestPipelineExecutor(dummy_pipeline_options)
+    t0 = datetime.datetime.now()
+    assert pe._stage_func(pe.state, pe.logs) == 1
+    t1 = datetime.datetime.now()
+
+    assert len(pe.logs.supervisor.stage_runs) == 1
+    assert pe.logs.supervisor.stage_runs[0].info.name == "test"
+    assert (pe.logs.supervisor.stage_runs[0].start - t0).total_seconds() < 5e-3
+    assert (pe.logs.supervisor.stage_runs[0].end - t1).total_seconds() < 5e-3
+    assert abs((pe.logs.supervisor.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 5e-3
+
+
+def test_pipeline_stage_decorator_generator(dummy_pipeline_options: PipelineOptions) -> None:
+
+    class TestStageLogInfo(StageInfo):
+        elements: list[int]
+        finalized: bool = False
+
+    def create_generator(x: int = 3) -> Generator[int, None, None]:
+        time.sleep(0.1)
+        for i in range(x):
+            time.sleep(0.02)
+            yield i
+
+    class TestPipelineExecutor(PipelineExecutor):
+
+        @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT, log=True, track=True)
+        def _stage_func(self, s: ExecutionState, log: StageLog) -> Generator[int, None, None]:
+            try:
+                time.sleep(0.1)
+                log.info = TestStageLogInfo(elements=[])
+                for i in create_generator():
+                    time.sleep(0.02)
+                    log.info.elements.append(i)
+                    yield i
+            finally:
+                log.info.finalized = True
+
+    times: list[datetime.timedelta] = []
+    gen_values: list[int] = []
+
+    last_time = datetime.datetime.now()
+    pe = TestPipelineExecutor(dummy_pipeline_options)
+    gen = pe._stage_func(pe.state, pe.logs)
+    times.append(datetime.datetime.now() - last_time)
+    last_time = datetime.datetime.now()
+    for x in gen:
+        gen_values.append(x)
+        times.append(datetime.datetime.now() - last_time)
+        time.sleep(0.2)  # this should not be counted in the time of the generator
+        last_time = datetime.datetime.now()
+
+        if x == 2:
+            break  # stop the generator early
+
+    gen = None  # make sure the generator is closed
+
+    assert gen_values == [0, 1, 2]
+    assert len(times) == 4
+
+    assert pe.logs.supervisor.stage_runs[0].info.elements == [0, 1, 2]
+    assert pe.logs.supervisor.stage_runs[0].info.finalized
+
+    assert abs(times[0].total_seconds()) < 0.005
+    assert abs(times[1].total_seconds() - 0.1 * 2 - 0.02 * 2) < 0.035  # higher tolerance due to pipeline_stage overhead
+    assert abs(times[2].total_seconds() - 0.02 * 2) < 0.025
+    assert abs(times[3].total_seconds() - 0.02 * 2) < 0.025
 
 
 def test_get_dataset_selector_batch_size_given(
@@ -262,12 +349,19 @@ def test__process_new_data(
 
 
 @patch.object(GRPCHandler, "inform_selector", return_value={})
-def test__process_new_data_batch_no_triggers(test_inform_selector: MagicMock, dummy_pipeline_options: PipelineOptions):
+def test__process_new_data_batch_no_triggers(
+    test_inform_selector: MagicMock, dummy_pipeline_options: PipelineOptions
+) -> None:
     dummy_pipeline_options.pipeline_id = 42
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
     batch = [(10, 1), (11, 2)]
 
-    with patch.object(pe.trigger, "inform", return_value=[]) as inform_mock:
+    with patch.object(pe.trigger, "inform") as inform_mock:
+
+        def fake(self):
+            yield from []
+
+        inform_mock.side_effect = fake
         assert len(pe._process_new_data_batch(pe.state, pe.logs, batch)) == 0
 
         inform_mock.assert_called_once_with(batch)
@@ -318,7 +412,7 @@ def test__execute_triggers(
     test__train_and_store_model: MagicMock,
     batch: list[tuple[int, int]],
     trigger_indexes: list[int],
-    trigger_ids: list[tuple[int, dict]],  # TODO: rename
+    trigger_ids: list[tuple[int, dict]],
     inform_selector_and_trigger_expected_args: list,
     train_and_store_model_expected_args: list,
     inform_selector_expected_args: list,
@@ -591,7 +685,7 @@ def test_train_and_evaluate(
     assert pe.state.current_training_id == training_id
 
     test_wait_for_training_completion.assert_called_once_with(training_id, 42, trigger_id)
-    test_start_training.assert_called_once_with(42, trigger_id, pe.state.pipeline_config, None, None)
+    test_start_training.assert_called_once_with(42, trigger_id, ANY, None, None)
     test_wait_for_training_completion.assert_called_once_with(training_id, 42, trigger_id)
     test_store_trained_model.assert_called_once_with(training_id)
 

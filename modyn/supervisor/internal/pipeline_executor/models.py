@@ -166,7 +166,9 @@ class ProcessNewDataInfo(StageInfo):
 
 class EvaluateTriggerInfo(StageInfo):
     batch_size: int
-    trigger_indexes: list[int]
+    trigger_indexes: list[int] = Field(default_factory=list)
+    trigger_eval_times: list[int] = Field(default_factory=list)
+    """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
 
     @override
     def online_df(self) -> pd.DataFrame | None:
@@ -255,6 +257,12 @@ class StageLog(BaseModel):
     # experiment time
     start: datetime.datetime
     end: datetime.datetime | None = Field(None)
+    """Timestamp when the decorated function exits. If decorated functions yields a generator, this will be the time
+    when the generator is returned, not when the generator is exhausted."""
+
+    duration: datetime.timedelta | None = Field(None)
+    """As pipeline stages can be lazily evaluated generators where other computation steps are interleaved,
+    `end-start` is not always the actual duration this stage spent in computing."""
 
     # dataset time of last seen sample
     sample_idx: int
@@ -268,8 +276,8 @@ class StageLog(BaseModel):
         extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
         """
         df = pd.DataFrame(
-            [(self.id, self.duration, self.sample_idx, self.sample_time)],
-            columns=["id", "duration", "sample_idx", "sample_time"],
+            [(self.id, self.start, self.end, self.duration, self.sample_idx, self.sample_time)],
+            columns=["id", "start", "end", "duration", "sample_idx", "sample_time"],
         )
         info_df = self.info.online_df() if self.info else None
         if info_df is not None and extended:
@@ -277,11 +285,6 @@ class StageLog(BaseModel):
             df = pd.concat([df, info_df], axis=1)
 
         return df
-
-    @property
-    def duration(self) -> datetime.timedelta:
-        assert self.end is not None
-        return self.end - self.start
 
 
 class SupervisorLogs(BaseModel):

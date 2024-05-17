@@ -4,9 +4,10 @@ from __future__ import annotations
 import logging
 import sys
 import traceback
-from datetime import datetime
+import types
+from datetime import datetime, timedelta
 from time import sleep
-from typing import Callable, Generator, TypeVar
+from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
 from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
@@ -16,6 +17,7 @@ from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.utils import dynamic_module_import
+from modyn.utils.timer import timed_generator
 from typing_extensions import Concatenate, ParamSpec
 
 from .models import (
@@ -40,6 +42,8 @@ EXCEPTION_EXITCODE = 8
 
 P = ParamSpec("P")  # parameters of pipeline stage
 R = TypeVar("R")  # result of pipeline stage
+
+G = TypeVar("G")  # generator type
 
 
 def pipeline_stage(  # type: ignore[no-untyped-def]
@@ -66,6 +70,34 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
             self: "PipelineExecutor", state: ExecutionState, logs: PipelineLogs, *args: P.args, **kwargs: P.kwargs
         ) -> R:
             """Measures the time for each stage and logs the pipeline state."""
+
+            def patch_generator_timer(gen: R, stage_log: StageLog) -> R:  # type: ignore[misc]
+                """As generators will return immediate we have to add time for each yield after the decorator returned.
+                For doing so we wrap the generator with this function.
+                """
+                try:
+                    for item, time in timed_generator(gen):  # type: ignore
+                        stage_log.duration = (stage_log.duration or timedelta(0)) + timedelta(milliseconds=time)
+                        yield item
+                finally:
+                    report_results(stage_log)
+
+            def report_results(stage_log: StageLog) -> None:
+                """For generators we should only report logs and tracking info once the generator is finalized.
+                I.e. fully iterated or garbage collected. In the non-generator case we can report immediately.
+                """
+                # if stage reported additional logs, we make the log available to the pipeline in a dataframe
+                if track and stage_log.info:
+                    # ensure df exists
+                    old_df = state.tracking.get(stage_log.id, None)
+                    if (new_rows := stage_log.online_df(extended=True)) is not None:
+                        state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
+
+                # record logs
+                if log:
+                    logs.supervisor.stage_runs.append(stage_log)
+                    logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
+
             state.stage = stage
             if log:
                 logger.info(f"[pipeline {pipeline}: {state.pipeline_id}] Entering <{stage}>.")
@@ -79,19 +111,17 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
             )
             result = func(self, state, stage_log, *args, **kwargs)  # type: ignore[call-arg]
             stage_log.end = datetime.now()
+            stage_log.duration = stage_log.end - stage_log.start
             state.stage = stage  # restore stage as child pipeline might have changed it
 
-            # if stage reported additional logs, we make the log available to the pipeline in a dataframe
-            if track and stage_log.info:
-                # ensure df exists
-                old_df = state.tracking.get(stage_log.id, None)
-                if (new_rows := stage_log.online_df(extended=True)) is not None:
-                    state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
+            if isinstance(result, types.GeneratorType):
+                # If the result is a generator, wrap it with the timed_generator so that every yield will be timed
+                # and added to the log time. The adding happens post-return when the generator is actually iterated.
+                # The wrapped generator adjusts the duration of the stage log and tracking dataframe.
+                result = cast(R, patch_generator_timer(result, stage_log))  # type: ignore[arg-type]
 
-            # record logs
-            if log:
-                logs.supervisor.stage_runs.append(stage_log)
-                logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
+            else:
+                report_results(stage_log)
 
             # result of stage function
             return result
@@ -374,29 +404,38 @@ class PipelineExecutor:
     @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EVALUATE_TRIGGER_POLICIES, track=True)
     def _evaluate_trigger_policies(
         self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]
-    ) -> list[int]:
+    ) -> Generator[int, None, None]:
         """Evaluate trigger policy and inform selector.
 
         Returns:
             List of indexes of data points that caused a trigger.
         """
-        # Evaluate trigger policy
-        lazy_trigger_indexes = self.trigger.inform(batch)
+        try:
+            # add log data
+            log.info = EvaluateTriggerInfo(batch_size=len(batch))
 
-        # add log data
-        log.info = EvaluateTriggerInfo(batch_size=len(batch), trigger_indexes=lazy_trigger_indexes)
+            # Evaluate trigger policy
+            for trigger_index, t_micros in timed_generator(self.trigger.inform(batch)):
+                log.info.trigger_indexes.append(trigger_index)
+                log.info.trigger_eval_times.append(int(t_micros))
+                yield trigger_index
 
-        return lazy_trigger_indexes
+        finally:
+            assert log.info
+            logger.info(f"There were {len(log.info.trigger_indexes)} triggers in this batch.")
 
     @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EXECUTE_TRIGGERS, track=True)
     def _execute_triggers(
-        self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]], trigger_indexes: Generator[int]
+        self,
+        s: ExecutionState,
+        log: StageLog,
+        batch: list[tuple[int, int, int]],
+        lazy_trigger_indexes: Generator[int, None, None],
     ) -> list[int]:
         """Evaluate trigger policy, start training after trigger and inform selector.
 
         Args:
             s: Execution state of the pipeline executor.
-            
         Returns:
             The list of the actually processed triggers
         """
@@ -405,10 +444,10 @@ class PipelineExecutor:
 
         previous_trigger_index = 0
         trigger_index = -1
-        processed_trigger_indexes: list[int] = []
-        for i, trigger_index in enumerate(trigger_indexes):
+        trigger_indexes: list[int] = []
+        for i, trigger_index in enumerate(lazy_trigger_indexes):
             # Run training and evaluation subpipelines
-            processed_trigger_indexes.append(trigger_index)
+            trigger_indexes.append(trigger_index)
             trigger_data = batch[previous_trigger_index : trigger_index + 1]
             previous_trigger_index = trigger_index + 1
 
@@ -418,7 +457,7 @@ class PipelineExecutor:
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break
             
-        return processed_trigger_indexes
+        return trigger_indexes
 
     @pipeline_stage(PipelineType.NEW_DATA, PipelineStage.INFORM_SELECTOR_REMAINING_DATA, track=True)
     def _inform_selector_remaining_data(
@@ -483,6 +522,7 @@ class PipelineExecutor:
             first_timestamp, last_timestamp = PipelineExecutor._get_trigger_timespan(s, trigger_i == 0, trigger_data)
             s.remaining_data_range = None
             training_id, model_id = self._train_and_store_model(s, self.logs, trigger_id)
+            self.trigger.inform_previous_model(model_id)
 
             if s.pipeline_config.evaluation:
                 self._evaluate_and_store_results(s, self.logs, trigger_id, training_id, model_id)
@@ -568,7 +608,7 @@ class PipelineExecutor:
             trigger_id,
             s.pipeline_config.model_dump(by_alias=True),
             s.previous_model_id,
-            num_samples_to_pass
+            num_samples_to_pass,
         )
         trainer_log = self.grpc.wait_for_training_completion(s.current_training_id, s.pipeline_id, trigger_id)
 
@@ -678,6 +718,12 @@ class PipelineExecutor:
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
         assert trigger is not None, "Error during trigger initialization"
+
+        trigger.init_trigger(
+            self.state.pipeline_id, self.state.pipeline_config, self.state.modyn_config, self.state.eval_directory
+        )
+        if self.state.previous_model_id is not None:
+            trigger.inform_previous_model(self.state.previous_model_id)
 
         return trigger
 
