@@ -290,9 +290,7 @@ class GRPCHandler:
             lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
             lr_scheduler_configs["config"] = lr_scheduler_configs.get("config", None)
 
-        criterion_config = json.dumps(
-            pipeline_config["training"]["optimization_criterion"].get("config") or {}
-        )
+        criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"].get("config") or {})
 
         epochs_per_trigger = pipeline_config["training"].get("epochs_per_trigger") or 1
 

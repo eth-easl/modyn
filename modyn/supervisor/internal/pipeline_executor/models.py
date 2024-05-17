@@ -22,6 +22,7 @@ from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class PipelineOptions:
     """

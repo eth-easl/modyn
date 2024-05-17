@@ -456,7 +456,7 @@ class PipelineExecutor:
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break
-            
+
         return trigger_indexes
 
     @pipeline_stage(PipelineType.NEW_DATA, PipelineStage.INFORM_SELECTOR_REMAINING_DATA, track=True)
