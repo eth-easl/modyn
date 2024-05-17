@@ -91,7 +91,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {storage_address}.")
         return StorageStub(storage_channel)
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals,too-many-return-statements
 
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
@@ -124,7 +124,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
             )
 
-        dataset_size_req = GetDatasetSizeRequest(dataset_id=request.dataset_info.dataset_id)
+        dataset_info = request.dataset_info
+        dataset_size_req = GetDatasetSizeRequest(
+            dataset_id=request.dataset_info.dataset_id,
+            start_timestamp=dataset_info.start_timestamp if dataset_info.HasField("start_timestamp") else None,
+            end_timestamp=dataset_info.end_timestamp if dataset_info.HasField("end_timestamp") else None,
+        )
         dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 
         dataset_size = dataset_size_response.num_keys
@@ -135,6 +140,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(
                 evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
+            )
+
+        if dataset_size == 0:
+            logger.info(
+                f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
+            )
+            return EvaluateModelResponse(
+                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
             )
 
         with self._lock:

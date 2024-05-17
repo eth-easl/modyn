@@ -50,15 +50,26 @@ class DatasetInfo(google.protobuf.message.Message):
 
     DATASET_ID_FIELD_NUMBER: builtins.int
     NUM_DATALOADERS_FIELD_NUMBER: builtins.int
+    START_TIMESTAMP_FIELD_NUMBER: builtins.int
+    END_TIMESTAMP_FIELD_NUMBER: builtins.int
     dataset_id: builtins.str
     num_dataloaders: builtins.int
+    start_timestamp: builtins.int
+    end_timestamp: builtins.int
     def __init__(
         self,
         *,
         dataset_id: builtins.str = ...,
         num_dataloaders: builtins.int = ...,
+        start_timestamp: builtins.int | None = ...,
+        end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "num_dataloaders", b"num_dataloaders", "start_timestamp", b"start_timestamp"]) -> None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
+    @typing.overload
+    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
 
 global___DatasetInfo = DatasetInfo
 

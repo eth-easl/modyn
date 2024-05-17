@@ -16,7 +16,7 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString a
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 
-POLL_TIMEOUT = 1
+POLL_INTERVAL = 1
 
 
 def wait_for_pipeline(pipeline_id: int) -> str:
@@ -24,7 +24,7 @@ def wait_for_pipeline(pipeline_id: int) -> str:
 
     res = supervisor.get_pipeline_status(req)
     while res.status == PipelineStatus.RUNNING:
-        time.sleep(POLL_TIMEOUT)
+        time.sleep(POLL_INTERVAL)
         res = supervisor.get_pipeline_status(req)
 
     return res

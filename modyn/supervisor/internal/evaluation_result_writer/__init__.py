@@ -6,7 +6,6 @@ import os
 
 from .abstract_evaluation_result_writer import AbstractEvaluationResultWriter  # noqa: F401
 from .json_result_writer import JsonResultWriter  # noqa: F401
-from .log_result_writer import LogResultWriter  # noqa: F401
 from .tensorboard_result_writer import TensorboardResultWriter  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))

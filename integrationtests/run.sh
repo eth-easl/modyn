@@ -22,6 +22,8 @@ echo "Running online datasets integration tests"
 python $SCRIPT_DIR/online_dataset/test_online_dataset.py
 echo "Running model storage integration tests"
 python $SCRIPT_DIR/model_storage/integrationtest_model_storage.py
+echo "Running evaluator integration tests"
+python $SCRIPT_DIR/evaluator/integrationtest_evaluator.py
 echo "Running supervisor integration tests"
 python $SCRIPT_DIR/supervisor/integrationtest_supervisor.py
 echo "Running modynclient integration tests"
