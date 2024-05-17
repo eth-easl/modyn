@@ -539,6 +539,14 @@ class EvaluationConfig(BaseModel):
         min_length=1,
     )
 
+    @field_validator("datasets")
+    @classmethod
+    def validate_datasets(cls, value: List[DatasetConfig]) -> List[DatasetConfig]:
+        dataset_ids = [dataset.dataset_id for dataset in value]
+        if len(dataset_ids) != len(set(dataset_ids)):
+            raise ValueError("Dataset IDs must be unique.")
+        return value
+
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 

@@ -44,6 +44,7 @@ def get_minimal_training_config() -> dict:
 
 def get_minimal_evaluation_config() -> dict:
     return {
+        "eval_strategy": get_minimal_eval_strategies_config(),
         "device": "cpu",
         "datasets": [
             {
@@ -722,7 +723,6 @@ def test__start_evaluations_success(
     evaluation_config = get_minimal_evaluation_config()
     eval_dataset_config = evaluation_config["datasets"][0]
     pipeline_config["evaluation"] = evaluation_config
-    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
         evaluation_started=True, evaluation_id=42, dataset_size=10
@@ -772,7 +772,6 @@ def test__start_evaluations_failure(
     pipeline_config = get_minimal_pipeline_config()
     evaluation_config = get_minimal_evaluation_config()
     pipeline_config["evaluation"] = evaluation_config
-    evaluation_config["eval_strategy"] = get_minimal_eval_strategies_config()
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
     failure_response = EvaluateModelResponse(

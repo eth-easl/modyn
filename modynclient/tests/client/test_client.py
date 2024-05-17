@@ -37,6 +37,14 @@ def get_minimal_pipeline_config() -> dict:
 
 def get_minimal_evaluation_config() -> dict:
     return {
+        "eval_strategy": {
+            "name": "MatrixEvalStrategy",
+            "config": {
+                "eval_every": "100s",
+                "eval_start_from": 0,
+                "eval_end_at": 300,
+            },
+        },
         "device": "cpu",
         "datasets": [
             {
