@@ -387,7 +387,7 @@ class PipelineLogs(BaseModel):
 
         if mode == "increment":
             with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.supervisor.model_dump(indent=2))
+                logfile.write(self.supervisor.model_dump_json(indent=2))
 
             self.supervisor.clear()
             self.partial_idx += 1
