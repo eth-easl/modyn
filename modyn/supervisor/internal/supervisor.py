@@ -15,11 +15,7 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import (
-    JsonResultWriter,
-    LogResultWriter,
-    TensorboardResultWriter,
-)
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
 )
@@ -42,7 +38,6 @@ class Supervisor:
     supported_evaluation_result_writers: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
         "json": JsonResultWriter,
         "tensorboard": TensorboardResultWriter,
-        "log": LogResultWriter,
     }
 
     def __init__(self, modyn_config: ModynConfig) -> None:

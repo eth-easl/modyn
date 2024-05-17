@@ -1,4 +1,3 @@
-import pytest
 from modyn.supervisor.internal.eval_strategies import MatrixEvalStrategy
 
 
@@ -15,17 +14,6 @@ def test_initialization() -> None:
     assert eval_strategy.eval_every == 100
     assert eval_strategy.eval_start_from == 0
     assert eval_strategy.eval_end_at == 300
-
-
-def test_init_fails_if_invalid() -> None:
-    config = get_minimal_eval_strategies_config()
-    config["eval_every"] = "0s"
-    with pytest.raises(ValueError, match="eval_every must be greater than 0"):
-        MatrixEvalStrategy(config)
-    config["eval_every"] = "10s"
-    config["eval_start_from"] = 400
-    with pytest.raises(ValueError, match="eval_start_from must be less than eval_end_at"):
-        MatrixEvalStrategy(config)
 
 
 def test_get_eval_intervals() -> None:

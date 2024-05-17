@@ -75,8 +75,8 @@ class PipelineStage(StrEnum):
 
     # Evaluation
     EVALUATE = "Run evaluation"
+    EVALUATE_SINGLE = "Run single evaluation"
     WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion"
-    EVALUATION_COMPLETED = "Evaluation completed 🚀"
     STORE_EVALUATION_RESULTS = "Store evaluation results"
 
     # Teardown

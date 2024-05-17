@@ -252,7 +252,6 @@ class ImageDatasetHelper(DatasetHelper):
         dataset_size: int = 10,
         dataset_dir: pathlib.Path = MODYN_DATASET_PATH,
         desc: str = "Test dataset for integration tests.",
-        first_added_images: list = [],
     ) -> None:
         super().__init__(
             dataset_id,
@@ -261,7 +260,6 @@ class ImageDatasetHelper(DatasetHelper):
             desc,
             {"file_extension": ".png", "label_file_extension": ".txt"},
         )
-        self.first_added_images = first_added_images
 
     def create_random_image(self) -> Image:
         image = Image.new("RGB", (100, 100))
@@ -279,16 +277,15 @@ class ImageDatasetHelper(DatasetHelper):
     def add_image_to_dataset(self, image: Image, name: str) -> None:
         image.save(self.dataset_path / name)
 
-    def add_images_to_dataset(self, start_number: int, end_number: int, images_added: list[bytes]) -> None:
+    def add_images_to_dataset(self, start_number: int, end_number: int) -> None:
         for i in range(start_number, end_number):
             image = self.create_random_image()
             self.add_image_to_dataset(image, f"image_{i}.png")
-            images_added.append(image.tobytes())
             with open(self.dataset_path / f"image_{i}.txt", "w") as label_file:
                 label_file.write(f"{i}")
 
     def create_dataset(self) -> None:
-        self.add_images_to_dataset(0, self.dataset_size, self.first_added_images)  # Add images to the dataset.
+        self.add_images_to_dataset(0, self.dataset_size)  # Add images to the dataset.
 
 
 class TinyDatasetHelper(DatasetHelper):

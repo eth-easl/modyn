@@ -235,8 +235,27 @@ class StoreModelInfo(_TrainInfoMixin):
         )
 
 
-class EvaluationInfo(StoreModelInfo):
-    pass
+class _ModelEvalInfo(StageInfo):
+    trigger_id: int
+    id_model: int
+    dataset_id: str
+    interval_start: int | None
+    interval_end: int | None
+
+    @override
+    def online_df(self) -> pd.DataFrame | None:
+        return pd.DataFrame(
+            [(self.trigger_id, self.id_model, self.dataset_id, self.interval_start, self.interval_end)],
+            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end"],
+        )
+
+
+class SingleEvaluationInfo(_ModelEvalInfo):
+    failure_reason: str | None = None
+
+
+class StoreEvaluationInfo(_ModelEvalInfo):
+    results: dict[str, Any]
 
 
 class SelectorInformLog(StageInfo):

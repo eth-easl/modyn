@@ -10,12 +10,17 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.supervisor.internal.evaluation_result_writer import LogResultWriter
+from modyn.config.schema.pipeline import DatasetConfig
+
+# pylint: disable-next=no-name-in-module
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage, PipelineType
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
 from typing_extensions import Concatenate, ParamSpec
@@ -23,7 +28,6 @@ from typing_extensions import Concatenate, ParamSpec
 from .models import (
     ConfigLogs,
     EvaluateTriggerInfo,
-    EvaluationInfo,
     ExecutionState,
     FetchDataInfo,
     PipelineLogs,
@@ -31,7 +35,9 @@ from .models import (
     ProcessNewDataInfo,
     SelectorInformLog,
     SelectorInformTriggerInfo,
+    SingleEvaluationInfo,
     StageLog,
+    StoreEvaluationInfo,
     StoreModelInfo,
     TrainingInfo,
     TriggerExecutionInfo,
@@ -525,7 +531,9 @@ class PipelineExecutor:
             self.trigger.inform_previous_model(model_id)
 
             if s.pipeline_config.evaluation:
-                self._evaluate_and_store_results(s, self.logs, trigger_id, training_id, model_id)
+                self._evaluate_and_store_results(
+                    s, self.logs, trigger_id, training_id, model_id, first_timestamp, last_timestamp
+                )
 
         else:
             first_timestamp, last_timestamp = None, None
@@ -652,49 +660,123 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATE, track=True)
     def _evaluate_and_store_results(
-        self, s: ExecutionState, log: StageLog, trigger_id: int, training_id: int, model_id: int
+        self,
+        s: ExecutionState,
+        log: StageLog,
+        trigger_id: int,
+        training_id: int,
+        model_id: int,
+        first_timestamp: int,
+        last_timestamp: int,
     ) -> None:
         """Evaluate the trained model and store the results."""
-        evaluations = self._evaluate(s, self.logs, trigger_id, training_id, model_id)
-        self._evaluation_completed(s, self.logs)
-        self._store_evaluation_results(s, self.logs, trigger_id, evaluations)
-
-    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATE, track=True)
-    def _evaluate(
-        self, s: ExecutionState, log: StageLog, trigger_id: int, training_id: int, model_id: int
-    ) -> dict[int, EvaluationStatusReporter]:
+        assert self.grpc.evaluator is not None, "Evaluator not initialized."
+        assert self.state.pipeline_config.evaluation is not None, "Evaluation config not set."
         s.pipeline_status_queue.put(
             pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
 
-        evaluations = self.grpc.start_evaluation(model_id, s.pipeline_config)
-        self.grpc.wait_for_evaluation_completion(training_id, evaluations)
+        eval_strategy_config = self.state.pipeline_config.evaluation.eval_strategy
+        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
+        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.name)(
+            eval_strategy_config.config.model_dump(by_alias=True)
+        )
 
-        # add log data
-        log.info = EvaluationInfo(trigger_id=trigger_id, training_id=training_id, id_model=model_id)
+        for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
+            for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
+                results = self._single_evaluation(
+                    s, self.logs, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end
+                )
+                if results:
+                    self._store_evaluation_results(
+                        s,
+                        self.logs,
+                        trigger_id,
+                        model_id,
+                        eval_dataset_config.dataset_id,
+                        results,
+                        interval_start,
+                        interval_end,
+                    )
 
-        return evaluations
+    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATE_SINGLE, track=True)
+    def _single_evaluation(
+        self,
+        s: ExecutionState,
+        log: StageLog,
+        trigger_id: int,
+        training_id: int,
+        model_id: int,
+        eval_dataset_config: DatasetConfig,
+        interval_start: int | None,
+        interval_end: int | None,
+    ) -> dict[int, EvaluationStatusReporter] | None:
+        assert self.grpc.evaluator is not None, "Evaluator not initialized."
+        assert self.state.pipeline_config.evaluation
+        logger.info(
+            f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}"
+            f" of dataset {eval_dataset_config.dataset_id}."
+        )
+        request = GRPCHandler.prepare_evaluation_request(
+            eval_dataset_config.model_dump(by_alias=True),
+            model_id,
+            self.state.pipeline_config.evaluation.device,
+            interval_start,
+            interval_end,
+        )
+        response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+        log.info = SingleEvaluationInfo(
+            trigger_id=trigger_id,
+            id_model=model_id,
+            dataset_id=eval_dataset_config.dataset_id,
+            interval_start=interval_start,
+            interval_end=interval_end,
+        )
+        if not response.evaluation_started:
+            log.info.failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
+                response.eval_aborted_reason
+            ].name
+            logger.error(
+                f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
+                f"reason: {log.info.failure_reason}."
+            )
+            return None
 
-    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATION_COMPLETED)
-    def _evaluation_completed(self, s: ExecutionState, log: StageLog) -> None:
-        pass  # nothing to do
+        logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
+        reporter = EvaluationStatusReporter(
+            self.state.eval_status_queue,
+            response.evaluation_id,
+            eval_dataset_config.dataset_id,
+            response.dataset_size,
+        )
+        evaluation = {response.evaluation_id: reporter}
+        reporter.create_tracker()
+        self.grpc.wait_for_evaluation_completion(training_id, evaluation)
+        return evaluation
 
     @pipeline_stage(PipelineType.EVALUATION, PipelineStage.STORE_EVALUATION_RESULTS, track=True)
     def _store_evaluation_results(
-        self, s: ExecutionState, log: StageLog, trigger_id: int, evaluations: dict[int, EvaluationStatusReporter]
+        self,
+        s: ExecutionState,
+        log: StageLog,
+        trigger_id: int,
+        model_id: int,
+        dataset_id: int,
+        evaluation: dict[int, EvaluationStatusReporter],
+        interval_start: int | None,
+        interval_end: int | None,
     ) -> None:
-        assert s.pipeline_config.evaluation
-        s.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.STORE_EVALUATION_RESULTS,
-                MsgType.ID,
-                id_submsg(IdType.TRIGGER, trigger_id),
-            )
-        )
+        eval_result_writer: JsonResultWriter = self._init_evaluation_writer(s, "json", trigger_id)
+        self.grpc.store_evaluation_results([eval_result_writer], evaluation)
 
-        writer_names: set[str] = set(s.pipeline_config.evaluation.result_writers)
-        writers = [self._init_evaluation_writer(s, name, trigger_id) for name in writer_names]
-        self.grpc.store_evaluation_results(writers, evaluations)
+        log.info = StoreEvaluationInfo(
+            trigger_id=trigger_id,
+            id_model=model_id,
+            dataset_id=dataset_id,
+            interval_start=interval_start,
+            interval_end=interval_end,
+            results=eval_result_writer.results,
+        )
 
     # Teardown
 
@@ -753,7 +835,7 @@ class PipelineExecutor:
 
         return first_timestamp, last_timestamp
 
-    def _init_evaluation_writer(self, s: ExecutionState, name: str, trigger_id: int) -> LogResultWriter:
+    def _init_evaluation_writer(self, s: ExecutionState, name: str, trigger_id: int) -> JsonResultWriter:
         return s.supervisor_supported_eval_result_writers[name](s.pipeline_id, trigger_id, self.state.eval_directory)
 
     def _shutdown_trainer(self) -> None:

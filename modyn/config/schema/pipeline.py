@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
+from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
+from modyn.utils import validate_timestr
+from pydantic import BaseModel, Field, NonNegativeInt, field_validator, model_validator
+from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
@@ -128,14 +131,10 @@ class MultiDownsamplingConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_downsampling_thresholds(
-        cls,
-        data: "MultiDownsamplingConfig",
-    ) -> "MultiDownsamplingConfig":
-        if len(data.downsampling_thresholds) != len(data.downsampling_list) - 1:
+    def validate_downsampling_thresholds(self) -> Self:
+        if len(self.downsampling_thresholds) != len(self.downsampling_list) - 1:
             raise ValueError("The downsampling_thresholds list should have one less item than the downsampling_list.")
-        return data
+        return self
 
 
 StorageBackend = Literal["database", "local"]
@@ -277,11 +276,10 @@ class LrSchedulerConfig(BaseModel):
     )
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_optimizers(cls, data: "LrSchedulerConfig") -> "LrSchedulerConfig":
-        if data.source == "PyTorch" and len(data.optimizers) != 1:
+    def validate_optimizers(self) -> Self:
+        if self.source == "PyTorch" and len(self.optimizers) != 1:
             raise ValueError("In case a PyTorch LR scheduler is used, the optimizers list should have only one item.")
-        return data
+        return self
 
 
 class TrainingConfig(BaseModel):
@@ -364,17 +362,16 @@ class TrainingConfig(BaseModel):
         return value
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_num_samples_to_pass(cls, data: "TrainingConfig") -> "TrainingConfig":
-        if data.initial_model == "pretrained":
-            if not data.use_previous_model:
-                raise ValidationError(
+    def validate_pretrained(self) -> Self:
+        if self.initial_model == "pretrained":
+            if not self.use_previous_model:
+                raise ValueError(
                     "Cannot have use_previous_model == False and use a pretrained initial model."
                     "Initial model would get lost after first trigger."
                 )
-            if not data.initial_model_id:
-                raise ValidationError("Initial model set to pretrained, but no initial_model_id given")
-        return data
+            if not self.initial_model_id:
+                raise ValueError("Initial model set to pretrained, but no initial_model_id given")
+        return self
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
@@ -417,8 +414,6 @@ class TriggerConfig(BaseModel):
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
-
-
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
@@ -426,6 +421,64 @@ class Metric(BaseModel):
         None,
         description="A function used to transform the model output before evaluation.",
     )
+
+
+class MatrixEvalStrategyConfig(BaseModel):
+    eval_every: str = Field(
+        description="The interval length for the evaluation "
+        "specified by an integer followed by a time unit (e.g. '100s')."
+    )
+    eval_start_from: NonNegativeInt = Field(
+        description="The timestamp from which the evaluation should start (inclusive). This timestamp is in seconds."
+    )
+    eval_end_at: NonNegativeInt = Field(
+        description="The timestamp at which the evaluation should end (exclusive). This timestamp is in seconds."
+    )
+
+    @field_validator("eval_every")
+    @classmethod
+    def validate_eval_every(cls, value: str) -> str:
+        if not validate_timestr(value):
+            raise ValueError("eval_every must be a valid time string")
+        return value
+
+    @model_validator(mode="after")
+    def eval_end_at_must_be_larger(self) -> Self:
+        if self.eval_start_from >= self.eval_end_at:
+            raise ValueError("eval_end_at must be larger than eval_start_from")
+        return self
+
+
+class OffsetEvalStrategyConfig(BaseModel):
+    offsets: List[str] = Field(
+        description=(
+            "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
+            "OffsetEvalStrategy."
+        ),
+        min_length=1,
+    )
+
+    @field_validator("offsets")
+    @classmethod
+    def validate_offsets(cls, value: List[str]) -> List[str]:
+        for offset in value:
+            if offset not in [OffsetEvalStrategy.NEGATIVE_INFINITY, OffsetEvalStrategy.INFINITY]:
+                if not validate_timestr(offset):
+                    raise ValueError(f"offset {offset} must be a valid time string")
+        return value
+
+
+class MatrixEvalStrategyModel(BaseModel):
+    name: Literal["MatrixEvalStrategy"]
+    config: MatrixEvalStrategyConfig
+
+
+class OffsetEvalStrategyModel(BaseModel):
+    name: Literal["OffsetEvalStrategy"]
+    config: OffsetEvalStrategyConfig
+
+
+EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
 class DatasetConfig(BaseModel):
@@ -466,6 +519,7 @@ ResultWriterType = Literal["json", "tensorboard", "log"]
 
 
 class EvaluationConfig(BaseModel):
+    eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[ResultWriterType] = Field(
         ["json"],
@@ -479,16 +533,6 @@ class EvaluationConfig(BaseModel):
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,
     )
-
-    # Additional validation
-
-    @model_validator(mode="after")
-    @classmethod
-    def validate_dataset_ids(cls, data: "EvaluationConfig") -> "EvaluationConfig":
-        dataset_ids = [dataset.dataset_id for dataset in data.datasets]
-        if len(set(dataset_ids)) != len(dataset_ids):
-            raise ValidationError("Dataset ids must be unique in evaluation")
-        return data
 
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #

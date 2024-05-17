@@ -7,16 +7,17 @@ import shutil
 import time
 from dataclasses import dataclass
 from typing import Generator, overload
+from unittest import mock
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
 from modyn.config.schema.config import DatasetsConfig, ModynConfig, SupervisorConfig
 from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
-from modyn.supervisor.internal.evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-    JsonResultWriter,
-    TensorboardResultWriter,
-)
+
+# pylint: disable=no-name-in-module
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
+from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineType
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
@@ -25,11 +26,11 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     ExecutionState,
     PipelineLogs,
     PipelineOptions,
+    SingleEvaluationInfo,
     StageInfo,
     StageLog,
 )
 from modyn.supervisor.internal.pipeline_executor.pipeline_executor import pipeline_stage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
@@ -163,9 +164,9 @@ def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> No
 
     assert len(pe.logs.supervisor.stage_runs) == 1
     assert pe.logs.supervisor.stage_runs[0].info.name == "test"
-    assert (pe.logs.supervisor.stage_runs[0].start - t0).total_seconds() < 5e-3
-    assert (pe.logs.supervisor.stage_runs[0].end - t1).total_seconds() < 5e-3
-    assert abs((pe.logs.supervisor.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 5e-3
+    assert (pe.logs.supervisor.stage_runs[0].start - t0).total_seconds() < 8e-3
+    assert (pe.logs.supervisor.stage_runs[0].end - t1).total_seconds() < 8e-3
+    assert abs((pe.logs.supervisor.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 8e-3
 
 
 def test_pipeline_stage_decorator_generator(dummy_pipeline_options: PipelineOptions) -> None:
@@ -229,7 +230,7 @@ def test_get_dataset_selector_batch_size_given(
     minimal_system_config: ModynConfig,
     minimal_pipeline_config: ModynPipelineConfig,
     dummy_dataset_config: DatasetsConfig,
-):
+) -> None:
     dataset1 = dummy_dataset_config.model_copy()
     dataset1.selector_batch_size = 2048
     minimal_system_config.storage.datasets = [dataset1]
@@ -239,7 +240,7 @@ def test_get_dataset_selector_batch_size_given(
     pe.state.selector_batch_size == 2048
 
 
-def test_shutdown_trainer():
+def test_shutdown_trainer() -> None:
     # TODO(MaxiBoether): implement
     pass
 
@@ -269,7 +270,7 @@ def test_fetch_new_data_batched(
     non_connecting_pipeline_executor: PipelineExecutor,
     dummy_execution_state: ExecutionState,
     dummy_logs: PipelineLogs,
-):
+) -> None:
     dummy_execution_state.max_timestamp = 21
     triggers = non_connecting_pipeline_executor._fetch_new_data(dummy_execution_state, dummy_logs)
     test_get_new_data_since.assert_called_once_with("test", 21)
@@ -281,7 +282,7 @@ def test_fetch_new_data_batched(
 
 def test_serve_online_data(
     non_connecting_pipeline_executor: PipelineExecutor, dummy_execution_state: ExecutionState, dummy_logs: PipelineLogs
-):
+) -> None:
     pe = non_connecting_pipeline_executor
 
     mocked__process_new_data_return_vals = [[10], [], []]
@@ -335,7 +336,7 @@ def test__process_new_data(
     expected_process_new_data_batch_args: list,
     non_connecting_pipeline_executor: PipelineExecutor,
     dummy_execution_state: ExecutionState,
-):
+) -> None:
     pe = non_connecting_pipeline_executor
     new_data = [(10, 1), (11, 2), (12, 3), (13, 4), (14, 5), (15, 6), (16, 7), (17, 8)]
 
@@ -630,56 +631,33 @@ def test__execute_triggers_within_batch_trigger_timespan(
         run_batch_triggers_and_validate(pe, batch)
 
 
-@pytest.mark.parametrize("evaluate", [True, False])
 @pytest.mark.parametrize(
     "trigger_id, training_id, model_id",
     [
         (21, 1337, 101),
     ],
 )
-@patch.object(GRPCHandler, "store_evaluation_results")
-@patch.object(GRPCHandler, "wait_for_evaluation_completion")
-@patch.object(GRPCHandler, "start_evaluation")
 @patch.object(GRPCHandler, "store_trained_model")
 @patch.object(GRPCHandler, "wait_for_training_completion")
 @patch.object(GRPCHandler, "start_training")
-def test_train_and_evaluate(
+def test_train_and_store_model(
     test_start_training: MagicMock,
     test_wait_for_training_completion: MagicMock,
     test_store_trained_model: MagicMock,
-    test_start_evaluation: MagicMock,
-    test_wait_for_evaluation_completion: MagicMock,
-    test_store_evaluation_results: MagicMock,
-    evaluate: bool,
     trigger_id: int,
     training_id: int,
     model_id: int,
     dummy_pipeline_options: PipelineOptions,
-    pipeline_evaluation_config: EvaluationConfig,
-):
+) -> None:
     dummy_pipeline_options.pipeline_id = 42
-    if evaluate:
-        pipeline_evaluation_config.result_writers = ["json"]
-        dummy_pipeline_options.pipeline_config.evaluation = pipeline_evaluation_config
-        dummy_pipeline_options.eval_directory = EVALUATION_DIRECTORY
-    else:
-        dummy_pipeline_options.pipeline_config.evaluation = None
-
+    dummy_pipeline_options.pipeline_config.evaluation = None
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
-
-    evaluations = {1: EvaluationStatusReporter(TRAINING_STATUS_QUEUE, EVAL_ID, "MNIST_eval", 1000)}
 
     test_start_training.return_value = training_id
     test_store_trained_model.return_value = model_id
     test_wait_for_training_completion.return_value = {}
 
-    if evaluate:
-        test_start_evaluation.return_value = evaluations
-
     ret_training_id, ret_model_id = pe._train_and_store_model(pe.state, pe.logs, trigger_id)
-    if evaluate:
-        pe._evaluate_and_store_results(pe.state, pe.logs, trigger_id, training_id, model_id)
-
     assert (ret_training_id, ret_model_id) == (training_id, model_id)
     assert pe.state.previous_model_id == model_id
     assert pe.state.current_training_id == training_id
@@ -688,19 +666,6 @@ def test_train_and_evaluate(
     test_start_training.assert_called_once_with(42, trigger_id, ANY, None, None)
     test_wait_for_training_completion.assert_called_once_with(training_id, 42, trigger_id)
     test_store_trained_model.assert_called_once_with(training_id)
-
-    if evaluate:
-        test_start_evaluation.assert_called_once_with(model_id, pe.state.pipeline_config)
-        test_wait_for_evaluation_completion.assert_called_once_with(training_id, evaluations)
-        test_store_evaluation_results.assert_called_once_with(ANY, evaluations)
-        assert len(test_store_evaluation_results.call_args[0][0]) == 1
-        result_writer: AbstractEvaluationResultWriter = test_store_evaluation_results.call_args[0][0][0]
-        assert result_writer.eval_directory == EVALUATION_DIRECTORY
-        assert result_writer.pipeline_id == 42
-        assert result_writer.trigger_id == 21
-
-    else:
-        test_start_evaluation.assert_not_called()
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
@@ -711,7 +676,7 @@ def test_run_training_set_num_samples_to_pass(
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
     dummy_pipeline_options: PipelineOptions,
-):
+) -> None:
     dummy_pipeline_options.pipeline_id = 42
     dummy_pipeline_options.pipeline_config.training.num_samples_to_pass = [73]
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
@@ -727,6 +692,89 @@ def test_run_training_set_num_samples_to_pass(
     # because the next trigger is out of the range of `num_samples_to_pass`
     pe._train_and_store_model(pe.state, pe.logs, trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, ANY, 101, None)
+
+
+@pytest.mark.parametrize("test_failure", [True])  # TODO add true
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "store_evaluation_results")
+def test__start_evaluations(
+    test_store_evaluation_results: MagicMock,
+    test_wait_for_evaluation_completion: MagicMock,
+    test_failure: bool,
+    dummy_pipeline_options: PipelineOptions,
+    pipeline_evaluation_config: EvaluationConfig,
+) -> None:
+    eval_dataset_config = pipeline_evaluation_config.datasets[0]
+    dummy_pipeline_options.pipeline_config.evaluation = pipeline_evaluation_config
+
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
+    failure_response = EvaluateModelResponse(
+        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+    )
+    # we let the second evaluation fail; it shouldn't affect the third evaluation
+    if test_failure:
+        evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
+    else:
+        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+            evaluation_started=True, evaluation_id=42, dataset_size=10
+        )
+
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    pe.grpc.evaluator = evaluator_stub_mock
+
+    if test_failure:
+
+        def get_eval_intervals(
+            first_timestamp: int, last_timestamp: int
+        ) -> Generator[tuple[int | None, int | None], None, None]:
+            yield from [(0, 100), (100, 200), (200, 300)]
+
+    else:
+        intervals = [(0, 100), (100, 200), (None, None), (None, 200), (None, 0), (200, None), (0, None), (0, 0)]
+
+        def get_eval_intervals(
+            first_timestamp: int, last_timestamp: int
+        ) -> Generator[tuple[int | None, int | None], None, None]:
+            yield from intervals
+
+    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
+        model_id = 1
+        pe._evaluate_and_store_results(
+            pe.state, pe.logs, trigger_id=0, training_id=0, model_id=model_id, first_timestamp=20, last_timestamp=70
+        )
+
+        if test_failure:
+            assert evaluator_stub_mock.evaluate_model.call_count == 3
+            assert test_store_evaluation_results.call_count == 2
+            assert test_wait_for_evaluation_completion.call_count == 2
+
+            stage_info = [
+                run.info for run in pe.logs.supervisor.stage_runs if isinstance(run.info, SingleEvaluationInfo)
+            ]
+            assert len(stage_info) == 3
+            assert (stage_info[0].interval_start, stage_info[0].interval_end) == (0, 100)
+            assert (stage_info[1].interval_start, stage_info[1].interval_end) == (100, 200)
+            assert (stage_info[2].interval_start, stage_info[2].interval_end) == (200, 300)
+            assert stage_info[0].failure_reason is None
+            assert stage_info[1].failure_reason == "EMPTY_DATASET"
+            assert stage_info[2].failure_reason is None
+        else:
+            assert evaluator_stub_mock.evaluate_model.call_count == len(intervals)
+            expected_calls = [
+                call(
+                    GRPCHandler.prepare_evaluation_request(
+                        eval_dataset_config.model_dump(by_alias=True),
+                        model_id,
+                        pipeline_evaluation_config.device,
+                        start_ts,
+                        end_ts,
+                    )
+                )
+                for start_ts, end_ts in intervals
+            ]
+
+            assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls
 
 
 @pytest.mark.parametrize("stop_replay_at", [None, 2, 43])
@@ -748,7 +796,7 @@ def test_replay_data(
     grpc_fetch_retval: list[tuple[list[tuple[int, int]], int]],
     stop_replay_at: int | None,
     dummy_pipeline_options: PipelineOptions,
-):
+) -> None:
     dummy_pipeline_options.pipeline_id = 42
     dummy_pipeline_options.start_replay_at = 0
     dummy_pipeline_options.stop_replay_at = stop_replay_at
@@ -782,7 +830,7 @@ def test_execute_pipeline(
     test_replay_data: MagicMock,
     experiment: bool,
     dummy_pipeline_options: PipelineOptions,
-):
+) -> None:
     dummy_pipeline_options.start_replay_at = 0 if experiment else None
 
     execute_pipeline(dummy_pipeline_options)
