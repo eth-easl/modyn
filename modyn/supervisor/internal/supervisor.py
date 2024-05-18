@@ -23,6 +23,7 @@ from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, Pipelin
 from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
+from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
 from pydantic import ValidationError
@@ -191,6 +192,7 @@ class Supervisor:
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
     ) -> dict:
+        # pylint: disable-msg=too-many-locals
         pipeline_config_model = self.validate_pipeline_config(pipeline_config)
         if not pipeline_config_model:
             return pipeline_res_msg(exception="Invalid pipeline configuration")
@@ -214,24 +216,22 @@ class Supervisor:
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
-            process = Process(
-                target=execute_pipeline,
-                args=(
-                    start_timestamp,
-                    pipeline_id,
-                    self.modyn_config.model_dump(by_alias=True),
-                    pipeline_config,
-                    eval_directory,
-                    self.supported_evaluation_result_writers,
-                    exception_queue,
-                    pipeline_status_queue,
-                    training_status_queue,
-                    eval_status_queue,
-                    start_replay_at,
-                    stop_replay_at,
-                    maximum_triggers,
-                ),
+            pipeline_options = PipelineOptions(
+                start_timestamp=start_timestamp,
+                pipeline_id=pipeline_id,
+                modyn_config=self.modyn_config,
+                pipeline_config=pipeline_config_model,
+                eval_directory=pathlib.Path(eval_directory),
+                supervisor_supported_eval_result_writers=self.supported_evaluation_result_writers,
+                exception_queue=exception_queue,
+                pipeline_status_queue=pipeline_status_queue,
+                training_status_queue=training_status_queue,
+                eval_status_queue=eval_status_queue,
+                start_replay_at=start_replay_at,
+                stop_replay_at=stop_replay_at,
+                maximum_triggers=maximum_triggers,
             )
+            process = Process(target=execute_pipeline, args=(pipeline_options,))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
@@ -241,8 +241,9 @@ class Supervisor:
                 eval_status_queue,
             )
             return pipeline_res_msg(pipeline_id=pipeline_id)
-        except Exception:  # pylint: disable=broad-except
-            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
+        except Exception as ex:  # pylint: disable=broad-except
+            raise ex
+            # return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 

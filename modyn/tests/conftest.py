@@ -3,6 +3,8 @@
 import pytest
 from modyn.config.schema.config import (
     DatabaseConfig,
+    DatasetBinaryFileWrapperConfig,
+    DatasetsConfig,
     EvaluatorConfig,
     MetadataDatabaseConfig,
     ModelStorageConfig,
@@ -17,6 +19,8 @@ from modyn.config.schema.pipeline import (
     DatasetConfig,
     EvaluationConfig,
     FullModelStrategy,
+    MatrixEvalStrategyConfig,
+    MatrixEvalStrategyModel,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
@@ -128,6 +132,25 @@ def dummy_system_config(
     )
 
 
+@pytest.fixture
+def dummy_dataset_config() -> DatasetConfig:
+    return DatasetsConfig(
+        name="test",
+        description="",
+        version="",
+        base_path="",
+        filesystem_wrapper_type="BinaryFilesystemWrapper",
+        file_wrapper_type="BinaryFileWrapper",
+        file_wrapper_config=DatasetBinaryFileWrapperConfig(
+            file_extension=".bin",
+            byteorder="little",
+            record_size=8,
+            label_size=4,
+        ),
+        selector_batch_size=128,
+    )
+
+
 # ----------------------------------------------------- Pipeline ----------------------------------------------------- #
 
 
@@ -152,8 +175,17 @@ def pipeline_training_config() -> TrainingConfig:
 
 
 @pytest.fixture
-def pipeline_evaluation_config() -> EvaluationConfig:
+def eval_strategies_config() -> MatrixEvalStrategyModel:
+    return MatrixEvalStrategyModel(
+        name="MatrixEvalStrategy",
+        config=MatrixEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300),
+    )
+
+
+@pytest.fixture
+def pipeline_evaluation_config(eval_strategies_config: MatrixEvalStrategyModel) -> EvaluationConfig:
     return EvaluationConfig(
+        eval_strategy=eval_strategies_config,
         device="cpu",
         datasets=[
             DatasetConfig(

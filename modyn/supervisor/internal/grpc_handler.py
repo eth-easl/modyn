@@ -44,8 +44,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.grpc.enums import IdType, MsgType, PipelineStage
-from modyn.supervisor.internal.grpc.template_msg import id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
@@ -159,9 +157,10 @@ class GRPCHandler:
 
         return response.available
 
-    def get_new_data_since(
-        self, dataset_id: str, timestamp: int
-    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+    def get_new_data_since(self, dataset_id: str, timestamp: int) -> Iterable[tuple[list[tuple[int, int, int]], int]]:
+        """Returns:
+        tuple containing actual data and fetch time in milliseconds
+        """
         assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
@@ -177,7 +176,10 @@ class GRPCHandler:
 
     def get_data_in_interval(
         self, dataset_id: str, start_timestamp: int, end_timestamp: int
-    ) -> Iterable[tuple[list[tuple[int, int, int]], dict[str, Any]]]:
+    ) -> Iterable[tuple[list[tuple[int, int, int]], int]]:
+        """Returns:
+        tuple containing actual data and fetch time in milliseconds
+        """
         assert self.storage is not None
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
@@ -276,30 +278,23 @@ class GRPCHandler:
             optimizer_config["source"] = optimizer["source"]
             optimizer_config["param_groups"] = []
             for param_group in optimizer["param_groups"]:
-                config_dict = param_group["config"] if "config" in param_group else {}
+                config_dict = param_group.get("config") or {}
                 optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
             optimizers_config[optimizer["name"]] = optimizer_config
 
         lr_scheduler_configs = {}
-        if "lr_scheduler" in pipeline_config["training"]:
+        if pipeline_config["training"].get("lr_scheduler"):
             lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
-            if "config" not in lr_scheduler_configs:
-                lr_scheduler_configs["config"] = {}
+            lr_scheduler_configs["config"] = lr_scheduler_configs.get("config", None)
 
-        if "config" in pipeline_config["training"]["optimization_criterion"]:
-            criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"]["config"])
-        else:
-            criterion_config = "{}"
+        criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"].get("config") or {})
 
-        if "epochs_per_trigger" in pipeline_config["training"]:
-            epochs_per_trigger = pipeline_config["training"]["epochs_per_trigger"]
-        else:
-            epochs_per_trigger = 1
+        epochs_per_trigger = pipeline_config["training"].get("epochs_per_trigger") or 1
 
-        if "num_prefetched_partitions" in pipeline_config["training"]:
+        if pipeline_config["training"].get("num_prefetched_partitions"):
             num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
         else:
-            if "prefetched_partitions" in pipeline_config["training"]:
+            if pipeline_config["training"].get("prefetched_partitions"):
                 raise ValueError(
                     "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
                     + " Please rename/remove that configuration"
@@ -307,7 +302,7 @@ class GRPCHandler:
             logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
             num_prefetched_partitions = 1
 
-        if "parallel_prefetch_requests" in pipeline_config["training"]:
+        if pipeline_config["training"].get("parallel_prefetch_requests"):
             parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
         else:
             logger.warning(
@@ -315,30 +310,15 @@ class GRPCHandler:
             )
             parallel_prefetch_requests = 1
 
-        if "seed" in pipeline_config["training"]:
-            seed = pipeline_config["training"]["seed"]
-        else:
-            seed = None
-
-        if "tokenizer" in pipeline_config["data"]:
-            tokenizer = pipeline_config["data"]["tokenizer"]
-        else:
-            tokenizer = None
-
-        if "transformations" in pipeline_config["data"]:
-            transform_list = pipeline_config["data"]["transformations"]
-        else:
-            transform_list = []
-
-        if "label_transformer_function" in pipeline_config["data"]:
-            label_transformer = pipeline_config["data"]["label_transformer_function"]
-        else:
-            label_transformer = ""
+        seed = pipeline_config["training"].get("seed", None)
+        tokenizer = pipeline_config["data"].get("tokenizer", None)
+        transform_list = pipeline_config["data"].get("transformations") or []
+        label_transformer = pipeline_config["data"].get("label_transformer_function") or ""
 
         if pipeline_config["training"]["checkpointing"]["activated"]:
             if (
-                "interval" not in pipeline_config["training"]["checkpointing"]
-                or "path" not in pipeline_config["training"]["checkpointing"]
+                pipeline_config["training"]["checkpointing"].get("interval") is None
+                or pipeline_config["training"]["checkpointing"].get("path") is None
             ):
                 raise ValueError("Checkpointing is enabled, but interval or path not given.")
 
@@ -349,10 +329,7 @@ class GRPCHandler:
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
-        if "grad_scaler_config" in pipeline_config["training"]:
-            grad_scaler_config = pipeline_config["training"]["grad_scaler_config"]
-        else:
-            grad_scaler_config = {}
+        grad_scaler_config = pipeline_config["training"].get("grad_scaler_config") or {}
 
         start_training_kwargs = {
             "pipeline_id": pipeline_id,
@@ -432,12 +409,6 @@ class GRPCHandler:
             self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale
         )
         training_reporter.create_tracker()
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.WAIT_FOR_TRAINING_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
-
         blocked_in_a_row = 0
 
         while True:
@@ -480,12 +451,6 @@ class GRPCHandler:
 
         training_reporter.close_counter()
         # status_tracker.close_counter()
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.TRAINING_COMPLETED, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
-        logger.debug("Training completed")
 
         return trainer_log
 
@@ -532,16 +497,8 @@ class GRPCHandler:
         end_timestamp: Optional[int] = None,
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
-
-        if "transformations" in dataset_config:
-            transform_list = dataset_config["transformations"]
-        else:
-            transform_list = []
-
-        if "label_transformer_function" in dataset_config:
-            label_transformer = dataset_config["label_transformer_function"]
-        else:
-            label_transformer = ""
+        transform_list = dataset_config.get("transformations") or []
+        label_transformer = dataset_config.get("label_transformer_function") or ""
 
         bytes_parser_function = dataset_config["bytes_parser_function"]
         batch_size = dataset_config["batch_size"]
@@ -549,15 +506,8 @@ class GRPCHandler:
         metrics = []
         for metric in dataset_config["metrics"]:
             name = metric["name"]
-            if "config" in metric:
-                metric_config = json.dumps(metric["config"])
-            else:
-                metric_config = "{}"
-
-            if "evaluation_transformer_function" in metric:
-                evaluation_transformer = metric["evaluation_transformer_function"]
-            else:
-                evaluation_transformer = ""
+            metric_config = json.dumps(metric.get("config") or {})
+            evaluation_transformer = metric.get("evaluation_transformer_function") or ""
 
             metrics.append(
                 MetricConfiguration(
@@ -583,7 +533,7 @@ class GRPCHandler:
             "label_transformer": EvaluatorPythonString(value=label_transformer),
         }
 
-        if "tokenizer" in dataset_config:
+        if dataset_config.get("tokenizer"):
             tokenizer = dataset_config["tokenizer"]
             start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
 
@@ -598,11 +548,6 @@ class GRPCHandler:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
         logger.debug("wait for evaluation completion")
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.WAIT_FOR_EVALUATION_COMPLETION, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
 
         # We are using a deque here in order to fetch the status of each evaluation
         # sequentially in a round-robin manner.
@@ -654,11 +599,6 @@ class GRPCHandler:
             working_queue.append(current_evaluation_id)
             sleep(1)
 
-        self.pipeline_status_queue.put(
-            pipeline_stage_msg(
-                PipelineStage.EVALUATION_COMPLETED, MsgType.ID, id_submsg(IdType.TRAINING, training_id), True
-            )
-        )
         logger.debug("Evaluation completed")
 
     def store_evaluation_results(
