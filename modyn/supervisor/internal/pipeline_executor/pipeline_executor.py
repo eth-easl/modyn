@@ -442,7 +442,7 @@ class PipelineExecutor:
 
         Args:
             s: Execution state of the pipeline executor.
-        
+
         Returns:
             The list of the actually processed triggers
         """
