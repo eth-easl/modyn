@@ -19,6 +19,7 @@ from integrationtests.utils import (
     init_metadata_db,
     register_pipeline,
 )
+from modyn.config.schema.pipeline import NewDataSelectionStrategy
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -39,7 +40,6 @@ from torchvision import transforms
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
 TIMEOUT = 120  # seconds
-
 # The following path leads to a directory that is mounted into the docker container and shared with the
 # storage container.
 DATASET_PATH = MODYN_DATASET_PATH / "test_dataset"
@@ -205,13 +205,10 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": True, "storage_backend": "database"},
-    }
-
-    pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config)
+    strategy_config = NewDataSelectionStrategy(
+        maximum_keys_in_memory=2, limit=-1, reset_after_trigger=True, storage_backend="database"
+    )
+    pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config.model_dump(by_alias=True))
     init_metadata_db(get_modyn_config())
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 

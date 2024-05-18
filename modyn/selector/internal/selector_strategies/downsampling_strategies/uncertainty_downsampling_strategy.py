@@ -11,7 +11,7 @@ class UncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
     def _build_downsampling_params(self) -> dict:
         config = super()._build_downsampling_params()
 
-        if "score_metric" not in self.downsampling_config:
+        if not self.downsampling_config.get("score_metric"):
             raise ValueError(
                 "Please specify the metric used to score uncertainty for the datapoints. "
                 "Available metrics : LeastConfidence, Entropy, Margin"

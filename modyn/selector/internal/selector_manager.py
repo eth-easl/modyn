@@ -188,7 +188,7 @@ class SelectorManager:
     def _instantiate_strategy(self, selection_strategy: dict, pipeline_id: int) -> AbstractSelectionStrategy:
         strategy_name = selection_strategy["name"]
         maximum_keys_in_memory = selection_strategy["maximum_keys_in_memory"]
-        config = selection_strategy["config"] if "config" in selection_strategy else {}
+        config = dict(selection_strategy)
         default_configs = {"limit": -1, "reset_after_trigger": False}
 
         for setting, default_value in default_configs.items():

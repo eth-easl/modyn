@@ -23,7 +23,7 @@ class AbstractDownsamplingStrategy(ABC):
     def __init__(self, downsampling_config: dict, maximum_keys_in_memory: int) -> None:
         super().__init__()
 
-        if "sample_then_batch" not in downsampling_config:
+        if downsampling_config.get("sample_then_batch") is None:
             raise ValueError(
                 "Please specify if you want to sample and then batch or vice versa. "
                 "Use the sample_then_batch parameter"
@@ -33,12 +33,12 @@ class AbstractDownsamplingStrategy(ABC):
         else:
             self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and "period" in downsampling_config:
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and downsampling_config.get("period"):
             raise ValueError("Downsampling period can be used only in sample-then-batch.")
 
         self.downsampling_period = downsampling_config.get("period", 1)
 
-        if "ratio" not in downsampling_config:
+        if downsampling_config.get("ratio") is None:
             raise ValueError("Please specify downsampling ratio to use downsampling methods")
 
         self.downsampling_ratio = downsampling_config["ratio"]

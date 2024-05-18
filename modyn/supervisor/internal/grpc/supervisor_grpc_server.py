@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 from modyn.common.grpc import GenericGRPCServer
+from modyn.config.schema.config import ModynConfig
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import (  # noqa: E402, E501
     add_SupervisorServicer_to_server,
 )
@@ -18,7 +19,7 @@ class SupervisorGRPCServer(GenericGRPCServer):
 
     def __init__(self, modyn_config: dict) -> None:
         self.modyn_config = modyn_config
-        self.supervisor = Supervisor(modyn_config)
+        self.supervisor = Supervisor(ModynConfig(**modyn_config))
 
         callback_kwargs = {"supervisor": self.supervisor}
         super().__init__(

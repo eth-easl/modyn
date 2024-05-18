@@ -1,5 +1,11 @@
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
+from modyn.config.schema.pipeline import (
+    CoresetSelectionStrategy,
+    DownsamplingConfig,
+    NewDataSelectionStrategy,
+    PresamplingConfig,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetAvailableLabelsRequest,
@@ -11,6 +17,25 @@ from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStu
 from modyn.utils import grpc_connection_established
 
 # TODO(54): Write more integration tests for different strategies.
+
+
+def get_coreset_strategy_config() -> CoresetSelectionStrategy:
+    return CoresetSelectionStrategy(
+        maximum_keys_in_memory=250,
+        storage_backend="database",  # TODO(#324): Support local backend
+        limit=-1,
+        reset_after_trigger=True,
+        presampling_config=PresamplingConfig(strategy="LabelBalancedPresamplingStrategy", ratio=50),
+    )
+
+
+def get_newdata_strategy_config() -> NewDataSelectionStrategy:
+    return NewDataSelectionStrategy(
+        maximum_keys_in_memory=2,
+        limit=-1,
+        reset_after_trigger=True,
+        storage_backend="database",
+    )
 
 
 def connect_to_selector_servicer() -> grpc.Channel:
@@ -29,18 +54,8 @@ def test_label_balanced_presampling_huge() -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
 
-    strategy_config = {
-        "name": "CoresetStrategy",
-        "maximum_keys_in_memory": 250,
-        "config": {
-            "storage_backend": "database",  # TODO(#324): Support local backend
-            "limit": -1,
-            "reset_after_trigger": True,
-            "presampling_config": {"strategy": "LabelBalancedPresamplingStrategy", "ratio": 50},
-        },
-    }
-
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    strategy_config = get_coreset_strategy_config()
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     trigger_id = selector.inform_data_and_trigger(
@@ -105,22 +120,13 @@ def test_label_balanced_force_same_size():
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
 
-    strategy_config = {
-        "name": "CoresetStrategy",
-        "maximum_keys_in_memory": 100,
-        "config": {
-            "storage_backend": "database",  # TODO(#324): Support local backend
-            "limit": -1,
-            "reset_after_trigger": False,
-            "presampling_config": {
-                "strategy": "LabelBalancedPresamplingStrategy",
-                "ratio": 90,
-                "force_column_balancing": True,
-            },
-        },
-    }
+    strategy_config = get_coreset_strategy_config()
+    strategy_config.maximum_keys_in_memory = 100
+    strategy_config.reset_after_trigger = False
+    strategy_config.presampling_config.force_column_balancing = True
+    strategy_config.presampling_config.ratio = 90
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     # now we just have 2 classes with 4 samples each
@@ -189,22 +195,13 @@ def test_label_balanced_force_all_samples():
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
 
-    strategy_config = {
-        "name": "CoresetStrategy",
-        "maximum_keys_in_memory": 100,
-        "config": {
-            "storage_backend": "database",  # TODO(#324): Support local backend
-            "limit": -1,
-            "reset_after_trigger": False,
-            "presampling_config": {
-                "strategy": "LabelBalancedPresamplingStrategy",
-                "ratio": 90,
-                "force_required_target_size": True,
-            },
-        },
-    }
+    strategy_config = get_coreset_strategy_config()
+    strategy_config.maximum_keys_in_memory = 100
+    strategy_config.reset_after_trigger = False
+    strategy_config.presampling_config.force_required_target_size = True
+    strategy_config.presampling_config.ratio = 90
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     # same classes as before
@@ -288,13 +285,9 @@ def test_newdata() -> None:
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": True, "storage_backend": "database"},
-    }
+    strategy_config = get_newdata_strategy_config()
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
@@ -417,23 +410,14 @@ def test_abstract_downsampler(reset_after_trigger) -> None:
     selector = SelectorStub(selector_channel)
 
     # sampling every datapoint
-    strategy_config = {
-        "name": "CoresetStrategy",
-        "maximum_keys_in_memory": 50000,
-        "config": {
-            "storage_backend": "database",  # TODO(#324): Support local backend
-            "limit": -1,
-            "reset_after_trigger": reset_after_trigger,
-            "presampling_config": {"ratio": 20, "strategy": "Random"},
-            "downsampling_config": {
-                "ratio": 10,
-                "strategy": "Loss",
-                "sample_then_batch": False,
-            },
-        },
-    }
+    strategy_config = get_coreset_strategy_config()
+    strategy_config.maximum_keys_in_memory = 50000
+    strategy_config.reset_after_trigger = reset_after_trigger
+    strategy_config.presampling_config.ratio = 20
+    strategy_config.presampling_config.strategy = "Random"
+    strategy_config.downsampling_config = DownsamplingConfig(strategy="Loss", ratio=10, sample_then_batch=False)
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
@@ -576,13 +560,10 @@ def test_empty_triggers() -> None:
     # We test without reset, i.e., after an empty trigger we get the same data
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
-    }
+    strategy_config = get_newdata_strategy_config()
+    strategy_config.reset_after_trigger = False
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
@@ -744,13 +725,11 @@ def test_many_samples_evenly_distributed():
     # We test without reset, i.e., after an empty trigger we get the same data
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 5000,
-        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
-    }
+    strategy_config = get_newdata_strategy_config()
+    strategy_config.maximum_keys_in_memory = 5000
+    strategy_config.reset_after_trigger = False
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
@@ -814,13 +793,11 @@ def test_many_samples_unevenly_distributed():
     # We test without reset, i.e., after an empty trigger we get the same data
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 4999,
-        "config": {"limit": -1, "reset_after_trigger": False, "storage_backend": "database"},
-    }
+    strategy_config = get_newdata_strategy_config()
+    strategy_config.maximum_keys_in_memory = 4999
+    strategy_config.reset_after_trigger = False
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
@@ -885,13 +862,11 @@ def test_get_available_labels(reset_after_trigger: bool):
     selector = SelectorStub(selector_channel)
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
-    strategy_config = {
-        "name": "NewDataStrategy",
-        "maximum_keys_in_memory": 2,
-        "config": {"limit": -1, "reset_after_trigger": reset_after_trigger, "storage_backend": "database"},
-    }
+    strategy_config = get_newdata_strategy_config()
+    strategy_config.maximum_keys_in_memory = 2
+    strategy_config.reset_after_trigger = reset_after_trigger
 
-    pipeline_config = get_minimal_pipeline_config(2, strategy_config)
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
     selector.inform_data(
