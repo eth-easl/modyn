@@ -86,7 +86,7 @@ class GenericGRPCServer:
         """
         logger.info(f"[{os.getpid()}] Starting server. Listening on port {self.port}")
         with reserve_port(self.port) as port:
-            bind_address = "[::]:" + port
+            bind_address = f"[::]:{port}"
             for _ in range(NUM_GPRC_PROCESSES):
                 worker = mp.Process(
                     target=_run_server_worker,

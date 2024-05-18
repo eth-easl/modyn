@@ -44,7 +44,7 @@ class EvaluatorGRPCServer:
         add_EvaluatorServicer_to_server(EvaluatorGRPCServicer(self.modyn_config, self.tempdir), self.server)
         port = self.modyn_config["evaluator"]["port"]
         logger.info(f"Starting GRPC server. Listening on port {port}")
-        self.server.add_insecure_port("[::]:" + port)
+        self.server.add_insecure_port(f"[::]:{port}")
         self.server.start()
         return self.server
 

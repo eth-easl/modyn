@@ -42,7 +42,7 @@ class GRPCServer:
 
         add_TrainerServerServicer_to_server(TrainerServerGRPCServicer(self.config, self.tempdir), self.server)
         logger.info(f"Starting trainer server. Listening on port {self.config['trainer_server']['port']}")
-        self.server.add_insecure_port("[::]:" + self.config["trainer_server"]["port"])
+        self.server.add_insecure_port(f"[::]:{self.config["trainer_server"]["port"]}")
         logger.info("start serving!")
         self.server.start()
         return self.server

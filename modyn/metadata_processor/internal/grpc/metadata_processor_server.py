@@ -33,6 +33,6 @@ class MetadataProcessorServer:
         port = self.config["metadata_processor"]["port"]
         logger.info(f"Starting server. Listening on port {port}")
 
-        server.add_insecure_port("[::]:" + port)
+        server.add_insecure_port(f"[::]:{port}")
         server.start()
         server.wait_for_termination()

@@ -47,7 +47,7 @@ class GRPCServer:
         )
         port = self.modyn_config["model_storage"]["port"]
         logger.info(f"Starting GRPC server. Listening on port {port}")
-        self.server.add_insecure_port("[::]:" + port)
+        self.server.add_insecure_port(f"[::]:{port}")
         self.server.start()
         return self.server
 
