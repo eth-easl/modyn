@@ -13,23 +13,13 @@ def instantiate_presampler(
         presampling_strategy = config["presampling_config"]["strategy"]
         presampling_config = config["presampling_config"]
 
-    try:
-        presampling_class = instantiate_class(
-            "modyn.selector.internal.selector_strategies.presampling_strategies",
-            presampling_strategy,
-            presampling_config,
-            modyn_config,
-            pipeline_id,
-            storage_backend,
-        )
-    except ValueError:
-        # Try to instantiate the class even if the short name is used
-        presampling_class = instantiate_class(
-            "modyn.selector.internal.selector_strategies.presampling_strategies",
-            presampling_strategy + "PresamplingStrategy",
-            presampling_config,
-            modyn_config,
-            pipeline_id,
-            storage_backend,
-        )
+
+    presampling_class = instantiate_class(
+        "modyn.selector.internal.selector_strategies.presampling_strategies",
+        presampling_strategy + "PresamplingStrategy",
+        presampling_config,
+        modyn_config,
+        pipeline_id,
+        storage_backend,
+    )
     return presampling_class
