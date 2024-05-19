@@ -14,7 +14,7 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
     def _build_downsampling_params(self) -> dict:
         config = super()._build_downsampling_params()
 
-        if self.downsampling_config.get("submodular_function"):
+        if self.downsampling_config.get("submodular_function") is None:
             raise ValueError(
                 f"Please specify the submodular function used to select the datapoints. "
                 f"Available functions: {SUBMODULAR_FUNCTIONS}, param submodular_function"
