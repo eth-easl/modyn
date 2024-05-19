@@ -10,12 +10,15 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import DatasetConfig
+from modyn.config.schema.pipeline import DatasetConfig, ResultWriterType
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import AbstractEvaluationResultWriter
+from modyn.supervisor.internal.evaluation_result_writer.json_result_writer import DedicatedJsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer.tensorboard_result_writer import TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage, PipelineType
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -45,6 +48,12 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
+
+EVAL_RESULT_WRITER_CLASSES: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
+    "json": JsonResultWriter,
+    "json_dedicated": DedicatedJsonResultWriter,
+    "tensorboard": TensorboardResultWriter,
+}
 
 P = ParamSpec("P")  # parameters of pipeline stage
 R = TypeVar("R")  # result of pipeline stage
@@ -548,7 +557,7 @@ class PipelineExecutor:
             last_timestamp=last_timestamp,
         )
 
-    @pipeline_stage(PipelineType.TRIGGER, PipelineStage.INFORM_SELECTOR_AND_TRIGGER, track=True)
+    @pipeline_stage(PipelineType.TRIGGER, PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, track=True)
     def _inform_selector_about_trigger(
         self,
         s: ExecutionState,
@@ -562,7 +571,7 @@ class PipelineExecutor:
         Returns:
             trigger id from selector and number of samples in trigger.
         """
-        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.INFORM_SELECTOR_AND_TRIGGER, MsgType.GENERAL))
+        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, MsgType.GENERAL))
 
         # This call informs the selector about the data until (and including) the data point that caused the trigger
         # and then also notifies it about the triggering. This means the next training call on trigger_id will
@@ -767,7 +776,7 @@ class PipelineExecutor:
         interval_start: int | None,
         interval_end: int | None,
     ) -> None:
-        eval_result_writer: JsonResultWriter = self._init_evaluation_writer(s, "json", trigger_id)
+        eval_result_writer: JsonResultWriter = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
         self.grpc.store_evaluation_results([eval_result_writer], evaluation)
 
         log.info = StoreEvaluationInfo(
@@ -776,7 +785,7 @@ class PipelineExecutor:
             dataset_id=dataset_id,
             interval_start=interval_start,
             interval_end=interval_end,
-            results=eval_result_writer.results,
+            results=eval_result_writer.results["datasets"][0][dataset_id],
         )
 
     # Teardown
@@ -836,8 +845,8 @@ class PipelineExecutor:
 
         return first_timestamp, last_timestamp
 
-    def _init_evaluation_writer(self, s: ExecutionState, name: str, trigger_id: int) -> JsonResultWriter:
-        return s.supervisor_supported_eval_result_writers[name](s.pipeline_id, trigger_id, self.state.eval_directory)
+    def _init_evaluation_writer(self, pipeline_id: int, name: str, trigger_id: int) -> JsonResultWriter:
+        return EVAL_RESULT_WRITER_CLASSES[name](pipeline_id, trigger_id, self.state.eval_directory)
 
     def _shutdown_trainer(self) -> None:
         if self.state.current_training_id is not None:

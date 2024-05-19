@@ -520,7 +520,11 @@ class ResultWriter(BaseModel):
     config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
 
 
-ResultWriterType = Literal["json", "tensorboard", "log"]
+ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
+"""
+- json: appends the evaluations to the standard json logfile.
+- json_dedicated: dumps the results into dedicated json files for each evaluation.
+- tensorboard: output the evaluation to dedicated tensorboard files."""
 
 
 class EvaluationConfig(BaseModel):

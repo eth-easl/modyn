@@ -58,7 +58,7 @@ class PipelineStage(StrEnum):
     # Trigger
     EXECUTE_TRIGGERS = "Execute triggers within batch"
     EXECUTE_SINGLE_TRIGGER = "Execute single trigger"
-    INFORM_SELECTOR_AND_TRIGGER = "Inform selector and trigger"
+    INFORM_SELECTOR_ABOUT_TRIGGER = "Inform selector and trigger"
     INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
 
     NEW_DATA_HANDLED = "New data handled"

@@ -10,14 +10,14 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional, cast
 
 import pandas as pd
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator
 from typing_extensions import override
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,6 @@ class PipelineOptions:
     modyn_config: ModynConfig
     pipeline_config: ModynPipelineConfig
     eval_directory: Path
-    supervisor_supported_eval_result_writers: dict
     exception_queue: mp.Queue
     pipeline_status_queue: mp.Queue
     training_status_queue: mp.Queue
@@ -214,7 +213,7 @@ class TriggerExecutionInfo(_TriggerLogMixin):
 class _TrainInfoMixin(StageInfo):
     trigger_id: int
     training_id: int
-
+    
 
 class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
@@ -270,6 +269,18 @@ class SelectorInformLog(StageInfo):
         )
 
 
+StageInfoUnion = (
+    FetchDataInfo
+    | ProcessNewDataInfo
+    | EvaluateTriggerInfo
+    | SelectorInformTriggerInfo
+    | TriggerExecutionInfo
+    | TrainingInfo
+    | StoreModelInfo
+    | SingleEvaluationInfo
+    | SelectorInformLog
+)
+
 class StageLog(BaseModel):
     id: str
     """Identifier for the pipeline stage, PipelineStage.name in most cases"""
@@ -305,7 +316,29 @@ class StageLog(BaseModel):
             df = pd.concat([df, info_df], axis=1)
 
         return df
+    
+    # (De)Serialization to enable parsing all classes in the StageInfoUnion;
+    # with that logic we avoid having to add disciminator fields to every subclass of StageInfo
 
+    @model_serializer(mode="wrap")
+    def serialize(self, handler: Callable[..., dict[str, Any]]) -> dict[str, Any]:
+        default_serializer = handler(self)
+        return {
+            **default_serializer,
+            "info": self.info.model_dump(by_alias=True) if self.info else None,
+            **({"info_type": self.info.__class__.__name__} if self.info else {}),
+        }
+    
+    @model_validator(mode="before")
+    @classmethod
+    def deserializer(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if data.get("info_type") and data.get("info"):
+                info_type = cast(type[StageInfo], globals().get(data["info_type"]))
+                data["info"] = info_type.model_validate(data["info"])
+            else:
+                data["info"] = None
+        return data
 
 class SupervisorLogs(BaseModel):
     stage_runs: list[StageLog] = Field(default_factory=list)
@@ -314,8 +347,18 @@ class SupervisorLogs(BaseModel):
         self.stage_runs.clear()
 
     def merge(self, logs: list[StageLog]) -> SupervisorLogs:
-        self.stage_runs = self.stage_runs + logs
+        self.stage_runs = self.stage_runs + [run for l in logs for run in l.stage_runs]
         return self
+    
+    @property
+    def df(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            data=[
+                (stage.id, stage.start, stage.end, stage.duration, stage.sample_idx, stage.sample_time) 
+                for stage in self.stage_runs
+            ],
+            columns=["id", "start", "end", "duration", "sample_idx", "sample_index"]
+        )
 
     @property
     def stage_runs_df(self) -> pd.DataFrame:
@@ -365,13 +408,13 @@ class PipelineLogs(BaseModel):
                 new items since the last materialization, and final will merge all logs.
         """
         if "PYTEST_CURRENT_TEST" in os.environ:
-            self.model_dump_json()  # Enforce serialization to catch issues
+            self.model_dump_json(by_alias=True)  # Enforce serialization to catch issues
             return  # But don't actually store in tests
 
         # ensure empty log directory
         pipeline_logdir = log_dir_path / f"pipeline_{self.pipeline_id}"
 
-        if pipeline_logdir.exists():
+        if mode == "initial" and pipeline_logdir.exists():
             # if not empty move the previous content to .backup_timetamp directory
             backup_dir = log_dir_path / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
             pipeline_logdir.rename(backup_dir)
@@ -387,20 +430,20 @@ class PipelineLogs(BaseModel):
 
         if mode == "increment":
             with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.supervisor.model_dump_json(indent=2))
+                logfile.write(self.supervisor.model_dump_json(by_alias=True, indent=2))
 
             self.supervisor.clear()
             self.partial_idx += 1
             return
 
         # final: merge increment logs
-        supervisor_files = sorted(pipeline_logdir.glob(f"pipeline_{self.pipeline_id}/supervisor.part_*.log"))
+        supervisor_files = sorted(pipeline_logdir.glob(f"supervisor_part_*.log"))
         partial_supervisor_logs = [
             SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
         ]
         self.supervisor = self.supervisor.merge(partial_supervisor_logs)
 
         with open(pipeline_logdir / "pipeline.log", "w", encoding="utf-8") as logfile:
-            logfile.write(self.model_dump_json(indent=2))
+            logfile.write(self.model_dump_json(by_alias=True, indent=2))
 
         self.supervisor.clear()
