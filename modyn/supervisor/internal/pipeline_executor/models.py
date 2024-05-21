@@ -10,7 +10,7 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, cast
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
 from modyn.config.schema.config import ModynConfig
@@ -99,6 +99,8 @@ class ExecutionState(PipelineOptions):
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
+    seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
+    current_batch_index: int = 0
     current_sample_index: int = 0
     current_sample_time: int = 0  # unix timestamp
     """The unix timestamp of the last sample seen and processed by the pipeline executor."""
@@ -213,7 +215,7 @@ class TriggerExecutionInfo(_TriggerLogMixin):
 class _TrainInfoMixin(StageInfo):
     trigger_id: int
     training_id: int
-    
+
 
 class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
@@ -256,6 +258,24 @@ class SingleEvaluationInfo(_ModelEvalInfo):
 class StoreEvaluationInfo(_ModelEvalInfo):
     results: dict[str, Any]
 
+    def results_df(self) -> pd.DataFrame:
+        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        return pd.DataFrame(
+            [
+                (
+                    self.trigger_id,
+                    self.id_model,
+                    self.dataset_id,
+                    self.interval_start,
+                    self.interval_end,
+                    metric["name"],
+                    metric["result"],
+                )
+                for metric in self.results["metrics"]
+            ],
+            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end", "metric", "value"],
+        )
+
 
 class SelectorInformLog(StageInfo):
     selector_log: dict[str, Any] | None
@@ -269,17 +289,18 @@ class SelectorInformLog(StageInfo):
         )
 
 
-StageInfoUnion = (
-    FetchDataInfo
-    | ProcessNewDataInfo
-    | EvaluateTriggerInfo
-    | SelectorInformTriggerInfo
-    | TriggerExecutionInfo
-    | TrainingInfo
-    | StoreModelInfo
-    | SingleEvaluationInfo
-    | SelectorInformLog
-)
+StageInfoUnion = Union[
+    FetchDataInfo,
+    ProcessNewDataInfo,
+    EvaluateTriggerInfo,
+    SelectorInformTriggerInfo,
+    TriggerExecutionInfo,
+    TrainingInfo,
+    StoreModelInfo,
+    SingleEvaluationInfo,
+    SelectorInformLog,
+]
+
 
 class StageLog(BaseModel):
     id: str
@@ -296,6 +317,7 @@ class StageLog(BaseModel):
     `end-start` is not always the actual duration this stage spent in computing."""
 
     # dataset time of last seen sample
+    batch_idx: int
     sample_idx: int
     sample_time: int
 
@@ -316,7 +338,7 @@ class StageLog(BaseModel):
             df = pd.concat([df, info_df], axis=1)
 
         return df
-    
+
     # (De)Serialization to enable parsing all classes in the StageInfoUnion;
     # with that logic we avoid having to add disciminator fields to every subclass of StageInfo
 
@@ -328,7 +350,7 @@ class StageLog(BaseModel):
             "info": self.info.model_dump(by_alias=True) if self.info else None,
             **({"info_type": self.info.__class__.__name__} if self.info else {}),
         }
-    
+
     @model_validator(mode="before")
     @classmethod
     def deserializer(cls, data: Any) -> Any:
@@ -340,6 +362,7 @@ class StageLog(BaseModel):
                 data["info"] = None
         return data
 
+
 class SupervisorLogs(BaseModel):
     stage_runs: list[StageLog] = Field(default_factory=list)
 
@@ -347,17 +370,17 @@ class SupervisorLogs(BaseModel):
         self.stage_runs.clear()
 
     def merge(self, logs: list[StageLog]) -> SupervisorLogs:
-        self.stage_runs = self.stage_runs + [run for l in logs for run in l.stage_runs]
+        self.stage_runs = self.stage_runs + [run for _l in logs for run in _l.stage_runs]
         return self
-    
+
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             data=[
-                (stage.id, stage.start, stage.end, stage.duration, stage.sample_idx, stage.sample_time) 
+                (stage.id, stage.start, stage.end, stage.duration, stage.sample_idx, stage.sample_time)
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "sample_idx", "sample_index"]
+            columns=["id", "start", "end", "duration", "sample_idx", "sample_index"],
         )
 
     @property
@@ -383,6 +406,8 @@ class PipelineLogs(BaseModel):
     # static logs
 
     pipeline_id: int
+    pipeline_stages: dict[str, tuple[int, list[str]]]
+    """List of all pipeline stages, their execution order index, and their parent stages."""
 
     config: ConfigLogs
 
@@ -437,7 +462,7 @@ class PipelineLogs(BaseModel):
             return
 
         # final: merge increment logs
-        supervisor_files = sorted(pipeline_logdir.glob(f"supervisor_part_*.log"))
+        supervisor_files = sorted(pipeline_logdir.glob("supervisor_part_*.log"))
         partial_supervisor_logs = [
             SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
         ]

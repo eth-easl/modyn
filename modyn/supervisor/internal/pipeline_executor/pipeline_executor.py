@@ -16,10 +16,12 @@ from modyn.config.schema.pipeline import DatasetConfig, ResultWriterType
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import AbstractEvaluationResultWriter
+from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
+    AbstractEvaluationResultWriter,
+)
 from modyn.supervisor.internal.evaluation_result_writer.json_result_writer import DedicatedJsonResultWriter
 from modyn.supervisor.internal.evaluation_result_writer.tensorboard_result_writer import TensorboardResultWriter
-from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage, PipelineType
+from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.triggers import Trigger
@@ -60,10 +62,13 @@ R = TypeVar("R")  # result of pipeline stage
 
 G = TypeVar("G")  # generator type
 
+_pipeline_stage_parents: dict[str, tuple[int, list[str]]] = {PipelineStage.MAIN.name: (0, [])}
+"""automatically filled parent relationships for pipeline stages"""
+
 
 def pipeline_stage(  # type: ignore[no-untyped-def]
-    pipeline: PipelineType,
     stage: PipelineStage,
+    parent: PipelineStage | list[PipelineStage] | None = None,
     *,
     log: bool = True,
     track: bool = False,
@@ -77,6 +82,14 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
         log: Whether to log the stage execution.
         track: Whether to track the stage execution and make results available in the pipeline (e.g. trigger policies).
     """
+    _pipeline_stage_parents[stage.name] = (
+        -1,  # sequential execution index; -1 as not yet determined
+        (
+            [parent.name]
+            if parent is not None and not isinstance(parent, list)
+            else ([p.name for p in parent] if isinstance(parent, list) else [])
+        ),
+    )
 
     def wrapper_outer(  # type: ignore[no-untyped-def]
         func: Callable[Concatenate["PipelineExecutor", ExecutionState, StageLog, P], R]
@@ -114,13 +127,21 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                     logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
 
             state.stage = stage
+            if stage not in state.seen_pipeline_stages:
+                _pipeline_stage_parents[stage.name] = (
+                    len(state.seen_pipeline_stages),
+                    _pipeline_stage_parents[stage.name][1],
+                )
+                state.seen_pipeline_stages.add(stage)
+
             if log:
-                logger.info(f"[pipeline {pipeline}: {state.pipeline_id}] Entering <{stage}>.")
+                logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
 
             # execute stage
             stage_log = StageLog(
                 id=stage.name,
                 start=datetime.now(),
+                batch_idx=state.current_batch_index,
                 sample_idx=state.current_sample_index,
                 sample_time=state.current_sample_time,
             )
@@ -152,6 +173,7 @@ class PipelineExecutor:
         self.state = ExecutionState(**vars(options))
         self.logs = PipelineLogs(
             pipeline_id=options.pipeline_id,
+            pipeline_stages=_pipeline_stage_parents,
             config=ConfigLogs(system=options.modyn_config, pipeline=options.pipeline_config),
             experiment=options.experiment_mode,
             start_replay_at=options.start_replay_at,
@@ -191,21 +213,21 @@ class PipelineExecutor:
 
     # Setup
 
-    @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT, log=False)
+    @pipeline_stage(PipelineStage.INIT, parent=PipelineStage.MAIN, log=False)
     def _init(self, s: ExecutionState, log: StageLog) -> None:
         s.max_timestamp = s.start_timestamp
         self.logs.materialize(s.log_directory, mode="initial")
         if s.pipeline_config.training.initial_model == "pretrained":
             s.previous_model_id = s.pipeline_config.training.initial_model_id
 
-    @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT_CLUSTER_CONNECTION)
+    @pipeline_stage(PipelineStage.INIT_CLUSTER_CONNECTION, parent=PipelineStage.MAIN)
     def _init_cluster_connection(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.INIT_CLUSTER_CONNECTION, MsgType.GENERAL))
         self.grpc.init_cluster_connection()
 
     # Replay Data (experiment mode)
 
-    @pipeline_stage(PipelineType.REPLAY_DATA, PipelineStage.REPLAY_DATA)
+    @pipeline_stage(PipelineStage.REPLAY_DATA, parent=PipelineStage.MAIN)
     def _replay_data(self, s: ExecutionState, log: StageLog) -> None:
         assert s.start_replay_at is not None, "Cannot call replay_data when start_replay_at is None"
 
@@ -245,7 +267,7 @@ class PipelineExecutor:
 
     # Online serving mode (non-experiment mode)
 
-    @pipeline_stage(PipelineType.SERVE_ONLINE, PipelineStage.SERVE_ONLINE_DATA)
+    @pipeline_stage(PipelineStage.SERVE_ONLINE_DATA, parent=PipelineStage.MAIN)
     def _serve_online_data(self, s: ExecutionState, log: StageLog) -> None:
         """Run pipeline in production mode fetching new data until pipeline is stopped."""
         logger.info(f"Running pipeline {s.pipeline_id} in online serving mode.")
@@ -266,7 +288,7 @@ class PipelineExecutor:
 
         logger.info(f"New data mode pipeline {s.pipeline_id} done.")
 
-    @pipeline_stage(PipelineType.SERVE_ONLINE, PipelineStage.FETCH_NEW_DATA, track=True)
+    @pipeline_stage(PipelineStage.FETCH_NEW_DATA, parent=PipelineStage.SERVE_ONLINE_DATA, track=True)
     def _fetch_new_data(self, s: ExecutionState, log: StageLog) -> int:
         """Try to fetch new data from the dataset and process it.
 
@@ -314,7 +336,7 @@ class PipelineExecutor:
 
         return len(trigger_indexes)
 
-    @pipeline_stage(PipelineType.SERVE_ONLINE, PipelineStage.WAIT_FOR_NEW_DATA)
+    @pipeline_stage(PipelineStage.WAIT_FOR_NEW_DATA, parent=PipelineStage.SERVE_ONLINE_DATA)
     def _wait_for_new_data(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(
             pipeline_stage_msg(
@@ -327,7 +349,9 @@ class PipelineExecutor:
 
     # Process new data
 
-    @pipeline_stage(PipelineType.NEW_DATA, PipelineStage.PROCESS_NEW_DATA, track=True)
+    @pipeline_stage(
+        PipelineStage.PROCESS_NEW_DATA, parent=[PipelineStage.REPLAY_DATA, PipelineStage.FETCH_NEW_DATA], track=True
+    )
     def _process_new_data(
         self, s: ExecutionState, log: StageLog, new_data: list[tuple[int, int, int]], fetch_time: int
     ) -> list[int]:
@@ -375,6 +399,7 @@ class PipelineExecutor:
             )
 
             trigger_indexes += self._process_new_data_batch(s, self.logs, batch)
+            s.current_batch_index += 1
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 logger.info(f"Reached trigger limit ({s.maximum_triggers}), exiting.")
@@ -392,7 +417,7 @@ class PipelineExecutor:
 
     # Process new data BATCH
 
-    @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
+    @pipeline_stage(PipelineStage.PROCESS_NEW_DATA_BATCH, parent=PipelineStage.PROCESS_NEW_DATA, track=True)
     def _process_new_data_batch(self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]) -> list[int]:
         """Process new data in batches and evaluate trigger policies in batches.
 
@@ -416,7 +441,7 @@ class PipelineExecutor:
 
         return executed_triggers
 
-    @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EVALUATE_TRIGGER_POLICIES, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE_TRIGGER_POLICIES, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
     def _evaluate_trigger_policies(
         self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]
     ) -> Generator[int, None, None]:
@@ -439,7 +464,7 @@ class PipelineExecutor:
             assert log.info
             logger.info(f"There were {len(log.info.trigger_indexes)} triggers in this batch.")
 
-    @pipeline_stage(PipelineType.NEW_BATCH, PipelineStage.EXECUTE_TRIGGERS, track=True)
+    @pipeline_stage(PipelineStage.EXECUTE_TRIGGERS, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
     def _execute_triggers(
         self,
         s: ExecutionState,
@@ -475,7 +500,9 @@ class PipelineExecutor:
 
         return trigger_indexes
 
-    @pipeline_stage(PipelineType.NEW_DATA, PipelineStage.INFORM_SELECTOR_REMAINING_DATA, track=True)
+    @pipeline_stage(
+        PipelineStage.INFORM_SELECTOR_REMAINING_DATA, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True
+    )
     def _inform_selector_remaining_data(
         self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]], trigger_indexes: list[int]
     ) -> None:
@@ -510,7 +537,7 @@ class PipelineExecutor:
 
     # Execute trigger within batch
 
-    @pipeline_stage(PipelineType.TRIGGER, PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True)
+    @pipeline_stage(PipelineStage.EXECUTE_SINGLE_TRIGGER, parent=PipelineStage.EXECUTE_TRIGGERS, track=True)
     def _execute_single_trigger(
         self,
         s: ExecutionState,
@@ -557,7 +584,9 @@ class PipelineExecutor:
             last_timestamp=last_timestamp,
         )
 
-    @pipeline_stage(PipelineType.TRIGGER, PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, track=True)
+    @pipeline_stage(
+        PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True
+    )
     def _inform_selector_about_trigger(
         self,
         s: ExecutionState,
@@ -591,7 +620,7 @@ class PipelineExecutor:
 
     # Training
 
-    @pipeline_stage(PipelineType.TRAINING, PipelineStage.TRAIN_AND_STORE_MODEL, track=True)
+    @pipeline_stage(PipelineStage.TRAIN_AND_STORE_MODEL, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True)
     def _train_and_store_model(self, s: ExecutionState, log: StageLog, trigger_id: int) -> tuple[int, int]:
         """Train a new model on batch data and store it."""
 
@@ -606,7 +635,7 @@ class PipelineExecutor:
         )
         return training_id, model_id
 
-    @pipeline_stage(PipelineType.TRAINING, PipelineStage.TRAIN, track=True)
+    @pipeline_stage(PipelineStage.TRAIN, parent=PipelineStage.TRAIN_AND_STORE_MODEL, track=True)
     def _train(self, s: ExecutionState, log: StageLog, trigger_id: int) -> int:
         """Run training for trigger on GPU and block until done."""
 
@@ -639,7 +668,7 @@ class PipelineExecutor:
 
         return s.current_training_id
 
-    @pipeline_stage(PipelineType.TRAINING, PipelineStage.TRAINING_COMPLETED, track=False)
+    @pipeline_stage(PipelineStage.TRAINING_COMPLETED, parent=PipelineStage.TRAIN_AND_STORE_MODEL, track=False)
     def _training_completed(self, s: ExecutionState, log: StageLog, training_id: int) -> None:
         s.pipeline_status_queue.put(
             pipeline_stage_msg(
@@ -648,7 +677,7 @@ class PipelineExecutor:
         )
         logger.info(f"Training {training_id} completed")
 
-    @pipeline_stage(PipelineType.TRAINING, PipelineStage.STORE_TRAINED_MODEL, track=True)
+    @pipeline_stage(PipelineStage.STORE_TRAINED_MODEL, parent=PipelineStage.TRAIN_AND_STORE_MODEL, track=True)
     def _store_trained_model(self, s: ExecutionState, log: StageLog, trigger_id: int, training_id: int) -> int:
         """Stores a trained model and returns the model id."""
         s.pipeline_status_queue.put(
@@ -668,7 +697,7 @@ class PipelineExecutor:
 
     # Evaluation
 
-    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATE, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True)
     def _evaluate_and_store_results(
         self,
         s: ExecutionState,
@@ -709,7 +738,7 @@ class PipelineExecutor:
                         interval_end,
                     )
 
-    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.EVALUATE_SINGLE, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, track=True)
     def _single_evaluation(
         self,
         s: ExecutionState,
@@ -764,7 +793,7 @@ class PipelineExecutor:
         self.grpc.wait_for_evaluation_completion(training_id, evaluation)
         return evaluation
 
-    @pipeline_stage(PipelineType.EVALUATION, PipelineStage.STORE_EVALUATION_RESULTS, track=True)
+    @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, track=True)
     def _store_evaluation_results(
         self,
         s: ExecutionState,
@@ -776,8 +805,9 @@ class PipelineExecutor:
         interval_start: int | None,
         interval_end: int | None,
     ) -> None:
-        eval_result_writer: JsonResultWriter = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
+        eval_result_writer = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
         self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+        assert isinstance(eval_result_writer, JsonResultWriter)
 
         log.info = StoreEvaluationInfo(
             trigger_id=trigger_id,
@@ -785,17 +815,19 @@ class PipelineExecutor:
             dataset_id=dataset_id,
             interval_start=interval_start,
             interval_end=interval_end,
-            results=eval_result_writer.results["datasets"][0][dataset_id],
+            results=(
+                eval_result_writer.results["datasets"][0][dataset_id] if eval_result_writer.results["datasets"] else {}
+            ),
         )
 
     # Teardown
 
-    @pipeline_stage(PipelineType.MAIN, PipelineStage.DONE)
+    @pipeline_stage(PipelineStage.DONE, parent=PipelineStage.MAIN)
     def _done(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.DONE, MsgType.GENERAL))
         self.logs.materialize(s.log_directory, mode="final")
 
-    @pipeline_stage(PipelineType.MAIN, PipelineStage.EXIT)
+    @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
     def _exit(self, s: ExecutionState, log: StageLog) -> None:
         return None  # end of pipeline
 
@@ -845,8 +877,8 @@ class PipelineExecutor:
 
         return first_timestamp, last_timestamp
 
-    def _init_evaluation_writer(self, pipeline_id: int, name: str, trigger_id: int) -> JsonResultWriter:
-        return EVAL_RESULT_WRITER_CLASSES[name](pipeline_id, trigger_id, self.state.eval_directory)
+    def _init_evaluation_writer(self, pipeline_id: int, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
+        return EVAL_RESULT_WRITER_CLASSES[name](pipeline_id, trigger_id, self.state.eval_directory)  # type: ignore
 
     def _shutdown_trainer(self) -> None:
         if self.state.current_training_id is not None:

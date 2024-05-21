@@ -45,7 +45,6 @@ def noop_pipeline_executor_constructor_mock(
     modyn_config: dict,
     pipeline_config: dict,
     eval_directory: str,
-    supervisor_supported_eval_result_writers: dict,
     pipeline_status_queue: mp.Queue,
     training_status_queue: mp.Queue,
     eval_status_queue: mp.Queue,

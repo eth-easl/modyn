@@ -18,22 +18,10 @@ class PipelineStatus(StrEnum):
     NOTFOUND = "not found"
 
 
-class PipelineType(StrEnum):
-    MAIN = "main"
-
-    REPLAY_DATA = "replay_data"
-    SERVE_ONLINE = "wait_for_new_data"
-
-    NEW_DATA = "new_data"
-    NEW_BATCH = "new_data"
-
-    TRIGGER = "trigger"
-    TRAINING = "training"
-    EVALUATION = "evaluation"
-
-
 class PipelineStage(StrEnum):
     """For a state transition graph checkout the `PIPELINE.md` file."""
+
+    MAIN = "Pipeline entrypoint"
 
     # Setup
     INIT = "Initialize pipeline executor"

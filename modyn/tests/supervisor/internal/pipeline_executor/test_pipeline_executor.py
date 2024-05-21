@@ -17,8 +17,7 @@ from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
-from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineType
+from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
 from modyn.supervisor.internal.pipeline_executor.models import (
@@ -30,10 +29,9 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     StageInfo,
     StageLog,
 )
-from modyn.supervisor.internal.pipeline_executor.pipeline_executor import pipeline_stage
+from modyn.supervisor.internal.pipeline_executor.pipeline_executor import _pipeline_stage_parents, pipeline_stage
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
-SUPPORTED_EVAL_RESULT_WRITERS: dict = {"json": JsonResultWriter, "tensorboard": TensorboardResultWriter}
 START_TIMESTAMP = 21
 PIPELINE_ID = 42
 EVAL_ID = 42
@@ -63,7 +61,6 @@ def get_dummy_pipeline_options(system_config: ModynConfig, pipeline_config: Mody
         modyn_config=system_config,
         pipeline_config=pipeline_config,
         eval_directory=str(EVALUATION_DIRECTORY),
-        supervisor_supported_eval_result_writers=SUPPORTED_EVAL_RESULT_WRITERS,
         exception_queue=EXCEPTION_QUEUE,
         pipeline_status_queue=PIPELINE_STATUS_QUEUE,
         training_status_queue=TRAINING_STATUS_QUEUE,
@@ -88,6 +85,7 @@ def dummy_logs(dummy_pipeline_options: PipelineOptions) -> PipelineLogs:
     options = dummy_pipeline_options
     return PipelineLogs(
         pipeline_id=PIPELINE_ID,
+        pipeline_stages=_pipeline_stage_parents,
         config=ConfigLogs(system=options.modyn_config, pipeline=options.pipeline_config),
         experiment=options.experiment_mode,
         start_replay_at=options.start_replay_at,
@@ -150,7 +148,7 @@ def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> No
 
     class TestPipelineExecutor(PipelineExecutor):
 
-        @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT, log=True, track=True)
+        @pipeline_stage(PipelineStage.INIT, log=True, track=True)
         def _stage_func(self, s: ExecutionState, log: StageLog) -> int:
             time.sleep(0.1)
             log.info = TestStageLogInfo(name="test")
@@ -183,7 +181,7 @@ def test_pipeline_stage_decorator_generator(dummy_pipeline_options: PipelineOpti
 
     class TestPipelineExecutor(PipelineExecutor):
 
-        @pipeline_stage(PipelineType.MAIN, PipelineStage.INIT, log=True, track=True)
+        @pipeline_stage(PipelineStage.INIT, log=True, track=True)
         def _stage_func(self, s: ExecutionState, log: StageLog) -> Generator[int, None, None]:
             try:
                 time.sleep(0.1)
@@ -694,7 +692,7 @@ def test_run_training_set_num_samples_to_pass(
     test_start_training.assert_called_once_with(42, 22, ANY, 101, None)
 
 
-@pytest.mark.parametrize("test_failure", [True])  # TODO add true
+@pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "store_evaluation_results")
 def test__start_evaluations(

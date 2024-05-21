@@ -18,16 +18,17 @@ class _JsonResultWriter(AbstractEvaluationResultWriter):
             dataset_results["metrics"].append({"name": metric.metric, "result": metric.result})
         self.results["datasets"].append({dataset_id: dataset_results})
 
+
 class JsonResultWriter(_JsonResultWriter):
     """Does not dump into files itself but only returns the result."""
-    
+
     def store_results(self) -> dict[str, Any]:
         return self.results
-    
+
 
 class DedicatedJsonResultWriter(_JsonResultWriter):
     """Dumps every log result into a dedicated file."""
-    
+
     def store_results(self) -> pathlib.Path:
         file_name = f"{self.pipeline_id}_{self.trigger_id}.eval"
         with open(self.eval_directory / file_name, "w+", encoding="utf-8") as output_file:
