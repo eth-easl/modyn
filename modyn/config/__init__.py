@@ -27,7 +27,7 @@ from .schema.config import (
 from .schema.pipeline import (
     CheckpointingConfig,
     DataConfig,
-    DatasetConfig,
+    EvalDataConfig,
     DownsamplingConfig,
     EvaluationConfig,
     FullModelStrategy,
@@ -91,7 +91,7 @@ __all__ = [
     "DataConfig",
     "TriggerConfig",
     "Metric",
-    "DatasetConfig",
+    "EvalDataConfig",
     "ResultWriter",
     "EvaluationConfig",
     "ModynPipelineConfig",
