@@ -88,7 +88,7 @@ class PresamplingConfig(BaseModel):
 
     strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
         description="Strategy used to presample the data."
-                    "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
+        "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
     )
     ratio: int = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
@@ -108,8 +108,10 @@ class DownsamplingConfig(BaseModel):
         extra = "allow"
 
     strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
-        Field(description="Strategy used to downsample the data."
-                          "Only the prefix, i.e. without `DownsamplingStrategy`, is needed.")
+        Field(
+            description="Strategy used to downsample the data."
+            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
+        )
     )
     sample_then_batch: bool = Field(
         False,
