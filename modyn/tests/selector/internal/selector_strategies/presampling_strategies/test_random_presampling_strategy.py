@@ -19,7 +19,7 @@ TMP_DIR = tempfile.mkdtemp()
 def get_config():
     return {
         "ratio": 50,
-        "strategy": "RandomPresamplingStrategy",
+        "strategy": "Random",
     }
 
 

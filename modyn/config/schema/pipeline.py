@@ -86,9 +86,10 @@ LimitResetStrategy = Literal["lastX", "sampleUAR"]
 class PresamplingConfig(BaseModel):
     """Config for the presampling strategy of CoresetStrategy. If missing, no presampling is applied."""
 
-    strategy: Literal[
-        "Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "LabelBalancedPresamplingStrategy", "No"
-    ] = Field(description="Strategy used to presample the data.")
+    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
+        description="Strategy used to presample the data."
+                    "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
+    )
     ratio: int = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
         min=0,
@@ -101,8 +102,14 @@ class PresamplingConfig(BaseModel):
 class DownsamplingConfig(BaseModel):
     """Config for the downsampling strategy of SelectionStrategy."""
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "Loss", "No"] = Field(
-        description="Strategy used to downsample the data. Available strategies: Loss, Gradnorm, No (no downsampling)."
+    class Config:
+        # depending on the strategy, additional fields may be required. Please refer to the respective strategy class
+        # for exact configurable fields.
+        extra = "allow"
+
+    strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
+        Field(description="Strategy used to downsample the data."
+                          "Only the prefix, i.e. without `DownsamplingStrategy`, is needed.")
     )
     sample_then_batch: bool = Field(
         False,
