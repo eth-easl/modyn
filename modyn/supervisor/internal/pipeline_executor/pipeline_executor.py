@@ -144,6 +144,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 batch_idx=state.current_batch_index,
                 sample_idx=state.current_sample_index,
                 sample_time=state.current_sample_time,
+                trigger_idx=len(state.triggers),
             )
             result = func(self, state, stage_log, *args, **kwargs)  # type: ignore[call-arg]
             stage_log.end = datetime.now()
@@ -490,7 +491,7 @@ class PipelineExecutor:
             trigger_indexes.append(trigger_index)
             trigger_data = batch[previous_trigger_index : trigger_index + 1]
             previous_trigger_index = trigger_index + 1
-            
+
             if len(trigger_data) > 0:
                 s.current_sample_time = trigger_data[0][1]  # update sample time
 

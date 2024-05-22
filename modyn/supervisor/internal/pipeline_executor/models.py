@@ -320,6 +320,7 @@ class StageLog(BaseModel):
     batch_idx: int
     sample_idx: int
     sample_time: int
+    trigger_idx: int
 
     # stage specific log info
     info: StageInfo | None = Field(None)
@@ -329,8 +330,19 @@ class StageLog(BaseModel):
         extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
         """
         df = pd.DataFrame(
-            [(self.id, self.start, self.end, self.duration, self.batch_idx, self.sample_idx, self.sample_time)],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
+            [
+                (
+                    self.id,
+                    self.start,
+                    self.end,
+                    self.duration,
+                    self.batch_idx,
+                    self.sample_idx,
+                    self.sample_time,
+                    self.trigger_idx,
+                )
+            ],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
         )
         info_df = self.info.online_df() if self.info else None
         if info_df is not None and extended:
