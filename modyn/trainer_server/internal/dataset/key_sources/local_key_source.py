@@ -17,7 +17,7 @@ class LocalKeySource(AbstractKeySource):
 
         if len(tuples_list) == 0:
             return [], []
-        keys, weights = zip(*tuples_list)
+        keys, weights = zip(*tuples_list)  # type: ignore
 
         return list(keys), list(weights)
 
