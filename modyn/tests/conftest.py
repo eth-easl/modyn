@@ -14,7 +14,7 @@ from modyn.config.schema.config import (
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
     DataConfig,
-    DatasetConfig,
+    EvalDatasetConfig,
     EvaluationConfig,
     FullModelStrategy,
     Metric,
@@ -156,7 +156,7 @@ def pipeline_evaluation_config() -> EvaluationConfig:
     return EvaluationConfig(
         device="cpu",
         datasets=[
-            DatasetConfig(
+            EvalDatasetConfig(
                 dataset_id="MNIST_eval",
                 bytes_parser_function="def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 dataloader_workers=2,

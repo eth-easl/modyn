@@ -88,7 +88,7 @@ class PresamplingConfig(BaseModel):
 
     strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
         description="Strategy used to presample the data."
-                    "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
+        "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
     )
     ratio: int = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
@@ -108,8 +108,10 @@ class DownsamplingConfig(BaseModel):
         extra = "allow"
 
     strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
-        Field(description="Strategy used to downsample the data."
-                          "Only the prefix, i.e. without `DownsamplingStrategy`, is needed.")
+        Field(
+            description="Strategy used to downsample the data."
+            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
+        )
     )
     sample_then_batch: bool = Field(
         False,
@@ -493,7 +495,7 @@ class OffsetEvalStrategyModel(BaseModel):
 EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
-class DatasetConfig(BaseModel):
+class EvalDatasetConfig(BaseModel):
     dataset_id: str = Field(description="The id of the dataset.")
     bytes_parser_function: str = Field(
         description=(
@@ -520,6 +522,10 @@ class DatasetConfig(BaseModel):
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
+    tokenizer: Optional[str] = Field(
+        None,
+        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
+    )
 
 
 class ResultWriter(BaseModel):
@@ -541,14 +547,14 @@ class EvaluationConfig(BaseModel):
         ),
         min_length=1,
     )
-    datasets: List[DatasetConfig] = Field(
+    datasets: List[EvalDatasetConfig] = Field(
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,
     )
 
     @field_validator("datasets")
     @classmethod
-    def validate_datasets(cls, value: List[DatasetConfig]) -> List[DatasetConfig]:
+    def validate_datasets(cls, value: List[EvalDatasetConfig]) -> List[EvalDatasetConfig]:
         dataset_ids = [dataset.dataset_id for dataset in value]
         if len(dataset_ids) != len(set(dataset_ids)):
             raise ValueError("Dataset IDs must be unique.")
