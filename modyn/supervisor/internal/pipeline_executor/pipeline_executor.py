@@ -62,7 +62,7 @@ R = TypeVar("R")  # result of pipeline stage
 
 G = TypeVar("G")  # generator type
 
-_pipeline_stage_parents: dict[str, tuple[int, list[str]]] = {PipelineStage.MAIN.name: (0, [])}
+_pipeline_stage_parents: dict[str, tuple[int, list[str]]] = {PipelineStage.MAIN.name: (-1, [])}
 """automatically filled parent relationships for pipeline stages"""
 
 
@@ -387,7 +387,6 @@ class PipelineExecutor:
             batch = new_data[i : i + s.selector_batch_size]
             batch_size = s.selector_batch_size if i + s.selector_batch_size < new_data_len else new_data_len - i
             if batch_size > 0:
-                s.current_sample_index = batch[0][0]  # update sample index
                 s.current_sample_time = batch[0][1]  # update sample time
 
             s.pipeline_status_queue.put(
@@ -491,9 +490,13 @@ class PipelineExecutor:
             trigger_indexes.append(trigger_index)
             trigger_data = batch[previous_trigger_index : trigger_index + 1]
             previous_trigger_index = trigger_index + 1
+            
+            if len(trigger_data) > 0:
+                s.current_sample_time = trigger_data[0][1]  # update sample time
 
             self._execute_single_trigger(s, self.logs, trigger_data, i, trigger_index)
             s.triggers.append(trigger_index)
+            s.current_sample_index += len(trigger_data)
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break

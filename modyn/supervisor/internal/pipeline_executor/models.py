@@ -329,8 +329,8 @@ class StageLog(BaseModel):
         extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
         """
         df = pd.DataFrame(
-            [(self.id, self.start, self.end, self.duration, self.sample_idx, self.sample_time)],
-            columns=["id", "start", "end", "duration", "sample_idx", "sample_time"],
+            [(self.id, self.start, self.end, self.duration, self.batch_idx, self.sample_idx, self.sample_time)],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
         )
         info_df = self.info.online_df() if self.info else None
         if info_df is not None and extended:
@@ -377,10 +377,10 @@ class SupervisorLogs(BaseModel):
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             data=[
-                (stage.id, stage.start, stage.end, stage.duration, stage.sample_idx, stage.sample_time)
+                (stage.id, stage.start, stage.end, stage.duration, stage.batch_idx, stage.sample_idx, stage.sample_time)
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "sample_idx", "sample_index"],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
         )
 
     @property
