@@ -102,9 +102,11 @@ class Supervisor:
         try:
             pipeline_config_model = ModynPipelineConfig.model_validate(pipeline_config)
             if not cls.validate_pipeline_config_content(pipeline_config_model):
+                logger.error("Pipeline has correct schema but invalid content.")
                 return None
             return pipeline_config_model
-        except ValidationError:
+        except ValidationError as e:
+            logger.error(f"Pipeline configuration is invalid with error: {e}")
             return None
 
     @staticmethod
