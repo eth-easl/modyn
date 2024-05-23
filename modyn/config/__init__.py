@@ -27,9 +27,8 @@ from .schema.config import (
 from .schema.pipeline import (
     CheckpointingConfig,
     DataConfig,
-    EvalDataConfig,
     DownsamplingConfig,
-    EvalDatasetConfig,
+    EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
     IncrementalModelStrategy,
