@@ -10,8 +10,7 @@ If they are directories, all yaml files in the directory will be used."""
 MODYN_PIPELINE_CONFIG_PATHS: list[str] = [
     "modynclient/config/examples/dummy.yaml",
     "modynclient/config/examples/mnist.yaml",
-    "benchmark/mnist/mnist.yaml",
-    "benchmark/wildtime_benchmarks/example_pipelines/",
+    "benchmark/",
 ]
 
 MODYN_SYSTEM_CONFIG_PATHS = ["modyn/config/examples/modyn_config.yaml"]
@@ -25,11 +24,13 @@ MODYN_CLIENT_CONFIG_PATHS = [
 def _discover_files(paths: list[str]) -> list[Path]:
     files = []
     for path in paths:
-        file = Path(path)
-        if file.is_dir():
-            files.extend(file.rglob("*.yaml"))
+        p = Path(path)
+        if not p.exists():
+            continue
+        if p.is_dir():
+            files.extend(p.rglob("*.yaml"))
         else:
-            files.append(file)
+            files.append(p)
     return files
 
 
