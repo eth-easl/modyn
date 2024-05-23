@@ -139,6 +139,8 @@ We assume the performance of a model changes continuously over time and not at d
 
 As we want to be able to plot the performance (i.e. accuracy) over the time range of the pipeline run, we have to observe the performance at a higher precision than [2] demands.
 
+Plotting with evenly spaced triggering indexes as x-axis (worst case is barplot where everything between two triggers is aggregated) is not sufficient as it disregards performance change in the potentially long intervals between triggers.
+
 Otherwise we could only plot a horizontal bar for every model evaluation at a trigger time. This would not allow us to see how the performance changes over time within one triggering interval. This information is important to fairly evaluate a trigger policy though as it could happen that a severe data drift causes rapid performance degradation. If the model wouldn't trigger for some time though we want to see that in the plot! Only plotting the total performance over the time range would hide this information.
 
 We therefore want to evaluate the model at multiple points in time within the triggering interval. We could define a configuration option that would allow us to either set the number of evaluation steps between two triggers or the time interval or number of samples between two evaluations.
