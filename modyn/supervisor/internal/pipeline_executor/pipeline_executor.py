@@ -30,6 +30,8 @@ from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
 from typing_extensions import Concatenate, ParamSpec
 
+from modyn.utils.utils import current_time_micros, current_time_nanos
+
 from .models import (
     ConfigLogs,
     EvaluateTriggerInfo,
@@ -138,6 +140,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
 
             # execute stage
+            epoch_nanos_start = current_time_micros()
             stage_log = StageLog(
                 id=stage.name,
                 start=datetime.now(),
@@ -148,7 +151,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
             )
             result = func(self, state, stage_log, *args, **kwargs)  # type: ignore[call-arg]
             stage_log.end = datetime.now()
-            stage_log.duration = stage_log.end - stage_log.start
+            stage_log.duration = timedelta(microseconds=current_time_micros() - epoch_nanos_start)
             state.stage = stage  # restore stage as child pipeline might have changed it
 
             if isinstance(result, types.GeneratorType):

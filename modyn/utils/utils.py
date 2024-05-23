@@ -65,8 +65,17 @@ def trigger_available(trigger_type: str) -> bool:
 
 
 def current_time_millis() -> int:
-    timestamp = time.time() * 1000
+    timestamp = time.monotonic_ns() / 1_000_000
     return int(round(timestamp))
+
+
+def current_time_micros() -> int:
+    timestamp = time.monotonic_ns() / 1_000
+    return int(round(timestamp))
+
+
+def current_time_nanos() -> int:
+    return time.monotonic_ns()
 
 
 def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:
