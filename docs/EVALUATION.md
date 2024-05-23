@@ -1,6 +1,6 @@
 Experiment: training time vs. training batch size
 
-# How and when to run evaluations
+# RFC: How and when to run evaluations
 
 ## Motivation
 
