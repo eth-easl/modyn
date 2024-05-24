@@ -10,7 +10,7 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import DatasetConfig, ResultWriterType
+from modyn.config.schema.pipeline import EvalDataConfig, ResultWriterType
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
@@ -743,7 +743,7 @@ class PipelineExecutor:
         trigger_id: int,
         training_id: int,
         model_id: int,
-        eval_dataset_config: DatasetConfig,
+        eval_dataset_config: EvalDataConfig,
         interval_start: int | None,
         interval_end: int | None,
     ) -> dict[int, EvaluationStatusReporter] | None:

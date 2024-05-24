@@ -133,7 +133,7 @@ def dummy_system_config(
 
 
 @pytest.fixture
-def dummy_dataset_config() -> DatasetConfig:
+def dummy_dataset_config() -> DatasetsConfig:
     return DatasetsConfig(
         name="test",
         description="",
