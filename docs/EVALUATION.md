@@ -204,3 +204,7 @@ gantt
         data4.5 :e4.5, 1963, 6y
         data4.6 :e4.6, 1967, 6y
 ```
+
+### Open Question
+
+With the approach of evaluating a model only on future data (where the model is eventually used), it might even be fair not to use a evaluation split as the samples used for evaluation are never part of the training data of a particular model.
