@@ -23,8 +23,8 @@ from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execut
 from modyn.supervisor.internal.pipeline_executor.models import (
     ConfigLogs,
     ExecutionState,
+    PipelineExecutionParams,
     PipelineLogs,
-    PipelineOptions,
     SingleEvaluationInfo,
     StageInfo,
     StageLog,
@@ -54,8 +54,10 @@ def minimal_pipeline_config(dummy_pipeline_config: ModynPipelineConfig) -> Modyn
     return config
 
 
-def get_dummy_pipeline_options(system_config: ModynConfig, pipeline_config: ModynPipelineConfig) -> PipelineOptions:
-    return PipelineOptions(
+def get_dummy_pipeline_args(
+    system_config: ModynConfig, pipeline_config: ModynPipelineConfig
+) -> PipelineExecutionParams:
+    return PipelineExecutionParams(
         start_timestamp=START_TIMESTAMP,
         pipeline_id=PIPELINE_ID,
         modyn_config=system_config,
@@ -69,20 +71,20 @@ def get_dummy_pipeline_options(system_config: ModynConfig, pipeline_config: Mody
 
 
 @pytest.fixture
-def dummy_pipeline_options(
+def dummy_pipeline_args(
     minimal_system_config: ModynConfig, minimal_pipeline_config: ModynPipelineConfig
-) -> PipelineOptions:
-    return get_dummy_pipeline_options(minimal_system_config, minimal_pipeline_config)
+) -> PipelineExecutionParams:
+    return get_dummy_pipeline_args(minimal_system_config, minimal_pipeline_config)
 
 
 @pytest.fixture
-def dummy_execution_state(dummy_pipeline_options: PipelineOptions) -> ExecutionState:
-    return ExecutionState(**vars(dummy_pipeline_options))
+def dummy_execution_state(dummy_pipeline_args: PipelineExecutionParams) -> ExecutionState:
+    return ExecutionState(**vars(dummy_pipeline_args))
 
 
 @pytest.fixture
-def dummy_logs(dummy_pipeline_options: PipelineOptions) -> PipelineLogs:
-    options = dummy_pipeline_options
+def dummy_logs(dummy_pipeline_args: PipelineExecutionParams) -> PipelineLogs:
+    options = dummy_pipeline_args
     return PipelineLogs(
         pipeline_id=PIPELINE_ID,
         pipeline_stages=_pipeline_stage_parents,
@@ -105,22 +107,22 @@ def get_non_connecting_pipeline_executor(
 
 
 @overload
-def get_non_connecting_pipeline_executor(pipeline_options: PipelineOptions) -> PipelineExecutor: ...
+def get_non_connecting_pipeline_executor(pipeline_args: PipelineExecutionParams) -> PipelineExecutor: ...
 
 
 def get_non_connecting_pipeline_executor(
-    pipeline_options: PipelineOptions | None = None,
+    pipeline_args: PipelineExecutionParams | None = None,
     system_config: ModynConfig | None = None,
     pipeline_config: ModynPipelineConfig | None = None,
 ) -> PipelineExecutor:
-    if pipeline_options:
-        return PipelineExecutor(pipeline_options)
-    return PipelineExecutor(get_dummy_pipeline_options(system_config, pipeline_config))
+    if pipeline_args:
+        return PipelineExecutor(pipeline_args)
+    return PipelineExecutor(get_dummy_pipeline_args(system_config, pipeline_config))
 
 
 @pytest.fixture
-def non_connecting_pipeline_executor(dummy_pipeline_options: PipelineOptions) -> PipelineExecutor:
-    return PipelineExecutor(dummy_pipeline_options)
+def non_connecting_pipeline_executor(dummy_pipeline_args: PipelineExecutionParams) -> PipelineExecutor:
+    return PipelineExecutor(dummy_pipeline_args)
 
 
 def sleep_mock(duration: int):
@@ -141,7 +143,7 @@ def test_initialization(non_connecting_pipeline_executor: PipelineExecutor) -> N
     assert non_connecting_pipeline_executor.state.stage == PipelineStage.INIT
 
 
-def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> None:
+def test_pipeline_stage_decorator(dummy_pipeline_args: PipelineExecutionParams) -> None:
 
     class TestStageLogInfo(StageInfo):
         name: str
@@ -155,7 +157,7 @@ def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> No
 
             return 1
 
-    pe = TestPipelineExecutor(dummy_pipeline_options)
+    pe = TestPipelineExecutor(dummy_pipeline_args)
     t0 = datetime.datetime.now()
     assert pe._stage_func(pe.state, pe.logs) == 1
     t1 = datetime.datetime.now()
@@ -167,7 +169,7 @@ def test_pipeline_stage_decorator(dummy_pipeline_options: PipelineOptions) -> No
     assert abs((pe.logs.supervisor.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 8e-3
 
 
-def test_pipeline_stage_decorator_generator(dummy_pipeline_options: PipelineOptions) -> None:
+def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecutionParams) -> None:
 
     class TestStageLogInfo(StageInfo):
         elements: list[int]
@@ -197,7 +199,7 @@ def test_pipeline_stage_decorator_generator(dummy_pipeline_options: PipelineOpti
     gen_values: list[int] = []
 
     last_time = datetime.datetime.now()
-    pe = TestPipelineExecutor(dummy_pipeline_options)
+    pe = TestPipelineExecutor(dummy_pipeline_args)
     gen = pe._stage_func(pe.state, pe.logs)
     times.append(datetime.datetime.now() - last_time)
     last_time = datetime.datetime.now()
@@ -293,7 +295,6 @@ def test_serve_online_data(
 
     handle_mock: MagicMock
     with patch.object(pe, "_process_new_data", side_effect=mocked__process_new_data_return_vals) as handle_mock:
-        get_new_data_mock: MagicMock
         with patch.object(pe.grpc, "get_new_data_since", side_effect=mocked_get_new_data_since) as get_new_data_mock:
             dummy_execution_state.max_timestamp = 21
             pe._serve_online_data(dummy_execution_state, dummy_logs)
@@ -349,10 +350,10 @@ def test__process_new_data(
 
 @patch.object(GRPCHandler, "inform_selector", return_value={})
 def test__process_new_data_batch_no_triggers(
-    test_inform_selector: MagicMock, dummy_pipeline_options: PipelineOptions
+    test_inform_selector: MagicMock, dummy_pipeline_args: PipelineExecutionParams
 ) -> None:
-    dummy_pipeline_options.pipeline_id = 42
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    dummy_pipeline_args.pipeline_id = 42
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
     batch = [(10, 1), (11, 2)]
 
     with patch.object(pe.trigger, "inform") as inform_mock:
@@ -415,17 +416,17 @@ def test__execute_triggers(
     inform_selector_and_trigger_expected_args: list,
     train_and_store_model_expected_args: list,
     inform_selector_expected_args: list,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    dummy_pipeline_options.pipeline_id = 42
-    dummy_pipeline_options.pipeline_config.evaluation = None
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    dummy_pipeline_args.pipeline_id = 42
+    dummy_pipeline_args.pipeline_config.evaluation = None
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
 
     test_inform_selector_and_trigger.side_effect = trigger_ids
     test_inform_selector.return_value = {}
     test_get_number_of_samples.side_effect = [len(params) for params in inform_selector_and_trigger_expected_args]
 
-    pe._execute_triggers(pe.state, pe.logs, batch, trigger_indexes)
+    pe._handle_triggers(pe.state, pe.logs, batch, trigger_indexes)
     pe._inform_selector_remaining_data(pe.state, pe.logs, batch, trigger_indexes)
 
     assert test_inform_selector_and_trigger.call_count == len(inform_selector_and_trigger_expected_args)
@@ -601,7 +602,7 @@ def test__execute_triggers_within_batch_trigger_timespan(
     test__run_training: MagicMock,
     batches: list[_BatchConfig],
     inform_selector_and_trigger_retval: list[tuple[int, dict]],
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
     tracking_columns = ["trigger_i", "trigger_id", "trigger_index", "first_timestamp", "last_timestamp"]
     test_inform_selector_and_trigger.side_effect = inform_selector_and_trigger_retval
@@ -615,16 +616,16 @@ def test__execute_triggers_within_batch_trigger_timespan(
 
         test_get_number_of_samples.side_effect = batch.get_num_samples
 
-        pe._execute_triggers(pe.state, pe.logs, batch.data, batch.trigger_indexes)
+        pe._handle_triggers(pe.state, pe.logs, batch.data, batch.trigger_indexes)
         pe._inform_selector_remaining_data(pe.state, pe.logs, batch.data, batch.trigger_indexes)
 
         assert pe.state.remaining_data_range == batch.remaining_data_range
         if batch.expected_tracking:
-            assert pe.state.tracking[PipelineStage.EXECUTE_SINGLE_TRIGGER.name][tracking_columns].to_dict("list") == (
+            assert pe.state.tracking[PipelineStage.HANDLE_SINGLE_TRIGGER.name][tracking_columns].to_dict("list") == (
                 batch.expected_tracking
             )
 
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
     for batch in batches:
         run_batch_triggers_and_validate(pe, batch)
 
@@ -645,11 +646,11 @@ def test_train_and_store_model(
     trigger_id: int,
     training_id: int,
     model_id: int,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    dummy_pipeline_options.pipeline_id = 42
-    dummy_pipeline_options.pipeline_config.evaluation = None
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    dummy_pipeline_args.pipeline_id = 42
+    dummy_pipeline_args.pipeline_config.evaluation = None
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
 
     test_start_training.return_value = training_id
     test_store_trained_model.return_value = model_id
@@ -673,11 +674,11 @@ def test_run_training_set_num_samples_to_pass(
     test_wait_for_training_completion: MagicMock,
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    dummy_pipeline_options.pipeline_id = 42
-    dummy_pipeline_options.pipeline_config.training.num_samples_to_pass = [73]
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    dummy_pipeline_args.pipeline_id = 42
+    dummy_pipeline_args.pipeline_config.training.num_samples_to_pass = [73]
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
 
     pe._train_and_store_model(pe.state, pe.logs, trigger_id=21)
     test_start_training.assert_called_once_with(42, 21, ANY, None, 73)
@@ -699,11 +700,11 @@ def test__start_evaluations(
     test_store_evaluation_results: MagicMock,
     test_wait_for_evaluation_completion: MagicMock,
     test_failure: bool,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
     pipeline_evaluation_config: EvaluationConfig,
 ) -> None:
     eval_dataset_config = pipeline_evaluation_config.datasets[0]
-    dummy_pipeline_options.pipeline_config.evaluation = pipeline_evaluation_config
+    dummy_pipeline_args.pipeline_config.evaluation = pipeline_evaluation_config
 
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
@@ -718,7 +719,7 @@ def test__start_evaluations(
             evaluation_started=True, evaluation_id=42, dataset_size=10
         )
 
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
     pe.grpc.evaluator = evaluator_stub_mock
 
     if test_failure:
@@ -793,12 +794,12 @@ def test_replay_data(
     test__process_new_data: MagicMock,
     grpc_fetch_retval: list[tuple[list[tuple[int, int]], int]],
     stop_replay_at: int | None,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    dummy_pipeline_options.pipeline_id = 42
-    dummy_pipeline_options.start_replay_at = 0
-    dummy_pipeline_options.stop_replay_at = stop_replay_at
-    pe = get_non_connecting_pipeline_executor(dummy_pipeline_options)
+    dummy_pipeline_args.pipeline_id = 42
+    dummy_pipeline_args.start_replay_at = 0
+    dummy_pipeline_args.stop_replay_at = stop_replay_at
+    pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
 
     if stop_replay_at:
         test_get_data_in_interval.side_effect = [grpc_fetch_retval]
@@ -827,11 +828,11 @@ def test_execute_pipeline(
     test_serve_online_data: MagicMock,
     test_replay_data: MagicMock,
     experiment: bool,
-    dummy_pipeline_options: PipelineOptions,
+    dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    dummy_pipeline_options.start_replay_at = 0 if experiment else None
+    dummy_pipeline_args.start_replay_at = 0 if experiment else None
 
-    execute_pipeline(dummy_pipeline_options)
+    execute_pipeline(dummy_pipeline_args)
 
     test_init_cluster_connection.assert_called_once()
 

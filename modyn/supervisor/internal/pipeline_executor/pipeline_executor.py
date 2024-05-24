@@ -24,23 +24,15 @@ from modyn.supervisor.internal.evaluation_result_writer.tensorboard_result_write
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.triggers import Trigger
-from modyn.supervisor.internal.utils import EvaluationStatusReporter
-from modyn.utils import dynamic_module_import
-from modyn.utils.timer import timed_generator
-from typing_extensions import Concatenate, ParamSpec
-
-from modyn.utils.utils import current_time_micros, current_time_nanos
-
-from .models import (
+from modyn.supervisor.internal.pipeline_executor.models import (
     ConfigLogs,
     EvaluateTriggerInfo,
     ExecutionState,
     FetchDataInfo,
+    PipelineExecutionParams,
     PipelineLogs,
-    PipelineOptions,
     ProcessNewDataInfo,
-    SelectorInformLog,
+    SelectorInformInfo,
     SelectorInformTriggerInfo,
     SingleEvaluationInfo,
     StageLog,
@@ -49,6 +41,12 @@ from .models import (
     TrainingInfo,
     TriggerExecutionInfo,
 )
+from modyn.supervisor.internal.triggers import Trigger
+from modyn.supervisor.internal.utils import EvaluationStatusReporter
+from modyn.utils import dynamic_module_import
+from modyn.utils.timer import timed_generator
+from modyn.utils.utils import current_time_micros
+from typing_extensions import Concatenate, ParamSpec
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
@@ -172,7 +170,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
 
 
 class PipelineExecutor:
-    def __init__(self, options: PipelineOptions) -> None:
+    def __init__(self, options: PipelineExecutionParams) -> None:
         self.stage = PipelineStage.INIT
         self.state = ExecutionState(**vars(options))
         self.logs = PipelineLogs(
@@ -248,10 +246,7 @@ class PipelineExecutor:
 
         for replay_data, request_time in replay_data_generator:
             # setting sample here to have correct logs in process_new_data
-            s.current_sample_time = min(
-                (timestamp for (_, timestamp, _) in replay_data),
-                default=s.start_timestamp,
-            )
+            s.current_sample_time = replay_data[0][1] if replay_data else s.start_timestamp
             s.current_sample_index = replay_data[0][0] if replay_data else 0
 
             self._process_new_data(s, self.logs, replay_data, request_time)
@@ -323,10 +318,7 @@ class PipelineExecutor:
             largest_keys.update({key for (key, timestamp, _) in fetched_data if timestamp == s.max_timestamp})
 
             # setting sample here to have correct logs in process_new_data
-            s.current_sample_time = min(
-                (timestamp for (_, timestamp, _) in fetched_data),
-                default=s.start_timestamp,
-            )
+            s.current_sample_time = fetched_data[0][1] if fetched_data else s.start_timestamp
             s.current_sample_index = fetched_data[0][0] if fetched_data else 0
 
             # process new data and invoke triggers
@@ -434,18 +426,18 @@ class PipelineExecutor:
         """
 
         # Evaluate trigger policy and inform selector
-        lazy_trigger_indexes = self._evaluate_trigger_policies(s, self.logs, batch)
+        lazy_trigger_indexes = self._evaluate_trigger_policy(s, self.logs, batch)
 
-        # Execute triggers within batch (training & evaluation subpipelines)
-        executed_triggers = self._execute_triggers(s, self.logs, batch, lazy_trigger_indexes)
+        # Handle triggers within batch (training & evaluation subpipelines)
+        handled_triggers = self._handle_triggers(s, self.logs, batch, lazy_trigger_indexes)
 
         # Inform selector about remaining data
-        self._inform_selector_remaining_data(s, self.logs, batch, executed_triggers)
+        self._inform_selector_remaining_data(s, self.logs, batch, handled_triggers)
 
-        return executed_triggers
+        return handled_triggers
 
-    @pipeline_stage(PipelineStage.EVALUATE_TRIGGER_POLICIES, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
-    def _evaluate_trigger_policies(
+    @pipeline_stage(PipelineStage.EVALUATE_TRIGGER_POLICY, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
+    def _evaluate_trigger_policy(
         self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]
     ) -> Generator[int, None, None]:
         """Evaluate trigger policy and inform selector.
@@ -467,8 +459,8 @@ class PipelineExecutor:
             assert log.info
             logger.info(f"There were {len(log.info.trigger_indexes)} triggers in this batch.")
 
-    @pipeline_stage(PipelineStage.EXECUTE_TRIGGERS, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
-    def _execute_triggers(
+    @pipeline_stage(PipelineStage.HANDLE_TRIGGERS, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
+    def _handle_triggers(
         self,
         s: ExecutionState,
         log: StageLog,
@@ -484,13 +476,13 @@ class PipelineExecutor:
             The list of the actually processed triggers
         """
         logger.info(f"Processing {len(s.triggers)} triggers in this batch.")
-        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.EXECUTE_TRIGGERS, MsgType.GENERAL))
+        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.GENERAL))
 
         previous_trigger_index = 0
         trigger_index = -1
         trigger_indexes: list[int] = []
         for i, trigger_index in enumerate(lazy_trigger_indexes):
-            # Run training and evaluation subpipelines
+            # Run training and evaluation substages
             trigger_indexes.append(trigger_index)
             trigger_data = batch[previous_trigger_index : trigger_index + 1]
             previous_trigger_index = trigger_index + 1
@@ -498,7 +490,7 @@ class PipelineExecutor:
             if len(trigger_data) > 0:
                 s.current_sample_time = trigger_data[0][1]  # update sample time
 
-            self._execute_single_trigger(s, self.logs, trigger_data, i, trigger_index)
+            self._handle_single_trigger(s, self.logs, trigger_data, i, trigger_index)
             s.triggers.append(trigger_index)
             s.current_sample_index += len(trigger_data)
 
@@ -538,14 +530,14 @@ class PipelineExecutor:
             s.remaining_data_range = None
 
         # add log data
-        log.info = SelectorInformLog(
+        log.info = SelectorInformInfo(
             selector_log=selector_log, remaining_data=len(s.remaining_data) > 0, trigger_indexes=trigger_indexes
         )
 
-    # Execute trigger within batch
+    # Handle trigger within batch
 
-    @pipeline_stage(PipelineStage.EXECUTE_SINGLE_TRIGGER, parent=PipelineStage.EXECUTE_TRIGGERS, track=True)
-    def _execute_single_trigger(
+    @pipeline_stage(PipelineStage.HANDLE_SINGLE_TRIGGER, parent=PipelineStage.HANDLE_TRIGGERS, track=True)
+    def _handle_single_trigger(
         self,
         s: ExecutionState,
         log: StageLog,
@@ -553,7 +545,7 @@ class PipelineExecutor:
         trigger_i: int,
         trigger_index: int,
     ) -> None:
-        """Execute trigger within batch.
+        """Handle trigger within batch.
 
         Args:
             s: Execution state of the pipeline executor.
@@ -561,7 +553,7 @@ class PipelineExecutor:
             trigger_i: Index of the trigger in the batch.
             trigger_index: Index of the trigger in the data.
         """
-        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.EXECUTE_SINGLE_TRIGGER, MsgType.GENERAL))
+        s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_SINGLE_TRIGGER, MsgType.GENERAL))
 
         # trigger_id: identifier of the trigger received from the selector
         trigger_id, num_samples_in_trigger = self._inform_selector_about_trigger(
@@ -591,9 +583,7 @@ class PipelineExecutor:
             last_timestamp=last_timestamp,
         )
 
-    @pipeline_stage(
-        PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True
-    )
+    @pipeline_stage(PipelineStage.INFORM_SELECTOR_ABOUT_TRIGGER, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
     def _inform_selector_about_trigger(
         self,
         s: ExecutionState,
@@ -627,7 +617,7 @@ class PipelineExecutor:
 
     # Training
 
-    @pipeline_stage(PipelineStage.TRAIN_AND_STORE_MODEL, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True)
+    @pipeline_stage(PipelineStage.TRAIN_AND_STORE_MODEL, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
     def _train_and_store_model(self, s: ExecutionState, log: StageLog, trigger_id: int) -> tuple[int, int]:
         """Train a new model on batch data and store it."""
 
@@ -638,7 +628,7 @@ class PipelineExecutor:
         s.trained_models.append(model_id)
 
         s.pipeline_status_queue.put(
-            pipeline_stage_msg(PipelineStage.EXECUTE_TRIGGERS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
+            pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
         return training_id, model_id
 
@@ -704,7 +694,7 @@ class PipelineExecutor:
 
     # Evaluation
 
-    @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.EXECUTE_SINGLE_TRIGGER, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
     def _evaluate_and_store_results(
         self,
         s: ExecutionState,
@@ -893,7 +883,7 @@ class PipelineExecutor:
             self.grpc.stop_training_at_trainer_server(self.state.current_training_id)
 
 
-def execute_pipeline(options: PipelineOptions) -> None:
+def execute_pipeline(options: PipelineExecutionParams) -> None:
     try:
         PipelineExecutor(options).run()
 

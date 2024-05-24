@@ -285,7 +285,7 @@ class GRPCHandler:
         lr_scheduler_configs = {}
         if pipeline_config["training"].get("lr_scheduler"):
             lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
-            lr_scheduler_configs["config"] = lr_scheduler_configs.get("config", None)
+            lr_scheduler_configs["config"] = lr_scheduler_configs.get("config") or {}
 
         criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"].get("config") or {})
 

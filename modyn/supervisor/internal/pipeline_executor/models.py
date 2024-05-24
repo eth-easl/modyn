@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class PipelineOptions:
+class PipelineExecutionParams:
     """
-    Wrapped cli argument bundle for the pipeline executor.
+    Wrapped initialization options for the pipeline executor, many of them are cli arguments.
     """
 
     start_timestamp: int
@@ -67,7 +67,7 @@ class PipelineOptions:
         return 128
 
     @model_validator(mode="after")
-    def validate_replay(self) -> PipelineOptions:
+    def validate_replay(self) -> PipelineExecutionParams:
         if self.start_replay_at is None and self.stop_replay_at is not None:
             raise ValueError("`stop_replay_at` can only be used in conjunction with `start_replay_at`.")
         return self
@@ -93,7 +93,7 @@ class PipelineBatchState:
 
 
 @dataclass
-class ExecutionState(PipelineOptions):
+class ExecutionState(PipelineExecutionParams):
     """Represent the state of the pipeline executor including artifacts of pipeline stages."""
 
     stage: PipelineStage = PipelineStage.INIT
@@ -277,7 +277,7 @@ class StoreEvaluationInfo(_ModelEvalInfo):
         )
 
 
-class SelectorInformLog(StageInfo):
+class SelectorInformInfo(StageInfo):
     selector_log: dict[str, Any] | None
     remaining_data: bool
     trigger_indexes: list[int]
@@ -298,7 +298,7 @@ StageInfoUnion = Union[
     TrainingInfo,
     StoreModelInfo,
     SingleEvaluationInfo,
-    SelectorInformLog,
+    SelectorInformInfo,
 ]
 
 
@@ -326,8 +326,18 @@ class StageLog(BaseModel):
     info: StageInfo | None = Field(None)
 
     def online_df(self, extended: bool = False) -> pd.DataFrame | None:
-        """Args:
-        extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
+        """
+        Provides a DataFrame with the log information of this stage.
+
+        This is especially useful as we want to be able to quickly do analysis on the logs of a pipeline run.
+        One can simply use the `online_df` method of the `SupervisorLogs` class to get a DataFrame of all logs.
+        Then one can filter the logs by stage id to get the logs of a specific stage and/or aggregate over the logs.
+
+        Args:
+            extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
+
+        Returns:
+            A DataFrame with the log information of this stage.
         """
         df = pd.DataFrame(
             [
@@ -387,6 +397,13 @@ class SupervisorLogs(BaseModel):
 
     @property
     def df(self) -> pd.DataFrame:
+        """Provides a dataframe with log information of all stages which helps to easily plot pipeline run metrics.
+
+        Returns:
+            A DataFrame with the core log information of all stages
+            (not including the additional info property of the StageLogs).
+        """
+
         return pd.DataFrame(
             data=[
                 (stage.id, stage.start, stage.end, stage.duration, stage.batch_idx, stage.sample_idx, stage.sample_time)
@@ -394,10 +411,6 @@ class SupervisorLogs(BaseModel):
             ],
             columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
         )
-
-    @property
-    def stage_runs_df(self) -> pd.DataFrame:
-        return pd.DataFrame([stage_run.df_row() for stage_run in self.stage_runs], columns=StageLog.df_columns())
 
 
 class PipelineLogs(BaseModel):

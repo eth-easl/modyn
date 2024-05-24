@@ -19,7 +19,7 @@ from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, Pipelin
 from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
-from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
+from modyn.supervisor.internal.pipeline_executor.models import PipelineExecutionParams
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
 from pydantic import ValidationError
@@ -208,7 +208,7 @@ class Supervisor:
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
-            pipeline_options = PipelineOptions(
+            pipeline_exec_args = PipelineExecutionParams(
                 start_timestamp=start_timestamp,
                 pipeline_id=pipeline_id,
                 modyn_config=self.modyn_config,
@@ -222,7 +222,7 @@ class Supervisor:
                 stop_replay_at=stop_replay_at,
                 maximum_triggers=maximum_triggers,
             )
-            process = Process(target=execute_pipeline, args=(pipeline_options,))
+            process = Process(target=execute_pipeline, args=(pipeline_exec_args,))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
@@ -232,9 +232,8 @@ class Supervisor:
                 eval_status_queue,
             )
             return pipeline_res_msg(pipeline_id=pipeline_id)
-        except Exception as ex:  # pylint: disable=broad-except
-            raise ex
-            # return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
+        except Exception:  # pylint: disable=broad-except
+            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 

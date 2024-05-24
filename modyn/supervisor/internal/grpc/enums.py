@@ -40,12 +40,12 @@ class PipelineStage(StrEnum):
     PROCESS_NEW_DATA = "Process new data"
 
     PROCESS_NEW_DATA_BATCH = "Process new data batch"
-    EVALUATE_TRIGGER_POLICIES = "Evaluate trigger on batch"
+    EVALUATE_TRIGGER_POLICY = "Evaluate trigger on batch"
     INFORM_SELECTOR_NO_TRIGGER = "Inform selector about no trigger"
 
     # Trigger
-    EXECUTE_TRIGGERS = "Execute triggers within batch"
-    EXECUTE_SINGLE_TRIGGER = "Execute single trigger"
+    HANDLE_TRIGGERS = "Handle triggers within batch"
+    HANDLE_SINGLE_TRIGGER = "Handle single trigger"
     INFORM_SELECTOR_ABOUT_TRIGGER = "Inform selector and trigger"
     INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
 
