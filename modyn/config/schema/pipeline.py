@@ -88,7 +88,7 @@ class PresamplingConfig(BaseModel):
 
     strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
         description="Strategy used to presample the data."
-                    "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
+        "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
     )
     ratio: int = Field(
         description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
@@ -108,8 +108,10 @@ class DownsamplingConfig(BaseModel):
         extra = "allow"
 
     strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
-        Field(description="Strategy used to downsample the data."
-                          "Only the prefix, i.e. without `DownsamplingStrategy`, is needed.")
+        Field(
+            description="Strategy used to downsample the data."
+            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
+        )
     )
     sample_then_batch: bool = Field(
         False,
@@ -386,18 +388,18 @@ class TrainingConfig(BaseModel):
         return self
 
 
-# ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
+# ------------------------------------------------------- Data ------------------------------------------------------- #
 
 
 class DataConfig(BaseModel):
-    dataset_id: str = Field(description="ID of dataset to be used for training.")
+    dataset_id: str = Field(description="ID of dataset to be used.")
     bytes_parser_function: str = Field(
         description=(
             "Function used to convert bytes received from the Storage, to a format useful for further transformations "
             "(e.g. Tensors) This function is called before any other transformations are performed on the data."
         )
     )
-    transformations: List[Any] = Field(
+    transformations: List[str] = Field(
         default_factory=list,
         description=(
             "Further transformations to be applied on the data after bytes_parser_function has been applied."
@@ -493,25 +495,7 @@ class OffsetEvalStrategyModel(BaseModel):
 EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
-class DatasetConfig(BaseModel):
-    dataset_id: str = Field(description="The id of the dataset.")
-    bytes_parser_function: str = Field(
-        description=(
-            "Function used to convert bytes received from the storage, to a format useful for further transformations "
-            "(e.g. Tensors). This function is called before any other transformations are performed on the data."
-        )
-    )
-    transformations: List[Any] = Field(
-        default_factory=list,
-        description=(
-            "Further (optional) transformations to be applied on the data after bytes_parser_function has been "
-            "applied. For example, this can be torchvision transformations."
-        ),
-    )
-    label_transformer_function: Optional[str] = Field(
-        None,
-        description="function used to transform the label which are tensors of integers",
-    )
+class EvalDataConfig(DataConfig):
     batch_size: int = Field(description="The batch size to be used during evaluation.", ge=1)
     dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
@@ -545,14 +529,14 @@ class EvaluationConfig(BaseModel):
         ),
         min_length=1,
     )
-    datasets: List[DatasetConfig] = Field(
+    datasets: List[EvalDataConfig] = Field(
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,
     )
 
     @field_validator("datasets")
     @classmethod
-    def validate_datasets(cls, value: List[DatasetConfig]) -> List[DatasetConfig]:
+    def validate_datasets(cls, value: List[EvalDataConfig]) -> List[EvalDataConfig]:
         dataset_ids = [dataset.dataset_id for dataset in value]
         if len(dataset_ids) != len(set(dataset_ids)):
             raise ValueError("Dataset IDs must be unique.")
