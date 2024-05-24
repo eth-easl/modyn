@@ -67,7 +67,7 @@ class DownsamplingScheduler:
 def instantiate_scheduler(config: dict, maximum_keys_in_memory: int) -> DownsamplingScheduler:
     if config.get("downsampling_config") is None:
         # missing downsampler, use NoDownsamplingStrategy
-        list_of_downsamplers = [{"strategy": "NoDownsamplingStrategy"}]
+        list_of_downsamplers = [{"strategy": "No"}]
         list_of_thresholds: list[int] = []
     elif config["downsampling_config"].get("downsampling_list") is None:
         # just use one strategy, so fake scheduler

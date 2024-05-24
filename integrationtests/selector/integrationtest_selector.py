@@ -25,7 +25,7 @@ def get_coreset_strategy_config() -> CoresetSelectionStrategy:
         storage_backend="database",  # TODO(#324): Support local backend
         limit=-1,
         reset_after_trigger=True,
-        presampling_config=PresamplingConfig(strategy="LabelBalancedPresamplingStrategy", ratio=50),
+        presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=50),
     )
 
 
