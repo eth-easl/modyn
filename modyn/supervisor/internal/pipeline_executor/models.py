@@ -10,23 +10,23 @@ import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_serializer, model_validator
 from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class PipelineOptions:
+class PipelineExecutionParams:
     """
-    Wrapped cli argument bundle for the pipeline executor.
+    Wrapped initialization options for the pipeline executor, many of them are cli arguments.
     """
 
     start_timestamp: int
@@ -34,7 +34,6 @@ class PipelineOptions:
     modyn_config: ModynConfig
     pipeline_config: ModynPipelineConfig
     eval_directory: Path
-    supervisor_supported_eval_result_writers: dict
     exception_queue: mp.Queue
     pipeline_status_queue: mp.Queue
     training_status_queue: mp.Queue
@@ -68,7 +67,7 @@ class PipelineOptions:
         return 128
 
     @model_validator(mode="after")
-    def validate_replay(self) -> PipelineOptions:
+    def validate_replay(self) -> PipelineExecutionParams:
         if self.start_replay_at is None and self.stop_replay_at is not None:
             raise ValueError("`stop_replay_at` can only be used in conjunction with `start_replay_at`.")
         return self
@@ -94,12 +93,14 @@ class PipelineBatchState:
 
 
 @dataclass
-class ExecutionState(PipelineOptions):
+class ExecutionState(PipelineExecutionParams):
     """Represent the state of the pipeline executor including artifacts of pipeline stages."""
 
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
+    seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
+    current_batch_index: int = 0
     current_sample_index: int = 0
     current_sample_time: int = 0  # unix timestamp
     """The unix timestamp of the last sample seen and processed by the pipeline executor."""
@@ -257,8 +258,26 @@ class SingleEvaluationInfo(_ModelEvalInfo):
 class StoreEvaluationInfo(_ModelEvalInfo):
     results: dict[str, Any]
 
+    def results_df(self) -> pd.DataFrame:
+        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        return pd.DataFrame(
+            [
+                (
+                    self.trigger_id,
+                    self.id_model,
+                    self.dataset_id,
+                    self.interval_start,
+                    self.interval_end,
+                    metric["name"],
+                    metric["result"],
+                )
+                for metric in self.results["metrics"]
+            ],
+            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end", "metric", "value"],
+        )
 
-class SelectorInformLog(StageInfo):
+
+class SelectorInformInfo(StageInfo):
     selector_log: dict[str, Any] | None
     remaining_data: bool
     trigger_indexes: list[int]
@@ -268,6 +287,19 @@ class SelectorInformLog(StageInfo):
         return pd.DataFrame(
             [(self.remaining_data, self.trigger_indexes)], columns=["remaining_data", "trigger_indexes"]
         )
+
+
+StageInfoUnion = Union[
+    FetchDataInfo,
+    ProcessNewDataInfo,
+    EvaluateTriggerInfo,
+    SelectorInformTriggerInfo,
+    TriggerExecutionInfo,
+    TrainingInfo,
+    StoreModelInfo,
+    SingleEvaluationInfo,
+    SelectorInformInfo,
+]
 
 
 class StageLog(BaseModel):
@@ -285,19 +317,42 @@ class StageLog(BaseModel):
     `end-start` is not always the actual duration this stage spent in computing."""
 
     # dataset time of last seen sample
+    batch_idx: int
     sample_idx: int
     sample_time: int
+    trigger_idx: int
 
     # stage specific log info
     info: StageInfo | None = Field(None)
 
     def online_df(self, extended: bool = False) -> pd.DataFrame | None:
-        """Args:
-        extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
+        """
+        Provides a DataFrame with the log information of this stage.
+
+        This is especially useful as we want to be able to quickly do analysis on the logs of a pipeline run.
+        One can simply use the `online_df` method of the `SupervisorLogs` class to get a DataFrame of all logs.
+        Then one can filter the logs by stage id to get the logs of a specific stage and/or aggregate over the logs.
+
+        Args:
+            extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
+
+        Returns:
+            A DataFrame with the log information of this stage.
         """
         df = pd.DataFrame(
-            [(self.id, self.start, self.end, self.duration, self.sample_idx, self.sample_time)],
-            columns=["id", "start", "end", "duration", "sample_idx", "sample_time"],
+            [
+                (
+                    self.id,
+                    self.start,
+                    self.end,
+                    self.duration,
+                    self.batch_idx,
+                    self.sample_idx,
+                    self.sample_time,
+                    self.trigger_idx,
+                )
+            ],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
         )
         info_df = self.info.online_df() if self.info else None
         if info_df is not None and extended:
@@ -305,6 +360,29 @@ class StageLog(BaseModel):
             df = pd.concat([df, info_df], axis=1)
 
         return df
+
+    # (De)Serialization to enable parsing all classes in the StageInfoUnion;
+    # with that logic we avoid having to add disciminator fields to every subclass of StageInfo
+
+    @model_serializer(mode="wrap")
+    def serialize(self, handler: Callable[..., dict[str, Any]]) -> dict[str, Any]:
+        default_serializer = handler(self)
+        return {
+            **default_serializer,
+            "info": self.info.model_dump(by_alias=True) if self.info else None,
+            **({"info_type": self.info.__class__.__name__} if self.info else {}),
+        }
+
+    @model_validator(mode="before")
+    @classmethod
+    def deserializer(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if data.get("info_type") and data.get("info"):
+                info_type = cast(type[StageInfo], globals().get(data["info_type"]))
+                data["info"] = info_type.model_validate(data["info"])
+            else:
+                data["info"] = None
+        return data
 
 
 class SupervisorLogs(BaseModel):
@@ -314,12 +392,25 @@ class SupervisorLogs(BaseModel):
         self.stage_runs.clear()
 
     def merge(self, logs: list[StageLog]) -> SupervisorLogs:
-        self.stage_runs = self.stage_runs + logs
+        self.stage_runs = self.stage_runs + [run for _l in logs for run in _l.stage_runs]
         return self
 
     @property
-    def stage_runs_df(self) -> pd.DataFrame:
-        return pd.DataFrame([stage_run.df_row() for stage_run in self.stage_runs], columns=StageLog.df_columns())
+    def df(self) -> pd.DataFrame:
+        """Provides a dataframe with log information of all stages which helps to easily plot pipeline run metrics.
+
+        Returns:
+            A DataFrame with the core log information of all stages
+            (not including the additional info property of the StageLogs).
+        """
+
+        return pd.DataFrame(
+            data=[
+                (stage.id, stage.start, stage.end, stage.duration, stage.batch_idx, stage.sample_idx, stage.sample_time)
+                for stage in self.stage_runs
+            ],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
+        )
 
 
 class PipelineLogs(BaseModel):
@@ -340,6 +431,8 @@ class PipelineLogs(BaseModel):
     # static logs
 
     pipeline_id: int
+    pipeline_stages: dict[str, tuple[int, list[str]]]
+    """List of all pipeline stages, their execution order index, and their parent stages."""
 
     config: ConfigLogs
 
@@ -365,13 +458,13 @@ class PipelineLogs(BaseModel):
                 new items since the last materialization, and final will merge all logs.
         """
         if "PYTEST_CURRENT_TEST" in os.environ:
-            self.model_dump_json()  # Enforce serialization to catch issues
+            self.model_dump_json(by_alias=True)  # Enforce serialization to catch issues
             return  # But don't actually store in tests
 
         # ensure empty log directory
         pipeline_logdir = log_dir_path / f"pipeline_{self.pipeline_id}"
 
-        if pipeline_logdir.exists():
+        if mode == "initial" and pipeline_logdir.exists():
             # if not empty move the previous content to .backup_timetamp directory
             backup_dir = log_dir_path / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
             pipeline_logdir.rename(backup_dir)
@@ -387,20 +480,20 @@ class PipelineLogs(BaseModel):
 
         if mode == "increment":
             with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.supervisor.model_dump_json(indent=2))
+                logfile.write(self.supervisor.model_dump_json(by_alias=True, indent=2))
 
             self.supervisor.clear()
             self.partial_idx += 1
             return
 
         # final: merge increment logs
-        supervisor_files = sorted(pipeline_logdir.glob(f"pipeline_{self.pipeline_id}/supervisor.part_*.log"))
+        supervisor_files = sorted(pipeline_logdir.glob("supervisor_part_*.log"))
         partial_supervisor_logs = [
             SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
         ]
         self.supervisor = self.supervisor.merge(partial_supervisor_logs)
 
         with open(pipeline_logdir / "pipeline.log", "w", encoding="utf-8") as logfile:
-            logfile.write(self.model_dump_json(indent=2))
+            logfile.write(self.model_dump_json(by_alias=True, indent=2))
 
         self.supervisor.clear()

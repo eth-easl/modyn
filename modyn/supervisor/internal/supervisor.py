@@ -8,22 +8,18 @@ from multiprocessing import Manager, Process
 from typing import Any, Optional
 
 from modyn.config.schema.config import ModynConfig
-from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig, ResultWriterType
+from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-)
 from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
 from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
-from modyn.supervisor.internal.pipeline_executor.models import PipelineOptions
+from modyn.supervisor.internal.pipeline_executor.models import PipelineExecutionParams
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
 from pydantic import ValidationError
@@ -34,11 +30,6 @@ logger = logging.getLogger(__name__)
 class Supervisor:
     # pylint: disable=too-many-instance-attributes
     # This is a core class and we require the attributes.
-
-    supported_evaluation_result_writers: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
-        "json": JsonResultWriter,
-        "tensorboard": TensorboardResultWriter,
-    }
 
     def __init__(self, modyn_config: ModynConfig) -> None:
         # TODO(#317): redesign tensorboard in the future
@@ -105,7 +96,8 @@ class Supervisor:
             if not cls.validate_pipeline_config_content(pipeline_config_model):
                 return None
             return pipeline_config_model
-        except ValidationError:
+        except ValidationError as e:
+            logger.error(e)
             return None
 
     @staticmethod
@@ -216,13 +208,12 @@ class Supervisor:
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
-            pipeline_options = PipelineOptions(
+            pipeline_exec_args = PipelineExecutionParams(
                 start_timestamp=start_timestamp,
                 pipeline_id=pipeline_id,
                 modyn_config=self.modyn_config,
                 pipeline_config=pipeline_config_model,
                 eval_directory=pathlib.Path(eval_directory),
-                supervisor_supported_eval_result_writers=self.supported_evaluation_result_writers,
                 exception_queue=exception_queue,
                 pipeline_status_queue=pipeline_status_queue,
                 training_status_queue=training_status_queue,
@@ -231,7 +222,7 @@ class Supervisor:
                 stop_replay_at=stop_replay_at,
                 maximum_triggers=maximum_triggers,
             )
-            process = Process(target=execute_pipeline, args=(pipeline_options,))
+            process = Process(target=execute_pipeline, args=(pipeline_exec_args,))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,
@@ -241,9 +232,8 @@ class Supervisor:
                 eval_status_queue,
             )
             return pipeline_res_msg(pipeline_id=pipeline_id)
-        except Exception as ex:  # pylint: disable=broad-except
-            raise ex
-            # return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
+        except Exception:  # pylint: disable=broad-except
+            return pipeline_res_msg(pipeline_id=pipeline_id, exception="Failed to execute pipeline")
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 

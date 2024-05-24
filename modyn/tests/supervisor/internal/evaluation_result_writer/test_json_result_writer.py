@@ -4,13 +4,13 @@ import tempfile
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
+from modyn.supervisor.internal.evaluation_result_writer import DedicatedJsonResultWriter
 
 
 def test_json_writer():
     with tempfile.TemporaryDirectory() as path:
         eval_dir = pathlib.Path(path)
-        writer = JsonResultWriter(10, 15, eval_dir)
+        writer = DedicatedJsonResultWriter(10, 15, eval_dir)
         writer.add_evaluation_data("mnist", 1000, [EvaluationData(metric="Accuracy", result=0.5)])
         writer.store_results()
 
