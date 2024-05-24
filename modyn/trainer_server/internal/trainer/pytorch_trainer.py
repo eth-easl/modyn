@@ -650,17 +650,16 @@ class PytorchTrainer:
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
         self._model.model.eval()
-        with torch.no_grad():
-            self._downsampler.init_downsampler()
-            self.start_embedding_recording_if_needed()
-            big_batch_output = self._model.model(data)
-            embeddings = self.get_embeddings_if_recorded()
-            self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
-            self.end_embedding_recorder_if_needed()
+        self._downsampler.init_downsampler()
+        self.start_embedding_recording_if_needed()
+        big_batch_output = self._model.model(data)
+        embeddings = self.get_embeddings_if_recorded()
+        self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+        self.end_embedding_recorder_if_needed()
 
-            # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
-            selected_indexes, weights = self._downsampler.select_points()
-            selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
+        # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
+        selected_indexes, weights = self._downsampler.select_points()
+        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
         self._model.model.train()
@@ -782,18 +781,17 @@ class PytorchTrainer:
         """
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
-        with torch.no_grad():
-            for batch_number, batch in enumerate(dataloader):
-                self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
+        for batch_number, batch in enumerate(dataloader):
+            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
 
-                sample_ids, target, data = self.preprocess_batch(batch)
-                number_of_samples += len(sample_ids)
+            sample_ids, target, data = self.preprocess_batch(batch)
+            number_of_samples += len(sample_ids)
 
-                with torch.autocast(self._device_type, enabled=self._amp):
-                    # compute the scores and accumulate them
-                    model_output = self._model.model(data)
-                    embeddings = self.get_embeddings_if_recorded()
-                    self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
+            with torch.autocast(self._device_type, enabled=self._amp):
+                # compute the scores and accumulate them
+                model_output = self._model.model(data)
+                embeddings = self.get_embeddings_if_recorded()
+                self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
 
         return batch_number, number_of_samples
 
