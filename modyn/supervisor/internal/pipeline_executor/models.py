@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
+from pydantic import BaseModel, Field, model_serializer, model_validator
+from typing_extensions import override
+
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -492,6 +495,7 @@ class PipelineLogs(BaseModel):
             pipeline_logdir.rename(backup_dir)
 
         pipeline_logdir.mkdir(parents=True, exist_ok=True)
+        (pipeline_logdir / ".name").write_text(self.config.pipeline.pipeline.name)
 
         # output logs
 
