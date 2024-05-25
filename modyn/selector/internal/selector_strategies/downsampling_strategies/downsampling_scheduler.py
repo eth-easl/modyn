@@ -7,7 +7,7 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies.utils i
 class DownsamplingScheduler:
     def __init__(
         self,
-        modyn_config,
+        modyn_config: dict,
         pipeline_id: int,
         downsampling_configs: list[dict],
         downsampling_thresholds: list[int],

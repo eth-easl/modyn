@@ -6,3 +6,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
+
+    def inform_next_trigger(self, next_trigger_id: int) -> None:
+        raise NotImplementedError
