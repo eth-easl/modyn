@@ -196,7 +196,7 @@ def test_instantiate_scheduler_just_one():
 
 
 def test_instantiate_scheduler_list():
-    config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": 7}}
+    config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": [7]}}
     scheduler = instantiate_scheduler(config, 123)
 
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)

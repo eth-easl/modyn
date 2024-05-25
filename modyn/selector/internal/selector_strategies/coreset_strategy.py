@@ -60,8 +60,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
-        trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
+        # self._next_trigger_id is the trigger id for this current trigger
+        # in super().trigger() self._next_trigger_id is incremented
+        # therefore we need to update the downsampler before calling super().trigger()
         self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
+        trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
