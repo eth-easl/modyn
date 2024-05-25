@@ -1,10 +1,12 @@
+from unittest.mock import patch
+
 import pytest
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
     GradNormDownsamplingStrategy,
     LossDownsamplingStrategy,
     NoDownsamplingStrategy,
-    instantiate_scheduler,
+    instantiate_scheduler, AbstractDownsamplingStrategy,
 )
 from modyn.utils import DownsamplingMode
 
@@ -38,7 +40,8 @@ def test_init():
     assert downs.next_threshold == 12
 
 
-def test_switch_downsamplers():
+@patch.object(AbstractDownsamplingStrategy, "inform_next_trigger")
+def test_switch_downsamplers(mock_inform_next_trigger):
     conf = get_configs()
     downs = DownsamplingScheduler({}, 0, conf, [12], 1000)
 
@@ -57,6 +60,7 @@ def test_switch_downsamplers():
     assert downs.current_downsampler.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
     assert downs.current_downsampler.downsampling_ratio == 25
     assert downs.next_threshold is None
+    mock_inform_next_trigger.assert_called_once_with(12)
 
 
 def test_switch_functions():
