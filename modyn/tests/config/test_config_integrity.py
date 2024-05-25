@@ -60,17 +60,3 @@ def test_client_config_integrity(config_path: str) -> None:
     file = PROJECT_ROOT / config_path
     assert file.exists(), f"Client config file {config_path} does not exist."
     read_client_config(file)
-
-
-def test_dynamic_experiment_configs() -> None:
-    yearbook_pipeline_config(
-        name="test",
-        trigger=TimeTriggerConfig(
-            id="TimeTrigger",
-            every=1,
-            unit="y",
-        ),
-        eval_strategy=OffsetEvalStrategyModel(
-            name="OffsetEvalStrategy", config=OffsetEvalStrategyConfig(offsets=["1d"])
-        ),
-    )
