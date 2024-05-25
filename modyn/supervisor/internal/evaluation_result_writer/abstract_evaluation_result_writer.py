@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import pathlib
 from abc import ABC, abstractmethod
+from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
@@ -28,7 +31,7 @@ class AbstractEvaluationResultWriter(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def store_results(self) -> None:
+    def store_results(self) -> Any:
         """
         Called in the end to store the results.
         """

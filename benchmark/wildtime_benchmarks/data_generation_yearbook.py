@@ -1,3 +1,10 @@
+"""Create the Yearbook dataset from the WildTime benchmark.
+
+Note:
+As modyn operates on unix timestamps (seconds since 1970), we need to create a fake timestamp for the yearbook dataset.
+We do this by converting the year to days since epoch (1970-01-01).
+"""
+
 import os
 import pickle
 from typing import Tuple

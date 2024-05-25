@@ -33,10 +33,9 @@ training:
   selection_strategy:
     name: NewDataStrategy
     maximum_keys_in_memory: 1000
-    config:
-      storage_backend: "database"
-      limit: -1
-      reset_after_trigger: True
+    storage_backend: "database"
+    limit: -1
+    reset_after_trigger: True
   seed: 42
   epochs_per_trigger: 1
 data:
@@ -57,6 +56,12 @@ trigger:
       threshold: 0.7
   
 evaluation:
+  eval_strategy:
+    name: MatrixEvalStrategy
+    config: 
+      eval_every: 100s
+      eval_start_from: 0
+      eval_end_at: 300
   device: "cuda:0"
   result_writers: ["json"]
   datasets:

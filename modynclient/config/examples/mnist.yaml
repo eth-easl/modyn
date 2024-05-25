@@ -49,6 +49,12 @@ trigger:
   trigger_config:
     data_points_for_trigger: 2000
 evaluation:
+  eval_strategy:
+    name: MatrixEvalStrategy
+    config: 
+      eval_every: 100s
+      eval_start_from: 0
+      eval_end_at: 300
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   datasets:

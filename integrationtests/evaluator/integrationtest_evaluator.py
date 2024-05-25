@@ -5,7 +5,7 @@ import time
 from typing import Optional, Tuple
 
 import torch
-from integrationtests.utils import ImageDatasetHelper, connect_to_server, get_modyn_config
+from integrationtests.utils import MODYN_MODELS_PATH, ImageDatasetHelper, connect_to_server, get_modyn_config
 from modyn.common.ftp import delete_file, upload_file
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
@@ -29,7 +29,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import M
 from modyn.models import ResNet18
 from modyn.utils import calculate_checksum
 
-TEST_MODELS_PATH = pathlib.Path("/app") / "model_storage" / "test_models"
+TEST_MODELS_PATH = MODYN_MODELS_PATH / "test_models"
 MODYN_CONFIG = get_modyn_config()
 DATASET_ID = "image_test_dataset"
 
