@@ -649,7 +649,7 @@ class PytorchTrainer:
 
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
-
+        self._model.model.eval()
         self._downsampler.init_downsampler()
         self.start_embedding_recording_if_needed()
         big_batch_output = self._model.model(data)
@@ -662,6 +662,7 @@ class PytorchTrainer:
         selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
+        self._model.model.train()
         return data, sample_ids, target, weights.to(self._device)
 
     def start_embedding_recording_if_needed(self) -> None:
