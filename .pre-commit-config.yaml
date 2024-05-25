@@ -55,8 +55,9 @@ repos:
     hooks:
       - id: pylint
         name: pylint
-        entry: ./pylint.sh
+        entry: pylint
         language: system
         types: [python]
         always_run: true
         pass_filenames: false
+        args: [modyn]
