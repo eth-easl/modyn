@@ -28,7 +28,7 @@ def get_configs_triple():
 
 def test_init():
     conf = get_configs()
-    downs = DownsamplingScheduler(conf, [12], 1000)
+    downs = DownsamplingScheduler({}, 0, conf, [12], 1000)
 
     assert downs.maximum_keys_in_memory == 1000
     assert isinstance(downs.current_downsampler, LossDownsamplingStrategy)
@@ -40,7 +40,7 @@ def test_init():
 
 def test_switch_downsamplers():
     conf = get_configs()
-    downs = DownsamplingScheduler(conf, [12], 1000)
+    downs = DownsamplingScheduler({}, 0, conf, [12], 1000)
 
     assert downs.maximum_keys_in_memory == 1000
     assert isinstance(downs.current_downsampler, LossDownsamplingStrategy)
@@ -61,7 +61,7 @@ def test_switch_downsamplers():
 
 def test_switch_functions():
     conf = get_configs()
-    downs = DownsamplingScheduler(conf, [12], 1000)
+    downs = DownsamplingScheduler({}, 0, conf, [12], 1000)
 
     # below the threshold
     for i in range(12):
@@ -93,27 +93,27 @@ def test_wrong_number_threshold():
     conf = get_configs_triple()
     # just one threshold
     with pytest.raises(ValueError):
-        DownsamplingScheduler(conf, [12], 560)
+        DownsamplingScheduler({}, 0, conf, [12], 560)
 
     # three thresholds
     with pytest.raises(ValueError):
-        DownsamplingScheduler(conf, [12, 13, 14], 560)
+        DownsamplingScheduler({}, 0, conf, [12, 13, 14], 560)
 
     # not sorted
     with pytest.raises(ValueError):
-        DownsamplingScheduler(conf, [12, 11], 560)
+        DownsamplingScheduler({}, 0, conf, [12, 11], 560)
 
     # double threshold
     with pytest.raises(ValueError):
-        DownsamplingScheduler(conf, [12, 12], 560)
+        DownsamplingScheduler({}, 0, conf, [12, 12], 560)
 
     # valid one
-    DownsamplingScheduler(conf, [12, 15], 560)
+    DownsamplingScheduler({}, 0, conf, [12, 15], 560)
 
 
 def test_double_threshold():
     conf = get_configs_triple()
-    downs = DownsamplingScheduler(conf, [12, 15], 1000)
+    downs = DownsamplingScheduler({}, 0, conf, [12, 15], 1000)
 
     # below the first threshold
     for i in range(12):
@@ -151,7 +151,7 @@ def test_double_threshold():
 
 def test_wrong_trigger():
     conf = get_configs()
-    downs = DownsamplingScheduler(conf, [12], 1000)
+    downs = DownsamplingScheduler({}, 0, conf, [12], 1000)
 
     for i in range(12):
         downs.inform_next_trigger(i)
@@ -183,21 +183,21 @@ def test_wrong_trigger():
 
 
 def test_instantiate_scheduler_empty():
-    scheduler = instantiate_scheduler({}, 100)
+    scheduler = instantiate_scheduler({}, {}, 0, 100)
     assert isinstance(scheduler.current_downsampler, NoDownsamplingStrategy)
     assert scheduler.next_threshold is None
 
 
 def test_instantiate_scheduler_just_one():
     config = {"downsampling_config": {"strategy": "Loss", "sample_then_batch": True, "ratio": 50}}
-    scheduler = instantiate_scheduler(config, 100)
+    scheduler = instantiate_scheduler(config, {}, 0, 100)
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
     assert scheduler.next_threshold is None
 
 
 def test_instantiate_scheduler_list():
     config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": 7}}
-    scheduler = instantiate_scheduler(config, 123)
+    scheduler = instantiate_scheduler(config, {}, 0, 123)
 
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
     assert scheduler.next_threshold == 7

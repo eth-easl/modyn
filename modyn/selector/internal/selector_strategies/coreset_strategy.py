@@ -24,7 +24,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
         # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
-        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
+        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(
+            config, modyn_config, pipeline_id, maximum_keys_in_memory
+        )
         self._storage_backend: AbstractStorageBackend
         if "storage_backend" in config:
             if config["storage_backend"] == "local":
