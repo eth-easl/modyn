@@ -15,7 +15,7 @@ class DataLoaderInfo:
         selector_address: str,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
-        tokenizer: Optional[None],
+        tokenizer: Optional[str],
     ):
         self.pipeline_id = pipeline_id
         self.dataset_id = dataset_id

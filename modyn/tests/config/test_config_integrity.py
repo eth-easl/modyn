@@ -1,11 +1,7 @@
 from pathlib import Path
 
 import pytest
-from experiments.yearbook.compare_trigger_policies.pipeline_config import (
-    gen_pipeline_config as yearbook_pipeline_config,
-)
 from modyn.config import read_modyn_config, read_pipeline
-from modyn.config.schema.pipeline import OffsetEvalStrategyConfig, OffsetEvalStrategyModel, TimeTriggerConfig, TriggerConfig
 from modynclient.config import read_client_config
 
 """Directories can either be file paths or directories.
