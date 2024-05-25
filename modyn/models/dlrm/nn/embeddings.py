@@ -158,7 +158,7 @@ class JointEmbedding(Embeddings):
             data[offsets[cat] : offsets[cat + 1]] = weight
 
 
-# If you want ot use a fused joint embedding for a different number of variables, firstly change
+# If you want to use a fused joint embedding for a different number of variables, firstly change
 # the custom cuda kernel code to accommodate the new number, then change this value accordingly
 FUSED_JOINT_EMBEDDING_NUMBER_OF_CATEGORICAL_VARIABLES = 26
 

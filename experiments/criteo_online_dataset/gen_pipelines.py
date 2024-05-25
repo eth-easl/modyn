@@ -122,12 +122,13 @@ trigger:
     data_points_for_trigger: 30000000
 """
 
+
 def main():
     curr_dir = pathlib.Path(__file__).resolve().parent
-    for num_dataloader_workers in [16,1,4,8]:
+    for num_dataloader_workers in [16, 1, 4, 8]:
         for partition_size in [10000, 100000, 2500000, 5000000]:
-            for num_prefetched_partitions in [0,1,2,6]:
-                for parallel_pref in [1,2,4,8]:
+            for num_prefetched_partitions in [0, 1, 2, 6]:
+                for parallel_pref in [1, 2, 4, 8]:
                     if num_prefetched_partitions == 0 and parallel_pref > 1:
                         continue
 
@@ -135,15 +136,20 @@ def main():
                         continue
 
                     if partition_size == 10000:
-                        if num_dataloader_workers not in [1,16]:
+                        if num_dataloader_workers not in [1, 16]:
                             continue
 
                         if num_prefetched_partitions in [2]:
                             continue
 
-                    pipeline = PIPELINE_BLANK.format(num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size)
+                    pipeline = PIPELINE_BLANK.format(
+                        num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size
+                    )
 
-                    with open(f"{curr_dir}/pipelines/criteo_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml", "w") as pfile:
+                    with open(
+                        f"{curr_dir}/pipelines/criteo_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml",
+                        "w",
+                    ) as pfile:
                         pfile.write(pipeline)
 
 

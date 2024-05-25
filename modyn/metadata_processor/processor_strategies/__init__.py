@@ -1,5 +1,5 @@
 """
-This module containes extensions of the MetadataProcessorStrategy class that
+This module contains extensions of the MetadataProcessorStrategy class that
 implement custom processing strategies.
 """
 

@@ -89,9 +89,9 @@ class CriteoLocalDataset(IterableDataset):
     ) -> Optional[Tuple]:
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
-        tranformed_sample = self._transform(sample)  # type: ignore
+        transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
-        return key, tranformed_sample, label
+        return key, transformed_sample, label
 
     def _persist_log(self, worker_id: int) -> None:
         if self._log_path is None:

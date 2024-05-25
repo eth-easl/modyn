@@ -118,5 +118,5 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
     @abstractmethod
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
-        # Here is where tha actual selection happens
+        # Here is where the actual selection happens
         raise NotImplementedError()

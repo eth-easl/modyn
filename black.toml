@@ -15,10 +15,3 @@ extend-exclude = '''
   | clang-tidy-build/
 )
 '''
-
-[tool.typos.default]
-extend-ignore-re = ["(?Rm)^.*# spellchecker:disable-line$"]
-
-[tool.typos.default.extend-words]
-"strat" = "strat"
-"fpr" = "fpr"
