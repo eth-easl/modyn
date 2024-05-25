@@ -326,7 +326,7 @@ class TrainingConfig(BaseModel):
     dataloader_workers: int = Field(
         description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
     )
-    batch_size: float = Field(description="The batch size to be used during training.", ge=1)
+    batch_size: int = Field(description="The batch size to be used during training.", ge=1)
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
@@ -511,7 +511,11 @@ class ResultWriter(BaseModel):
     config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
 
 
-ResultWriterType = Literal["json", "tensorboard", "log"]
+ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
+"""
+- json: appends the evaluations to the standard json logfile.
+- json_dedicated: dumps the results into dedicated json files for each evaluation.
+- tensorboard: output the evaluation to dedicated tensorboard files."""
 
 
 class EvaluationConfig(BaseModel):

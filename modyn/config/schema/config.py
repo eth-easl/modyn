@@ -127,7 +127,8 @@ class DatasetsConfig(BaseModel):
         None, description="The interval in seconds in which the file watcher checks for new files."
     )
     selector_batch_size: int = Field(
-        True, description="The number of samples per which we check for triggers and inform the selector."
+        128,
+        description="The number of samples per which we check for triggers and inform the selector.",
     )
 
 
