@@ -28,6 +28,7 @@ class DataDriftTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, config: DataDriftTriggerConfig):
+        self.config = config
         self.context: TriggerContext | None = None
 
         self.previous_trigger_id: Optional[int] = None
@@ -88,13 +89,13 @@ class DataDriftTrigger(Trigger):
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
         assert self.encoder_downloader is not None
-        assert self.pipeline_config is not None
+        assert self.context and self.context.pipeline_config is not None
 
         reference_dataloader = prepare_trigger_dataloader_by_trigger(
             self.previous_trigger_id,
             self.dataloader_info,
             data_points_in_trigger=self.previous_data_points,
-            sample_size=self.sample_size,
+            sample_size=self.config.sample_size,
         )
 
         current_keys, _, _ = zip(*self.data_cache[idx_start:idx_end])  # type: ignore
@@ -102,14 +103,14 @@ class DataDriftTrigger(Trigger):
             self.previous_trigger_id + 1,
             self.dataloader_info,
             current_keys,  # type: ignore
-            sample_size=self.sample_size,
+            sample_size=self.config.sample_size,
         )
 
         # Download previous model as embedding encoder
         # TODO(417) Support custom model as embedding encoder
         if self.model_updated:
             self.embedding_encoder = self.encoder_downloader.setup_encoder(
-                self.previous_model_id, self.pipeline_config["training"]["device"]
+                self.previous_model_id, self.context.pipeline_config.training.device
             )
             self.model_updated = False
 
@@ -149,9 +150,9 @@ class DataDriftTrigger(Trigger):
         detection_idx_start = 0
         detection_idx_end = 0
 
-        while unvisited_data_points >= self.detection_interval:
-            unvisited_data_points -= self.detection_interval
-            detection_idx_end += self.detection_interval
+        while unvisited_data_points >= self.config.detection_interval_data_points:
+            unvisited_data_points -= self.config.detection_interval_data_points
+            detection_idx_end += self.config.detection_interval_data_points
             if detection_idx_end <= self.leftover_data_points:
                 continue
 
@@ -203,65 +204,32 @@ class DataDriftTrigger(Trigger):
         return metrics
 
     def _init_dataloader_info(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.pipeline_config is not None
-        assert self.modyn_config is not None
+        assert self.context
 
-        training_config = self.pipeline_config["training"]
-        data_config = self.pipeline_config["data"]
-
-        if "num_prefetched_partitions" in training_config:
-            num_prefetched_partitions = training_config["num_prefetched_partitions"]
-        else:
-            if "prefetched_partitions" in training_config:
-                raise ValueError(
-                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
-                    + " Please rename/remove that configuration"
-                )
-            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
-            num_prefetched_partitions = 1
-
-        if "parallel_prefetch_requests" in training_config:
-            parallel_prefetch_requests = training_config["parallel_prefetch_requests"]
-        else:
-            logger.warning(
-                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
-            )
-            parallel_prefetch_requests = 1
-
-        if "tokenizer" in data_config:
-            tokenizer = data_config["tokenizer"]
-        else:
-            tokenizer = None
-
-        if "transformations" in data_config:
-            transform_list = data_config["transformations"]
-        else:
-            transform_list = []
+        training_config = self.context.pipeline_config.training
+        data_config = self.context.pipeline_config.data
 
         self.dataloader_info = DataLoaderInfo(
-            self.pipeline_id,
-            dataset_id=data_config["dataset_id"],
-            num_dataloaders=training_config["dataloader_workers"],
-            batch_size=training_config["batch_size"],
-            bytes_parser=data_config["bytes_parser_function"],
-            transform_list=transform_list,
-            storage_address=f"{self.modyn_config['storage']['hostname']}:{self.modyn_config['storage']['port']}",
-            selector_address=f"{self.modyn_config['selector']['hostname']}:{self.modyn_config['selector']['port']}",
-            num_prefetched_partitions=num_prefetched_partitions,
-            parallel_prefetch_requests=parallel_prefetch_requests,
-            tokenizer=tokenizer,
+            self.context.pipeline_id,
+            dataset_id=data_config.dataset_id,
+            num_dataloaders=training_config.dataloader_workers,
+            batch_size=training_config.batch_size,
+            bytes_parser=data_config.bytes_parser_function,
+            transform_list=data_config.transformations,
+            storage_address=f"{self.context.modyn_config.storage.hostname}:{self.context.modyn_config.storage.port}",
+            selector_address=f"{self.context.modyn_config.selector.hostname}:{self.context.modyn_config.selector.port}",
+            num_prefetched_partitions=training_config.num_prefetched_partitions,
+            parallel_prefetch_requests=training_config.parallel_prefetch_requests,
+            tokenizer=data_config.tokenizer,
         )
 
     def _init_encoder_downloader(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.pipeline_config is not None
-        assert self.modyn_config is not None
-        assert self.base_dir is not None
+        assert self.context is not None
 
         self.encoder_downloader = EmbeddingEncoderDownloader(
-            self.modyn_config,
-            self.pipeline_id,
-            self.base_dir,
-            f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
+            self.context.modyn_config,
+            self.context.pipeline_id,
+            self.context.base_dir,
+            f"{self.context.modyn_config.modyn_model_storage.hostname}:{
+                self.context.modyn_config.modyn_model_storage.port}",
         )

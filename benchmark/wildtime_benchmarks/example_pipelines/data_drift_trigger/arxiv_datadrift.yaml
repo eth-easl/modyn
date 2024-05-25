@@ -47,7 +47,7 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  data_points: 100000
+  detection_interval_data_points: 100000
   sample_size: 5000
   
 evaluation:

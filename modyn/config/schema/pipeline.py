@@ -431,14 +431,17 @@ class DataAmountTriggerConfig(BaseModel):
 
 class DataDriftTriggerConfig(BaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
-    data_points: int = Field(description="The number of data points for one drift detection.", ge=1)
+    detection_interval_data_points: int = Field(
+        1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
+    )
     sample_size: int | None = Field(None, description="The number of samples used for the metric calculation.", ge=1)
-    detection_interval: int = Field(1000, description="The interval in which drift detection is performed.", ge=1)
     metric: str = Field("model", description="The metric used for drift detection.")
     metric_config: dict[str, Any] = Field(default_factory=dict, description="Configuration for the evidently metric.")
 
 
-TriggerConfig = Annotated[Union[TimeTriggerConfig, DataAmountTriggerConfig, DataDriftTriggerConfig], Field(discriminator="id")]
+TriggerConfig = Annotated[
+    Union[TimeTriggerConfig, DataAmountTriggerConfig, DataDriftTriggerConfig], Field(discriminator="id")
+]
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #

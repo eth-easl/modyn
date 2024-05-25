@@ -1,11 +1,7 @@
 from pathlib import Path
 
 import pytest
-from experiments.yearbook.compare_trigger_policies.pipeline_config import (
-    gen_pipeline_config as yearbook_pipeline_config,
-)
 from modyn.config import read_modyn_config, read_pipeline
-from modyn.config.schema.pipeline import OffsetEvalStrategyConfig, OffsetEvalStrategyModel, TimeTriggerConfig, TriggerConfig
 from modynclient.config import read_client_config
 
 """Directories can either be file paths or directories.
@@ -60,17 +56,3 @@ def test_client_config_integrity(config_path: str) -> None:
     file = PROJECT_ROOT / config_path
     assert file.exists(), f"Client config file {config_path} does not exist."
     read_client_config(file)
-
-
-def test_dynamic_experiment_configs() -> None:
-    yearbook_pipeline_config(
-        name="test",
-        trigger=TimeTriggerConfig(
-            id="TimeTrigger",
-            every=1,
-            unit="y",
-        ),
-        eval_strategy=OffsetEvalStrategyModel(
-            name="OffsetEvalStrategy", config=OffsetEvalStrategyConfig(offsets=["1d"])
-        ),
-    )

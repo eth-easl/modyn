@@ -1,23 +1,15 @@
-import pytest
+from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers import TimeTrigger
 
 
 def test_initialization() -> None:
-    trigger = TimeTrigger({"trigger_every": "2s"})
+    trigger = TimeTrigger(TimeTriggerConfig(every=2, unit="s"))
     assert trigger.trigger_every_s == 2
     assert trigger.next_trigger_at is None
 
 
-def test_init_fails_if_invalid() -> None:
-    with pytest.raises(ValueError, match="Trigger config is missing `trigger_every` field"):
-        TimeTrigger({})
-
-    with pytest.raises(ValueError, match="trigger_every must be > 0, but is 0"):
-        TimeTrigger({"trigger_every": "0s"})
-
-
 def test_inform() -> None:
-    trigger = TimeTrigger({"trigger_every": "1000s"})
+    trigger = TimeTrigger(TimeTriggerConfig(every=1000, unit="s"))
     LABEL = 2  # pylint: disable=invalid-name
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert list(trigger.inform([])) == []
