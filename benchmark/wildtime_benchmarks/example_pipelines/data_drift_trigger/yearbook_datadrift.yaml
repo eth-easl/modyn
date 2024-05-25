@@ -49,11 +49,10 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  trigger_config:
-    data_points_for_detection: 1000
-    metric_name: model
-    metric_config:
-      threshold: 0.7
+  data_points: 1000
+  metric: model
+  metric_config:
+    threshold: 0.7
   
 evaluation:
   eval_strategy:

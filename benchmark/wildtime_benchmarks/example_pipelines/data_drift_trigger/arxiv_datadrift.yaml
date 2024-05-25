@@ -47,9 +47,8 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  trigger_config:
-    data_points_for_detection: 100000
-    sample_size: 5000
+  data_points: 100000
+  sample_size: 5000
   
 evaluation:
   eval_strategy:

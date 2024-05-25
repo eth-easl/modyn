@@ -418,16 +418,32 @@ class DataConfig(BaseModel):
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
 
 
-class TriggerConfig(BaseModel):
-    id: str = Field(description="Type of trigger to be used.")
+class TimeTriggerConfig(BaseModel):
+    id: Literal["TimeTrigger"] = Field("TimeTrigger")
+    every: int = Field(description="The interval length for the trigger specified by an integer", ge=1)
+    unit: Literal["s", "m", "h", "d", "w", "mth", "y"] = Field(description="The unit of the interval length.")
 
-    trigger_config: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Configuration dictionary that will be passed to the trigger on initialization.",
-    )
+
+class DataAmountTriggerConfig(BaseModel):
+    id: Literal["DataAmountTrigger"] = Field("DataAmountTrigger")
+    num_samples: int = Field(description="The number of samples that should trigger the pipeline.", ge=1)
+
+
+class DataDriftTriggerConfig(BaseModel):
+    id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
+    data_points: int = Field(description="The number of data points for one drift detection.", ge=1)
+    sample_size: int | None = Field(None, description="The number of samples used for the metric calculation.", ge=1)
+    detection_interval: int = Field(1000, description="The interval in which drift detection is performed.", ge=1)
+    metric: str = Field("model", description="The metric used for drift detection.")
+    metric_config: dict[str, Any] = Field(default_factory=dict, description="Configuration for the evidently metric.")
+
+
+TriggerConfig = Annotated[Union[TimeTriggerConfig, DataAmountTriggerConfig, DataDriftTriggerConfig], Field(discriminator="id")]
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
+
+
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")

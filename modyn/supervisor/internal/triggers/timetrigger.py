@@ -1,7 +1,10 @@
-from typing import Generator, Optional
+from __future__ import annotations
 
+from typing import Generator
+
+from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
-from modyn.utils import convert_timestr_to_seconds, validate_timestr
+from modyn.utils.utils import SECONDS_PER_UNIT
 
 
 class TimeTrigger(Trigger):
@@ -9,21 +12,14 @@ class TimeTrigger(Trigger):
     Uses the sample timestamps and not time at supervisor to measure passed time.
     Clock starts with the first observed datapoint"""
 
-    def __init__(self, trigger_config: dict):
-        if "trigger_every" not in trigger_config.keys():
-            raise ValueError("Trigger config is missing `trigger_every` field")
-
-        timestr = trigger_config["trigger_every"]
-        if not validate_timestr(timestr):
-            raise ValueError(f"Invalid time string: {timestr}\nValid format is <number>[s|m|h|d|w].")
-
-        self.trigger_every_s: int = convert_timestr_to_seconds(trigger_config["trigger_every"])
-        self.next_trigger_at: Optional[int] = None
+    def __init__(self, config: TimeTriggerConfig):
+        self.trigger_every_s: int = config.every * SECONDS_PER_UNIT[config.unit]
+        self.next_trigger_at: int | None = None
 
         if self.trigger_every_s < 1:
             raise ValueError(f"trigger_every must be > 0, but is {self.trigger_every_s}")
 
-        super().__init__(trigger_config)
+        super().__init__()
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:

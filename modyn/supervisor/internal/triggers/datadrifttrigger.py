@@ -1,19 +1,22 @@
+from __future__ import annotations
+
 import logging
-import pathlib
 from typing import Generator, Optional
 
 import pandas as pd
 from evidently import ColumnMapping
+from evidently.metrics import EmbeddingsDriftMetric
+from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
+from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
 
 # pylint: disable-next=no-name-in-module
-from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
     convert_tensor_to_df,
     get_embeddings,
-    get_evidently_metrics,
     prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
 )
@@ -24,11 +27,8 @@ logger = logging.getLogger(__name__)
 class DataDriftTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
-    def __init__(self, trigger_config: dict):
-        self.pipeline_id: Optional[int] = None
-        self.pipeline_config: Optional[dict] = None
-        self.modyn_config: Optional[dict] = None
-        self.base_dir: Optional[pathlib.Path] = None
+    def __init__(self, config: DataDriftTriggerConfig):
+        self.context: TriggerContext | None = None
 
         self.previous_trigger_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
@@ -39,100 +39,14 @@ class DataDriftTrigger(Trigger):
         self.encoder_downloader: Optional[EmbeddingEncoderDownloader] = None
         self.embedding_encoder: Optional[EmbeddingEncoder] = None
 
-        self.detection_interval: int = 1000
-        self.sample_size: Optional[int] = None
         self.evidently_column_mapping_name = "data"
-        self.metrics: Optional[list] = None
+        self.metrics = self._get_evidently_metrics(self.evidently_column_mapping_name, config)
 
         self.data_cache: list[tuple[int, int, int]] = []
         self.leftover_data_points = 0
 
-        if len(trigger_config) > 0:
-            self._parse_trigger_config(trigger_config)
-
-        super().__init__(trigger_config)
-
-    def _parse_trigger_config(self, trigger_config: dict) -> None:
-        if "data_points_for_detection" in trigger_config.keys():
-            self.detection_interval = trigger_config["data_points_for_detection"]
-        assert self.detection_interval > 0, "data_points_for_detection needs to be at least 1"
-
-        if "sample_size" in trigger_config.keys():
-            self.sample_size = trigger_config["sample_size"]
-        assert self.sample_size is None or self.sample_size > 0, "sample_size needs to be at least 1"
-
-        self.metrics = get_evidently_metrics(self.evidently_column_mapping_name, trigger_config)
-
-    def _init_dataloader_info(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.pipeline_config is not None
-        assert self.modyn_config is not None
-
-        training_config = self.pipeline_config["training"]
-        data_config = self.pipeline_config["data"]
-
-        if "num_prefetched_partitions" in training_config:
-            num_prefetched_partitions = training_config["num_prefetched_partitions"]
-        else:
-            if "prefetched_partitions" in training_config:
-                raise ValueError(
-                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
-                    + " Please rename/remove that configuration"
-                )
-            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
-            num_prefetched_partitions = 1
-
-        if "parallel_prefetch_requests" in training_config:
-            parallel_prefetch_requests = training_config["parallel_prefetch_requests"]
-        else:
-            logger.warning(
-                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
-            )
-            parallel_prefetch_requests = 1
-
-        if "tokenizer" in data_config:
-            tokenizer = data_config["tokenizer"]
-        else:
-            tokenizer = None
-
-        if "transformations" in data_config:
-            transform_list = data_config["transformations"]
-        else:
-            transform_list = []
-
-        self.dataloader_info = DataLoaderInfo(
-            self.pipeline_id,
-            dataset_id=data_config["dataset_id"],
-            num_dataloaders=training_config["dataloader_workers"],
-            batch_size=training_config["batch_size"],
-            bytes_parser=data_config["bytes_parser_function"],
-            transform_list=transform_list,
-            storage_address=f"{self.modyn_config['storage']['hostname']}:{self.modyn_config['storage']['port']}",
-            selector_address=f"{self.modyn_config['selector']['hostname']}:{self.modyn_config['selector']['port']}",
-            num_prefetched_partitions=num_prefetched_partitions,
-            parallel_prefetch_requests=parallel_prefetch_requests,
-            tokenizer=tokenizer,
-        )
-
-    def _init_encoder_downloader(self) -> None:
-        assert self.pipeline_id is not None
-        assert self.pipeline_config is not None
-        assert self.modyn_config is not None
-        assert self.base_dir is not None
-
-        self.encoder_downloader = EmbeddingEncoderDownloader(
-            self.modyn_config,
-            self.pipeline_id,
-            self.base_dir,
-            f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
-        )
-
-    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
-        self.pipeline_id = pipeline_id
-        self.pipeline_config = pipeline_config
-        self.modyn_config = modyn_config
-        self.base_dir = base_dir
-
+    def init_trigger(self, context: TriggerContext) -> None:
+        self.context = context
         self._init_dataloader_info()
         self._init_encoder_downloader()
 
@@ -270,3 +184,84 @@ class DataDriftTrigger(Trigger):
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
         self.model_updated = True
+
+    # --------------------------------------------------- INTERNAL --------------------------------------------------- #
+
+    def _get_evidently_metrics(
+        self, column_mapping_name: str, config: DataDriftTriggerConfig
+    ) -> list[EmbeddingsDriftMetric]:
+        """This function instantiates an Evidently metric given metric configuration.
+        If we want to support multiple metrics in the future, we can loop through the configurations.
+
+        Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
+        model, distance, mmd, ratio
+        If metric_name not given, we use the default 'model' metric.
+        Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
+        """
+        metric = getattr(embedding_drift_methods, config.metric)(**config.metric_config)
+        metrics = [EmbeddingsDriftMetric(column_mapping_name, drift_method=metric)]
+        return metrics
+
+    def _init_dataloader_info(self) -> None:
+        assert self.pipeline_id is not None
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+
+        training_config = self.pipeline_config["training"]
+        data_config = self.pipeline_config["data"]
+
+        if "num_prefetched_partitions" in training_config:
+            num_prefetched_partitions = training_config["num_prefetched_partitions"]
+        else:
+            if "prefetched_partitions" in training_config:
+                raise ValueError(
+                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
+                    + " Please rename/remove that configuration"
+                )
+            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
+            num_prefetched_partitions = 1
+
+        if "parallel_prefetch_requests" in training_config:
+            parallel_prefetch_requests = training_config["parallel_prefetch_requests"]
+        else:
+            logger.warning(
+                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
+            )
+            parallel_prefetch_requests = 1
+
+        if "tokenizer" in data_config:
+            tokenizer = data_config["tokenizer"]
+        else:
+            tokenizer = None
+
+        if "transformations" in data_config:
+            transform_list = data_config["transformations"]
+        else:
+            transform_list = []
+
+        self.dataloader_info = DataLoaderInfo(
+            self.pipeline_id,
+            dataset_id=data_config["dataset_id"],
+            num_dataloaders=training_config["dataloader_workers"],
+            batch_size=training_config["batch_size"],
+            bytes_parser=data_config["bytes_parser_function"],
+            transform_list=transform_list,
+            storage_address=f"{self.modyn_config['storage']['hostname']}:{self.modyn_config['storage']['port']}",
+            selector_address=f"{self.modyn_config['selector']['hostname']}:{self.modyn_config['selector']['port']}",
+            num_prefetched_partitions=num_prefetched_partitions,
+            parallel_prefetch_requests=parallel_prefetch_requests,
+            tokenizer=tokenizer,
+        )
+
+    def _init_encoder_downloader(self) -> None:
+        assert self.pipeline_id is not None
+        assert self.pipeline_config is not None
+        assert self.modyn_config is not None
+        assert self.base_dir is not None
+
+        self.encoder_downloader = EmbeddingEncoderDownloader(
+            self.modyn_config,
+            self.pipeline_id,
+            self.base_dir,
+            f"{self.modyn_config['model_storage']['hostname']}:{self.modyn_config['model_storage']['port']}",
+        )
