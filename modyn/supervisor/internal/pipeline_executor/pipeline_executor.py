@@ -118,12 +118,12 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 if track and stage_log.info:
                     # ensure df exists
                     old_df = state.tracking.get(stage_log.id, None)
-                    if (new_rows := stage_log.online_df(extended=True)) is not None:
+                    if (new_rows := stage_log.df(extended=True)) is not None:
                         state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
 
                 # record logs
                 if log:
-                    logs.supervisor.stage_runs.append(stage_log)
+                    logs.supervisor_logs.stage_runs.append(stage_log)
                     logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
 
             state.stage = stage
@@ -245,7 +245,7 @@ class PipelineExecutor:
             replay_data_generator = self.grpc.get_data_in_interval(s.dataset_id, s.start_replay_at, s.stop_replay_at)
 
         for replay_data, request_time in replay_data_generator:
-            # setting sample here to have correct logs in process_new_data
+            # setting sample info here to have correct logs in process_new_data
             s.current_sample_time = replay_data[0][1] if replay_data else s.start_timestamp
             s.current_sample_index = replay_data[0][0] if replay_data else 0
 
@@ -317,7 +317,7 @@ class PipelineExecutor:
             )
             largest_keys.update({key for (key, timestamp, _) in fetched_data if timestamp == s.max_timestamp})
 
-            # setting sample here to have correct logs in process_new_data
+            # setting sample info here to have correct logs in process_new_data
             s.current_sample_time = fetched_data[0][1] if fetched_data else s.start_timestamp
             s.current_sample_index = fetched_data[0][0] if fetched_data else 0
 

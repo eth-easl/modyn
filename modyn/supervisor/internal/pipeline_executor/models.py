@@ -1,5 +1,3 @@
-# pylint: disable=E1133
-
 from __future__ import annotations
 
 import dataclasses
@@ -133,13 +131,20 @@ class ConfigLogs(BaseModel):
 
 
 class StageInfo(BaseModel):
-    """Base class for stage log info. Has no members, intended to be subclassed"""
+    """Some stages might want to persist additional information in the logs.
 
-    def online_df(self) -> pd.DataFrame | None:
+    This can be done using the `.info` attribute of the `StageLog` class which stores subtypes of `StageInfo`.
+    `StageInfo` class is therefore intended to be subclassed for different pipeline stage information.
+    """
+
+    @property
+    def df(self) -> pd.DataFrame | None:
         """
-        Some stages might want to store data in the online DataFrame.
+        While appending StageLog subclasses to `StageLog.info` is sufficient to persist additional information in the
+        logs, this method is used to provide a DataFrame representation of the data for online analysis.
 
-        This data can be used by pipeline steps such as trigger policies.
+        `Online` refers the to the ability to analyze the data while the pipeline is running as we do not only
+        want to analyze the data after the pipeline has finished (e.g. for triggering policies).
 
         Returns:
             A DataFrame if the stage should collect data, else None.
@@ -152,7 +157,8 @@ class FetchDataInfo(StageInfo):
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.num_samples, str(self.trigger_indexes))], columns=["num_samples", "trigger_indexes"])
 
 
@@ -162,7 +168,8 @@ class ProcessNewDataInfo(StageInfo):
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.fetch_time, self.num_samples)], columns=["fetch_time", "num_samples"])
 
 
@@ -173,7 +180,8 @@ class EvaluateTriggerInfo(StageInfo):
     """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.batch_size, list(self.trigger_indexes))], columns=["batch_size", "trigger_indexes"])
 
 
@@ -193,7 +201,8 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     num_samples_in_trigger: int
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             [(self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)],
             columns=["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"],
@@ -205,7 +214,8 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     last_timestamp: int | None
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             [(self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)],
             columns=["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"],
@@ -221,7 +231,8 @@ class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.trigger_id, self.training_id)], columns=["trigger_id", "training_id"])
 
 
@@ -229,7 +240,8 @@ class StoreModelInfo(_TrainInfoMixin):
     id_model: int  # model_ prefix not allowed in pydantic
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             [(self.trigger_id, self.training_id, self.id_model)],
             columns=["trigger_id", "training_id", "id_model"],
@@ -244,7 +256,8 @@ class _ModelEvalInfo(StageInfo):
     interval_end: int | None
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             [(self.trigger_id, self.id_model, self.dataset_id, self.interval_start, self.interval_end)],
             columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end"],
@@ -283,7 +296,8 @@ class SelectorInformInfo(StageInfo):
     trigger_indexes: list[int]
 
     @override
-    def online_df(self) -> pd.DataFrame | None:
+    @property
+    def df(self) -> pd.DataFrame:
         return pd.DataFrame(
             [(self.remaining_data, self.trigger_indexes)], columns=["remaining_data", "trigger_indexes"]
         )
@@ -325,13 +339,12 @@ class StageLog(BaseModel):
     # stage specific log info
     info: StageInfo | None = Field(None)
 
-    def online_df(self, extended: bool = False) -> pd.DataFrame | None:
+    def df(self, extended: bool = False) -> pd.DataFrame | None:
         """
         Provides a DataFrame with the log information of this stage.
 
-        This is especially useful as we want to be able to quickly do analysis on the logs of a pipeline run.
-        One can simply use the `online_df` method of the `SupervisorLogs` class to get a DataFrame of all logs.
-        Then one can filter the logs by stage id to get the logs of a specific stage and/or aggregate over the logs.
+        To conveniently allow analysis of lists of log entries, this method provides a DataFrame representation of the
+        log entry.
 
         Args:
             extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
@@ -354,7 +367,7 @@ class StageLog(BaseModel):
             ],
             columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
         )
-        info_df = self.info.online_df() if self.info else None
+        info_df = self.info.df if self.info else None
         if info_df is not None and extended:
             # add additional columns
             df = pd.concat([df, info_df], axis=1)
@@ -406,10 +419,19 @@ class SupervisorLogs(BaseModel):
 
         return pd.DataFrame(
             data=[
-                (stage.id, stage.start, stage.end, stage.duration, stage.batch_idx, stage.sample_idx, stage.sample_time)
+                (
+                    stage.id,
+                    stage.start,
+                    stage.end,
+                    stage.duration,
+                    stage.batch_idx,
+                    stage.sample_idx,
+                    stage.sample_time,
+                    stage.trigger_idx,
+                )
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time"],
+            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
         )
 
 
@@ -442,7 +464,7 @@ class PipelineLogs(BaseModel):
 
     # incremental logs
 
-    supervisor: SupervisorLogs = Field(default_factory=SupervisorLogs)
+    supervisor_logs: SupervisorLogs = Field(default_factory=SupervisorLogs)
 
     # metadata
     partial_idx: int = Field(0)
@@ -480,9 +502,9 @@ class PipelineLogs(BaseModel):
 
         if mode == "increment":
             with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.supervisor.model_dump_json(by_alias=True, indent=2))
+                logfile.write(self.supervisor_logs.model_dump_json(by_alias=True, indent=2))
 
-            self.supervisor.clear()
+            self.supervisor_logs.clear()
             self.partial_idx += 1
             return
 
@@ -491,9 +513,9 @@ class PipelineLogs(BaseModel):
         partial_supervisor_logs = [
             SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
         ]
-        self.supervisor = self.supervisor.merge(partial_supervisor_logs)
+        self.supervisor_logs = self.supervisor_logs.merge(partial_supervisor_logs)
 
         with open(pipeline_logdir / "pipeline.log", "w", encoding="utf-8") as logfile:
             logfile.write(self.model_dump_json(by_alias=True, indent=2))
 
-        self.supervisor.clear()
+        self.supervisor_logs.clear()

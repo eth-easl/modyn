@@ -162,11 +162,11 @@ def test_pipeline_stage_decorator(dummy_pipeline_args: PipelineExecutionParams) 
     assert pe._stage_func(pe.state, pe.logs) == 1
     t1 = datetime.datetime.now()
 
-    assert len(pe.logs.supervisor.stage_runs) == 1
-    assert pe.logs.supervisor.stage_runs[0].info.name == "test"
-    assert (pe.logs.supervisor.stage_runs[0].start - t0).total_seconds() < 8e-3
-    assert (pe.logs.supervisor.stage_runs[0].end - t1).total_seconds() < 8e-3
-    assert abs((pe.logs.supervisor.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 8e-3
+    assert len(pe.logs.supervisor_logs.stage_runs) == 1
+    assert pe.logs.supervisor_logs.stage_runs[0].info.name == "test"
+    assert (pe.logs.supervisor_logs.stage_runs[0].start - t0).total_seconds() < 8e-3
+    assert (pe.logs.supervisor_logs.stage_runs[0].end - t1).total_seconds() < 8e-3
+    assert abs((pe.logs.supervisor_logs.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 8e-3
 
 
 def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecutionParams) -> None:
@@ -217,8 +217,8 @@ def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecuti
     assert gen_values == [0, 1, 2]
     assert len(times) == 4
 
-    assert pe.logs.supervisor.stage_runs[0].info.elements == [0, 1, 2]
-    assert pe.logs.supervisor.stage_runs[0].info.finalized
+    assert pe.logs.supervisor_logs.stage_runs[0].info.elements == [0, 1, 2]
+    assert pe.logs.supervisor_logs.stage_runs[0].info.finalized
 
     assert abs(times[0].total_seconds()) < 0.005
     assert abs(times[1].total_seconds() - 0.1 * 2 - 0.02 * 2) < 0.035  # higher tolerance due to pipeline_stage overhead
@@ -749,7 +749,7 @@ def test__start_evaluations(
             assert test_wait_for_evaluation_completion.call_count == 2
 
             stage_info = [
-                run.info for run in pe.logs.supervisor.stage_runs if isinstance(run.info, SingleEvaluationInfo)
+                run.info for run in pe.logs.supervisor_logs.stage_runs if isinstance(run.info, SingleEvaluationInfo)
             ]
             assert len(stage_info) == 3
             assert (stage_info[0].interval_start, stage_info[0].interval_end) == (0, 100)
