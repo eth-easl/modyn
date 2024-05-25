@@ -60,9 +60,13 @@ class CoresetStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
-        # self._next_trigger_id is the trigger id for this current trigger
-        # in super().trigger() self._next_trigger_id is incremented
-        # therefore we need to update the downsampler before calling super().trigger()
+        # Upon entering this method, self._next_trigger_id is the trigger id for the current trigger
+        # whose training set is to be computed. After calling super().trigger() self._next_trigger_id is incremented.
+
+        # Therefore we need to update the downsampler before calling super().trigger().
+        # We should only update the downsampler to the current trigger not to the future one referred by
+        # self._next_trigger_id after the call to super().trigger() because later the remote downsampler on trainer
+        # server needs to fetch configuration for the current trigger
         self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
         trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
         return trigger_id, total_keys_in_trigger, num_partitions, log
