@@ -57,6 +57,9 @@ def setup_logger():
 
 
 def create_fake_timestamp(year: int, base_year: int) -> int:
+    """As we cannot support years before 1970, we create a fake timestamp based on the year.
+    We convert years from base_year to days since epoch.
+    """
     timestamp = ((year - base_year) * DAY_LENGTH_SECONDS)
     return timestamp
 

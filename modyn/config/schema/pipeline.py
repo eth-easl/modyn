@@ -504,6 +504,10 @@ class EvalDataConfig(DataConfig):
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
+    tokenizer: Optional[str] = Field(
+        None,
+        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
+    )
 
 
 class ResultWriter(BaseModel):

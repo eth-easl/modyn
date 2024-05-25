@@ -32,10 +32,9 @@ training:
   selection_strategy:
     name: NewDataStrategy
     maximum_keys_in_memory: 1000
-    config:
-      storage_backend: "database"
-      limit: -1
-      reset_after_trigger: True
+    storage_backend: "database"
+    limit: -1
+    reset_after_trigger: True
 data:
   dataset_id: fmow
   transformations: [
