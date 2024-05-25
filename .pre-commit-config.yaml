@@ -19,6 +19,7 @@ repos:
         pass_filenames: false
         args:
           - .
+          - --config=black.toml
           - --safe
           - --target-version=py311
   - repo: https://github.com/pre-commit/mirrors-mypy
