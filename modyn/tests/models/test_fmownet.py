@@ -1,5 +1,5 @@
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as func
 from modyn.models import FmowNet
 
 
@@ -17,7 +17,7 @@ def test_forward_with_embedding_recording():
 
     assert net.model.embedding is not None
 
-    expected_embedding = F.adaptive_avg_pool2d(F.relu(net.model.enc(input_data), inplace=True), (1, 1))
+    expected_embedding = func.adaptive_avg_pool2d(func.relu(net.model.enc(input_data), inplace=True), (1, 1))
     assert torch.equal(torch.flatten(expected_embedding, 1), net.model.embedding)
     assert torch.equal(net.model.classifier(net.model.embedding), output)
 

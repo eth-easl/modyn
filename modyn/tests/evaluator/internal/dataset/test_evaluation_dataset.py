@@ -1,10 +1,15 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
+
 import platform
 from unittest.mock import patch
 
 import grpc
 import pytest
 import torch
+from torchvision import transforms
+
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.models.tokenizers import DistilBertTokenizerTransform
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -13,7 +18,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetRequest,
     GetResponse,
 )
-from torchvision import transforms
 
 
 def get_identity_bytes_parser():

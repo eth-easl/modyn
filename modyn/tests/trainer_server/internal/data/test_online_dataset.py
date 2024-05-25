@@ -1,15 +1,17 @@
 # pylint: disable=unused-argument, no-name-in-module, too-many-locals
+
 import platform
 from unittest.mock import patch
 
 import grpc
 import pytest
 import torch
+from torchvision import transforms
+
 from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse, UsesWeightsResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
-from torchvision import transforms
 
 
 def get_mock_bytes_parser():
@@ -40,7 +42,7 @@ class MockStorageStub:
     def __init__(self, channel) -> None:
         pass
 
-    def Get(self, request):  # pylint: disable=invalid-name
+    def Get(self, request):  # pylint: disable=invalid-name  # noqa: N802
         for i in range(0, 10, 2):
             yield GetResponse(
                 samples=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],
