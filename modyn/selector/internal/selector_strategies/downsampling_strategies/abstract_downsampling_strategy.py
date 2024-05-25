@@ -82,5 +82,8 @@ class AbstractDownsamplingStrategy(ABC):
     def inform_next_trigger(self, next_trigger_id: int) -> None:
         """
         This function is used to inform the downsampler that the next trigger is reached.
+
+        This is used for some downsamplers to implement some preparation logic before the actual downsampling
+        on trainer server side happens.
         """
         pass

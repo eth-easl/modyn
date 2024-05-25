@@ -8,4 +8,16 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
 
     def inform_next_trigger(self, next_trigger_id: int) -> None:
+        # The logic to train an IL model will be implemented here
+        # Step 1: Fetch or create the rho_pipeline_id from metadata database
+        #
+        # Will create a new table (pipeline_id, rho_pipeline_id) representing the mapping
+        # between pipeline_id and rho_pipeline_id, primary key being pipeline_id.
+        #
+        # Step 2: Prepare the training data for the IL model, by randomly sampling a predefined ratio of samples
+        # from next_trigger_id's data and storing them as a TSS with identifier (rho_pipeline_id, next_trigger_id).
+
+        # Step 3: Issue training request to the trainer server, with pipeline_id as rho_pipeline_id and trigger_id
+        # as next_trigger_id. Wait for the training to complete. Store the model. Record model id in
+        # downsampling_params, so that it can be fetched and used for downsampling.
         raise NotImplementedError

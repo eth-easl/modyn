@@ -2,11 +2,12 @@ from unittest.mock import patch
 
 import pytest
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
+    AbstractDownsamplingStrategy,
     DownsamplingScheduler,
     GradNormDownsamplingStrategy,
     LossDownsamplingStrategy,
     NoDownsamplingStrategy,
-    instantiate_scheduler, AbstractDownsamplingStrategy,
+    instantiate_scheduler,
 )
 from modyn.utils import DownsamplingMode
 
