@@ -133,16 +133,16 @@ def main():
 
                     if num_prefetched_partitions > 0 and parallel_pref > num_prefetched_partitions:
                         continue
-                    
+
                     if partition_size == 10000:
                         if num_dataloader_workers not in [1,16]:
                             continue
-                        
+
                         if num_prefetched_partitions in [2]:
                             continue
-                    
+
                     pipeline = PIPELINE_BLANK.format(num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size)
-                    
+
                     with open(f"{curr_dir}/pipelines/criteo_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml", "w") as pfile:
                         pfile.write(pipeline)
 
