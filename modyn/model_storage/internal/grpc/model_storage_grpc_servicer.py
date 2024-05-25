@@ -1,4 +1,5 @@
 """Model storage GRPC servicer."""
+
 # ruff: noqa: N802  # grpc functions are not snake case
 
 import logging
@@ -7,7 +8,6 @@ import pathlib
 
 import grpc
 import torch
-
 from modyn.common.ftp.ftp_utils import download_file, get_pretrained_model_callback
 from modyn.model_storage.internal import ModelStorageManager
 

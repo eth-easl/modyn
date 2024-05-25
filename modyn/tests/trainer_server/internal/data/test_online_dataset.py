@@ -6,12 +6,11 @@ from unittest.mock import patch
 import grpc
 import pytest
 import torch
-from torchvision import transforms
-
 from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse, UsesWeightsResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
+from torchvision import transforms
 
 
 def get_mock_bytes_parser():
