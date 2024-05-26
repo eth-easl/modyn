@@ -207,4 +207,6 @@ gantt
 
 ### Open Question
 
-With the approach of evaluating a model only on future data (where the model is eventually used), it might even be fair not to use a evaluation split as the samples used for evaluation are never part of the training data of a particular model.
+1) With the approach of evaluating a model only on future data (where the model is eventually used), it might even be fair not to use a evaluation split as the samples used for evaluation are never part of the training data of a particular model.
+
+2) What behavior do we desire when we train multiple models on the same timestamp (e.g. if we have a lot of data at a certain point in time). One option for plotting would be to weight average the different according to how many samples of this point in time were covered by the respective model.
