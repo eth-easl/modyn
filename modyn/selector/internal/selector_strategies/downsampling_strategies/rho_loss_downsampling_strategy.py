@@ -1,4 +1,5 @@
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
+from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 
@@ -25,4 +26,11 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         # Step 3: Issue training request to the trainer server, with pipeline_id as rho_pipeline_id and trigger_id
         # as next_trigger_id. Wait for the training to complete. Store the model. Record model id in
         # downsampling_params, so that it can be fetched and used for downsampling.
+        raise NotImplementedError
+
+    def _prepare_holdout_set(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+        current_trigger_dataset_size = get_trigger_dataset_size(
+            selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
+        )
+
         raise NotImplementedError
