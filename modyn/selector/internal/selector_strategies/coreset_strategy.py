@@ -63,7 +63,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
         trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
-        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
+        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
@@ -99,7 +99,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
-        ), "FreshnessStrategy currently only supports DatabaseBackend"
+        ), "CoresetStrategy currently only supports DatabaseBackend"
 
         def _session_callback(session: Session) -> Any:
             return (

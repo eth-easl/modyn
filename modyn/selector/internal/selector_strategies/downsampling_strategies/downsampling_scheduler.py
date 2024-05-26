@@ -2,6 +2,7 @@ from typing import Optional, Tuple
 
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 
 
 class DownsamplingScheduler:
@@ -68,12 +69,12 @@ class DownsamplingScheduler:
     def training_status_bar_scale(self) -> int:
         return self.current_downsampler.status_bar_scale
 
-    def inform_next_trigger(self, next_trigger_id: int) -> None:
+    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if self.next_threshold is not None and next_trigger_id >= self.next_threshold:
             self.downsampler_index += 1
             self.current_downsampler, self.next_threshold = self._get_next_downsampler_and_threshold()
 
-        self.current_downsampler.inform_next_trigger(next_trigger_id)
+        self.current_downsampler.inform_next_trigger(next_trigger_id, selector_storage_backend)
 
 
 def instantiate_scheduler(

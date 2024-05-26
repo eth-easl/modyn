@@ -1,4 +1,6 @@
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
@@ -7,7 +9,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
 
-    def inform_next_trigger(self, next_trigger_id: int) -> None:
+    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+        if not isinstance(selector_storage_backend, DatabaseStorageBackend):
+            raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
+
         # The logic to train an IL model will be implemented here
         # Step 1: Fetch or create the rho_pipeline_id from metadata database
         #

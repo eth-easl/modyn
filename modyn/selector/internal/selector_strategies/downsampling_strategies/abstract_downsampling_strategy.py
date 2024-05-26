@@ -1,5 +1,6 @@
 from abc import ABC
 
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
 
@@ -78,12 +79,14 @@ class AbstractDownsamplingStrategy(ABC):
 
         return config
 
-    # pylint: disable=unnecessary-pass
-    def inform_next_trigger(self, next_trigger_id: int) -> None:
+    # pylint: disable=unused-argument
+    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         """
         This function is used to inform the downsampler that the next trigger is reached.
 
         This is used for some downsamplers to implement some preparation logic before the actual downsampling
-        on trainer server side happens.
+        on trainer server side happens, with the help of the argument `selector_storage_backend`.
         """
-        pass
+
+        # by default, no preparation is needed
+        return
