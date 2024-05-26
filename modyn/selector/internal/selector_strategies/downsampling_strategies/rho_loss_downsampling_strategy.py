@@ -28,7 +28,11 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         # downsampling_params, so that it can be fetched and used for downsampling.
         raise NotImplementedError
 
-    def _prepare_holdout_set(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+    def _prepare_holdout_set(
+            self, next_trigger_id: int,
+            rho_pipeline_id: int,
+            selector_storage_backend: AbstractStorageBackend
+    ) -> None:
         current_trigger_dataset_size = get_trigger_dataset_size(
             selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
         )

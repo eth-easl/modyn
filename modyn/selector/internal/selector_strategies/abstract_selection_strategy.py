@@ -191,24 +191,21 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger_partition)
             database.session.commit()
 
-    # pylint: disable=too-many-locals,too-many-statements
-    def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
-        """
-        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
-
-        Returns:
-            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
-        """
-        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
-
-        trigger_id = self._next_trigger_id
+    @staticmethod
+    def store_training_set(
+            target_pipeline_id: int,
+            target_trigger_id: int,
+            modyn_config: dict,
+            training_set_generator: Iterable[tuple[list[tuple[int, float]], dict[str, Any]]],
+            insertion_threads: int,
+    ) -> tuple[int, int, dict[str, Any]]:
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
 
         swt.start("trigger_creation")
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
+        with MetadataDatabaseConnection(modyn_config) as database:
+            trigger = Trigger(pipeline_id=target_pipeline_id, trigger_id=target_trigger_id)
             database.session.add(trigger)
             database.session.commit()
         log["trigger_creation_time"] = swt.stop()
@@ -217,59 +214,51 @@ class AbstractSelectionStrategy(ABC):
         partition: Optional[int] = None
         swt.start("on_trigger")
 
-        for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
+        for partition, (training_samples, partition_log) in enumerate(training_set_generator):
             overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
-
-            logger.info(
-                f"Strategy for pipeline {self._pipeline_id} returned batch of"
-                + f" {len(training_samples)} samples for new trigger {trigger_id}."
-            )
 
             partition_num_keys[partition] = len(training_samples)
 
             total_keys_in_trigger += len(training_samples)
 
-            if (self._is_mac and self._is_test) or self._disable_mt:
+            if insertion_threads == 1:
                 swt.start("store_triggersamples", overwrite=True)
                 AbstractSelectionStrategy._store_triggersamples_impl(
                     partition,
-                    trigger_id,
-                    self._pipeline_id,
+                    target_trigger_id,
+                    target_pipeline_id,
                     np.array(training_samples, dtype=np.dtype("i8,f8")),
                     [len(training_samples)],
-                    self._modyn_config,
+                    modyn_config,
                 )
                 overall_partition_log["store_triggersamples_time"] = swt.stop()
-                log["trigger_partitions"].append(overall_partition_log)
-                swt.start("on_trigger", overwrite=True)
-                continue
+            else:
+                swt.start("store_triggersamples", overwrite=True)
+                swt.start("mt_prep", overwrite=True)
+                samples_per_proc = int(len(training_samples) / insertion_threads)
 
-            swt.start("store_triggersamples", overwrite=True)
-            swt.start("mt_prep", overwrite=True)
-            samples_per_proc = int(len(training_samples) / self._insertion_threads)
+                data_lengths = []
 
-            data_lengths = []
+                overall_partition_log["mt_prep_time"] = swt.stop()
+                swt.start("mt_finish", overwrite=True)
 
-            overall_partition_log["mt_prep_time"] = swt.stop()
-            swt.start("mt_finish", overwrite=True)
+                if samples_per_proc > 0:
+                    data_lengths = [samples_per_proc] * (insertion_threads - 1)
 
-            if samples_per_proc > 0:
-                data_lengths = [samples_per_proc] * (self._insertion_threads - 1)
+                if sum(data_lengths) < len(training_samples):
+                    data_lengths.append(len(training_samples) - sum(data_lengths))
 
-            if sum(data_lengths) < len(training_samples):
-                data_lengths.append(len(training_samples) - sum(data_lengths))
+                AbstractSelectionStrategy._store_triggersamples_impl(
+                    partition,
+                    target_trigger_id,
+                    target_pipeline_id,
+                    np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    data_lengths,
+                    modyn_config,
+                )
 
-            AbstractSelectionStrategy._store_triggersamples_impl(
-                partition,
-                trigger_id,
-                self._pipeline_id,
-                np.array(training_samples, dtype=np.dtype("i8,f8")),
-                data_lengths,
-                self._modyn_config,
-            )
-
-            overall_partition_log["mt_finish_time"] = swt.stop()
-            overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
+                overall_partition_log["mt_finish_time"] = swt.stop()
+                overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
 
             log["trigger_partitions"].append(overall_partition_log)
             swt.start("on_trigger", overwrite=True)
@@ -281,10 +270,10 @@ class AbstractSelectionStrategy(ABC):
 
         swt.start("db_update")
         # Update Trigger about number of partitions and keys
-        with MetadataDatabaseConnection(self._modyn_config) as database:
+        with MetadataDatabaseConnection(modyn_config) as database:
             trigger = (
                 database.session.query(Trigger)
-                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
+                .filter(Trigger.pipeline_id == target_pipeline_id, Trigger.trigger_id == target_trigger_id)
                 .first()
             )
             trigger.num_keys = total_keys_in_trigger
@@ -294,20 +283,40 @@ class AbstractSelectionStrategy(ABC):
         # Insert all partition lengths into DB
         for partition, partition_keys in partition_num_keys.items():
             AbstractSelectionStrategy._store_trigger_num_keys(
-                modyn_config=self._modyn_config,
-                pipeline_id=self._pipeline_id,
-                trigger_id=trigger_id,
+                modyn_config=modyn_config,
+                pipeline_id=target_pipeline_id,
+                trigger_id=target_trigger_id,
                 partition_id=partition,
                 num_keys=partition_keys,
             )
 
         log["db_update_time"] = swt.stop()
+        return total_keys_in_trigger, num_partitions, log
 
+    def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
+        """
+        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
+
+        Returns:
+            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
+        """
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
+        single_threaded = (self._is_mac and self._is_test) or self._disable_mt
+        total_keys_in_trigger, num_partitions, log = self.store_training_set(
+            self._pipeline_id,
+            self._next_trigger_id,
+            self._modyn_config,
+            self._on_trigger(),
+            insertion_threads=1 if single_threaded else self._insertion_threads,
+        )
+
+        swt = Stopwatch()
         if self.reset_after_trigger:
             swt.start("reset_state")
             self._reset_state()
             log["reset_state_time"] = swt.stop()
 
+        trigger_id = self._next_trigger_id
         self._next_trigger_id += 1
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
