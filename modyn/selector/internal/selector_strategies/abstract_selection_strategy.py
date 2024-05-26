@@ -199,6 +199,7 @@ class AbstractSelectionStrategy(ABC):
             training_set_generator: Iterable[tuple[list[tuple[int, float]], dict[str, Any]]],
             insertion_threads: int,
     ) -> tuple[int, int, dict[str, Any]]:
+        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
@@ -300,7 +301,6 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
-        # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         single_threaded = (self._is_mac and self._is_test) or self._disable_mt
         total_keys_in_trigger, num_partitions, log = self.store_training_set(
             self._pipeline_id,
