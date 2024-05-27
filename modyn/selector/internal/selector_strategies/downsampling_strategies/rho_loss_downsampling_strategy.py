@@ -45,7 +45,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
         )
 
-        holdout_set_size = min(int(current_trigger_dataset_size * self.holdout_set_ratio / 100), 1)
+        holdout_set_size = max(int(current_trigger_dataset_size * self.holdout_set_ratio / 100), 1)
 
         stmt = self._get_holdout_sampling_query(self._pipeline_id, next_trigger_id, holdout_set_size).execution_options(
             yield_per=self.maximum_keys_in_memory
