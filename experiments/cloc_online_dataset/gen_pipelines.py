@@ -59,7 +59,7 @@ data:
 trigger:
   id: DataAmountTrigger
   trigger_config:
-    data_points_for_trigger: 500000
+    num_samples: 500000
 """
 
 def main():
