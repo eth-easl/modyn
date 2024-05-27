@@ -1,6 +1,4 @@
 import logging
-import os
-import platform
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, Optional
 
@@ -9,6 +7,7 @@ from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -70,14 +69,9 @@ class AbstractSelectionStrategy(ABC):
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
         self._maximum_keys_in_memory = maximum_keys_in_memory
-        self._insertion_threads = modyn_config["selector"]["insertion_threads"]
-
-        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
-        self._is_mac = platform.system() == "Darwin"
-        self._disable_mt = self._insertion_threads <= 0
-
         if self._maximum_keys_in_memory < 1:
             raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
+        self._storage_backend = self._init_storage_backend()
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
@@ -106,6 +100,11 @@ class AbstractSelectionStrategy(ABC):
             )
 
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+
+    @abstractmethod
+    def _init_storage_backend(self) -> AbstractStorageBackend:
+        """Initializes the storage backend."""
+        raise NotImplementedError
 
     @property
     def maximum_keys_in_memory(self) -> int:
@@ -193,11 +192,11 @@ class AbstractSelectionStrategy(ABC):
 
     @staticmethod
     def store_training_set(
-            target_pipeline_id: int,
-            target_trigger_id: int,
-            modyn_config: dict,
-            training_set_generator: Iterable[tuple[list[tuple[int, float]], dict[str, Any]]],
-            insertion_threads: int,
+        target_pipeline_id: int,
+        target_trigger_id: int,
+        modyn_config: dict,
+        training_set_generator: Iterable[tuple[list[tuple[int, float]], dict[str, Any]]],
+        insertion_threads: int,
     ) -> tuple[int, int, dict[str, Any]]:
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         total_keys_in_trigger = 0
@@ -222,8 +221,9 @@ class AbstractSelectionStrategy(ABC):
 
             total_keys_in_trigger += len(training_samples)
 
+            swt.start("store_triggersamples", overwrite=True)
             if insertion_threads == 1:
-                swt.start("store_triggersamples", overwrite=True)
+
                 AbstractSelectionStrategy._store_triggersamples_impl(
                     partition,
                     target_trigger_id,
@@ -232,20 +232,11 @@ class AbstractSelectionStrategy(ABC):
                     [len(training_samples)],
                     modyn_config,
                 )
-                overall_partition_log["store_triggersamples_time"] = swt.stop()
             else:
-                swt.start("store_triggersamples", overwrite=True)
-                swt.start("mt_prep", overwrite=True)
                 samples_per_proc = int(len(training_samples) / insertion_threads)
-
                 data_lengths = []
-
-                overall_partition_log["mt_prep_time"] = swt.stop()
-                swt.start("mt_finish", overwrite=True)
-
                 if samples_per_proc > 0:
                     data_lengths = [samples_per_proc] * (insertion_threads - 1)
-
                 if sum(data_lengths) < len(training_samples):
                     data_lengths.append(len(training_samples) - sum(data_lengths))
 
@@ -257,9 +248,7 @@ class AbstractSelectionStrategy(ABC):
                     data_lengths,
                     modyn_config,
                 )
-
-                overall_partition_log["mt_finish_time"] = swt.stop()
-                overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
+            overall_partition_log["store_triggersamples_time"] = swt.stop()
 
             log["trigger_partitions"].append(overall_partition_log)
             swt.start("on_trigger", overwrite=True)
@@ -301,13 +290,12 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
-        single_threaded = (self._is_mac and self._is_test) or self._disable_mt
         total_keys_in_trigger, num_partitions, log = self.store_training_set(
             self._pipeline_id,
             self._next_trigger_id,
             self._modyn_config,
             self._on_trigger(),
-            insertion_threads=1 if single_threaded else self._insertion_threads,
+            insertion_threads=self._storage_backend.insertion_threads,
         )
 
         swt = Stopwatch()

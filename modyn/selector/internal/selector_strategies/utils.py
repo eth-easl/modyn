@@ -1,17 +1,13 @@
-from typing import Optional, Any
-
-from sqlalchemy.orm import Session
+from typing import Any, Optional
 
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
+from sqlalchemy.orm import Session
 
 
 def get_trigger_dataset_size(
-        storage_backend: AbstractStorageBackend,
-        pipeline_id: int,
-        trigger_id: int,
-        tail_triggers: Optional[int]
+    storage_backend: AbstractStorageBackend, pipeline_id: int, trigger_id: int, tail_triggers: Optional[int]
 ) -> int:
     # Count the number of samples that might be sampled during the next trigger. Typically used to compute the
     # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
@@ -29,7 +25,7 @@ def get_trigger_dataset_size(
                     if tail_triggers is not None
                     else True
                 ),
-                )
+            )
             .count()
         )
 
