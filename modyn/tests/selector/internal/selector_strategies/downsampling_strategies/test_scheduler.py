@@ -238,7 +238,7 @@ def test_instantiate_scheduler_just_one():
 
 
 def test_instantiate_scheduler_list():
-    config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": 7}}
+    config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": [7]}}
     pipeline_id = 0
     maximum_keys_in_memory = 123
     selector_storage_backend = MockStorageBackend(pipeline_id, {}, maximum_keys_in_memory)
