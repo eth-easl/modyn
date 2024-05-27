@@ -4,27 +4,6 @@ PARENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." >/dev/null 2>&1 && pwd )
 
 pushd $PARENT_DIR
 
-if ! command -v micromamba &> /dev/null
-then
-    echo "Cannot find micromamba."
-    if [ -n "$ZSH_VERSION" ]; then
-        source ~/.zshrc
-        eval "$(micromamba shell.zsh hook)"
-    elif [ -n "$BASH_VERSION" ]; then
-        source ~/.bashrc
-        eval "$(micromamba shell.bash hook)"
-    else
-        echo "Unknown shell, neither zsh nor bash, please ensure micromamba is available before running the script."
-        exit 1
-    fi
-    
-    if ! command -v micromamba &> /dev/null
-    then
-        echo "micromamba still not available after trying to fix, please ensure micromamba is available before running the script."
-        exit 1
-    fi
-fi
-
 echo "Running auto-formatters"
 
 micromamba run -n modyn isort . > /dev/null

@@ -16,6 +16,10 @@ class HostnamePortMixin(BaseModel):
     hostname: str = Field(description="The hostname where the service can be reached.")
     port: int = Field(description="The port where the service can be reached.")
 
+    @property
+    def address(self) -> str:
+        return f"{self.hostname}:{self.port}"
+
 
 class DatabaseMixin(HostnamePortMixin):
     """
