@@ -371,6 +371,7 @@ class PytorchTrainer:
             epoch_num_generator = itertools.count(start=0)
             self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
 
+        bts_accumulation_buffer: list[tuple] = []
         if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
             expected_bts_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
@@ -383,7 +384,6 @@ class PytorchTrainer:
                 )
 
             bts_accumulate_period = int(self._batch_size / expected_bts_size)
-            bts_accumulation_buffer = []
 
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
@@ -434,8 +434,14 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         stopw.stop()
                         assert (
-                            data.shape[0] == expected_bts_size
-                        ), f"expected bts size: {expected_bts_size} actual: {data.shape[0]}"
+                            all(tensor.shape[0] == expected_bts_size for tensor in data.values())
+                            if isinstance(data, dict)
+                            else data.shape[0] == expected_bts_size
+                        ), (
+                            f"expected bts size: {expected_bts_size} "
+                            + f"actual: {data.shape[0] if isinstance(data,torch.Tensor) else 'n/a'}"
+                        )
+
                         assert (
                             len(sample_ids) == expected_bts_size
                         ), f"expected bts size: {expected_bts_size} actual: {len(sample_ids)}"
@@ -448,23 +454,39 @@ class PytorchTrainer:
                             for partial_data, partial_sids, partial_target, partial_weights in reversed(
                                 bts_accumulation_buffer
                             ):
-                                data = torch.cat((data, partial_data.to(self._device)))
+                                if isinstance(data, torch.Tensor):
+                                    data = torch.cat((data, partial_data.to(self._device)))
+                                else:
+                                    for key in data:
+                                        data[key] = torch.cat((data[key], partial_data[key].to(self._device)))
+
                                 sample_ids.extend(partial_sids)
                                 target = torch.cat((target, partial_target.to(self._device)))
                                 weights = torch.cat((weights, partial_weights.to(self._device)))
 
                             bts_accumulation_buffer.clear()
                         else:
+                            data = (
+                                {k: v.detach().cpu() for k, v in data.items()}
+                                if isinstance(data, dict)
+                                else data.detach().cpu()
+                            )
+
                             bts_accumulation_buffer.append(
-                                (data.detach().cpu(), sample_ids, target.detach().cpu(), weights.detach().cpu())
+                                (data, sample_ids, target.detach().cpu(), weights.detach().cpu())
                             )
                             stopw.start("FetchBatch", resume=True)
                             stopw.start("IndivFetchBatch", overwrite=True)
                             continue
 
                     assert (
-                        data.shape[0] == self._batch_size
-                    ), f"expected batch size: {self._batch_size} actual batch size: {data.shape[0]}"
+                        all(tensor.shape[0] == self._batch_size for tensor in data.values())
+                        if isinstance(data, dict)
+                        else data.shape[0] == self._batch_size
+                    ), (
+                        f"expected batch size: {self._batch_size} actual batch size: "
+                        + f"{data.shape[0] if isinstance(data,torch.Tensor) else 'n/a'}"
+                    )
                     assert (
                         len(sample_ids) == self._batch_size
                     ), f"expected batch size: {self._batch_size} actual batch size: {len(sample_ids)}"
