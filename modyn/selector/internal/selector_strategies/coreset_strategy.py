@@ -104,6 +104,11 @@ class CoresetStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:
         pass  # As we currently hold everything in database (#116), this currently is a noop.
 
+    def _get_trigger_dataset_size(self) -> int:
+        return get_trigger_dataset_size(
+            self._storage_backend, self._pipeline_id, self._next_trigger_id, self.tail_triggers
+        )
+
     def get_available_labels(self) -> list[int]:
         return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)
 

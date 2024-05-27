@@ -1,4 +1,3 @@
-from typing import Any, Iterable, Optional
 from unittest.mock import patch
 
 import pytest
@@ -10,34 +9,8 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
     NoDownsamplingStrategy,
     instantiate_scheduler,
 )
-from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.tests.selector.internal.storage_backend.utils import MockStorageBackend
 from modyn.utils import DownsamplingMode
-
-
-class MockStorageBackend(AbstractStorageBackend):
-
-    # pylint: disable=super-init-not-called
-    def __init__(self, pipeline_id: int, modyn_config: dict, maximum_keys_in_memory: int):
-        return
-
-    def persist_samples(
-        self, seen_in_trigger_id: int, keys: list[int], timestamps: list[int], labels: list[int]
-    ) -> dict[str, Any]:
-        pass
-
-    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
-        pass
-
-    def get_trigger_data(self, trigger_id: int) -> Iterable[tuple[list[int], dict[str, object]]]:
-        pass
-
-    def get_data_since_trigger(
-        self, smallest_included_trigger_id: int
-    ) -> Iterable[tuple[list[int], dict[str, object]]]:
-        pass
-
-    def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        pass
 
 
 def get_configs():

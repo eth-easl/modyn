@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional, Callable
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
@@ -190,6 +190,7 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger_partition)
             database.session.commit()
 
+    # pylint: disable=too-many-locals
     @staticmethod
     def store_training_set(
         target_pipeline_id: int,
