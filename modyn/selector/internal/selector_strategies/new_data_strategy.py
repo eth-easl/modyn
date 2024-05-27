@@ -54,7 +54,9 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     def _init_storage_backend(self) -> AbstractStorageBackend:
         if self._config["storage_backend"] == "local":
-            storage_backend = LocalStorageBackend(self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory)
+            storage_backend: AbstractStorageBackend = LocalStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
         elif self._config["storage_backend"] == "database":
             storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
