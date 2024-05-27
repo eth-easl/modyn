@@ -19,7 +19,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     If we reset after trigger, we always use the data since the last trigger.
     If there is a limit, we choose a random subset from that data.
-    This configuration can be used to either continously finetune
+    This configuration can be used to either continuously finetune
     or retrain from scratch on only new data.
 
     Without reset, we always output all data points since the pipeline has been started.
@@ -154,7 +154,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         if self.limit_reset_strategy == "sampleUAR":
             return self._sample_uar(samples)
 
-        raise NotImplementedError(f"Unsupport limit reset strategy: {self.limit_reset_strategy}")
+        raise NotImplementedError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
 
     def _last_x_limit(self, samples: list[int]) -> list[int]:
         assert self.has_limit

@@ -28,4 +28,4 @@ echo "Running supervisor integration tests"
 python $SCRIPT_DIR/supervisor/integrationtest_supervisor.py
 echo "Running modynclient integration tests"
 python $SCRIPT_DIR/modynclient/integrationtest_modynclient.py
-echo "Successfuly ran all integration tests."
+echo "Successfully ran all integration tests."
