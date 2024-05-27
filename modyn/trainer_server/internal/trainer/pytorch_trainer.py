@@ -439,7 +439,7 @@ class PytorchTrainer:
                             else data.shape[0] == expected_bts_size
                         ), (
                             f"expected bts size: {expected_bts_size} "
-                            + f"actual: {data.shape[0] if isinstance(data,torch.Tensor) else 'n/a'}"
+                            + f"actual: {data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
                         )
 
                         assert (
@@ -485,7 +485,7 @@ class PytorchTrainer:
                         else data.shape[0] == self._batch_size
                     ), (
                         f"expected batch size: {self._batch_size} actual batch size: "
-                        + f"{data.shape[0] if isinstance(data,torch.Tensor) else 'n/a'}"
+                        + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
                     )
                     assert (
                         len(sample_ids) == self._batch_size
