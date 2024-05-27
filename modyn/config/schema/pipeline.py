@@ -142,8 +142,9 @@ class MultiDownsamplingConfig(BaseModel):
     downsampling_thresholds: List[int] = Field(
         description=(
             "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
-            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item on the list "
-            "of downsamplers."
+            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item than the list "
+            "of downsamplers. For example, if we have 3 downsamplers [A, B, C], and two thresholds [5, 10], the "
+            "downsampler A is used for triggers 0-4, B for triggers 5-9, and C for triggers 10 and above."
         )
     )
 
