@@ -319,7 +319,7 @@ def test_trainer_init():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    assert trainer._label_tranformer_function is None
+    assert trainer._label_transformer_function is None
 
 
 def test_trainer_init_multi_optimizers():
@@ -334,7 +334,7 @@ def test_trainer_init_multi_optimizers():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    assert trainer._label_tranformer_function is None
+    assert trainer._label_transformer_function is None
 
 
 def test_trainer_init_torch_lr_scheduler():
@@ -348,7 +348,7 @@ def test_trainer_init_torch_lr_scheduler():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    assert trainer._label_tranformer_function is None
+    assert trainer._label_transformer_function is None
 
 
 def test_trainer_init_custom_lr_scheduler():
@@ -362,7 +362,7 @@ def test_trainer_init_custom_lr_scheduler():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    assert trainer._label_tranformer_function is None
+    assert trainer._label_transformer_function is None
 
 
 @patch.object(PytorchTrainer, "load_state_if_given")
@@ -376,7 +376,7 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
     load_state_if_given_mock.assert_called_once_with("/path/to/model", False)
-    assert trainer._label_tranformer_function is None
+    assert trainer._label_transformer_function is None
 
 
 def test_trainer_init_with_label_transformer():
@@ -390,10 +390,10 @@ def test_trainer_init_with_label_transformer():
     assert trainer._num_samples == 0
     assert trainer._checkpoint_interval == 10
     assert os.path.isdir(trainer._checkpoint_path)
-    assert trainer._label_tranformer_function is not None
+    assert trainer._label_transformer_function is not None
     test_tensor = torch.ones(10, dtype=torch.int32)
-    assert torch.equal(trainer._label_tranformer_function(test_tensor), torch.ones(10, dtype=torch.float32))
-    assert trainer._label_tranformer_function(test_tensor).dtype == torch.float32
+    assert torch.equal(trainer._label_transformer_function(test_tensor), torch.ones(10, dtype=torch.float32))
+    assert trainer._label_transformer_function(test_tensor).dtype == torch.float32
 
 
 def test_save_state_to_file():

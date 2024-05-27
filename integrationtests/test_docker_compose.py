@@ -144,7 +144,7 @@ def supervisor_running() -> bool:
         print(f"Could not establish gRPC connection to supervisor at {supervisor_address}. Retrying.")
         return False
 
-    print("Sucessfully connected to supervisor!")
+    print("Successfully connected to supervisor!")
 
     return True
 

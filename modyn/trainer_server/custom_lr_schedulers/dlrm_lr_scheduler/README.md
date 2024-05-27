@@ -4,7 +4,7 @@ We use the implementation provided by the NVIDIA [repository](https://github.com
 
 # Changes to NVIDIA Version
 In according with the LICENSE of the NVIDIA code, we list our changes here:
-- We move the learning rate scheduler to a seperate file.
+- We move the learning rate scheduler to a separate file.
 - We rename the class `LearningRateScheduler` to  `DLRMScheduler`
 - We change the `__init__` function of the class to take as argument a configuration dictionary, containing all the arguments originally passed.
 

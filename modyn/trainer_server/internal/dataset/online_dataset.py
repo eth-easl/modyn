@@ -216,11 +216,11 @@ class OnlineDataset(IterableDataset):
         assert self._uses_weights is not None
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
-        tranformed_sample = self._transform(sample)  # type: ignore
+        transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
         if self._uses_weights:
-            return key, tranformed_sample, label, weight
-        return key, tranformed_sample, label
+            return key, transformed_sample, label, weight
+        return key, transformed_sample, label
 
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()

@@ -47,5 +47,4 @@ data:
       return arr.astype(np.float32)
 trigger:
   id: DataAmountTrigger
-  trigger_config:
-    data_points_for_trigger: 2
+  num_samples: 2

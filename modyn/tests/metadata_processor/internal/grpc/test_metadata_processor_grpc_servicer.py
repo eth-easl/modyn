@@ -12,7 +12,7 @@ from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 imp
 from modyn.metadata_processor.internal.grpc.metadata_processor_grpc_servicer import MetadataProcessorGRPCServicer
 from modyn.metadata_processor.internal.metadata_processor_manager import MetadataProcessorManager
 
-TRIGGER_METATDATA = PerTriggerMetadata(loss=0.05)
+TRIGGER_METADATA = PerTriggerMetadata(loss=0.05)
 SAMPLE_METADATA = [PerSampleMetadata(sample_id="s1", loss=0.1)]
 
 
@@ -39,7 +39,7 @@ def test_process_training_metadata(test__process_training_metadata: MagicMock):
     manager = MetadataProcessorManager({})
     servicer = MetadataProcessorGRPCServicer(manager)
     request = TrainingMetadataRequest(
-        pipeline_id=56, trigger_id=1, trigger_metadata=TRIGGER_METATDATA, sample_metadata=SAMPLE_METADATA
+        pipeline_id=56, trigger_id=1, trigger_metadata=TRIGGER_METADATA, sample_metadata=SAMPLE_METADATA
     )
 
     response = servicer.process_training_metadata(request, None)

@@ -1,7 +1,7 @@
 # Example Extension
 
 This directory contains an example of how to build a C++ extension for a Modyn Python component.
-In `example_extension.py`, the Python wrapper around the C++ library is expoed.
+In `example_extension.py`, the Python wrapper around the C++ library is exposed.
 It loads the DLL, and needs to provide the input/output for each function of the library.
 Then, for each C++ library function, a Python function wrapper is provided.
 

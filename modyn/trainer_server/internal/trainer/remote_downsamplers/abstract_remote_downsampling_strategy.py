@@ -48,7 +48,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # The next variable is used to keep a mapping index <-> sample_id
         # This is needed since the data selection policy works on indexes (the policy does not care what the sample_id
         # is, it simply stores its score in a vector/matrix) but for retrieving again the data we need somehow to
-        # remember the sample_id. So, index_sampleid_map might cantain something like [124, 156, 562, 18] and the
+        # remember the sample_id. So, index_sampleid_map might contain something like [124, 156, 562, 18] and the
         # per-sample score (whatever it is, Gradnom/loss/CRAIG..) be [1.23, 0.31, 14.3, 0.09]. So, for example, the
         # policy selects the two points with highest score ([0, 2]) and we need to know that 0 is sample 124 and 2 is
         # sample 562.
@@ -59,7 +59,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         self.requires_data_label_by_label = False
 
         # Some methods require extra features (embedding recorder, get_last_layer) that are implemented in the class
-        # CoresetSupporingModule for model implementations.
+        # CoresetSupportingModule for model implementations.
         self.requires_coreset_supporting_module = False
 
     @abstractmethod

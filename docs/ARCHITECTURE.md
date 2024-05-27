@@ -17,7 +17,7 @@ The trainer then runs a training according to the configuration ⑥.
 The trained model, the output of \modyn, can then be used in further steps in the overall ML workflow, such as deployment ⑦.
 Note that we are actively developing this architecture - for example, a new model storage component is in the works to alleviate the Supervisor of managing the trained models.
 
-Information on pipeliens can be found in the [EXAMPLE.md](EXAMPLE.md).
+Information on pipelines can be found in the [EXAMPLE.md](EXAMPLE.md).
 Information on how to extend Modyn with new policies and how to develop the codebase can be found in the [TECHNICAL.md](TECHNICAL.md).
 
 ## Production vs Experiment Mode
@@ -61,7 +61,7 @@ Our prototype currently implements a PyTorch-based trainer, however, the design 
 The trainer server executes a training loop, which consists of steps, such as model initialization, setup of optimizer(s), and handling registered callbacks (e.g., for metadata collection).
 The trainer fetches data from the storage layer and interacts with the selector via an [OnlineDataset](modyn/trainer_server/internal/dataset/online_dataset.py) abstraction.
 
-### Data Stroage
+### Data Storage
 Modyn pipelines ingests files from data sources such as stream processing or ETL jobs.
 The data storage component abstracts different file formats and file systems (e.g., local file system or remote storage services like S3).
 Each file can contain one or more samples, which can be of any form, e.g., entire files, database rows, etc.

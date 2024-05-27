@@ -15,6 +15,7 @@ from modyn.config.schema.config import (
 )
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
+    DataAmountTriggerConfig,
     DataConfig,
     EvalDataConfig,
     EvaluationConfig,
@@ -31,7 +32,6 @@ from modyn.config.schema.pipeline import (
     Pipeline,
     PipelineModelStorageConfig,
     TrainingConfig,
-    TriggerConfig,
 )
 
 # --------------------------------------------------- Modyn config --------------------------------------------------- #
@@ -210,8 +210,5 @@ def dummy_pipeline_config(pipeline_training_config: TrainingConfig) -> ModynPipe
             dataset_id="test",
             bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
         ),
-        trigger=TriggerConfig(
-            id="DataAmountTrigger",
-            trigger_config={"data_points_for_trigger": 1},
-        ),
+        trigger=DataAmountTriggerConfig(num_samples=1),
     )

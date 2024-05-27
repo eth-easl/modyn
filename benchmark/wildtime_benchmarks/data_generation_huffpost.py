@@ -22,7 +22,7 @@ class HuffpostDownloader(Dataset):
     time_steps = [i for i in range(2012, 2019)]
     input_dim = 44
     num_classes = 11
-    drive_id = "1jKqbfPx69EPK_fjgU9RLuExToUg7rwIY"
+    drive_id = "1jKqbfPx69EPK_fjgU9RLuExToUg7rwIY"  # spellchecker:disable-line
     file_name = "huffpost.pkl"
 
     def __getitem__(self, idx):

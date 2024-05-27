@@ -421,7 +421,7 @@ int64_t StorageServiceImpl::get_dataset_id(soci::session& session, const std::st
 
 std::vector<int64_t> StorageServiceImpl::get_file_ids(soci::session& session, const int64_t dataset_id,
                                                       const int64_t start_timestamp, const int64_t end_timestamp) {
-  // TODO(#362): We are almost excecuting the same query twice since we first count and then get the data
+  // TODO(#362): We are almost executing the same query twice since we first count and then get the data
 
   const uint64_t number_of_files = get_file_count(session, dataset_id, start_timestamp, end_timestamp);
 

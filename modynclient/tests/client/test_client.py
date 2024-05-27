@@ -1,6 +1,3 @@
-import os
-import pathlib
-import shutil
 from typing import Optional
 from unittest.mock import MagicMock, patch
 

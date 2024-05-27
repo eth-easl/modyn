@@ -32,9 +32,7 @@ class GRPCHandler:
         )
 
         if not grpc_connection_established(self.supervisor_channel):
-            raise ConnectionError(
-                f"Could not establish gRPC connection to supervisor at {supervisor_address}."
-            )
+            raise ConnectionError(f"Could not establish gRPC connection to supervisor at {supervisor_address}.")
 
         self.supervisor = SupervisorStub(self.supervisor_channel)
         logger.info("Successfully connected to supervisor.")
@@ -48,9 +46,7 @@ class GRPCHandler:
         maximum_triggers: Optional[int] = None,
     ) -> dict:
         if not self.connected_to_supervisor:
-            raise ConnectionError(
-                "Tried to start pipeline at supervisor, but not there is no gRPC connection."
-            )
+            raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
 
         start_pipeline_request = StartPipelineRequest(
             pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
@@ -74,15 +70,11 @@ class GRPCHandler:
 
     def get_pipeline_status(self, pipeline_id: int) -> dict:
         if not self.connected_to_supervisor:
-            raise ConnectionError(
-                "Tried to start pipeline at supervisor, but not there is no gRPC connection."
-            )
+            raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")
 
         get_status_request = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
-        res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(
-            get_status_request
-        )
+        res: GetPipelineStatusResponse = self.supervisor.get_pipeline_status(get_status_request)
         ret = MessageToDict(
             res,
             preserving_proto_field_name=True,
