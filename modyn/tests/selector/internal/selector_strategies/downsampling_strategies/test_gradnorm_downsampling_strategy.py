@@ -8,6 +8,8 @@ def test_init_gradnorm():
             "ratio": 10,
             "sample_then_batch": True,
         },
+        {},
+        0,
         1000,
     )
 

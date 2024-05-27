@@ -24,7 +24,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
         # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
-        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
+        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(
+            config, modyn_config, pipeline_id, maximum_keys_in_memory
+        )
         self._storage_backend: AbstractStorageBackend
         if "storage_backend" in config:
             if config["storage_backend"] == "local":
@@ -67,7 +69,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # We should only update the downsampler to the current trigger not to the future one referred by
         # self._next_trigger_id after the call to super().trigger() because later the remote downsampler on trainer
         # server needs to fetch configuration for the current trigger
-        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
+        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
         trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
@@ -104,7 +106,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
-        ), "FreshnessStrategy currently only supports DatabaseBackend"
+        ), "CoresetStrategy currently only supports DatabaseBackend"
 
         def _session_callback(session: Session) -> Any:
             return (
