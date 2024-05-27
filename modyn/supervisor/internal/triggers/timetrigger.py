@@ -4,7 +4,6 @@ from typing import Generator
 
 from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
-from modyn.utils.utils import SECONDS_PER_UNIT
 
 
 class TimeTrigger(Trigger):
@@ -13,7 +12,7 @@ class TimeTrigger(Trigger):
     Clock starts with the first observed datapoint"""
 
     def __init__(self, config: TimeTriggerConfig):
-        self.trigger_every_s: int = config.every * SECONDS_PER_UNIT[config.unit]
+        self.trigger_every_s: int = config.every_seconds
         self.next_trigger_at: int | None = None
 
         if self.trigger_every_s < 1:

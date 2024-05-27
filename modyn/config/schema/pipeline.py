@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
+from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
@@ -417,11 +419,21 @@ class DataConfig(BaseModel):
 
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
 
+_REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
+
 
 class TimeTriggerConfig(BaseModel):
     id: Literal["TimeTrigger"] = Field("TimeTrigger")
-    every: int = Field(description="The interval length for the trigger specified by an integer", ge=1)
-    unit: Literal["s", "m", "h", "d", "w", "mth", "y"] = Field(description="The unit of the interval length.")
+    every: str = Field(
+        description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
+        pattern=rf"^\d+{_REGEX_TIME_UNIT}$",
+    )
+
+    @cached_property
+    def every_seconds(self) -> int:
+        unit = str(self.every)[-1:]
+        num = int(str(self.every)[:-1])
+        return num * SECONDS_PER_UNIT[unit]
 
 
 class DataAmountTriggerConfig(BaseModel):
