@@ -433,13 +433,21 @@ class PytorchTrainer:
                         stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         stopw.stop()
-                        assert data.shape[0] == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {data.shape[0]}"
-                        assert len(sample_ids) == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {len(sample_ids)}"
-                        assert target.shape[0] == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {target.shape[0]}"
+                        assert (
+                            data.shape[0] == expected_bts_size
+                        ), f"expected bts size: {expected_bts_size} actual: {data.shape[0]}"
+                        assert (
+                            len(sample_ids) == expected_bts_size
+                        ), f"expected bts size: {expected_bts_size} actual: {len(sample_ids)}"
+                        assert (
+                            target.shape[0] == expected_bts_size
+                        ), f"expected bts size: {expected_bts_size} actual: {target.shape[0]}"
 
                         if (batch_number + 1) % bts_accumulate_period == 0:
                             # Build up new batch do to forward pass on
-                            for partial_data, partial_sids, partial_target, partial_weights in reversed(bts_accumulation_buffer):
+                            for partial_data, partial_sids, partial_target, partial_weights in reversed(
+                                bts_accumulation_buffer
+                            ):
                                 data = torch.cat((data, partial_data.to(self._device)))
                                 sample_ids.extend(partial_sids)
                                 target = torch.cat((target, partial_target.to(self._device)))
@@ -454,9 +462,15 @@ class PytorchTrainer:
                             stopw.start("IndivFetchBatch", overwrite=True)
                             continue
 
-                    assert data.shape[0] == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {data.shape[0]}"
-                    assert len(sample_ids) == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {len(sample_ids)}"
-                    assert target.shape[0] == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {target.shape[0]}"
+                    assert (
+                        data.shape[0] == self._batch_size
+                    ), f"expected batch size: {self._batch_size} actual batch size: {data.shape[0]}"
+                    assert (
+                        len(sample_ids) == self._batch_size
+                    ), f"expected batch size: {self._batch_size} actual batch size: {len(sample_ids)}"
+                    assert (
+                        target.shape[0] == self._batch_size
+                    ), f"expected batch size: {self._batch_size} actual batch size: {target.shape[0]}"
 
                     stopw.start("Forward", resume=True)
                     output = self._model.model(data)

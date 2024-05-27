@@ -13,7 +13,6 @@ from time import sleep
 from unittest.mock import MagicMock, patch
 
 import grpc
-from modyn.utils import DownsamplingMode
 import pytest
 import torch
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -31,6 +30,7 @@ from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callb
 from modyn.trainer_server.internal.trainer.pytorch_trainer import PytorchTrainer, train
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
 from modyn.trainer_server.internal.utils.training_info import TrainingInfo
+from modyn.utils import DownsamplingMode
 
 
 class NoneOrFalse:
@@ -131,10 +131,13 @@ def mock_get_dataloaders(
     num_parallel_requests,
     tokenizer,
     log_path,
-    num_batches: int = 100
+    num_batches: int = 100,
 ):
     mock_train_dataloader = iter(
-        [(("1",) * batch_size, torch.ones(batch_size, 10, requires_grad=True), torch.ones(batch_size, dtype=int)) for _ in range(num_batches)]
+        [
+            (("1",) * batch_size, torch.ones(batch_size, 10, requires_grad=True), torch.ones(batch_size, dtype=int))
+            for _ in range(num_batches)
+        ]
     )
     return mock_train_dataloader, None
 
@@ -157,7 +160,7 @@ def get_training_info(
     lr_scheduler: str,
     transform_label: bool,
     offline_dataset_path: str,
-    model_dynamic_module_patch: MagicMock
+    model_dynamic_module_patch: MagicMock,
 ):
     if num_optimizers == 1:
         torch_optimizers_configuration = {
@@ -272,13 +275,17 @@ def get_mock_trainer(
     test_grpc_connection_established: MagicMock,
     batch_size: int = 32,
     downsampling_mode: DownsamplingMode = DownsamplingMode.DISABLED,
-    downsampling_ratio: int = 25
+    downsampling_ratio: int = 25,
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
 
     if downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-        mock_selection_strategy.return_value = (True, "RemoteGradNormDownsampling", {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False})
+        mock_selection_strategy.return_value = (
+            True,
+            "RemoteGradNormDownsampling",
+            {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False},
+        )
     elif downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH:
         raise NotImplementedError()
 
@@ -293,7 +300,7 @@ def get_mock_trainer(
         num_optimizers,
         lr_scheduler,
         transform_label,
-        "/tmp/offline_dataset"
+        "/tmp/offline_dataset",
     )
     trainer = PytorchTrainer(
         training_info, "cpu", query_queue, response_queue, mp.Queue(), mp.Queue(), logging.getLogger(__name__)
@@ -838,6 +845,7 @@ def test_create_trainer_with_exception(
 
         assert pathlib.Path(temp.name).exists()
 
+
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(BaseCallback, "on_train_begin", return_value=None)
 @patch.object(BaseCallback, "on_train_end", return_value=None)
@@ -863,25 +871,43 @@ def test_train_batch_then_sample_accumulation(
     test_on_train_end,
     test_on_train_begin,
 ):
-    num_batches = 100 # hardcoded into mock dataloader
+    num_batches = 100  # hardcoded into mock dataloader
     batch_size = 32
     downsampling_ratio = 25
 
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, True, None, 2, "custom", False, batch_size=batch_size, downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE, downsampling_ratio=downsampling_ratio)
+    trainer = get_mock_trainer(
+        query_status_queue,
+        status_queue,
+        False,
+        True,
+        None,
+        2,
+        "custom",
+        False,
+        batch_size=batch_size,
+        downsampling_mode=DownsamplingMode.BATCH_THEN_SAMPLE,
+        downsampling_ratio=downsampling_ratio,
+    )
     assert trainer._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
 
     # Mock the downsample_batch method to return batches of the expected size
     expected_bts_size = int(batch_size * (downsampling_ratio / 100.0))
     bts_accumulate_period = batch_size // expected_bts_size
-    
+
     global num_downsamples
     num_downsamples = -1
+
     def mock_downsample_batch(data, sample_ids, target):
         global num_downsamples
         num_downsamples += 1
-        return ((torch.ones(expected_bts_size, requires_grad=True) + num_downsamples) * len(data)), sample_ids[:expected_bts_size], target[:expected_bts_size], torch.ones(expected_bts_size)
+        return (
+            ((torch.ones(expected_bts_size, requires_grad=True) + num_downsamples) * len(data)),
+            sample_ids[:expected_bts_size],
+            target[:expected_bts_size],
+            torch.ones(expected_bts_size),
+        )
 
     test_downsample_batch.side_effect = mock_downsample_batch
 
@@ -906,7 +932,7 @@ def test_train_batch_then_sample_accumulation(
     for num_call, data in enumerate(forward_calls):
         assert data.shape[0] == batch_size
         range_start = (num_call + 1) * bts_accumulate_period
-        range_end = range_start - bts_accumulate_period # since range end is exclusive no -1
+        range_end = range_start - bts_accumulate_period  # since range end is exclusive no -1
         # We stack up zeros and add as much and 1 more as we add to the ones in the mocked downsampler
         expected_data = torch.cat([torch.zeros(expected_bts_size) + i for i in range(range_start, range_end, -1)])
         expected_data = expected_data * batch_size
@@ -914,4 +940,4 @@ def test_train_batch_then_sample_accumulation(
         assert expected_data.shape[0] == data.shape[0]
         assert torch.allclose(data, expected_data)
 
-    del num_downsamples # cleanup global space
+    del num_downsamples  # cleanup global space
