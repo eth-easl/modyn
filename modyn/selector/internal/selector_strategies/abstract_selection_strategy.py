@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Optional, Callable
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
@@ -71,7 +71,6 @@ class AbstractSelectionStrategy(ABC):
         self._maximum_keys_in_memory = maximum_keys_in_memory
         if self._maximum_keys_in_memory < 1:
             raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
-        self._storage_backend = self._init_storage_backend()
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
@@ -100,6 +99,7 @@ class AbstractSelectionStrategy(ABC):
             )
 
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+        self._storage_backend = self._init_storage_backend()
 
     @abstractmethod
     def _init_storage_backend(self) -> AbstractStorageBackend:
@@ -195,7 +195,7 @@ class AbstractSelectionStrategy(ABC):
         target_pipeline_id: int,
         target_trigger_id: int,
         modyn_config: dict,
-        training_set_generator: Iterable[tuple[list[tuple[int, float]], dict[str, Any]]],
+        training_set_producer: Callable[[], Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]],
         insertion_threads: int,
     ) -> tuple[int, int, dict[str, Any]]:
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
@@ -214,7 +214,7 @@ class AbstractSelectionStrategy(ABC):
         partition: Optional[int] = None
         swt.start("on_trigger")
 
-        for partition, (training_samples, partition_log) in enumerate(training_set_generator):
+        for partition, (training_samples, partition_log) in enumerate(training_set_producer()):
             overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
 
             partition_num_keys[partition] = len(training_samples)
@@ -294,7 +294,7 @@ class AbstractSelectionStrategy(ABC):
             self._pipeline_id,
             self._next_trigger_id,
             self._modyn_config,
-            self._on_trigger(),
+            self._on_trigger,
             insertion_threads=self._storage_backend.insertion_threads,
         )
 
