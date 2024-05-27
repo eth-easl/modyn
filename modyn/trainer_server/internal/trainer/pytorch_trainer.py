@@ -370,6 +370,21 @@ class PytorchTrainer:
             # an infinity epoch generator
             epoch_num_generator = itertools.count(start=0)
             self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
+
+        if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
+            expected_bts_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
+            assert expected_bts_size < self._batch_size
+            if self._batch_size % expected_bts_size != 0:
+                raise ValueError(
+                    f"The target batch size of {self._batch_size} is not a multiple of the batch size "
+                    + f"after downsampling a batch in BtS mode ({expected_bts_size}). We cannot accumulate batches. "
+                    + "Please choose the downsampling ratio and batch size such that this is possible."
+                )
+
+            bts_accumulate_period = int(self._batch_size / expected_bts_size)
+            bts_accumulation_buffer = []
+
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
@@ -418,6 +433,30 @@ class PytorchTrainer:
                         stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         stopw.stop()
+                        assert data.shape[0] == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {data.shape[0]}"
+                        assert len(sample_ids) == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {len(sample_ids)}"
+                        assert target.shape[0] == expected_bts_size, f"expected bts size: {expected_bts_size} actual: {target.shape[0]}"
+
+                        if (batch_number + 1) % bts_accumulate_period == 0:
+                            # Build up new batch do to forward pass on
+                            for partial_data, partial_sids, partial_target, partial_weights in reversed(bts_accumulation_buffer):
+                                data = torch.cat((data, partial_data.to(self._device)))
+                                sample_ids.extend(partial_sids)
+                                target = torch.cat((target, partial_target.to(self._device)))
+                                weights = torch.cat((weights, partial_weights.to(self._device)))
+
+                            bts_accumulation_buffer.clear()
+                        else:
+                            bts_accumulation_buffer.append(
+                                (data.detach().cpu(), sample_ids, target.detach().cpu(), weights.detach().cpu())
+                            )
+                            stopw.start("FetchBatch", resume=True)
+                            stopw.start("IndivFetchBatch", overwrite=True)
+                            continue
+
+                    assert data.shape[0] == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {data.shape[0]}"
+                    assert len(sample_ids) == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {len(sample_ids)}"
+                    assert target.shape[0] == self._batch_size, f"expected batch size: {self._batch_size} actual batch size: {target.shape[0]}"
 
                     stopw.start("Forward", resume=True)
                     output = self._model.model(data)
