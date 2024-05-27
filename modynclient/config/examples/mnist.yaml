@@ -46,8 +46,7 @@ data:
       return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
-  trigger_config:
-    data_points_for_trigger: 2000
+  num_samples: 2000
 evaluation:
   eval_strategy:
     name: MatrixEvalStrategy

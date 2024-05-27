@@ -1,5 +1,6 @@
 from abc import ABC
 
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
 
@@ -20,9 +21,11 @@ class AbstractDownsamplingStrategy(ABC):
         downsampling_config (dict): The configuration for the selector.
     """
 
-    def __init__(self, downsampling_config: dict, maximum_keys_in_memory: int) -> None:
-        super().__init__()
-
+    def __init__(
+        self, downsampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+    ) -> None:
+        self._modyn_config = modyn_config
+        self._pipeline_id = pipeline_id
         if downsampling_config.get("sample_then_batch") is None:
             raise ValueError(
                 "Please specify if you want to sample and then batch or vice versa. "
@@ -75,3 +78,15 @@ class AbstractDownsamplingStrategy(ABC):
             config["downsampling_period"] = self.downsampling_period
 
         return config
+
+    # pylint: disable=unused-argument
+    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+        """
+        This function is used to inform the downsampler that the next trigger is reached.
+
+        This is used for some downsamplers to implement some preparation logic before the actual downsampling
+        on trainer server side happens, with the help of the argument `selector_storage_backend`.
+        """
+
+        # by default, no preparation is needed
+        return
