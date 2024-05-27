@@ -426,7 +426,7 @@ def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: Ma
     assert strat._next_trigger_id == 1
     assert trigger_num_keys == 0
 
-    test_inform.assert_called_once_with(0)
+    test_inform.assert_called_once_with(0, strat._storage_backend)
     test__on_trigger.assert_called_once()
 
 
