@@ -379,8 +379,8 @@ class PytorchTrainer:
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
                     f"The target batch size of {self._batch_size} is not a multiple of the batch size "
-                    + f"after downsampling a batch in BtS mode ({post_downsampling_size}). We cannot accumulate batches. "
-                    + "Please choose the downsampling ratio and batch size such that this is possible."
+                    + f"after downsampling a batch in BtS mode ({post_downsampling_size}). We cannot accumulate "
+                    + "batches. Please choose the downsampling ratio and batch size such that this is possible."
                 )
             batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
