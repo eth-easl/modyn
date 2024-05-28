@@ -20,7 +20,7 @@ We are looking at a completed pipeline run that produced multiple triggers and t
 
 ```mermaid
 gantt
-    title A Gantt Diagram
+    title Pipeline run
     dateFormat YYYY-MM-DD
     axisFormat %Y
     section models
@@ -79,7 +79,7 @@ Accounting for the afore mentioned assumptions that training takes some time and
 
 ```mermaid
 gantt
-    title A Gantt Diagram
+    title Pipeline run
     dateFormat YYYY-MM-DD
     axisFormat %Y
     section models
@@ -109,12 +109,12 @@ With our assumption of `training_time=0` this `training_<i>` would be can be rem
 
 ##### State of modyn (at the time of writing)
 
-We currectly evaluate a model directly after training it (e.g. we are now at `Trigger 4`) and have now robust approach of combining the results of the single model evaluations to a pipeline performance. We support a `OfflineEvaluationStrategy` that specifies the interval in which we want to evaluate the models. We also support `MatrixEvaluationStrategy`: We evaluate on predefined grid of evaluation points.
+We currectly evaluate a model directly after training it (e.g. we are now at `Trigger 4`) and have now robust approach of combining the results of the single model evaluations to a pipeline performance. We support a `OffsetEvaluationStrategy` that specifies the interval in which we want to evaluate the models. We also support `MatrixEvaluationStrategy`: We evaluate on predefined grid of evaluation points.
 
 We face several problems:
 
 1) We don't know when the next trigger occurs.
-    This might be fine if we assume a time based trigger policy with a regular schedule where we can set the OfflineEvaluationStrategy lookahead offset to the trigger interval. However, for a generic trigger policy we cannot assume this. In consequence when setting a fixed lookahead offset we might end up evaluating a model with a lookahead offset that is too large or too small. (E.g. when always evaluate on the next 5 years after a training. That would mean that if a policy doesn't retrain for 20 years we miss a lot of data)
+    This might be fine if we assume a time based trigger policy with a regular schedule where we can set the OffsetEvaluationStrategy lookahead offset to the trigger interval. However, for a generic trigger policy we cannot assume this. In consequence when setting a fixed lookahead offset we might end up evaluating a model with a lookahead offset that is too large or too small. (E.g. when always evaluate on the next 5 years after a training. That would mean that if a policy doesn't retrain for 20 years we miss a lot of data)
 
 > After `Trigger 4` we e.g. could end up only considering the first 5 years of the time where `model 4` is used. That could completely skew the pipeline performance if e.g. as heavy drift occurs after 5 years of using `model 4`.
 
@@ -122,13 +122,13 @@ We face several problems:
 
 3) Without making any assumptions on how & when to trigger `MatrixEvaluationStrategy` is not of any use as the grid splits are arbitrary and don't correspond to the times when triggers occur and models are transitioned.
 
-4) `OfflineEvaluationStrategy` is not flexible enough to handle arbitrary intervals. Even if we would run after the pipeline where we know the exact points in time when triggers occurred, we could still not specify the intervals as `OfflineEvaluationStrategy` only supports 1-sided intervals. It currently assumes being given `first_timestamp` and `last_timestamp` representing the first and last sample timestamp for the data batch that lead to the trigger. These do not correspond to the start and end time of the model usage.
+4) `OffsetEvaluationStrategy` is not flexible enough to handle arbitrary intervals. Even if we would run after the pipeline where we know the exact points in time when triggers occurred, we could still not specify the intervals as `OffsetEvaluationStrategy` only supports 1-sided intervals. It currently assumes being given `first_timestamp` and `last_timestamp` representing the first and last sample timestamp for the data batch that lead to the trigger. These do not correspond to the start and end time of the model usage.
 
 >>> The ideal solution would therefore evaluate models on their entire usage period with all samples in that period.
 
 ```mermaid
 gantt
-    title A Gantt Diagram
+    title Pipeline run
     dateFormat YYYY-MM-DD
     axisFormat %Y
     section models
@@ -192,7 +192,7 @@ Theoretically it would be possible to partition the evaluation split of one "tri
 
 ```mermaid
 gantt
-    title A Gantt Diagram
+    title Pipeline run
     dateFormat YYYY-MM-DD
     axisFormat %Y
     section models
