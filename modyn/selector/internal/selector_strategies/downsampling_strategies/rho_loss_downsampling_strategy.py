@@ -26,3 +26,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         # as next_trigger_id. Wait for the training to complete. Store the model. Record model id in
         # downsampling_params, so that it can be fetched and used for downsampling.
         raise NotImplementedError
+
+    def _get_or_create_rho_pipeline_id(self) -> int:
+        raise NotImplementedError
