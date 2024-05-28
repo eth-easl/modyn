@@ -203,14 +203,6 @@ class AbstractSelectionStrategy(ABC):
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
-
-        swt.start("trigger_creation")
-        with MetadataDatabaseConnection(modyn_config) as database:
-            trigger = Trigger(pipeline_id=target_pipeline_id, trigger_id=target_trigger_id)
-            database.session.add(trigger)
-            database.session.commit()
-        log["trigger_creation_time"] = swt.stop()
-
         partition_num_keys = {}
         partition: Optional[int] = None
         swt.start("on_trigger")
@@ -260,15 +252,14 @@ class AbstractSelectionStrategy(ABC):
         log["num_keys"] = total_keys_in_trigger
 
         swt.start("db_update")
-        # Update Trigger about number of partitions and keys
         with MetadataDatabaseConnection(modyn_config) as database:
-            trigger = (
-                database.session.query(Trigger)
-                .filter(Trigger.pipeline_id == target_pipeline_id, Trigger.trigger_id == target_trigger_id)
-                .first()
+            trigger = Trigger(
+                pipeline_id=target_pipeline_id,
+                trigger_id=target_trigger_id,
+                num_keys=total_keys_in_trigger,
+                num_partitions=num_partitions,
             )
-            trigger.num_keys = total_keys_in_trigger
-            trigger.num_partitions = num_partitions
+            database.session.add(trigger)
             database.session.commit()
 
         # Insert all partition lengths into DB
