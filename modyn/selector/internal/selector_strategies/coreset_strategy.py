@@ -87,9 +87,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
         trigger_dataset_size = None
         if self.presampling_strategy.requires_trigger_dataset_size:
-            trigger_dataset_size = get_trigger_dataset_size(
-                self._storage_backend, self._pipeline_id, self._next_trigger_id, self.tail_triggers
-            )
+            trigger_dataset_size = self._get_trigger_dataset_size()
 
         stmt = self.presampling_strategy.get_presampling_query(
             next_trigger_id=self._next_trigger_id,

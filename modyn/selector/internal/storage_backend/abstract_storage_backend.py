@@ -15,10 +15,10 @@ class AbstractStorageBackend(ABC):
 
         raw_insertion_threads = modyn_config["selector"]["insertion_threads"]
 
-        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
-        self._is_mac = platform.system() == "Darwin"
+        is_test = "PYTEST_CURRENT_TEST" in os.environ
+        is_mac = platform.system() == "Darwin"
 
-        if raw_insertion_threads <= 0 or (self._is_test and self._is_mac):
+        if raw_insertion_threads <= 0 or (is_test and is_mac):
             self.insertion_threads = 1
         else:
             self.insertion_threads = raw_insertion_threads

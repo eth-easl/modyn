@@ -55,7 +55,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             with MetadataDatabaseConnection(self._modyn_config) as database:
                 for chunk in database.session.execute(stmt).partitions():
                     samples = [res[0] for res in chunk]
-                    random.shuffle(samples)
                     yield [(sample, 1.0) for sample in samples], {}
 
         AbstractSelectionStrategy.store_training_set(
