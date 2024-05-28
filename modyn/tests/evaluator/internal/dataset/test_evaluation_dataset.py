@@ -1,4 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
+
 import platform
 from unittest.mock import patch
 

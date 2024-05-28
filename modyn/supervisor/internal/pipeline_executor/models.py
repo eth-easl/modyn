@@ -11,15 +11,12 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
-
 from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.utils.evaluation_status_reporter import (
-    EvaluationStatusReporter,
-)
+from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from pydantic import BaseModel, Field, model_serializer, model_validator
+from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
@@ -490,7 +487,7 @@ class PipelineLogs(BaseModel):
         pipeline_logdir = log_dir_path / f"pipeline_{self.pipeline_id}"
 
         if mode == "initial" and pipeline_logdir.exists():
-            # if not empty move the previous content to .backup_timetamp directory
+            # if not empty move the previous content to .backup_timestamp directory
             backup_dir = log_dir_path / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
             pipeline_logdir.rename(backup_dir)
 

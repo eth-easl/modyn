@@ -216,8 +216,8 @@ class DataDriftTrigger(Trigger):
             batch_size=training_config.batch_size,
             bytes_parser=data_config.bytes_parser_function,
             transform_list=data_config.transformations,
-            storage_address=f"{self.context.modyn_config.storage.hostname}:{self.context.modyn_config.storage.port}",
-            selector_address=f"{self.context.modyn_config.selector.hostname}:{self.context.modyn_config.selector.port}",
+            storage_address=f"{self.context.modyn_config.storage.address}",
+            selector_address=f"{self.context.modyn_config.selector.address}",
             num_prefetched_partitions=training_config.num_prefetched_partitions,
             parallel_prefetch_requests=training_config.parallel_prefetch_requests,
             tokenizer=data_config.tokenizer,
@@ -230,6 +230,5 @@ class DataDriftTrigger(Trigger):
             self.context.modyn_config,
             self.context.pipeline_id,
             self.context.base_dir,
-            f"{self.context.modyn_config.modyn_model_storage.hostname}:{
-                self.context.modyn_config.modyn_model_storage.port}",
+            f"{self.context.modyn_config.modyn_model_storage.address}",
         )

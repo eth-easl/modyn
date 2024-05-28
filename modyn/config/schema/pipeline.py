@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
+from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
@@ -140,8 +142,9 @@ class MultiDownsamplingConfig(BaseModel):
     downsampling_thresholds: List[int] = Field(
         description=(
             "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
-            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item on the list "
-            "of downsamplers."
+            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item than the list "
+            "of downsamplers. For example, if we have 3 downsamplers [A, B, C], and two thresholds [5, 10], the "
+            "downsampler A is used for triggers 0-4, B for triggers 5-9, and C for triggers 10 and above."
         )
     )
 
@@ -417,11 +420,24 @@ class DataConfig(BaseModel):
 
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
 
+_REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
+
 
 class TimeTriggerConfig(BaseModel):
     id: Literal["TimeTrigger"] = Field("TimeTrigger")
-    every: int = Field(description="The interval length for the trigger specified by an integer", ge=1)
-    unit: Literal["s", "m", "h", "d", "w", "mth", "y"] = Field(description="The unit of the interval length.")
+    every: str = Field(
+        description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
+        pattern=rf"^\d+{_REGEX_TIME_UNIT}$",
+    )
+    sample_size: int | None = Field(None, description="The number of samples used for the metric calculation.", ge=1)
+    metric: str = Field("model", description="The metric used for drift detection.")
+    metric_config: dict[str, Any] = Field(default_factory=dict, description="Configuration for the evidently metric.")
+
+    @cached_property
+    def every_seconds(self) -> int:
+        unit = str(self.every)[-1:]
+        num = int(str(self.every)[:-1])
+        return num * SECONDS_PER_UNIT[unit]
 
 
 class DataAmountTriggerConfig(BaseModel):

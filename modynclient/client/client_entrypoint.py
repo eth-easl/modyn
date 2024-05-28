@@ -69,9 +69,7 @@ def validate_args(args: Any) -> None:
     assert args.config.is_file(), f"File does not exist: {args.config}"
 
     if args.start_replay_at is None and args.stop_replay_at is not None:
-        raise ValueError(
-            "--stop-replay-at was provided, but --start-replay-at was not."
-        )
+        raise ValueError("--stop-replay-at was provided, but --start-replay-at was not.")
 
     if args.maximum_triggers is not None and args.maximum_triggers < 1:
         raise ValueError(f"maximum_triggers is {args.maximum_triggers}, needs to be >= 1")
@@ -89,9 +87,7 @@ def main() -> None:
     client_config = read_client_config(args.config)
 
     if args.start_replay_at is not None:
-        logger.info(
-            f"Starting client in experiment mode. Starting replay at {args.start_replay_at}."
-        )
+        logger.info(f"Starting client in experiment mode. Starting replay at {args.start_replay_at}.")
         if args.stop_replay_at is not None:
             logger.info(f"Replay interval ends at {args.stop_replay_at}.")
 

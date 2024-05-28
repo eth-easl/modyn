@@ -62,28 +62,34 @@ trigger:
     num_samples: 500000
 """
 
+
 def main():
     curr_dir = pathlib.Path(__file__).resolve().parent
-    for num_dataloader_workers in [16,1,2,8]:
+    for num_dataloader_workers in [16, 1, 2, 8]:
         for partition_size in [5000, 30000, 85000]:
-            for num_prefetched_partitions in [0,1,2,6]:
-                for parallel_pref in [1,2,8]:
+            for num_prefetched_partitions in [0, 1, 2, 6]:
+                for parallel_pref in [1, 2, 8]:
                     if num_prefetched_partitions == 0 and parallel_pref > 1:
                         continue
 
                     if num_prefetched_partitions > 0 and parallel_pref > num_prefetched_partitions:
                         continue
-                    
+
                     if partition_size == 5000:
-                        if num_dataloader_workers not in [1,16]:
+                        if num_dataloader_workers not in [1, 16]:
                             continue
-                        
+
                         if num_prefetched_partitions in [2]:
                             continue
-                    
-                    pipeline = PIPELINE_BLANK.format(num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size)
-                    
-                    with open(f"{curr_dir}/pipelines/cloc_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml", "w") as pfile:
+
+                    pipeline = PIPELINE_BLANK.format(
+                        num_dataloader_workers, num_prefetched_partitions, parallel_pref, partition_size
+                    )
+
+                    with open(
+                        f"{curr_dir}/pipelines/cloc_{num_dataloader_workers}_{num_prefetched_partitions}_{parallel_pref}_{partition_size}.yml",
+                        "w",
+                    ) as pfile:
                         pfile.write(pipeline)
 
 

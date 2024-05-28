@@ -9,7 +9,7 @@ from scipy.optimize import nnls
 
 def orthogonal_matching_pursuit(A, b, budget: int, lam: float = 1.0):
     """approximately solves min_x |x|_0 s.t. Ax=b using Orthogonal Matching Pursuit
-    Acknowlegement to:
+    Acknowledgement to:
     https://github.com/krishnatejakk/GradMatch/blob/main/GradMatch/selectionstrategies/helpers/omp_solvers.py
     Args:
       A: design matrix of size (d, n)
@@ -60,7 +60,7 @@ def orthogonal_matching_pursuit(A, b, budget: int, lam: float = 1.0):
 
 def orthogonal_matching_pursuit_np(A, b, budget: int, lam: float = 1.0):
     """approximately solves min_x |x|_0 s.t. Ax=b using Orthogonal Matching Pursuit
-    Acknowlegement to:
+    Acknowledgement to:
     https://github.com/krishnatejakk/GradMatch/blob/main/GradMatch/selectionstrategies/helpers/omp_solvers.py
     Args:
       A: design matrix of size (d, n)

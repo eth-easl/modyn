@@ -21,7 +21,7 @@ json file that contains all the logs for a single pipeline execution.
 ### `SupervisorLogs`
 
 One member of `PipelineLogs` is a `SupervisorLog`. This model contains logs produced by / relevant to the
-superivsor. Semantically it is a wrapper for a list of `StageLog` entries and provides additional utility functions
+supervisors. Semantically it is a wrapper for a list of `StageLog` entries and provides additional utility functions
 for conversion to pandas dataframes.
 
 ### `StageLog`
@@ -61,12 +61,12 @@ class MyPipelineStageInfo(StageInfo):
         return pd.DataFrame([(self.my_data)], columns=["my_data"])
 ```
 
-2) If not already present, define your `pipline_executor` stage function in `pipeline_executor.py`.
+2) If not already present, define your `pipeline_executor` stage function in `pipeline_executor.py`.
 
 E.g.
 ```python
     @pipeline_stage(PipelineType.<StageName>, PipelineStage.<parent_stage>)
-    def _my_pipline_stage(
+    def _my_pipeline_stage(
         self, s: ExecutionState, log: StageLog, <arguments from the caller>
     ) -> None:
         <Business logic>

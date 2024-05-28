@@ -49,4 +49,4 @@ class DotBasedInteract(Function):
         return grad, mlp_grad
 
 
-dotBasedInteract = DotBasedInteract.apply
+dotBasedInteract = DotBasedInteract.apply  # noqa: N816

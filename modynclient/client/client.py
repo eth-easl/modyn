@@ -59,7 +59,7 @@ class Client:
             logger.info(f"Pipeline <{res['pipeline_id']}> failed with error {res['exception']}.")
             return False
         else:
-            self.pipeline_id = res['pipeline_id']
+            self.pipeline_id = res["pipeline_id"]
             logger.info(f"Pipeline <{self.pipeline_id}> started.")
             return True
 
@@ -81,7 +81,7 @@ class Client:
                     f"and exception {msg['exit_msg']['exception']}"
                 )
         else:
-            msg_type = msg['msg_type']
+            msg_type = msg["msg_type"]
             if msg_type in msg:
                 submsg = msg[msg_type]
 
@@ -96,7 +96,7 @@ class Client:
                     self.pbar = self.progress_mgr.counter(
                         total=submsg["create_params"]["new_data_len"],
                         desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
-                        unit="samples"
+                        unit="samples",
                     )
                 elif submsg["action"] == CounterAction.UPDATE:
                     assert self.pbar is not None
@@ -116,7 +116,7 @@ class Client:
         if msg["action"] == "create_tracker":
             params = msg["training_create_tracker_params"]
             self.training_status_tracker = TrainingStatusTracker(
-                self.progress_mgr, id, params["total_samples"],  params["status_bar_scale"]
+                self.progress_mgr, id, params["total_samples"], params["status_bar_scale"]
             )
         elif msg["action"] == "progress_counter":
             params = msg["training_progress_counter_params"]
@@ -130,14 +130,10 @@ class Client:
         id = msg["id"]
         if msg["action"] == "create_tracker":
             params = msg["eval_create_tracker_params"]
-            self.evaluations[id] = EvaluationStatusTracker(
-                params["dataset_id"], params["dataset_size"]
-            )
+            self.evaluations[id] = EvaluationStatusTracker(params["dataset_id"], params["dataset_size"])
         elif msg["action"] == "create_counter":
             params = msg["eval_create_counter_params"]
-            self.evaluations[id].create_counter(
-                self.progress_mgr, params["training_id"], id
-            )
+            self.evaluations[id].create_counter(self.progress_mgr, params["training_id"], id)
         elif msg["action"] == "progress_counter":
             params = msg["eval_progress_counter_params"]
             self.evaluations[id].progress_counter(params["total_samples_seen"])
@@ -185,15 +181,9 @@ def run_multiple_pipelines(
 ) -> None:
     logger.info("Start running multiple experiments!")
     logger.info(f"{client_config.model_dump()}")
-    
+
     for pipeline_config in pipeline_configs:
-        client = Client(
-            client_config,
-            pipeline_config,
-            start_replay_at,
-            stop_replay_at,
-            maximum_triggers
-        )
+        client = Client(client_config, pipeline_config, start_replay_at, stop_replay_at, maximum_triggers)
 
     logger.info(f"Starting pipeline: {pipeline_config.pipeline.name}")
     started = client.start_pipeline()

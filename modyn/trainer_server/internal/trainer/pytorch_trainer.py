@@ -106,7 +106,7 @@ class PytorchTrainer:
         self._batch_size = training_info.batch_size
         self._num_dataloaders = training_info.num_dataloaders
 
-        self._label_tranformer_function = deserialize_function(
+        self._label_transformer_function = deserialize_function(
             training_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
 
@@ -609,8 +609,8 @@ class PytorchTrainer:
         stopw.stop("PreprocSampleIDs")
 
         stopw.start("LabelTransform", resume=True)
-        if self._label_tranformer_function is not None:
-            target = self._label_tranformer_function(batch[2])
+        if self._label_transformer_function is not None:
+            target = self._label_transformer_function(batch[2])
         else:
             target = batch[2]
         stopw.stop("LabelTransform")

@@ -207,7 +207,7 @@ void write_file(const char* filename, const void* data, int64_t data_offset, con
  * @param samples Amount of samples in vector
  * @param start_index Start index of new samples
  * @param end_index End index of new samples
- * @return true File read succesfully
+ * @return true File read successfully
  * @return false end_index exceeds samples of file
  */
 bool parse_file_subset(const char* filename, std::vector<char>& char_vector, const int64_t samples,

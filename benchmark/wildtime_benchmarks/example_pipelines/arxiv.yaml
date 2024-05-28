@@ -45,5 +45,4 @@ data:
 
 trigger:
   id: TimeTrigger
-  every: 1
-  unit: d
+  every: 1d

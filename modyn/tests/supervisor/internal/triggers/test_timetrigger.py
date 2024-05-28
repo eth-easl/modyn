@@ -3,13 +3,13 @@ from modyn.supervisor.internal.triggers import TimeTrigger
 
 
 def test_initialization() -> None:
-    trigger = TimeTrigger(TimeTriggerConfig(every=2, unit="s"))
+    trigger = TimeTrigger(TimeTriggerConfig(every="2s"))
     assert trigger.trigger_every_s == 2
     assert trigger.next_trigger_at is None
 
 
 def test_inform() -> None:
-    trigger = TimeTrigger(TimeTriggerConfig(every=1000, unit="s"))
+    trigger = TimeTrigger(TimeTriggerConfig(every="1000s"))
     LABEL = 2  # pylint: disable=invalid-name
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert list(trigger.inform([])) == []

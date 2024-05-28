@@ -29,7 +29,7 @@ class MockStorageStub:
     def __init__(self, channel) -> None:
         pass
 
-    def Get(self, request: GetRequest):  # pylint: disable=invalid-name
+    def Get(self, request: GetRequest):  # pylint: disable=invalid-name  # noqa: N802
         yield GetResponse(
             samples=[key.to_bytes(2, "big") for key in request.keys], keys=request.keys, labels=[1] * len(request.keys)
         )

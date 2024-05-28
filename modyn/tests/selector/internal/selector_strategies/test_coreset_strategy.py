@@ -426,5 +426,44 @@ def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: Ma
     assert strat._next_trigger_id == 1
     assert trigger_num_keys == 0
 
-    test_inform.assert_called_once_with(1)
+    test_inform.assert_called_once_with(0, strat._storage_backend)
     test__on_trigger.assert_called_once()
+
+
+def test_trigger():
+    def fake_super_trigger(self):
+        trigger = self._next_trigger_id
+        self._next_trigger_id += 1
+        return trigger, 50, 1, {}
+
+    strat = CoresetStrategy(
+        {
+            "limit": -1,
+            "reset_after_trigger": False,
+            "downsampling_config": {
+                "downsampling_list": [
+                    {"strategy": "Loss", "sample_then_batch": True, "ratio": 50},
+                    {"strategy": "GradNorm", "sample_then_batch": False, "ratio": 25},
+                ],
+                "downsampling_thresholds": [3],
+            },
+        },
+        get_minimal_modyn_config(),
+        pipeline_id=42,
+        maximum_keys_in_memory=1000,
+    )
+
+    assert strat._next_trigger_id == 0
+
+    with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
+        # As threshold is 3, trigger 0, 1, 2 should use Loss downsampling
+        # and trigger 3, 4 should use GradNorm downsampling
+        for i in range(3):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteLossDownsampling"
+
+        for i in range(3, 5):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteGradNormDownsampling"
