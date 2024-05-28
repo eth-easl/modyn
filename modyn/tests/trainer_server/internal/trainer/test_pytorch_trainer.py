@@ -896,19 +896,16 @@ def test_train_batch_then_sample_accumulation(
     expected_bts_size = int(batch_size * (downsampling_ratio / 100.0))
     bts_accumulate_period = batch_size // expected_bts_size
 
-    global num_downsamples
-    num_downsamples = -1
-
     def mock_downsample_batch(data, sample_ids, target):
-        global num_downsamples
-        num_downsamples += 1
+        mock_downsample_batch.num_downsamples += 1
         return (
-            ((torch.ones(expected_bts_size, requires_grad=True) + num_downsamples) * len(data)),
+            ((torch.ones(expected_bts_size, requires_grad=True) + mock_downsample_batch.num_downsamples) * len(data)),
             sample_ids[:expected_bts_size],
             target[:expected_bts_size],
             torch.ones(expected_bts_size),
         )
 
+    mock_downsample_batch.num_downsamples = -1
     test_downsample_batch.side_effect = mock_downsample_batch
 
     # Mock the model's forward method to check the input data
@@ -939,5 +936,3 @@ def test_train_batch_then_sample_accumulation(
 
         assert expected_data.shape[0] == data.shape[0]
         assert torch.allclose(data, expected_data)
-
-    del num_downsamples  # cleanup global space

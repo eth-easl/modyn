@@ -1,7 +1,8 @@
 import unittest
-import torch
 
+import torch
 from modyn.trainer_server.internal.trainer.batch_accumulator import BatchAccumulator
+
 
 class TestBatchAccumulator(unittest.TestCase):
     def setUp(self):
@@ -53,7 +54,12 @@ class TestBatchAccumulator(unittest.TestCase):
         for _ in range(self.accumulation_period):
             self.accumulator.inform_batch(data, sample_ids, target, weights)
 
-        accumulated_data, accumulated_sample_ids, accumulated_target, accumulated_weights = self.accumulator.get_accumulated_batch()
+        (
+            accumulated_data,
+            accumulated_sample_ids,
+            accumulated_target,
+            accumulated_weights,
+        ) = self.accumulator.get_accumulated_batch()
 
         self.assertIsInstance(accumulated_data, torch.Tensor)
         self.assertEqual(accumulated_data.shape, (6, 3))
@@ -61,8 +67,6 @@ class TestBatchAccumulator(unittest.TestCase):
         self.assertEqual(accumulated_target.shape, (6,))
         self.assertEqual(accumulated_weights.shape, (6,))
         self.assertEqual(len(self.accumulator._accumulation_buffer), 0)
-
-
 
     def test_get_accumulated_batch_dict(self):
         data = {"input1": torch.randn(2, 3), "input2": torch.randn(2, 4)}
@@ -73,7 +77,12 @@ class TestBatchAccumulator(unittest.TestCase):
         for _ in range(self.accumulation_period):
             self.accumulator.inform_batch(data, sample_ids, target, weights)
 
-        accumulated_data, accumulated_sample_ids, accumulated_target, accumulated_weights = self.accumulator.get_accumulated_batch()
+        (
+            accumulated_data,
+            accumulated_sample_ids,
+            accumulated_target,
+            accumulated_weights,
+        ) = self.accumulator.get_accumulated_batch()
 
         self.assertIsInstance(accumulated_data, dict)
         self.assertEqual(accumulated_data["input1"].shape, (6, 3))
@@ -84,7 +93,11 @@ class TestBatchAccumulator(unittest.TestCase):
         self.assertEqual(len(self.accumulator._accumulation_buffer), 0)
 
     def test_get_accumulated_batch_tensor_multi_round(self):
-        data = [torch.Tensor([[1, 2, 3], [3, 4, 5]]), torch.Tensor([[6,7,8], [9, 10,11]]), torch.Tensor([[12, 13,14], [15, 16,17]])]
+        data = [
+            torch.Tensor([[1, 2, 3], [3, 4, 5]]),
+            torch.Tensor([[6, 7, 8], [9, 10, 11]]),
+            torch.Tensor([[12, 13, 14], [15, 16, 17]]),
+        ]
         sample_ids = [[1, 2], [3, 4], [5, 6]]
         target = torch.randn(2)
         weights = torch.randn(2)
@@ -92,7 +105,12 @@ class TestBatchAccumulator(unittest.TestCase):
         for i in range(self.accumulation_period):
             self.accumulator.inform_batch(data[i], sample_ids[i], target, weights)
 
-        accumulated_data, accumulated_sample_ids, accumulated_target, accumulated_weights = self.accumulator.get_accumulated_batch()
+        (
+            accumulated_data,
+            accumulated_sample_ids,
+            accumulated_target,
+            accumulated_weights,
+        ) = self.accumulator.get_accumulated_batch()
 
         self.assertIsInstance(accumulated_data, torch.Tensor)
         self.assertEqual(accumulated_data.shape, (6, 3))
@@ -101,8 +119,10 @@ class TestBatchAccumulator(unittest.TestCase):
         self.assertEqual(accumulated_weights.shape, (6,))
         self.assertEqual(len(self.accumulator._accumulation_buffer), 0)
 
-        assert torch.allclose(accumulated_data, torch.Tensor([ [12, 13,14], [15, 16,17],[6,7,8], [9, 10,11], [1, 2, 3], [3, 4, 5] ]))
-        self.assertEqual(accumulated_sample_ids, [5,6,3,4,1,2])
+        assert torch.allclose(
+            accumulated_data, torch.Tensor([[12, 13, 14], [15, 16, 17], [6, 7, 8], [9, 10, 11], [1, 2, 3], [3, 4, 5]])
+        )
+        self.assertEqual(accumulated_sample_ids, [5, 6, 3, 4, 1, 2])
 
         # Start another round
 
@@ -114,7 +134,12 @@ class TestBatchAccumulator(unittest.TestCase):
         for _ in range(self.accumulation_period):
             self.accumulator.inform_batch(data, sample_ids, target, weights)
 
-        accumulated_data, accumulated_sample_ids, accumulated_target, accumulated_weights = self.accumulator.get_accumulated_batch()
+        (
+            accumulated_data,
+            accumulated_sample_ids,
+            accumulated_target,
+            accumulated_weights,
+        ) = self.accumulator.get_accumulated_batch()
 
         self.assertIsInstance(accumulated_data, torch.Tensor)
         self.assertEqual(accumulated_data.shape, (6, 3))
@@ -122,4 +147,3 @@ class TestBatchAccumulator(unittest.TestCase):
         self.assertEqual(accumulated_target.shape, (6,))
         self.assertEqual(accumulated_weights.shape, (6,))
         self.assertEqual(len(self.accumulator._accumulation_buffer), 0)
-

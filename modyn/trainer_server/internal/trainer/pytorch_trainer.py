@@ -557,7 +557,9 @@ class PytorchTrainer:
         self._persist_pipeline_log()
 
     @staticmethod
-    def _assert_data_size(expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor):
+    def _assert_data_size(
+        expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor
+    ) -> None:
         assert (
             all(tensor.shape[0] == expected_size for tensor in data.values())
             if isinstance(data, dict)
@@ -566,13 +568,8 @@ class PytorchTrainer:
             f"expected size: {expected_size} actual size: "
             + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
         )
-        assert (
-            len(sample_ids) == expected_size
-        ), f"expected size: {expected_size} actual size: {len(sample_ids)}"
-        assert (
-            target.shape[0] == expected_size
-        ), f"expected size: {expected_size} actual size: {target.shape[0]}"
-
+        assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
+        assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
 
     def _load_dataset_log(self) -> None:
         worker_log = {}
@@ -677,8 +674,8 @@ class PytorchTrainer:
         return sample_ids, target, data
 
     def downsample_batch(
-        self, data: torch.Tensor, sample_ids: list, target: torch.Tensor
-    ) -> Tuple[torch.Tensor, list, torch.Tensor, torch.Tensor]:
+        self, data: Union[dict[str, torch.Tensor], torch.Tensor], sample_ids: list, target: torch.Tensor
+    ) -> Tuple[Union[dict[str, torch.Tensor], torch.Tensor], list, torch.Tensor, torch.Tensor]:
         """
         Function to score every datapoint in the current BATCH and sample a fraction of it
         Used for downsampling strategies in BATCH_THEN_SAMPLE mode
