@@ -199,6 +199,19 @@ class AbstractSelectionStrategy(ABC):
         training_set_producer: Callable[[], Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]],
         insertion_threads: int,
     ) -> tuple[int, int, dict[str, Any]]:
+        """
+        Store the training set, produced by the training_set_producer, as TriggerSampleStorage.
+        Relevant metadata for the trigger is also stored in the metadata database.
+
+        :param target_pipeline_id: the pipeline id the training set is associated with.
+        :param target_trigger_id: the trigger id the training set is associated with.
+        :param modyn_config: the modyn configuration.
+        :param training_set_producer: a callable that returns partitioned training samples. The type is the same as
+            the return type of the _on_trigger method.
+        :param insertion_threads: how many threads are used to store. If bigger than 1, multiple threads are used to
+            store the data.
+        :return: total number of keys in the trigger, number of partitions, and a log.
+        """
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
