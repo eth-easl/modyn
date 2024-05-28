@@ -4,13 +4,12 @@ from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel as PydanticBaseModel
-from pydantic import Field, NonNegativeInt, field_validator, model_validator
-from typing_extensions import Self
-
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import Field, NonNegativeInt, field_validator, model_validator
+from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
