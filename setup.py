@@ -1,4 +1,5 @@
 """setup file for the project."""
+
 # code inspired by https://github.com/navdeep-G/setup.py
 
 import io
@@ -139,7 +140,7 @@ setup(
         "modyn/metadata_processor/modyn-metadata-processor",
         "modyn/model_storage/modyn-model-storage",
         "modyn/evaluator/modyn-evaluator",
-        'modynclient/client/modyn-client',
+        "modynclient/client/modyn-client",
     ],
     install_requires=REQUIRED,
     extras_require=EXTRAS,

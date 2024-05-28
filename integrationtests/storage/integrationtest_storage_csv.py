@@ -125,7 +125,7 @@ def test_storage() -> None:
 
     add_files_to_dataset(0, 10, [], FIRST_ADDED_CSVS)  # Add samples to the dataset.
 
-    response = None
+    responses = None
     for i in range(500):
         responses = list(get_new_data_since(0))
         keys = []

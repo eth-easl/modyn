@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
 import json
 import multiprocessing as mp
 import os
@@ -323,13 +325,13 @@ def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage):
         assert len(metrics) == 1
         assert isinstance(metrics[0], Accuracy)
 
-        unkown_metric_config = MetricConfiguration(
+        unknown_metric_config = MetricConfiguration(
             name="UnknownMetric",
             config=JsonString(value=json.dumps({})),
             evaluation_transformer=PythonString(value=""),
         )
         with pytest.raises(NotImplementedError):
-            evaluator._setup_metrics([unkown_metric_config])
+            evaluator._setup_metrics([unknown_metric_config])
 
         metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
         assert len(metrics) == 1

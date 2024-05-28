@@ -42,6 +42,7 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     TriggerExecutionInfo,
 )
 from modyn.supervisor.internal.triggers import Trigger
+from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
@@ -835,14 +836,19 @@ class PipelineExecutor:
 
     def _setup_trigger(self) -> Trigger:
         trigger_id = self.state.pipeline_config.trigger.id
-        trigger_config = self.state.pipeline_config.trigger.trigger_config
+        trigger_config = self.state.pipeline_config.trigger
 
         trigger_module = dynamic_module_import("modyn.supervisor.internal.triggers")
         trigger: Trigger = getattr(trigger_module, trigger_id)(trigger_config)
         assert trigger is not None, "Error during trigger initialization"
 
         trigger.init_trigger(
-            self.state.pipeline_id, self.state.pipeline_config, self.state.modyn_config, self.state.eval_directory
+            TriggerContext(
+                pipeline_id=self.state.pipeline_id,
+                pipeline_config=self.state.pipeline_config,
+                modyn_config=self.state.modyn_config,
+                base_dir=self.state.eval_directory,
+            )
         )
         if self.state.previous_model_id is not None:
             trigger.inform_previous_model(self.state.previous_model_id)

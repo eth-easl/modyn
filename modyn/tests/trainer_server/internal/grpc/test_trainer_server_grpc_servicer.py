@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
 import json
 import multiprocessing as mp
 import os

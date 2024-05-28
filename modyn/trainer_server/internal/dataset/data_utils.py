@@ -37,7 +37,7 @@ def prepare_dataloaders(
         num_dataloaders (int): Number of PyTorch data workers for the dataloader
         batch_size (int): Batch size used for training
         bytes_parser (str): Serialized Python code,
-            used for converting bytes to a form useful for futher transformations (such as Tensors).
+            used for converting bytes to a form useful for further transformations (such as Tensors).
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
         tokenizer (optional[str]): Optional tokenizer for NLP tasks
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.

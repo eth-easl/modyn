@@ -213,7 +213,7 @@ def test_start_pipeline(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -272,7 +272,7 @@ def test_get_pipeline_status_running(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -299,7 +299,7 @@ def test_get_pipeline_status_exit(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -333,7 +333,7 @@ def test_get_pipeline_status_not_found(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
 ) -> None:
     sup = get_non_connecting_supervisor(minimal_system_config)  # pylint: disable=no-value-for-parameter

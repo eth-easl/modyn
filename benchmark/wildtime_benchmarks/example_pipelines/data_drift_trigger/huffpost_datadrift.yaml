@@ -47,11 +47,10 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  trigger_config:
-    data_points_for_detection: 5000
-    metric_name: mmd
-    metric_config:
-      bootstrap: False
+  detection_interval_data_points: 5000
+  metric: mmd
+  metric_config:
+    bootstrap: False
   
 evaluation:
   eval_strategy:

@@ -6,4 +6,4 @@ from modyn.supervisor.internal.triggers import Trigger
 
 @patch.multiple(Trigger, __abstractmethods__=set())
 def test_initialization() -> None:
-    _ = Trigger({})
+    _ = Trigger()

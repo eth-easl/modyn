@@ -58,7 +58,7 @@ def send_metadata_and_check_database(processor_client: MetadataProcessorClient, 
     )
 
     resp = processor_client.send_metadata(req)
-    assert resp, "Coult not send training metadata to the Metadata Processor Server"
+    assert resp, "Could not send training metadata to the Metadata Processor Server"
 
     with MetadataDatabaseConnection(config) as database:
         trigger_metadata = (

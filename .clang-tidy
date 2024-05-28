@@ -82,10 +82,10 @@ Checks: >
 # openMP                                                doesn't apply (we're not using OpenMP)
 # zircon                                                utility checks that would need configuration
 
-## Aliasses
+## Aliases
 # Having check aliases enabled harms performance in clang-tidy and is annoying to ignore locally, so we disable some aliases
-# The hicpp-* checks are generally aliasses (25) and only have a few original checks (4), so we use whitelisting here.
-# The cert-* checks are 22 aliasses and 15 original checks, so we also use whitelisting here.
+# The hicpp-* checks are generally aliases (25) and only have a few original checks (4), so we use whitelisting here.
+# The cert-* checks are 22 aliases and 15 original checks, so we also use whitelisting here.
 # bugprone-narrowing-conversions                               alias to cppcoreguidelines-narrowing-conversions
 # cppcoreguidelines-avoid-c-arrays                             alias to modernize-avoid-c-arrays
 # cppcoreguidelines-avoid-magic-numbers                        alias to readability-magic-numbers

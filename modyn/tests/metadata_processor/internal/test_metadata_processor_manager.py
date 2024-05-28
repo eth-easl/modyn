@@ -14,7 +14,7 @@ from modyn.metadata_processor.metadata_processor import MetadataProcessor
 from modyn.metadata_processor.processor_strategies.abstract_processor_strategy import AbstractProcessorStrategy
 from modyn.metadata_processor.processor_strategies.processor_strategy_type import ProcessorStrategyType
 
-TRIGGER_METATDATA = PerTriggerMetadata(loss=0.05)
+TRIGGER_METADATA = PerTriggerMetadata(loss=0.05)
 SAMPLE_METADATA = [PerSampleMetadata(sample_id="s1", loss=0.1)]
 
 
@@ -80,7 +80,7 @@ def test_processor_training_metadata(
     manager.register_pipeline(56, ProcessorStrategyType.BasicProcessorStrategy.value)
 
     with pytest.raises(ValueError):
-        manager.process_training_metadata(60, 0, TRIGGER_METATDATA, SAMPLE_METADATA)
+        manager.process_training_metadata(60, 0, TRIGGER_METADATA, SAMPLE_METADATA)
 
-    manager.process_training_metadata(56, 1, TRIGGER_METATDATA, SAMPLE_METADATA)
-    metadata_processor_process_training_metadata.assert_called_once_with(1, TRIGGER_METATDATA, SAMPLE_METADATA)
+    manager.process_training_metadata(56, 1, TRIGGER_METADATA, SAMPLE_METADATA)
+    metadata_processor_process_training_metadata.assert_called_once_with(1, TRIGGER_METADATA, SAMPLE_METADATA)

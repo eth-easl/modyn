@@ -70,10 +70,10 @@ def test_switch_downsamplers(mock_inform_next_trigger):
 
 def test_switch_functions():
     conf = get_configs()
-    pipline_id = 0
+    pipeline_id = 0
     maximum_keys_in_memory = 1000
-    downs = DownsamplingScheduler({}, pipline_id, conf, [12], maximum_keys_in_memory)
-    selector_storage_backend = MockStorageBackend(pipline_id, {}, maximum_keys_in_memory)
+    downs = DownsamplingScheduler({}, pipeline_id, conf, [12], maximum_keys_in_memory)
+    selector_storage_backend = MockStorageBackend(pipeline_id, {}, maximum_keys_in_memory)
     # below the threshold
     for i in range(12):
         downs.inform_next_trigger(i, selector_storage_backend)

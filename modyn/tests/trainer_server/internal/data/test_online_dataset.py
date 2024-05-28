@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module, too-many-locals
+
 import platform
 from unittest.mock import patch
 
@@ -40,7 +41,7 @@ class MockStorageStub:
     def __init__(self, channel) -> None:
         pass
 
-    def Get(self, request):  # pylint: disable=invalid-name
+    def Get(self, request):  # pylint: disable=invalid-name  # noqa: N802
         for i in range(0, 10, 2):
             yield GetResponse(
                 samples=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],

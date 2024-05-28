@@ -9,7 +9,7 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
 
-// For simplicity reason, boundry checks are removed
+// For simplicity reason, boundary checks are removed
 // All the  kernels MUST be launched with grid size = batch size and block size = embedding size
 
 __global__ void GatherKernel(const float* params,

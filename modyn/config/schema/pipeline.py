@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
+from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
@@ -418,17 +420,46 @@ class DataConfig(BaseModel):
 
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
 
+_REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
 
-class TriggerConfig(BaseModel):
-    id: str = Field(description="Type of trigger to be used.")
 
-    trigger_config: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Configuration dictionary that will be passed to the trigger on initialization.",
+class TimeTriggerConfig(BaseModel):
+    id: Literal["TimeTrigger"] = Field("TimeTrigger")
+    every: str = Field(
+        description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
+        pattern=rf"^\d+{_REGEX_TIME_UNIT}$",
     )
+
+    @cached_property
+    def every_seconds(self) -> int:
+        unit = str(self.every)[-1:]
+        num = int(str(self.every)[:-1])
+        return num * SECONDS_PER_UNIT[unit]
+
+
+class DataAmountTriggerConfig(BaseModel):
+    id: Literal["DataAmountTrigger"] = Field("DataAmountTrigger")
+    num_samples: int = Field(description="The number of samples that should trigger the pipeline.", ge=1)
+
+
+class DataDriftTriggerConfig(BaseModel):
+    id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
+    detection_interval_data_points: int = Field(
+        1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
+    )
+    sample_size: int | None = Field(None, description="The number of samples used for the metric calculation.", ge=1)
+    metric: str = Field("model", description="The metric used for drift detection.")
+    metric_config: dict[str, Any] = Field(default_factory=dict, description="Configuration for the evidently metric.")
+
+
+TriggerConfig = Annotated[
+    Union[TimeTriggerConfig, DataAmountTriggerConfig, DataDriftTriggerConfig], Field(discriminator="id")
+]
 
 
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
+
+
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")

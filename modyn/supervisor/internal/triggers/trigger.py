@@ -1,14 +1,24 @@
 import pathlib
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Generator
+
+from modyn.config.schema.config import ModynConfig
+from modyn.config.schema.pipeline import ModynPipelineConfig
+
+
+@dataclass
+class TriggerContext:
+    pipeline_id: int
+    pipeline_config: ModynPipelineConfig
+    modyn_config: ModynConfig
+    base_dir: pathlib.Path
 
 
 class Trigger(ABC):
-    def __init__(self, trigger_config: dict) -> None:
-        assert trigger_config is not None, "trigger_config cannot be None."
 
     # pylint: disable=unnecessary-pass
-    def init_trigger(self, pipeline_id: int, pipeline_config: dict, modyn_config: dict, base_dir: pathlib.Path) -> None:
+    def init_trigger(self, context: TriggerContext) -> None:
         """The supervisor initializes the concrete Trigger with Trigger-type-specific configurations
         base_dir: the base directory to store Trigger outputs. A location at the supervisor.
         """

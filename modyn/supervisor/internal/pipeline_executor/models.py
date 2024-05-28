@@ -487,7 +487,7 @@ class PipelineLogs(BaseModel):
         pipeline_logdir = log_dir_path / f"pipeline_{self.pipeline_id}"
 
         if mode == "initial" and pipeline_logdir.exists():
-            # if not empty move the previous content to .backup_timetamp directory
+            # if not empty move the previous content to .backup_timestamp directory
             backup_dir = log_dir_path / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
             pipeline_logdir.rename(backup_dir)
 
