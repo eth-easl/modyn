@@ -1,4 +1,3 @@
-import random
 from typing import Any, Iterable
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -8,7 +7,7 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import Select, asc, func, select
+from sqlalchemy import Select, func, select
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
@@ -64,11 +63,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             training_set_producer,
             selector_storage_backend.insertion_threads,
         )
-        raise NotImplementedError
 
     @staticmethod
     def _get_holdout_sampling_query(main_pipeline_id: int, trigger_id: int, target_size: int) -> Select:
-        subq = (
+        return (
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == main_pipeline_id,
@@ -77,14 +75,3 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             .order_by(func.random())  # pylint: disable=E1102
             .limit(target_size)
         )
-
-        stmt = (
-            select(SelectorStateMetadata.sample_key)
-            .filter(
-                SelectorStateMetadata.pipeline_id == main_pipeline_id,
-                SelectorStateMetadata.sample_key.in_(subq),
-            )
-            .order_by(asc(SelectorStateMetadata.timestamp))
-        )
-
-        return stmt
