@@ -68,7 +68,44 @@ Mind, that we need to weight every model performance at a point in time by the n
 
 > E.g. in `model 3` from the Gantt diagram above: assuming our dataset sample distribution is so uneven that 90% of the samples are in the time range between `Trigger3` and `Trigger4`, then the performance of `model 3` should have a higher weight in the pipeline performance than the performance of `model 2`.
 
-It can be argued that the model performance of the newest model in the time span between two triggers is well measured by the model performance (evaluation result) when evaluating with using all evaluation split samples between the two triggers.
+It can be argued that the model performance of the newest model in the time span between the ends of two training processes is measured well by the model performance (evaluation result) when evaluating with using all evaluation split samples between the two triggers.
+
+> **Remark/Assumptions**: Instead of considering the time between two model training completions, we will go forward with the time between two triggers (start of training processes). These are not exactly the same, as we would still use the old model while a training is going on (see diagram below). However, we argue that the difference is negligible as (1) we don't expect much drift between the samples directly after the trigger and after the training (close in time). And (2) compared to the time between two triggers, the duration of a training process is rather small and therefore doesn't have a big impact on the evaluation. Note: We do not evaluate on training samples in this model! We can adjust this assumption later on if needed by incorporating the training time into the evaluation strategy.
+
+##### More fine grained view
+
+Accounting for the afore mentioned assumptions that training takes some time and triggers are not at one point in time but specify a training batch (time interval), we can visualize a pipeline run as follows:
+
+
+```mermaid
+gantt
+    title A Gantt Diagram
+    dateFormat YYYY-MM-DD
+    axisFormat %Y
+    section models
+        Trigger1 :milestone, t1, 1930, 0d
+        train_batch_1 :a10, 1928, 2y
+        training1 :a11, after t1, 1y
+        model 1          :a12, after a11, until a22
+
+        Trigger2 :milestone, t2, 1940, 0d
+        train_batch_2 :a20, after a10, until t2
+        training2 :a21, after t2, 1y
+        model 2          :a22, after a21, until a32
+
+        Trigger3 :milestone, t3, 1945, 0d
+        train_batch_3 :a30, after a20, until t3
+        training3 :a31, after t3, 1y
+        model 3          :a32, after a31, until a42
+
+        Trigger4 :milestone, t4, 1950, 0d
+        train_batch_4 :a40, after a30, until t4
+        training4 :a41, after t4, 1y
+        model 4          :a42, after a41, 10y
+
+```
+
+With our assumption of `training_time=0` this `training_<i>` would be can be removed so that we can evaluate one model on the data between two triggers (hence the next training batch)
 
 ##### State of modyn (at the time of writing)
 
@@ -207,6 +244,6 @@ gantt
 
 ### Open Question
 
-1) With the approach of evaluating a model only on future data (where the model is eventually used), it might even be fair not to use a evaluation split as the samples used for evaluation are never part of the training data of a particular model.
+1) With the approach of evaluating a model only on future data (where the model is eventually used), it might even be fair not to use a evaluation split as the samples used for evaluation are never part of the training data of a particular model. Agreed?
 
-2) What behavior do we desire when we train multiple models on the same timestamp (e.g. if we have a lot of data at a certain point in time). One option for plotting would be to weight average the different according to how many samples of this point in time were covered by the respective model.
+2) What behavior do we desire when we train multiple models on the same timestamp (e.g. if we have a lot of data at a certain point in time). One option for plotting would be to weight average the different according to how many samples of this point in time were covered by the respective model. Considering the samples that are used to evaluate the models we cannot different the evaluation data of two training runs on the same timestamps (even if their batches might contain different samples)
