@@ -374,15 +374,15 @@ class PytorchTrainer:
 
         if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
-            expected_bts_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
-            assert expected_bts_size < self._batch_size
-            if self._batch_size % expected_bts_size != 0:
+            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
+            assert post_downsampling_size < self._batch_size
+            if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
                     f"The target batch size of {self._batch_size} is not a multiple of the batch size "
-                    + f"after downsampling a batch in BtS mode ({expected_bts_size}). We cannot accumulate batches. "
+                    + f"after downsampling a batch in BtS mode ({post_downsampling_size}). We cannot accumulate batches. "
                     + "Please choose the downsampling ratio and batch size such that this is possible."
                 )
-            batch_accumulator = BatchAccumulator(self._batch_size // expected_bts_size, self._device)
+            batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
@@ -432,7 +432,7 @@ class PytorchTrainer:
                         stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         stopw.stop()
-                        self._assert_data_size(expected_bts_size, data, sample_ids, target)
+                        self._assert_data_size(post_downsampling_size, data, sample_ids, target)
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
                             stopw.start("FetchBatch", resume=True)
                             stopw.start("IndivFetchBatch", overwrite=True)
