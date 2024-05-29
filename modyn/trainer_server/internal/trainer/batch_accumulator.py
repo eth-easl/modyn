@@ -57,7 +57,7 @@ class BatchAccumulator:
                 - The accumulated weights.
         """
         data, sample_ids, target, weights = None, [], None, None
-        
+
         for partial_data, partial_sids, partial_target, partial_weights in self._accumulation_buffer:
             partial_target = partial_target.to(self._target_device)
             partial_weights = partial_weights.to(self._target_device)
@@ -67,7 +67,7 @@ class BatchAccumulator:
                 data = torch.cat((data, partial_data)) if data is not None else partial_data
             else:
                 if data is None:
-                    data = { key: partial_data[key].to(self._target_device) for key in partial_data }
+                    data = {key: partial_data[key].to(self._target_device) for key in partial_data}
                 else:
                     for key in data:
                         data[key] = torch.cat((data[key], partial_data[key].to(self._target_device)))

@@ -928,9 +928,8 @@ def test_train_batch_then_sample_accumulation(
     assert len(forward_calls) == num_batches // bts_accumulate_period
     for num_call, data in enumerate(forward_calls):
         assert data.shape[0] == batch_size
-        
-        
-        range_end = (num_call + 1) * bts_accumulate_period + 1 # + 1 since end is exclusive
+
+        range_end = (num_call + 1) * bts_accumulate_period + 1  # + 1 since end is exclusive
         range_start = range_end - bts_accumulate_period
         # We stack up zeros and add as much and 1 more as we add to the ones in the mocked downsampler
         expected_data = torch.cat([torch.zeros(expected_bts_size) + i for i in range(range_start, range_end, 1)])
