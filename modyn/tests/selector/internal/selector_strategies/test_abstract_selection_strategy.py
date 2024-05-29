@@ -101,9 +101,10 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == np.array(
-        [(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")]
-    )
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
@@ -138,12 +139,14 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
     test_reset_state.assert_not_called()
     test__on_trigger.assert_called_once()
 
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == np.array(
-        [(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")]
-    )
-    assert strat.get_trigger_partition_keys(trigger_id, 1) == np.array(
-        [(13, 1.0), (14, 1.0), (15, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")]
-    )
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 1)
+        == np.array([(13, 1.0), (14, 1.0), (15, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
     with pytest.raises(AssertionError):
         strat.get_trigger_partition_keys(trigger_id, 2)
@@ -178,9 +181,10 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 
     test_reset_state.assert_called_once()
     test__on_trigger.assert_called_once()
-    assert strat.get_trigger_partition_keys(trigger_id, 0) == np.array(
-        [(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")]
-    )
+    assert (
+        strat.get_trigger_partition_keys(trigger_id, 0)
+        == np.array([(10, 1.0), (11, 1.0), (12, 1.0)], dtype=[("f0", "<i8"), ("f1", "<f8")])
+    ).all()
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())

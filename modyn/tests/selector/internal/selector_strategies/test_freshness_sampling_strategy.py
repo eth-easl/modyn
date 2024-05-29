@@ -241,7 +241,7 @@ def test__get_trigger_data_limit(
     test__get_data_sample.side_effect = sampler
 
     config = get_freshness_config()
-    config["limit"] = 4
+    config.limit = 4
 
     strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0)
     strat._is_first_trigger = False
@@ -316,7 +316,7 @@ def test__calc_num_samples_no_limit():
 
 def test__calc_num_samples_limit():
     config = get_freshness_config()
-    config["limit"] = 100
+    config.limit = 100
 
     strat = FreshnessSamplingStrategy(config, get_minimal_modyn_config(), 0)
     strat.unused_data_ratio = 50
