@@ -10,7 +10,7 @@ class NoPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
         self, presampling_config: dict, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
     ):
-        if "ratio" in presampling_config and presampling_config["ratio"] != 100:
+        if presampling_config["ratio"] != 100:
             raise ValueError("Using NoPresamplingStrategy, the presampling_ratio is implicitly 100%")
         presampling_config["ratio"] = 100
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)

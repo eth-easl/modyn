@@ -7,6 +7,7 @@ from typing import Any, Iterable, Optional
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
+from modyn.config import SelectionStrategy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from sqlalchemy import func
@@ -25,51 +26,25 @@ class AbstractSelectionStrategy(ABC):
     """
 
     # pylint: disable-next=too-many-branches
-    def __init__(
-        self,
-        config: dict,
-        modyn_config: dict,
-        pipeline_id: int,
-        maximum_keys_in_memory: int,
-        required_configs: Optional[list[str]] = None,
-    ):
+    def __init__(self, config: SelectionStrategy, modyn_config: dict, pipeline_id: int):
         self._config = config
 
-        if required_configs is None:
-            required_configs = []  # Using [] as default is considered unsafe by pylint
-
-        required_configs.extend(["limit", "reset_after_trigger"])
-        for required_config in required_configs:
-            if required_config not in self._config.keys():
-                raise ValueError(f"{required_config} not given but required.")
-
-        self.training_set_size_limit: int = config["limit"]
+        self.training_set_size_limit: int = config.limit
         self.has_limit = self.training_set_size_limit > 0
-        self.reset_after_trigger: bool = config["reset_after_trigger"]
+        self.reset_after_trigger: bool = config.reset_after_trigger
 
         # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
-        if config.get("uses_weights", None):
-            self.uses_weights = config["uses_weights"]
-        else:
-            self.uses_weights = False
+        self.uses_weights = config.uses_weights
 
-        if config.get("tail_triggers", None):
-            self.tail_triggers = config["tail_triggers"]
-            if self.tail_triggers < 0 or not isinstance(config["tail_triggers"], int):
-                raise ValueError("Tail trigger must be an integer greater than 0")
-            if (self.reset_after_trigger and self.tail_triggers > 0) or (
-                (not self.reset_after_trigger) and self.tail_triggers == 0
-            ):
-                raise ValueError("Reset after trigger is equivalent to setting tail triggers to 0.")
+        self.tail_triggers = config.tail_triggers
+        if self.tail_triggers is None:
+            self.reset_after_trigger = False
         else:
-            if self.reset_after_trigger:
-                self.tail_triggers = 0  # consider only the current trigger
-            else:
-                self.tail_triggers = None  # consider every datapoint
+            self.reset_after_trigger = self.tail_triggers == 0
 
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._maximum_keys_in_memory = maximum_keys_in_memory
+        self._maximum_keys_in_memory = config.maximum_keys_in_memory
         self._insertion_threads = modyn_config["selector"]["insertion_threads"]
 
         self._is_test = "PYTEST_CURRENT_TEST" in os.environ

@@ -24,12 +24,14 @@ from .schema.config import (
     TensorboardConfig,
     TrainingServerConfig,
 )
-from .schema.pipeline import (
+from .schema.pipeline import (  # noqa: F401
     CheckpointingConfig,
+    CoresetSelectionStrategy,
     DataConfig,
     DownsamplingConfig,
     EvalDataConfig,
     EvaluationConfig,
+    FreshnessSamplingStrategy,
     FullModelStrategy,
     IncrementalModelStrategy,
     LrSchedulerConfig,
@@ -37,6 +39,7 @@ from .schema.pipeline import (
     ModelConfig,
     ModynPipelineConfig,
     MultiDownsamplingConfig,
+    NewDataSelectionStrategy,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,

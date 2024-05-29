@@ -7,7 +7,6 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
     DownsamplingScheduler,
     GradNormDownsamplingStrategy,
     LossDownsamplingStrategy,
-    NoDownsamplingStrategy,
     instantiate_scheduler,
 )
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -222,12 +221,6 @@ def test_wrong_trigger():
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
         assert downs.training_status_bar_scale == 100
-
-
-def test_instantiate_scheduler_empty():
-    scheduler = instantiate_scheduler({}, {}, 0, 100)
-    assert isinstance(scheduler.current_downsampler, NoDownsamplingStrategy)
-    assert scheduler.next_threshold is None
 
 
 def test_instantiate_scheduler_just_one():

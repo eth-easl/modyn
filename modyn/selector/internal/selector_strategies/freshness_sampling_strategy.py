@@ -6,6 +6,7 @@ from math import isclose
 from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.config import FreshnessSamplingStrategy as FreshnessSamplingStrategyConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -32,12 +33,10 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(
-            config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["unused_data_ratio"]
-        )
+    def __init__(self, config: FreshnessSamplingStrategyConfig, modyn_config: dict, pipeline_id: int):
+        super().__init__(config, modyn_config, pipeline_id)
         assert self.tail_triggers is None or self.tail_triggers == 0, "Tail triggers not supported for this strategy."
-        self.unused_data_ratio = self._config["unused_data_ratio"]
+        self.unused_data_ratio = self._config.unused_data_ratio
         self._is_first_trigger = True
 
         if self.unused_data_ratio < 1 or self.unused_data_ratio > 99:
@@ -53,24 +52,13 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             )
 
         self._storage_backend: AbstractStorageBackend
-        if "storage_backend" in config:
-            if config["storage_backend"] == "local":
-                # TODO(#324): Support local backend on FreshnessSamplingStrategy
-                raise NotImplementedError("The FreshnessSamplingStrategy currently does not support the local backend.")
-
-            if config["storage_backend"] == "database":
-                self._storage_backend = DatabaseStorageBackend(
-                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown storage backend \"{config['storage_backend']}\". Supported: database"
-                )
-        else:
-            logger.info("FreshnessSamplingStrategy defaulting to database backend.")
+        if config.storage_backend == "database":
             self._storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
+        else:
+            # TODO(#324): Support local backend on FreshnessSamplingStrategy
+            raise NotImplementedError(f"Unknown storage backend \"{config['storage_backend']}\". Supported: database")
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         assert len(keys) == len(timestamps)

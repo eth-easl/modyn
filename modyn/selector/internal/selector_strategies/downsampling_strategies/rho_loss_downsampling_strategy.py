@@ -1,10 +1,14 @@
+from modyn.config.schema.downsampling_config import RHOLossDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
-    def __init__(self, downsampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+    def __init__(
+            self, downsampling_config: RHOLossDownsamplingConfig,
+            modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+    ):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"

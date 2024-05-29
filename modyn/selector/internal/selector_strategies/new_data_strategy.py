@@ -5,6 +5,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.config import NewDataSelectionStrategy
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
@@ -34,30 +35,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(
-            config, modyn_config, pipeline_id, maximum_keys_in_memory, required_configs=["storage_backend"]
-        )
-
-        if self.has_limit and not self.reset_after_trigger and "limit_reset" not in config:
-            raise ValueError("Please define how to deal with the limit without resets using the 'limit_reset' option.")
-
-        if not (self.has_limit and not self.reset_after_trigger) and "limit_reset" in config:
-            logger.warning("Since we do not have a limit and not reset, we ignore the 'limit_reset' setting.")
-
-        self.supported_limit_reset_strategies = ["lastX", "sampleUAR"]
-        if "limit_reset" in config:
-            self.limit_reset_strategy = config["limit_reset"]
-
-            if self.limit_reset_strategy not in self.supported_limit_reset_strategies:
-                raise ValueError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
+    def __init__(self, config: NewDataSelectionStrategy, modyn_config: dict, pipeline_id: int):
+        super().__init__(config, modyn_config, pipeline_id)
+        self.limit_reset_strategy = config.limit_reset
 
         self._storage_backend: AbstractStorageBackend
-        if config["storage_backend"] == "local":
+        if config.storage_backend == "local":
             self._storage_backend = LocalStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
-        elif config["storage_backend"] == "database":
+        elif config.storage_backend == "database":
             self._storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
@@ -117,7 +104,8 @@ class NewDataStrategy(AbstractSelectionStrategy):
             yield from self._get_current_trigger_data()
 
     def _get_data_tail(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        assert not self.reset_after_trigger and self.tail_triggers > 0
+        assert self.tail_triggers is not None and self.tail_triggers > 0
+        assert not self.reset_after_trigger
 
         if self.has_limit:
             swt = Stopwatch()
@@ -182,6 +170,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         Returns:
             list[int]: Keys of used samples
         """
+        assert self.tail_triggers is not None
         yield from self._storage_backend.get_data_since_trigger(self._next_trigger_id - self.tail_triggers)
 
     def _get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:

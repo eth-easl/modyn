@@ -1,5 +1,6 @@
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
+from modyn.config import CoresetSelectionStrategy, MultiDownsamplingConfig, DownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -10,13 +11,13 @@ class DownsamplingScheduler:
         self,
         modyn_config: dict,
         pipeline_id: int,
-        downsampling_configs: list[dict],
+        downsampling_configs: List[DownsamplingConfig],
         downsampling_thresholds: list[int],
         maximum_keys_in_memory: int,
     ):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
-        self.dowsampling_configs: list[dict] = downsampling_configs
+        self.dowsampling_configs = downsampling_configs
         self.dowsampling_thresholds: list[int] = downsampling_thresholds
         self.downsampler_index = 0
         # transition from downsampler[i] to downsampler[i+1] happens before the thresholds[i]-th trigger
@@ -78,26 +79,17 @@ class DownsamplingScheduler:
 
 
 def instantiate_scheduler(
-    config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+    config: CoresetSelectionStrategy, modyn_config: dict, pipeline_id: int
 ) -> DownsamplingScheduler:
-    if config.get("downsampling_config") is None:
-        # missing downsampler, use NoDownsamplingStrategy
-        list_of_downsamplers = [{"strategy": "No"}]
-        list_of_thresholds: list[int] = []
-    elif config["downsampling_config"].get("downsampling_list") is None:
-        # just use one strategy, so fake scheduler
-        list_of_downsamplers = [config["downsampling_config"]]
-        list_of_thresholds = []
-    else:
+    if isinstance(config.downsampling_config, MultiDownsamplingConfig):
         # real scheduler
-        list_of_downsamplers = config["downsampling_config"]["downsampling_list"]
-        if config["downsampling_config"].get("downsampling_thresholds") is None:
-            raise ValueError(
-                "You should specify the thresholds to switch from a downsampler to another. "
-                "Use downsampling_thresholds"
-            )
-        list_of_thresholds = config["downsampling_config"]["downsampling_thresholds"]
+        list_of_downsamplers = config.downsampling_config.downsampling_list
+        list_of_thresholds = config.downsampling_config.downsampling_thresholds
+    else:
+        # just use one strategy, so fake scheduler
+        list_of_downsamplers = [config.downsampling_config]
+        list_of_thresholds = []
 
     return DownsamplingScheduler(
-        modyn_config, pipeline_id, list_of_downsamplers, list_of_thresholds, maximum_keys_in_memory
+        modyn_config, pipeline_id, list_of_downsamplers, list_of_thresholds, config.maximum_keys_in_memory
     )

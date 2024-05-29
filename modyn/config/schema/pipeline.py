@@ -4,22 +4,18 @@ from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
+from modyn.config.schema.downsampling_config import DownsamplingConfig, NoDownsamplingConfig
+from modyn.config.schema.modyn_base_model import ModynBaseModel
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
 
-class BaseModel(PydanticBaseModel):
-    class Config:
-        extra = "forbid"
-
-
-class Pipeline(BaseModel):
+class Pipeline(ModynBaseModel):
     name: str = Field(description="The name of the pipeline.")
     description: Optional[str] = Field(None, description="The description of the pipeline.")
     version: Optional[str] = Field(None, description="The version of the pipeline.")
@@ -28,7 +24,7 @@ class Pipeline(BaseModel):
 # ------------------------------------------------------- MODEL ------------------------------------------------------ #
 
 
-class ModelConfig(BaseModel):
+class ModelConfig(ModynBaseModel):
     id: str = Field(description="The ID of the model that should be trained.")
     config: dict = Field(
         default_factory=dict,
@@ -39,7 +35,7 @@ class ModelConfig(BaseModel):
 # --------------------------------------------------- MODEL STORAGE -------------------------------------------------- #
 
 
-class _BaseModelStrategy(BaseModel):
+class _BaseModelStrategy(ModynBaseModel):
     """Base class for the model storage strategies."""
 
     config: Dict[str, Any] = Field(
@@ -73,7 +69,7 @@ class IncrementalModelStrategy(_BaseModelStrategy):
 ModelStrategy = Union[FullModelStrategy, IncrementalModelStrategy]
 
 
-class PipelineModelStorageConfig(BaseModel):
+class PipelineModelStorageConfig(ModynBaseModel):
     full_model_strategy: FullModelStrategy = Field(description="Which full model strategy is used.")
     incremental_model_strategy: Optional[IncrementalModelStrategy] = Field(
         None, description="Which incremental model strategy is used."
@@ -85,7 +81,7 @@ class PipelineModelStorageConfig(BaseModel):
 LimitResetStrategy = Literal["lastX", "sampleUAR"]
 
 
-class PresamplingConfig(BaseModel):
+class PresamplingConfig(ModynBaseModel):
     """Config for the presampling strategy of CoresetStrategy. If missing, no presampling is applied."""
 
     strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
@@ -101,43 +97,7 @@ class PresamplingConfig(BaseModel):
     force_required_target_size: bool = Field(False)
 
 
-class DownsamplingConfig(BaseModel):
-    """Config for the downsampling strategy of SelectionStrategy."""
-
-    class Config:
-        # depending on the strategy, additional fields may be required. Please refer to the respective strategy class
-        # for exact configurable fields.
-        extra = "allow"
-
-    strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
-        Field(
-            description="Strategy used to downsample the data."
-            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
-        )
-    )
-    sample_then_batch: bool = Field(
-        False,
-        description=(
-            "If True, the samples are first sampled and then batched and supplied to the training loop. If False, "
-            "the datapoints are first divided into batches and then sampled."
-        ),
-    )
-    ratio: int = Field(
-        description="Ratio post_sampling_size/pre_sampling_size. E.g. with 160 records and a ratio of 50 we keep 80.",
-        min=0,
-        max=100,
-    )
-    period: int | None = Field(
-        None,
-        description=(
-            "In multi-epoch training and sample_then_batch, how frequently the data is selected. "
-            "`1` selects every epoch. To select once per trigger, set this parameter to 0."
-        ),
-        min=0,
-    )
-
-
-class MultiDownsamplingConfig(BaseModel):
+class MultiDownsamplingConfig(ModynBaseModel):
     downsampling_list: List[DownsamplingConfig] = Field(description="An array of downsampling strategies.")
     downsampling_thresholds: List[int] = Field(
         description=(
@@ -158,7 +118,7 @@ class MultiDownsamplingConfig(BaseModel):
 StorageBackend = Literal["database", "local"]
 
 
-class _BaseSelectionStrategy(BaseModel):
+class _BaseSelectionStrategy(ModynBaseModel):
     maximum_keys_in_memory: int = Field(
         description="Limits how many keys should be materialized at a time in the strategy."
     )
@@ -170,12 +130,8 @@ class _BaseSelectionStrategy(BaseModel):
         -1,
         description="This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.",
     )
-    reset_after_trigger: bool = Field(
-        False,
-        description="If set to true, the selection strategy resets its internal state after a trigger.",
-    )
-    storage_backend: StorageBackend | None = Field(
-        None,
+    storage_backend: StorageBackend = Field(
+        Literal["database"],
         description="Most strategies currently support `database`, and the NewDataStrategy supports `local` as well.",
     )
     uses_weights: bool = Field(
@@ -189,10 +145,16 @@ class _BaseSelectionStrategy(BaseModel):
         None,
         description=(
             "For the training iteration, just use data from this trigger and the previous tail_triggers. "
-            "reset_after_trigger is equivalent to tail_triggers = 0. Omit this parameter if you want to use every "
+            "If tail_triggers = 0, it means we reset after every trigger. Omit this parameter if you want to use every "
             "previous datapoint."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_tail_triggers(self) -> Self:
+        if self.tail_triggers is not None and self.tail_triggers < 0:
+            raise ValueError("tail_triggers must be a non-negative integer or None.")
+        return self
 
 
 class FreshnessSamplingStrategy(_BaseSelectionStrategy):
@@ -221,19 +183,22 @@ class NewDataSelectionStrategy(_BaseSelectionStrategy):
 class CoresetSelectionStrategy(_BaseSelectionStrategy):
     name: Literal["CoresetStrategy"] = Field("CoresetStrategy")
 
-    presampling_config: Optional[PresamplingConfig] = Field(
-        None,
+    presampling_config: PresamplingConfig = Field(
+        PresamplingConfig(strategy="No", ratio=100),
         description=("Config for the presampling strategy. If missing, no presampling is applied."),
     )
-    downsampling_config: DownsamplingConfig | MultiDownsamplingConfig | None = Field(
-        None, description="Configurates the downsampling with one or multiple strategies."
+    downsampling_config: DownsamplingConfig | MultiDownsamplingConfig = Field(
+        NoDownsamplingConfig(strategy="No", ratio=100),
+        description="Configurates the downsampling with one or multiple strategies.",
     )
 
 
-SelectionStrategy = Union[FreshnessSamplingStrategy, NewDataSelectionStrategy, CoresetSelectionStrategy]
+SelectionStrategy = Annotated[
+    Union[FreshnessSamplingStrategy, NewDataSelectionStrategy, CoresetSelectionStrategy], Field(discriminator="name")
+]
 
 
-class CheckpointingConfig(BaseModel):
+class CheckpointingConfig(ModynBaseModel):
     """Configuration for checkpointing during training."""
 
     activated: bool = Field(description="Whether we checkpoint or not.")
@@ -247,7 +212,7 @@ class CheckpointingConfig(BaseModel):
 OptimizerSource = Literal["PyTorch", "APEX"]
 
 
-class OptimizerParamGroup(BaseModel):
+class OptimizerParamGroup(ModynBaseModel):
     """Configuration for a parameter group."""
 
     module: str = Field(description="A set of parameters.")
@@ -257,7 +222,7 @@ class OptimizerParamGroup(BaseModel):
     )
 
 
-class OptimizerConfig(BaseModel):
+class OptimizerConfig(ModynBaseModel):
     """Configuration for the optimizer used during training."""
 
     name: str = Field(description="The name of the optimizer (like an ID).")
@@ -269,7 +234,7 @@ class OptimizerConfig(BaseModel):
     )
 
 
-class OptimizationCriterion(BaseModel):
+class OptimizationCriterion(ModynBaseModel):
     """Configuration for the optimization criterion that we optimize."""
 
     name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
@@ -279,7 +244,7 @@ class OptimizationCriterion(BaseModel):
 LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
-class LrSchedulerConfig(BaseModel):
+class LrSchedulerConfig(ModynBaseModel):
     """Configuration for the Torch-based Learning Rate (LR) scheduler used for training."""
 
     name: str = Field(description="The name of the LR scheduler.")
@@ -300,7 +265,7 @@ class LrSchedulerConfig(BaseModel):
         return self
 
 
-class TrainingConfig(BaseModel):
+class TrainingConfig(ModynBaseModel):
     gpus: int = Field(description="The number of GPUs that should be used for training.", ge=1)
     epochs_per_trigger: int = Field(1, description="The number of epochs that should be trained per trigger.")
     num_samples_to_pass: list[int] | None = Field(
@@ -394,7 +359,7 @@ class TrainingConfig(BaseModel):
 # ------------------------------------------------------- Data ------------------------------------------------------- #
 
 
-class DataConfig(BaseModel):
+class DataConfig(ModynBaseModel):
     dataset_id: str = Field(description="ID of dataset to be used.")
     bytes_parser_function: str = Field(
         description=(
@@ -423,7 +388,7 @@ class DataConfig(BaseModel):
 _REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
 
 
-class TimeTriggerConfig(BaseModel):
+class TimeTriggerConfig(ModynBaseModel):
     id: Literal["TimeTrigger"] = Field("TimeTrigger")
     every: str = Field(
         description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
@@ -437,12 +402,12 @@ class TimeTriggerConfig(BaseModel):
         return num * SECONDS_PER_UNIT[unit]
 
 
-class DataAmountTriggerConfig(BaseModel):
+class DataAmountTriggerConfig(ModynBaseModel):
     id: Literal["DataAmountTrigger"] = Field("DataAmountTrigger")
     num_samples: int = Field(description="The number of samples that should trigger the pipeline.", ge=1)
 
 
-class DataDriftTriggerConfig(BaseModel):
+class DataDriftTriggerConfig(ModynBaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
     detection_interval_data_points: int = Field(
         1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
@@ -460,7 +425,7 @@ TriggerConfig = Annotated[
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
 
 
-class Metric(BaseModel):
+class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
     evaluation_transformer_function: Optional[str] = Field(
@@ -469,7 +434,7 @@ class Metric(BaseModel):
     )
 
 
-class MatrixEvalStrategyConfig(BaseModel):
+class MatrixEvalStrategyConfig(ModynBaseModel):
     eval_every: str = Field(
         description="The interval length for the evaluation "
         "specified by an integer followed by a time unit (e.g. '100s')."
@@ -495,7 +460,7 @@ class MatrixEvalStrategyConfig(BaseModel):
         return self
 
 
-class OffsetEvalStrategyConfig(BaseModel):
+class OffsetEvalStrategyConfig(ModynBaseModel):
     offsets: List[str] = Field(
         description=(
             "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
@@ -514,12 +479,12 @@ class OffsetEvalStrategyConfig(BaseModel):
         return value
 
 
-class MatrixEvalStrategyModel(BaseModel):
+class MatrixEvalStrategyModel(ModynBaseModel):
     name: Literal["MatrixEvalStrategy"]
     config: MatrixEvalStrategyConfig
 
 
-class OffsetEvalStrategyModel(BaseModel):
+class OffsetEvalStrategyModel(ModynBaseModel):
     name: Literal["OffsetEvalStrategy"]
     config: OffsetEvalStrategyConfig
 
@@ -542,7 +507,7 @@ class EvalDataConfig(DataConfig):
     )
 
 
-class ResultWriter(BaseModel):
+class ResultWriter(ModynBaseModel):
     name: str = Field(description="The name of the result writer.")
     config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
 
@@ -554,7 +519,7 @@ ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
 - tensorboard: output the evaluation to dedicated tensorboard files."""
 
 
-class EvaluationConfig(BaseModel):
+class EvaluationConfig(ModynBaseModel):
     eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[ResultWriterType] = Field(
@@ -582,7 +547,7 @@ class EvaluationConfig(BaseModel):
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 
 
-class ModynPipelineConfig(BaseModel):
+class ModynPipelineConfig(ModynBaseModel):
     pipeline: Pipeline
 
     # model is a reserved keyword in Pydantic, so we use modyn_model instead

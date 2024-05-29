@@ -1,11 +1,12 @@
+from modyn.config import DownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import instantiate_class
 
 
 def instantiate_downsampler(
-    downsampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+    downsampling_config: DownsamplingConfig, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
 ) -> AbstractDownsamplingStrategy:
-    downsampling_strategy_name = downsampling_config["strategy"]
+    downsampling_strategy_name = downsampling_config.strategy
 
     downsampling_class = instantiate_class(
         "modyn.selector.internal.selector_strategies.downsampling_strategies",
