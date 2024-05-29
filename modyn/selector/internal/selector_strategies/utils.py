@@ -13,7 +13,7 @@ def get_trigger_dataset_size(
     # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
     assert isinstance(
         storage_backend, DatabaseStorageBackend
-    ), "CoresetStrategy currently only supports DatabaseBackend"
+    ), "We currently only support DatabaseBackend"
 
     def _session_callback(session: Session) -> Any:
         return (
