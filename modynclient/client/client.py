@@ -4,7 +4,6 @@ import time
 from typing import Optional
 
 import enlighten
-from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
@@ -170,24 +169,3 @@ class Client:
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
         else:
             logger.error(f"unknown pipeline status {json.dumps(res, sort_keys=True, indent=2)}")
-
-
-def run_multiple_pipelines(
-    client_config: ModynClientConfig,
-    pipeline_configs: list[ModynPipelineConfig],
-    start_replay_at: int = 0,
-    stop_replay_at: int | None = None,
-    maximum_triggers: int | None = None,
-) -> None:
-    logger.info("Start running multiple experiments!")
-    logger.info(f"{client_config.model_dump()}")
-
-    for pipeline_config in pipeline_configs:
-        client = Client(client_config, pipeline_config, start_replay_at, stop_replay_at, maximum_triggers)
-
-    logger.info(f"Starting pipeline: {pipeline_config.pipeline.name}")
-    started = client.start_pipeline()
-    if started:
-        client.poll_pipeline_status()
-
-    logger.info("Finished running multiple experiments!")
