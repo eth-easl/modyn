@@ -35,6 +35,7 @@ from modyn.trainer_server.internal.dataset.data_utils import (
 from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
+from modyn.trainer_server.internal.trainer.batch_accumulator import BatchAccumulator
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -370,6 +371,19 @@ class PytorchTrainer:
             # an infinity epoch generator
             epoch_num_generator = itertools.count(start=0)
             self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
+
+        if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
+            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
+            assert post_downsampling_size < self._batch_size
+            if self._batch_size % post_downsampling_size != 0:
+                raise ValueError(
+                    f"The target batch size of {self._batch_size} is not a multiple of the batch size "
+                    + f"after downsampling a batch in BtS mode ({post_downsampling_size}). We cannot accumulate "
+                    + "batches. Please choose the downsampling ratio and batch size such that this is possible."
+                )
+            batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
+
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
@@ -418,7 +432,15 @@ class PytorchTrainer:
                         stopw.start("DownsampleBTS", resume=True)
                         data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         stopw.stop()
+                        self._assert_data_size(post_downsampling_size, data, sample_ids, target)
+                        if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
+                            stopw.start("FetchBatch", resume=True)
+                            stopw.start("IndivFetchBatch", overwrite=True)
+                            continue
 
+                        data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
+
+                    self._assert_data_size(self._batch_size, data, sample_ids, target)
                     stopw.start("Forward", resume=True)
                     output = self._model.model(data)
                     stopw.stop("Forward")
@@ -534,6 +556,21 @@ class PytorchTrainer:
         self._info("Training complete!")
         self._persist_pipeline_log()
 
+    @staticmethod
+    def _assert_data_size(
+        expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor
+    ) -> None:
+        assert (
+            all(tensor.shape[0] == expected_size for tensor in data.values())
+            if isinstance(data, dict)
+            else data.shape[0] == expected_size
+        ), (
+            f"expected size: {expected_size} actual size: "
+            + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
+        )
+        assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
+        assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
+
     def _load_dataset_log(self) -> None:
         worker_log = {}
         for filename in glob.glob(str(self._dataset_log_path / "*.log")):
@@ -637,8 +674,8 @@ class PytorchTrainer:
         return sample_ids, target, data
 
     def downsample_batch(
-        self, data: torch.Tensor, sample_ids: list, target: torch.Tensor
-    ) -> Tuple[torch.Tensor, list, torch.Tensor, torch.Tensor]:
+        self, data: Union[dict[str, torch.Tensor], torch.Tensor], sample_ids: list, target: torch.Tensor
+    ) -> Tuple[Union[dict[str, torch.Tensor], torch.Tensor], list, torch.Tensor, torch.Tensor]:
         """
         Function to score every datapoint in the current BATCH and sample a fraction of it
         Used for downsampling strategies in BATCH_THEN_SAMPLE mode
