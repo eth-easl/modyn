@@ -6,8 +6,11 @@ from modyn.selector.internal.storage_backend.database import DatabaseStorageBack
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def __init__(
-            self, downsampling_config: RHOLossDownsamplingConfig,
-            modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+        self,
+        downsampling_config: RHOLossDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
     ):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 

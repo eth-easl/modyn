@@ -10,7 +10,13 @@ class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
 
     """
 
-    def __init__(self, downsampling_config: NoDownsamplingConfig, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+    def __init__(
+        self,
+        downsampling_config: NoDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
+    ):
         # just to deal with exceptions in parent class
         if downsampling_config["ratio"] != 100:
             raise ValueError("NoDownsamplingStrategy must have a downsampling ratio of 100%")

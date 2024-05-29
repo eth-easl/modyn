@@ -1,7 +1,6 @@
 from typing import Annotated, Literal, Union
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
-
 from pydantic import Field
 
 
@@ -114,5 +113,5 @@ DownsamplingConfig = Annotated[
         NoDownsamplingConfig,
         RHOLossDownsamplingConfig,
     ],
-    Field(discriminator="name"),
+    Field(discriminator="strategy"),
 ]
