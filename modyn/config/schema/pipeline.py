@@ -142,7 +142,6 @@ class _BaseSelectionStrategy(ModynBaseModel):
         ),
     )
     tail_triggers: int | None = Field(
-        None,
         description=(
             "For the training iteration, just use data from this trigger and the previous tail_triggers. "
             "If tail_triggers = 0, it means we reset after every trigger. "
