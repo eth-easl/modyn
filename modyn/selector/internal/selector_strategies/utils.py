@@ -11,9 +11,7 @@ def get_trigger_dataset_size(
 ) -> int:
     # Count the number of samples that might be sampled during the next trigger. Typically used to compute the
     # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
-    assert isinstance(
-        storage_backend, DatabaseStorageBackend
-    ), "We currently only support DatabaseBackend"
+    assert isinstance(storage_backend, DatabaseStorageBackend), "We currently only support DatabaseBackend"
 
     def _session_callback(session: Session) -> Any:
         return (
