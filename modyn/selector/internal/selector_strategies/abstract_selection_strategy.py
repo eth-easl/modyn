@@ -31,7 +31,6 @@ class AbstractSelectionStrategy(ABC):
 
         self.training_set_size_limit: int = config.limit
         self.has_limit = self.training_set_size_limit > 0
-        self.reset_after_trigger: bool = config.reset_after_trigger
 
         # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
         self.uses_weights = config.uses_weights
