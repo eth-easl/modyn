@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
-from modyn.utils.utils import SECONDS_PER_UNIT
+from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
@@ -417,6 +417,24 @@ class DataConfig(BaseModel):
         description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )
 
+    @field_validator("bytes_parser_function", mode="before")
+    @classmethod
+    def validate_bytes_parser_function(cls, value: str) -> str:
+        try:
+            res = deserialize_function(value, "bytes_parser_function")
+            if not callable(res):
+                raise ValueError("Function 'bytes_parser_function' must be callable!")
+        except AttributeError as exc:
+            raise ValueError("Function 'bytes_parser_function' could not be parsed!") from exc
+        return value
+
+    @property
+    def bytes_parser_function_deserialized(self) -> Callable:
+        func = deserialize_function(self.bytes_parser_function, "bytes_parser_function")
+        if func is None:
+            raise ValueError("Function 'bytes_parser_function' could not be parsed!")
+        return func
+
 
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
 
@@ -463,10 +481,27 @@ TriggerConfig = Annotated[
 class Metric(BaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
-    evaluation_transformer_function: Optional[str] = Field(
+    evaluation_transformer_function: str | None = Field(
         None,
         description="A function used to transform the model output before evaluation.",
     )
+
+    @field_validator("evaluation_transformer_function", mode="before")
+    @classmethod
+    def validate_evaluation_transformer_function(cls, value: str) -> str | None:
+        if not value:
+            return None
+        try:
+            deserialize_function(value, "evaluation_transformer_function")
+        except AttributeError as exc:
+            raise ValueError("Function 'evaluation_transformer_function' could not be parsed!") from exc
+        return value
+
+    @property
+    def evaluation_transformer_function_deserialized(self) -> Callable | None:
+        if self.evaluation_transformer_function:
+            return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
+        return None
 
 
 class MatrixEvalStrategyConfig(BaseModel):
