@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKeyConstraint, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey
 
 from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.metadata_database.metadata_base import MetadataBase

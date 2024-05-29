@@ -1,3 +1,5 @@
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
@@ -28,4 +30,23 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         raise NotImplementedError
 
     def _get_or_create_rho_pipeline_id(self) -> int:
-        raise NotImplementedError
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            aux_pipeline = database.session.get(AuxiliaryPipeline, self._pipeline_id)
+            if aux_pipeline is not None:
+                return aux_pipeline.auxiliary_pipeline_id
+
+            # register rho pipeline
+            rho_pipeline_id = self._create_rho_pipeline_id(database)
+        return rho_pipeline_id
+
+    def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection) -> int:
+        rho_pipeline_id = database.register_pipeline(
+            num_workers=1,
+            model_class_name="RHOLoss",
+            model_config="{}",
+            amp=False,
+            selection_strategy="random",
+            selection_strategy_config="{}",
+        )
+        database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
+        return rho_pipeline_id
