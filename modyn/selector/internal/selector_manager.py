@@ -87,12 +87,9 @@ class SelectorManager:
             )
             self._selector_locks[pipeline_id] = self._prepared_locks[pipeline_id % len(self._prepared_locks)]
 
-            selection_strategy = TypeAdapter(SelectionStrategyModel).validate_json(pipeline.selection_strategy)
-            self._instantiate_selector(pipeline_id, pipeline.num_workers, selection_strategy)
+            self._instantiate_selector(pipeline_id, pipeline.num_workers, pipeline.selection_strategy)
 
-    def _instantiate_selector(
-        self, pipeline_id: int, num_workers: int, selection_strategy: SelectionStrategyModel
-    ) -> None:
+    def _instantiate_selector(self, pipeline_id: int, num_workers: int, selection_strategy: str) -> None:
         assert pipeline_id in self._selector_locks, f"Trying to register pipeline {pipeline_id} without existing lock!"
         parsed_selection_strategy = self._instantiate_strategy(selection_strategy, pipeline_id)
         selector = Selector(
@@ -189,9 +186,8 @@ class SelectorManager:
 
         return self._selectors[pipeline_id].uses_weights()
 
-    def _instantiate_strategy(
-        self, selection_strategy: SelectionStrategyModel, pipeline_id: int
-    ) -> AbstractSelectionStrategy:
+    def _instantiate_strategy(self, raw_selection_strategy: str, pipeline_id: int) -> AbstractSelectionStrategy:
+        selection_strategy = TypeAdapter(SelectionStrategyModel).validate_json(raw_selection_strategy)
         strategy_name = selection_strategy.name
         strategy_module = dynamic_module_import("modyn.selector.internal.selector_strategies")
         if not hasattr(strategy_module, strategy_name):

@@ -131,7 +131,7 @@ class _BaseSelectionStrategy(ModynBaseModel):
         description="This limits how many data points we train on at maximum on a trigger. Set to -1 to disable limit.",
     )
     storage_backend: StorageBackend = Field(
-        Literal["database"],
+        "database",
         description="Most strategies currently support `database`, and the NewDataStrategy supports `local` as well.",
     )
     uses_weights: bool = Field(
@@ -142,11 +142,9 @@ class _BaseSelectionStrategy(ModynBaseModel):
         ),
     )
     tail_triggers: int | None = Field(
-        None,
         description=(
             "For the training iteration, just use data from this trigger and the previous tail_triggers. "
-            "If tail_triggers = 0, it means we reset after every trigger. Omit this parameter if you want to use every "
-            "previous datapoint."
+            "If tail_triggers = 0, it means we reset after every trigger."
         ),
     )
 
@@ -157,19 +155,19 @@ class _BaseSelectionStrategy(ModynBaseModel):
         return self
 
 
-class FreshnessSamplingStrategy(_BaseSelectionStrategy):
+class FreshnessSamplingConfig(_BaseSelectionStrategy):
     name: Literal["FreshnessSamplingStrategy"] = Field("FreshnessSamplingStrategy")
-
-    unused_data_ratio: float = Field(
-        0.0,
+    unused_data_ratio: int = Field(
         description=(
             "Ratio that defines how much data in the training set per trigger should be from previously unused "
             "data (in all previous triggers)."
         ),
+        ge=1,
+        le=99,
     )
 
 
-class NewDataSelectionStrategy(_BaseSelectionStrategy):
+class NewDataSelectionConfig(_BaseSelectionStrategy):
     name: Literal["NewDataStrategy"] = Field("NewDataStrategy")
 
     limit_reset: LimitResetStrategy = Field(
@@ -180,7 +178,7 @@ class NewDataSelectionStrategy(_BaseSelectionStrategy):
     )
 
 
-class CoresetSelectionStrategy(_BaseSelectionStrategy):
+class CoresetSelectionConfig(_BaseSelectionStrategy):
     name: Literal["CoresetStrategy"] = Field("CoresetStrategy")
 
     presampling_config: PresamplingConfig = Field(
@@ -194,7 +192,7 @@ class CoresetSelectionStrategy(_BaseSelectionStrategy):
 
 
 SelectionStrategy = Annotated[
-    Union[FreshnessSamplingStrategy, NewDataSelectionStrategy, CoresetSelectionStrategy], Field(discriminator="name")
+    Union[FreshnessSamplingConfig, NewDataSelectionConfig, CoresetSelectionConfig], Field(discriminator="name")
 ]
 
 

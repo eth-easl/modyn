@@ -1,5 +1,6 @@
 from typing import Optional
 
+from modyn.config import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
@@ -12,7 +13,11 @@ from sqlalchemy.orm.session import Session
 
 class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
-        self, presampling_config: dict, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
+        self,
+        presampling_config: PresamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        storage_backend: AbstractStorageBackend,
     ):
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
         self.requires_trigger_dataset_size = True

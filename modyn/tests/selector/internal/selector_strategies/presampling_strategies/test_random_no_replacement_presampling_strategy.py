@@ -4,6 +4,7 @@ import shutil
 import tempfile
 
 import pytest
+from modyn.config import CoresetSelectionConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import RandomNoReplacementPresamplingStrategy
@@ -14,11 +15,12 @@ TMP_DIR = tempfile.mkdtemp()
 
 
 def get_config():
-    return {
-        "reset_after_trigger": False,
-        "presampling_config": {"ratio": 25, "strategy": "RandomNoReplacement"},
-        "limit": -1,
-    }
+    return CoresetSelectionConfig(
+        tail_triggers=None,
+        presampling_config=PresamplingConfig(ratio=25, strategy="RandomNoReplacement"),
+        limit=-1,
+        maximum_keys_in_memory=1000,
+    )
 
 
 def get_minimal_modyn_config():
@@ -56,7 +58,7 @@ def insert_data(strat, base_index=0, size=200):
 
 def test_sampling():
     modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
+    strat = CoresetStrategy(get_config(), modyn_config, 0)
 
     strat.presampling_strategy: RandomNoReplacementPresamplingStrategy
 

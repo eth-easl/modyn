@@ -33,7 +33,7 @@ class BaseDownsamplingConfig(ModynBaseModel):
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 
-    strategy: Literal["Craig"]
+    strategy: Literal["Uncertainty"] = "Uncertainty"
     score_metric: Literal["LeastConfidence", "Entropy", "Margin"] = Field(
         description="the metric used to score uncertainty for the datapoints"
     )
@@ -43,21 +43,21 @@ class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
 class KcenterGreedyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the KcenterGreedy downsampling strategy."""
 
-    strategy: Literal["KcenterGreedy"]
+    strategy: Literal["KcenterGreedy"] = "KcenterGreedy"
     balance: bool = Field(False, description="If True, the samples are balanced.")
 
 
 class GradMatchDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the GradMatch downsampling strategy."""
 
-    strategy: Literal["GradMatch"]
+    strategy: Literal["GradMatch"] = "GradMatch"
     balance: bool = Field(False, description="If True, the samples are balanced.")
 
 
 class CraigDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 
-    strategy: Literal["Craig"]
+    strategy: Literal["Craig"] = "Craig"
     selection_batch: int = Field(64, description="The batch size for the selection.")
     balance: bool = Field(False, description="If True, the samples are balanced.")
     greedy: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
@@ -68,13 +68,13 @@ class CraigDownsamplingConfig(BaseDownsamplingConfig):
 class LossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Loss downsampling strategy."""
 
-    strategy: Literal["Loss"]
+    strategy: Literal["Loss"] = "Loss"
 
 
 class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Submodular downsampling strategy."""
 
-    strategy: Literal["Submodular"]
+    strategy: Literal["Submodular"] = "Submodular"
     submodular_function: Literal["FacilityLocation", "GraphCut", "LogDeterminant"]
     submodular_optimizer: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
         "NaiveGreedy", description="The greedy strategy to use."
@@ -86,19 +86,20 @@ class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
 class GradNormDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the GradNorm downsampling strategy."""
 
-    strategy: Literal["GradNorm"]
+    strategy: Literal["GradNorm"] = "GradNorm"
 
 
 class NoDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the No downsampling strategy."""
 
-    strategy: Literal["No"]
+    strategy: Literal["No"] = "No"
+    ratio: int = Field(100, description="For No downsampling, the ratio must be 100.")
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
-    strategy: Literal["RHOLoss"]
+    strategy: Literal["RHOLoss"] = "RHOLoss"
 
 
 DownsamplingConfig = Annotated[

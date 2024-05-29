@@ -3,7 +3,7 @@ import random
 from typing import Any, Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import CoresetSelectionStrategy
+from modyn.config import CoresetSelectionConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
-    def __init__(self, config: CoresetSelectionStrategy, modyn_config: dict, pipeline_id: int):
+    def __init__(self, config: CoresetSelectionConfig, modyn_config: dict, pipeline_id: int):
         super().__init__(config, modyn_config, pipeline_id)
 
         # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
@@ -37,7 +37,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
         else:
-            raise NotImplementedError(f"Unknown storage backend \"{config['storage_backend']}\". Supported: database")
+            raise NotImplementedError(f'Unknown storage backend "{config.storage_backend}". Supported: database')
 
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(

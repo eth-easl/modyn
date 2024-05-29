@@ -6,7 +6,7 @@ from math import isclose
 from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import FreshnessSamplingStrategy as FreshnessSamplingStrategyConfig
+from modyn.config import FreshnessSamplingConfig as FreshnessSamplingStrategyConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -58,7 +58,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             )
         else:
             # TODO(#324): Support local backend on FreshnessSamplingStrategy
-            raise NotImplementedError(f"Unknown storage backend \"{config['storage_backend']}\". Supported: database")
+            raise NotImplementedError(f'Unknown storage backend "{config.storage_backend}". Supported: database')
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
         assert len(keys) == len(timestamps)

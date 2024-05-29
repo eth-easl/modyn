@@ -8,7 +8,7 @@ from modyn.config.schema.pipeline import (
     Metric,
     ModelConfig,
     ModynPipelineConfig,
-    NewDataSelectionStrategy,
+    NewDataSelectionConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
@@ -41,7 +41,7 @@ def gen_pipeline_config(name: str, trigger: TriggerConfig, eval_strategy: EvalSt
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
-            selection_strategy=NewDataSelectionStrategy(
+            selection_strategy=NewDataSelectionConfig(
                 maximum_keys_in_memory=1000, storage_backend="database", limit=-1, reset_after_trigger=True
             ),
         ),

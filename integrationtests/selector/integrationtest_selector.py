@@ -1,9 +1,9 @@
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
 from modyn.config.schema.pipeline import (
-    CoresetSelectionStrategy,
+    CoresetSelectionConfig,
     DownsamplingConfig,
-    NewDataSelectionStrategy,
+    NewDataSelectionConfig,
     PresamplingConfig,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -19,8 +19,8 @@ from modyn.utils import grpc_connection_established
 # TODO(54): Write more integration tests for different strategies.
 
 
-def get_coreset_strategy_config() -> CoresetSelectionStrategy:
-    return CoresetSelectionStrategy(
+def get_coreset_strategy_config() -> CoresetSelectionConfig:
+    return CoresetSelectionConfig(
         maximum_keys_in_memory=250,
         storage_backend="database",  # TODO(#324): Support local backend
         limit=-1,
@@ -29,8 +29,8 @@ def get_coreset_strategy_config() -> CoresetSelectionStrategy:
     )
 
 
-def get_newdata_strategy_config() -> NewDataSelectionStrategy:
-    return NewDataSelectionStrategy(
+def get_newdata_strategy_config() -> NewDataSelectionConfig:
+    return NewDataSelectionConfig(
         maximum_keys_in_memory=2,
         limit=-1,
         reset_after_trigger=True,

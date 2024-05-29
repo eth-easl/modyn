@@ -35,7 +35,7 @@ training:
     maximum_keys_in_memory: 10000
     storage_backend: "database"
     limit: -1
-    reset_after_trigger: True
+    tail_triggers: 0
   seed: 42
   epochs_per_trigger: 1
 data:

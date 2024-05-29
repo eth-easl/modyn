@@ -26,12 +26,12 @@ from .schema.config import (
 )
 from .schema.pipeline import (  # noqa: F401
     CheckpointingConfig,
-    CoresetSelectionStrategy,
+    CoresetSelectionConfig,
     DataConfig,
     DownsamplingConfig,
     EvalDataConfig,
     EvaluationConfig,
-    FreshnessSamplingStrategy,
+    FreshnessSamplingConfig,
     FullModelStrategy,
     IncrementalModelStrategy,
     LrSchedulerConfig,
@@ -39,7 +39,7 @@ from .schema.pipeline import (  # noqa: F401
     ModelConfig,
     ModynPipelineConfig,
     MultiDownsamplingConfig,
-    NewDataSelectionStrategy,
+    NewDataSelectionConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
