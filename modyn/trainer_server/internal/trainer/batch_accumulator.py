@@ -42,12 +42,8 @@ class BatchAccumulator:
 
         self._accumulation_buffer.append((data, sample_ids.copy(), target.detach().cpu(), weights.detach().cpu()))
 
-        if (self._current_batch_number + 1) % self._accumulation_period == 0:
-            self._current_batch_number += 1
-            return True
-
-        self._current_batch_number += 1
-        return False
+        self._current_batch_number = (self._current_batch_number + 1) % self._accumulation_period
+        return self._current_batch_number == 0
 
     def get_accumulated_batch(self) -> tuple[torch.Tensor | dict[str, torch.Tensor], list, torch.Tensor, torch.Tensor]:
         """
@@ -60,18 +56,25 @@ class BatchAccumulator:
                 - The accumulated target values.
                 - The accumulated weights.
         """
-        data, sample_ids, target, weights = self._accumulation_buffer[-1]
+        data, sample_ids, target, weights = None, [], None, None
+        
+        for partial_data, partial_sids, partial_target, partial_weights in self._accumulation_buffer:
+            partial_target = partial_target.to(self._target_device)
+            partial_weights = partial_weights.to(self._target_device)
 
-        for partial_data, partial_sids, partial_target, partial_weights in reversed(self._accumulation_buffer[:-1]):
-            if isinstance(data, torch.Tensor):
-                data = torch.cat((data, partial_data.to(self._target_device)))
+            if isinstance(partial_data, torch.Tensor):
+                partial_data = partial_data.to(self._target_device)
+                data = torch.cat((data, partial_data)) if data is not None else partial_data
             else:
-                for key in data:
-                    data[key] = torch.cat((data[key], partial_data[key].to(self._target_device)))
+                if data is None:
+                    data = { key: partial_data[key].to(self._target_device) for key in partial_data }
+                else:
+                    for key in data:
+                        data[key] = torch.cat((data[key], partial_data[key].to(self._target_device)))
 
             sample_ids.extend(partial_sids)
-            target = torch.cat((target, partial_target.to(self._target_device)))
-            weights = torch.cat((weights, partial_weights.to(self._target_device)))
+            target = torch.cat((target, partial_target)) if target is not None else partial_target
+            weights = torch.cat((weights, partial_weights)) if weights is not None else partial_weights
 
         self._accumulation_buffer.clear()
 

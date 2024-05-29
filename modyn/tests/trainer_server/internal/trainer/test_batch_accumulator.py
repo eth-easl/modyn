@@ -120,9 +120,9 @@ class TestBatchAccumulator(unittest.TestCase):
         self.assertEqual(len(self.accumulator._accumulation_buffer), 0)
 
         assert torch.allclose(
-            accumulated_data, torch.Tensor([[12, 13, 14], [15, 16, 17], [6, 7, 8], [9, 10, 11], [1, 2, 3], [3, 4, 5]])
+            accumulated_data, torch.Tensor([[1, 2, 3], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14], [15, 16, 17],  ])
         )
-        self.assertEqual(accumulated_sample_ids, [5, 6, 3, 4, 1, 2])
+        self.assertEqual(accumulated_sample_ids, [1,2,3,4,5,6])
 
         # Start another round
 
