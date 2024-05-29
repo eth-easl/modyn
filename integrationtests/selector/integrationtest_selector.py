@@ -24,7 +24,7 @@ def get_coreset_strategy_config() -> CoresetSelectionConfig:
         maximum_keys_in_memory=250,
         storage_backend="database",  # TODO(#324): Support local backend
         limit=-1,
-        reset_after_trigger=True,
+        tail_triggers=0,
         presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=50),
     )
 
@@ -33,7 +33,7 @@ def get_newdata_strategy_config() -> NewDataSelectionConfig:
     return NewDataSelectionConfig(
         maximum_keys_in_memory=2,
         limit=-1,
-        reset_after_trigger=True,
+        tail_triggers=0,
         storage_backend="database",
     )
 
