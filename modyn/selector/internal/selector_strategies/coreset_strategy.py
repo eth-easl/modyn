@@ -1,9 +1,8 @@
 import logging
 import random
-from typing import Any, Iterable
+from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
@@ -11,9 +10,9 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 )
 from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies.utils import instantiate_presampler
+from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -27,30 +26,32 @@ class CoresetStrategy(AbstractSelectionStrategy):
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(
             config, modyn_config, pipeline_id, maximum_keys_in_memory
         )
-        self._storage_backend: AbstractStorageBackend
-        if "storage_backend" in config:
-            if config["storage_backend"] == "local":
-                # TODO(#324): Support local backend on CoresetStrategy
-                raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
-
-            if config["storage_backend"] == "database":
-                self._storage_backend = DatabaseStorageBackend(
-                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown storage backend \"{config['storage_backend']}\". Supported: database"
-                )
-        else:
-            logger.info("CoresetStrategy defaulting to database backend.")
-            self._storage_backend = DatabaseStorageBackend(
-                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-            )
 
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, self._storage_backend
         )
+
+    def _init_storage_backend(self) -> AbstractStorageBackend:
+        if "storage_backend" in self._config:
+            if self._config["storage_backend"] == "local":
+                # TODO(#324): Support local backend on CoresetStrategy
+                raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
+
+            if self._config["storage_backend"] == "database":
+                storage_backend = DatabaseStorageBackend(
+                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+                )
+            else:
+                raise NotImplementedError(
+                    f"Unknown storage backend \"{self._config['storage_backend']}\". Supported: database"
+                )
+        else:
+            logger.info("CoresetStrategy defaulting to database backend.")
+            storage_backend = DatabaseStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
+        return storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
@@ -102,27 +103,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
         pass  # As we currently hold everything in database (#116), this currently is a noop.
 
     def _get_trigger_dataset_size(self) -> int:
-        # Count the number of samples that might be sampled during the next trigger. Typically used to compute the
-        # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
-        assert isinstance(
-            self._storage_backend, DatabaseStorageBackend
-        ), "CoresetStrategy currently only supports DatabaseBackend"
-
-        def _session_callback(session: Session) -> Any:
-            return (
-                session.query(SelectorStateMetadata.sample_key)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    (
-                        SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
-                        if self.tail_triggers is not None
-                        else True
-                    ),
-                )
-                .count()
-            )
-
-        return self._storage_backend._execute_on_session(_session_callback)
+        return get_trigger_dataset_size(
+            self._storage_backend, self._pipeline_id, self._next_trigger_id, self.tail_triggers
+        )
 
     def get_available_labels(self) -> list[int]:
         return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)

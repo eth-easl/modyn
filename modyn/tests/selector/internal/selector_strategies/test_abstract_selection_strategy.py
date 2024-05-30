@@ -12,6 +12,8 @@ from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.tests.selector.internal.storage_backend.utils import MockStorageBackend
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
@@ -31,6 +33,10 @@ def get_minimal_modyn_config():
     }
 
 
+def mock__init_storage_backend(self) -> AbstractStorageBackend:
+    return MockStorageBackend(self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory)
+
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
@@ -44,6 +50,7 @@ def setup_and_teardown():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 def test_init():
     # Test init works
     strat = AbstractSelectionStrategy(
@@ -81,6 +88,7 @@ def test_init():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 def test__on_trigger():
     strat = AbstractSelectionStrategy(
         {"limit": -1, "reset_after_trigger": False},
@@ -93,6 +101,7 @@ def test__on_trigger():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 def test__reset_state():
     strat = AbstractSelectionStrategy(
         {"limit": -1, "reset_after_trigger": False},
@@ -105,6 +114,7 @@ def test__reset_state():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 def test_inform_data():
     strat = AbstractSelectionStrategy(
         {"limit": -1, "reset_after_trigger": False},
@@ -117,6 +127,7 @@ def test_inform_data():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
@@ -148,6 +159,7 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, test__on_trigger: MagicMock):
@@ -189,6 +201,7 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
@@ -215,6 +228,7 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
@@ -260,6 +274,7 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 def test_two_strategies_increase_next_trigger_separately(test__on_trigger: MagicMock):
     test__on_trigger.return_value = []
