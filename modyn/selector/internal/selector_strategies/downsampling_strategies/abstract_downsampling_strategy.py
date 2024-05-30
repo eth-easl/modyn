@@ -1,5 +1,6 @@
 from abc import ABC
 
+from modyn.config import SingleDownsamplingConfig
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
@@ -22,32 +23,21 @@ class AbstractDownsamplingStrategy(ABC):
     """
 
     def __init__(
-        self, downsampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+        self,
+        downsampling_config: SingleDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
     ) -> None:
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        if downsampling_config.get("sample_then_batch") is None:
-            raise ValueError(
-                "Please specify if you want to sample and then batch or vice versa. "
-                "Use the sample_then_batch parameter"
-            )
-        if downsampling_config["sample_then_batch"]:
+        if downsampling_config.sample_then_batch:
             self.downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
         else:
             self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and downsampling_config.get("period"):
-            raise ValueError("Downsampling period can be used only in sample-then-batch.")
-
-        self.downsampling_period = downsampling_config.get("period", 1)
-
-        if downsampling_config.get("ratio") is None:
-            raise ValueError("Please specify downsampling ratio to use downsampling methods")
-
-        self.downsampling_ratio = downsampling_config["ratio"]
-
-        if not (0 < self.downsampling_ratio <= 100) or not isinstance(self.downsampling_ratio, int):
-            raise ValueError("The downsampling ratio must be an integer in (0,100)")
+        self.downsampling_period = downsampling_config.period
+        self.downsampling_ratio = downsampling_config.ratio
 
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory

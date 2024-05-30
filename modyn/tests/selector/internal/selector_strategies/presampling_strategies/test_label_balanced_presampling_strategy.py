@@ -5,6 +5,7 @@ import shutil
 import tempfile
 
 import pytest
+from modyn.config import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.coreset_strategy import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import LabelBalancedPresamplingStrategy
@@ -29,11 +30,12 @@ def get_minimal_modyn_config():
 
 
 def get_config():
-    return {
-        "reset_after_trigger": False,
-        "presampling_config": {"ratio": 50, "strategy": "LabelBalanced"},
-        "limit": -1,
-    }
+    return CoresetStrategyConfig(
+        tail_triggers=None,
+        presampling_config=PresamplingConfig(ratio=50, strategy="LabelBalanced"),
+        limit=-1,
+        maximum_keys_in_memory=1000,
+    )
 
 
 def insert_data(strat, base_index=0):
@@ -66,7 +68,7 @@ def setup_and_teardown():
 
 def test_counting_query():
     modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
+    strat = CoresetStrategy(get_config(), modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
 
@@ -95,7 +97,7 @@ def test_counting_query():
 
 def test_counting_query_reset_after_trigger():
     modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
+    strat = CoresetStrategy(get_config(), modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
 
@@ -144,7 +146,7 @@ def test_counting_query_reset_after_trigger():
 
 def test_query_data_above_threshold():
     modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
+    strat = CoresetStrategy(get_config(), modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
 
@@ -164,7 +166,7 @@ def test_query_data_above_threshold():
 
 def test_query_data_one_below_threshold():
     modyn_config = get_minimal_modyn_config()
-    strat = CoresetStrategy(get_config(), modyn_config, 0, 1000)
+    strat = CoresetStrategy(get_config(), modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
     count = [40, 160, 100]
@@ -186,8 +188,8 @@ def test_query_data_one_below_threshold():
 def test_query_data_one_below_threshold_balanced():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_config"]["force_column_balancing"] = True
-    strat = CoresetStrategy(config, modyn_config, 0, 1000)
+    config.presampling_config.force_column_balancing = True
+    strat = CoresetStrategy(config, modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
     count = [40, 160, 100]
@@ -209,8 +211,8 @@ def test_query_data_one_below_threshold_balanced():
 def test_query_data_below_target():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_config"]["ratio"] = 72  # to get 100 points as target
-    strat = CoresetStrategy(config, modyn_config, 0, 1000)
+    config.presampling_config.ratio = 72
+    strat = CoresetStrategy(config, modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
     count = [30, 50, 40, 20]
@@ -234,9 +236,9 @@ def test_query_data_below_target():
 def test_query_data_below_target_forced():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_config"]["ratio"] = 72  # to get 100 points as target
-    config["presampling_config"]["force_required_target_size"] = True
-    strat = CoresetStrategy(config, modyn_config, 0, 1000)
+    config.presampling_config.ratio = 72  # to get 100 points as target
+    config.presampling_config.force_required_target_size = True
+    strat = CoresetStrategy(config, modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
     count = [30, 50, 40, 20]
@@ -260,8 +262,8 @@ def test_query_data_below_target_forced():
 def test_query_data_one_below_threshold_force_size_but_already_ok():
     modyn_config = get_minimal_modyn_config()
     config = get_config()
-    config["presampling_config"]["force_required_target_size"] = True
-    strat = CoresetStrategy(config, modyn_config, 0, 1000)
+    config.presampling_config.force_required_target_size = True
+    strat = CoresetStrategy(config, modyn_config, 0)
 
     strat.presampling_strategy: LabelBalancedPresamplingStrategy
     count = [40, 160, 100]

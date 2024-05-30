@@ -1,12 +1,17 @@
 from unittest.mock import patch
 
 import pytest
+from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig
+from modyn.config.schema.sampling.downsampling_config import (
+    GradNormDownsamplingConfig,
+    LossDownsamplingConfig,
+    NoDownsamplingConfig,
+)
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     AbstractDownsamplingStrategy,
     DownsamplingScheduler,
     GradNormDownsamplingStrategy,
     LossDownsamplingStrategy,
-    NoDownsamplingStrategy,
     instantiate_scheduler,
 )
 from modyn.tests.selector.internal.storage_backend.utils import MockStorageBackend
@@ -15,18 +20,16 @@ from modyn.utils import DownsamplingMode
 
 def get_configs():
     return [
-        {"strategy": "Loss", "sample_then_batch": True, "ratio": 50},
-        {"strategy": "GradNorm", "sample_then_batch": False, "ratio": 25},
+        LossDownsamplingConfig(ratio=50, sample_then_batch=True),
+        GradNormDownsamplingConfig(ratio=25, sample_then_batch=False),
     ]
 
 
 def get_configs_triple():
     return [
-        {"strategy": "Loss", "sample_then_batch": True, "ratio": 50},
-        {"strategy": "GradNorm", "sample_then_batch": False, "ratio": 25},
-        {
-            "strategy": "No",
-        },
+        LossDownsamplingConfig(ratio=50, sample_then_batch=True),
+        GradNormDownsamplingConfig(ratio=25, sample_then_batch=False),
+        NoDownsamplingConfig(),
     ]
 
 
@@ -197,25 +200,28 @@ def test_wrong_trigger():
         assert downs.training_status_bar_scale == 100
 
 
-def test_instantiate_scheduler_empty():
-    scheduler = instantiate_scheduler({}, {}, 0, 100)
-    assert isinstance(scheduler.current_downsampler, NoDownsamplingStrategy)
-    assert scheduler.next_threshold is None
-
-
 def test_instantiate_scheduler_just_one():
-    config = {"downsampling_config": {"strategy": "Loss", "sample_then_batch": True, "ratio": 50}}
-    scheduler = instantiate_scheduler(config, {}, 0, 100)
+    config = CoresetStrategyConfig(
+        downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True),
+        maximum_keys_in_memory=1000,
+        tail_triggers=None,
+    )
+    scheduler = instantiate_scheduler(config, {}, 0)
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
     assert scheduler.next_threshold is None
 
 
 def test_instantiate_scheduler_list():
-    config = {"downsampling_config": {"downsampling_list": get_configs(), "downsampling_thresholds": [7]}}
-    pipeline_id = 0
     maximum_keys_in_memory = 123
+    config = CoresetStrategyConfig(
+        downsampling_config=MultiDownsamplingConfig(downsampling_list=get_configs(), downsampling_thresholds=[7]),
+        maximum_keys_in_memory=maximum_keys_in_memory,
+        tail_triggers=None,
+    )
+    pipeline_id = 0
+
     selector_storage_backend = MockStorageBackend(pipeline_id, {}, maximum_keys_in_memory)
-    scheduler = instantiate_scheduler(config, {}, 0, maximum_keys_in_memory)
+    scheduler = instantiate_scheduler(config, {}, 0)
 
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
     assert scheduler.next_threshold == 7

@@ -3,6 +3,7 @@ from typing import Any, Iterable
 
 from modyn.config import FullModelStrategy
 from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline
+from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -22,10 +23,15 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         Supervisor.get_model_strategy(FullModelStrategy(name="PyTorchFullModel"))
     )
 
-    def __init__(self, downsampling_config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
+    def __init__(
+        self,
+        downsampling_config: RHOLossDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
+    ):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
-        self.num_workers = downsampling_config["num_workers"]
-        self.holdout_set_ratio = downsampling_config["holdout_set_ratio"]
+        self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:

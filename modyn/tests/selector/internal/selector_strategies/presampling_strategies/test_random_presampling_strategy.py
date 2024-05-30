@@ -4,6 +4,7 @@ import shutil
 import tempfile
 
 import pytest
+from modyn.config import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies.random_presampling_strategy import (
@@ -17,10 +18,7 @@ TMP_DIR = tempfile.mkdtemp()
 
 
 def get_config():
-    return {
-        "ratio": 50,
-        "strategy": "Random",
-    }
+    return PresamplingConfig(ratio=50, strategy="Random")
 
 
 def get_minimal_modyn_config():
@@ -101,29 +99,6 @@ def test_get_query_wrong():
         strat.get_presampling_query(120, None, -18, 120)
 
 
-def test_constructor_throws_on_invalid_config():
-    conf = get_config()
-    conf["ratio"] = 0
-
-    with pytest.raises(ValueError):
-        RandomPresamplingStrategy(
-            conf,
-            get_minimal_modyn_config(),
-            10,
-            DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
-        )
-
-    conf["ratio"] = 101
-
-    with pytest.raises(ValueError):
-        RandomPresamplingStrategy(
-            conf,
-            get_minimal_modyn_config(),
-            10,
-            DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
-        )
-
-
 def test_dataset_size_various_scenarios():
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -134,15 +109,17 @@ def test_dataset_size_various_scenarios():
     labels2 = [0] * 30
 
     conf = get_config()
-    conf["limit"] = -1
-    conf["reset_after_trigger"] = True
 
     # first trigger
     strat = CoresetStrategy(
-        {"presampling_config": conf, "limit": -1, "reset_after_trigger": True},
+        CoresetStrategyConfig(
+            presampling_config=conf,
+            limit=-1,
+            tail_triggers=0,
+            maximum_keys_in_memory=1000,
+        ),
         get_minimal_modyn_config(),
-        0,
-        100,
+        pipeline_id=0,
     )
     presampling_strat: RandomPresamplingStrategy = strat.presampling_strategy
     strat.inform_data(data1, timestamps1, labels1)
