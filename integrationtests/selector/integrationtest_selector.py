@@ -1,8 +1,8 @@
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
 from modyn.config.schema.pipeline import (
-    CoresetSelectionConfig,
-    NewDataSelectionConfig,
+    CoresetStrategyConfig,
+    NewDataStrategyConfig,
     PresamplingConfig,
     SingleDownsamplingConfig,
 )
@@ -19,8 +19,8 @@ from modyn.utils import grpc_connection_established
 # TODO(54): Write more integration tests for different strategies.
 
 
-def get_coreset_strategy_config() -> CoresetSelectionConfig:
-    return CoresetSelectionConfig(
+def get_coreset_strategy_config() -> CoresetStrategyConfig:
+    return CoresetStrategyConfig(
         maximum_keys_in_memory=250,
         storage_backend="database",  # TODO(#324): Support local backend
         limit=-1,
@@ -29,8 +29,8 @@ def get_coreset_strategy_config() -> CoresetSelectionConfig:
     )
 
 
-def get_newdata_strategy_config() -> NewDataSelectionConfig:
-    return NewDataSelectionConfig(
+def get_newdata_strategy_config() -> NewDataStrategyConfig:
+    return NewDataStrategyConfig(
         maximum_keys_in_memory=2,
         limit=-1,
         tail_triggers=0,
@@ -197,7 +197,7 @@ def test_label_balanced_force_all_samples():
 
     strategy_config = get_coreset_strategy_config()
     strategy_config.maximum_keys_in_memory = 100
-    strategy_config.reset_after_trigger = False
+    strategy_config.tail_triggers = None
     strategy_config.presampling_config.force_required_target_size = True
     strategy_config.presampling_config.ratio = 90
 

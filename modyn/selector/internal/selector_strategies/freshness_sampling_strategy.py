@@ -6,7 +6,7 @@ from math import isclose
 from typing import Any, Iterable, Iterator
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import FreshnessSamplingConfig as FreshnessSamplingStrategyConfig
+from modyn.config import FreshnessSamplingStrategyConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend

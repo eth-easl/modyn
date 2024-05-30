@@ -1,11 +1,11 @@
-from modyn.config import CoresetSelectionConfig
+from modyn.config import CoresetStrategyConfig
 from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.utils import instantiate_class
 
 
 def instantiate_presampler(
-    config: CoresetSelectionConfig, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
+    config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int, storage_backend: AbstractStorageBackend
 ) -> AbstractPresamplingStrategy:
     presampling_strategy = config.presampling_config.strategy
     presampling_config = config.presampling_config

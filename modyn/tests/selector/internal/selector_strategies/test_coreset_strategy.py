@@ -5,8 +5,8 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.config import CoresetSelectionConfig, MultiDownsamplingConfig, PresamplingConfig
-from modyn.config.schema.downsampling_config import (
+from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, PresamplingConfig
+from modyn.config.schema.sampling.downsampling_config import (
     GradNormDownsamplingConfig,
     LossDownsamplingConfig,
     NoDownsamplingConfig,
@@ -52,7 +52,7 @@ def setup_and_teardown():
 
 
 def get_config():
-    return CoresetSelectionConfig(
+    return CoresetStrategyConfig(
         tail_triggers=None,
         limit=-1,
         maximum_keys_in_memory=1000,
@@ -62,7 +62,7 @@ def get_config():
 
 
 def get_config_all():
-    return CoresetSelectionConfig(
+    return CoresetStrategyConfig(
         tail_triggers=None,
         limit=-1,
         maximum_keys_in_memory=1000,
@@ -284,7 +284,7 @@ def test_chunking_with_stricter_presampling():
 
 
 def get_config_tail():
-    return CoresetSelectionConfig(
+    return CoresetStrategyConfig(
         tail_triggers=1,
         limit=-1,
         maximum_keys_in_memory=1000,
@@ -411,7 +411,7 @@ def test_dataset_size_tail():
 @patch.object(DownsamplingScheduler, "inform_next_trigger")
 def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: MagicMock):
     strat = CoresetStrategy(
-        CoresetSelectionConfig(
+        CoresetStrategyConfig(
             limit=-1,
             tail_triggers=None,
             maximum_keys_in_memory=1000,
@@ -441,7 +441,7 @@ def test_trigger():
         return trigger, 50, 1, {}
 
     strat = CoresetStrategy(
-        CoresetSelectionConfig(
+        CoresetStrategyConfig(
             limit=-1,
             tail_triggers=None,
             downsampling_config=MultiDownsamplingConfig(

@@ -4,7 +4,7 @@ import shutil
 import tempfile
 
 import pytest
-from modyn.config import CoresetSelectionConfig, PresamplingConfig
+from modyn.config import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies.random_presampling_strategy import (
@@ -112,7 +112,7 @@ def test_dataset_size_various_scenarios():
 
     # first trigger
     strat = CoresetStrategy(
-        CoresetSelectionConfig(
+        CoresetStrategyConfig(
             presampling_config=conf,
             limit=-1,
             tail_triggers=0,

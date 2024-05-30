@@ -6,7 +6,7 @@ from math import isclose
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.config import FreshnessSamplingConfig
+from modyn.config import FreshnessSamplingStrategyConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.freshness_sampling_strategy import FreshnessSamplingStrategy
@@ -33,7 +33,7 @@ def get_minimal_modyn_config():
 
 
 def get_freshness_config():
-    return FreshnessSamplingConfig(
+    return FreshnessSamplingStrategyConfig(
         tail_triggers=None,
         unused_data_ratio=50,
         limit=-1,

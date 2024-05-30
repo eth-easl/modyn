@@ -1,8 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-from modyn.config import CoresetSelectionConfig, MultiDownsamplingConfig
-from modyn.config.schema.downsampling_config import (
+from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig
+from modyn.config.schema.sampling.downsampling_config import (
     GradNormDownsamplingConfig,
     LossDownsamplingConfig,
     NoDownsamplingConfig,
@@ -201,7 +201,7 @@ def test_wrong_trigger():
 
 
 def test_instantiate_scheduler_just_one():
-    config = CoresetSelectionConfig(
+    config = CoresetStrategyConfig(
         downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True),
         maximum_keys_in_memory=1000,
         tail_triggers=None,
@@ -213,7 +213,7 @@ def test_instantiate_scheduler_just_one():
 
 def test_instantiate_scheduler_list():
     maximum_keys_in_memory = 123
-    config = CoresetSelectionConfig(
+    config = CoresetStrategyConfig(
         downsampling_config=MultiDownsamplingConfig(downsampling_list=get_configs(), downsampling_thresholds=[7]),
         maximum_keys_in_memory=maximum_keys_in_memory,
         tail_triggers=None,

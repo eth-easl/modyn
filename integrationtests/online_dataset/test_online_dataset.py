@@ -19,7 +19,7 @@ from integrationtests.utils import (
     init_metadata_db,
     register_pipeline,
 )
-from modyn.config.schema.pipeline import NewDataSelectionConfig
+from modyn.config.schema.pipeline import NewDataStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -205,7 +205,7 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
-    strategy_config = NewDataSelectionConfig(
+    strategy_config = NewDataStrategyConfig(
         maximum_keys_in_memory=2, limit=-1, reset_after_trigger=True, storage_backend="database"
     )
     pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config.model_dump(by_alias=True))

@@ -4,12 +4,12 @@ from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
-from modyn.config.schema.downsampling_config import (
+from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.sampling.downsampling_config import (
     MultiDownsamplingConfig,
     NoDownsamplingConfig,
     SingleDownsamplingConfig,
 )
-from modyn.config.schema.modyn_base_model import ModynBaseModel
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
@@ -143,7 +143,7 @@ class _BaseSelectionStrategy(ModynBaseModel):
         return self
 
 
-class FreshnessSamplingConfig(_BaseSelectionStrategy):
+class FreshnessSamplingStrategyConfig(_BaseSelectionStrategy):
     name: Literal["FreshnessSamplingStrategy"] = Field("FreshnessSamplingStrategy")
     unused_data_ratio: int = Field(
         description=(
@@ -155,7 +155,7 @@ class FreshnessSamplingConfig(_BaseSelectionStrategy):
     )
 
 
-class NewDataSelectionConfig(_BaseSelectionStrategy):
+class NewDataStrategyConfig(_BaseSelectionStrategy):
     name: Literal["NewDataStrategy"] = Field("NewDataStrategy")
 
     limit_reset: LimitResetStrategy = Field(
@@ -166,7 +166,7 @@ class NewDataSelectionConfig(_BaseSelectionStrategy):
     )
 
 
-class CoresetSelectionConfig(_BaseSelectionStrategy):
+class CoresetStrategyConfig(_BaseSelectionStrategy):
     name: Literal["CoresetStrategy"] = Field("CoresetStrategy")
 
     presampling_config: PresamplingConfig = Field(
@@ -180,7 +180,7 @@ class CoresetSelectionConfig(_BaseSelectionStrategy):
 
 
 SelectionStrategy = Annotated[
-    Union[FreshnessSamplingConfig, NewDataSelectionConfig, CoresetSelectionConfig], Field(discriminator="name")
+    Union[FreshnessSamplingStrategyConfig, NewDataStrategyConfig, CoresetStrategyConfig], Field(discriminator="name")
 ]
 
 

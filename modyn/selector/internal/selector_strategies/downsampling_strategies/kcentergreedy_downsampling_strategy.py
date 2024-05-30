@@ -1,4 +1,4 @@
-from modyn.config.schema.downsampling_config import KcenterGreedyDownsamplingConfig
+from modyn.config.schema.sampling.downsampling_config import KcenterGreedyDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
 

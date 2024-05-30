@@ -5,7 +5,7 @@ import shutil
 import tempfile
 
 import pytest
-from modyn.config import CoresetSelectionConfig, PresamplingConfig
+from modyn.config import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies.coreset_strategy import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import LabelBalancedPresamplingStrategy
@@ -30,7 +30,7 @@ def get_minimal_modyn_config():
 
 
 def get_config():
-    return CoresetSelectionConfig(
+    return CoresetStrategyConfig(
         tail_triggers=None,
         presampling_config=PresamplingConfig(ratio=50, strategy="LabelBalanced"),
         limit=-1,

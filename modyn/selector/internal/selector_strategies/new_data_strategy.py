@@ -5,7 +5,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import NewDataSelectionConfig
+from modyn.config import NewDataStrategyConfig
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
@@ -35,7 +35,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         config (dict): The configuration for the selector.
     """
 
-    def __init__(self, config: NewDataSelectionConfig, modyn_config: dict, pipeline_id: int):
+    def __init__(self, config: NewDataStrategyConfig, modyn_config: dict, pipeline_id: int):
         super().__init__(config, modyn_config, pipeline_id)
         self.limit_reset_strategy = config.limit_reset
 

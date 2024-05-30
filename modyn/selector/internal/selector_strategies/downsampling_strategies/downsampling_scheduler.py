@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from modyn.config import CoresetSelectionConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
+from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -78,9 +78,7 @@ class DownsamplingScheduler:
         self.current_downsampler.inform_next_trigger(next_trigger_id, selector_storage_backend)
 
 
-def instantiate_scheduler(
-    config: CoresetSelectionConfig, modyn_config: dict, pipeline_id: int
-) -> DownsamplingScheduler:
+def instantiate_scheduler(config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int) -> DownsamplingScheduler:
     if isinstance(config.downsampling_config, MultiDownsamplingConfig):
         # real scheduler
         list_of_downsamplers = config.downsampling_config.downsampling_list

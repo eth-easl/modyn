@@ -1,6 +1,6 @@
 from typing import Any, Iterable
 
-from modyn.config.schema.downsampling_config import RHOLossDownsamplingConfig
+from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy

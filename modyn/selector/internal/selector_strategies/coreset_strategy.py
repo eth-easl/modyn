@@ -3,7 +3,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import CoresetSelectionConfig
+from modyn.config import CoresetStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
-    def __init__(self, config: CoresetSelectionConfig, modyn_config: dict, pipeline_id: int):
+    def __init__(self, config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int):
         super().__init__(config, modyn_config, pipeline_id)
         # a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.

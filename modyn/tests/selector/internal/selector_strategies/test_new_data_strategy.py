@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.config import NewDataSelectionConfig
+from modyn.config import NewDataStrategyConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
@@ -37,12 +37,12 @@ def get_minimal_modyn_config():
 
 def get_config():
     # TODO(MaxiBoether): also test local
-    return NewDataSelectionConfig(tail_triggers=None, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
+    return NewDataStrategyConfig(tail_triggers=None, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
 
 
 def get_config_tail():
     # TODO(MaxiBoether): also test local
-    return NewDataSelectionConfig(tail_triggers=1, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
+    return NewDataStrategyConfig(tail_triggers=1, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
 
 
 @pytest.fixture(scope="function", autouse=True)
