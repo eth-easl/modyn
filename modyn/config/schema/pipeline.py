@@ -4,7 +4,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
-from modyn.config.schema.downsampling_config import DownsamplingConfig, NoDownsamplingConfig
+from modyn.config.schema.downsampling_config import (
+    MultiDownsamplingConfig,
+    NoDownsamplingConfig,
+    SingleDownsamplingConfig,
+)
 from modyn.config.schema.modyn_base_model import ModynBaseModel
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
@@ -97,24 +101,6 @@ class PresamplingConfig(ModynBaseModel):
     force_required_target_size: bool = Field(False)
 
 
-class MultiDownsamplingConfig(ModynBaseModel):
-    downsampling_list: List[DownsamplingConfig] = Field(description="An array of downsampling strategies.")
-    downsampling_thresholds: List[int] = Field(
-        description=(
-            "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
-            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item than the list "
-            "of downsamplers. For example, if we have 3 downsamplers [A, B, C], and two thresholds [5, 10], the "
-            "downsampler A is used for triggers 0-4, B for triggers 5-9, and C for triggers 10 and above."
-        )
-    )
-
-    @model_validator(mode="after")
-    def validate_downsampling_thresholds(self) -> Self:
-        if len(self.downsampling_thresholds) != len(self.downsampling_list) - 1:
-            raise ValueError("The downsampling_thresholds list should have one less item than the downsampling_list.")
-        return self
-
-
 StorageBackend = Literal["database", "local"]
 
 
@@ -175,7 +161,7 @@ class NewDataSelectionConfig(_BaseSelectionStrategy):
     limit_reset: LimitResetStrategy = Field(
         "lastX",
         description=(
-            "Strategy to follow for respecting the limit in case of reset. Only used when reset_after_trigger == true."
+            "Strategy to follow for respecting the limit in case of reset. Only used when tail_triggers == 0."
         ),
     )
 
@@ -187,7 +173,7 @@ class CoresetSelectionConfig(_BaseSelectionStrategy):
         PresamplingConfig(strategy="No", ratio=100),
         description=("Config for the presampling strategy. If missing, no presampling is applied."),
     )
-    downsampling_config: DownsamplingConfig | MultiDownsamplingConfig = Field(
+    downsampling_config: SingleDownsamplingConfig | MultiDownsamplingConfig = Field(
         NoDownsamplingConfig(strategy="No", ratio=100),
         description="Configurates the downsampling with one or multiple strategies.",
     )

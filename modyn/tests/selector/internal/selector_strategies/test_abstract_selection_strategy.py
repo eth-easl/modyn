@@ -80,6 +80,7 @@ def test_init():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):

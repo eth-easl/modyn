@@ -1,6 +1,6 @@
 from abc import ABC
 
-from modyn.config import DownsamplingConfig
+from modyn.config import SingleDownsamplingConfig
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
@@ -23,7 +23,11 @@ class AbstractDownsamplingStrategy(ABC):
     """
 
     def __init__(
-        self, downsampling_config: DownsamplingConfig, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int
+        self,
+        downsampling_config: SingleDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
     ) -> None:
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id

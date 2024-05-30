@@ -204,7 +204,7 @@ def test_instantiate_scheduler_just_one():
     config = CoresetSelectionConfig(
         downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True),
         maximum_keys_in_memory=1000,
-        tail_triggers=0,
+        tail_triggers=None,
     )
     scheduler = instantiate_scheduler(config, {}, 0)
     assert isinstance(scheduler.current_downsampler, LossDownsamplingStrategy)
@@ -216,7 +216,7 @@ def test_instantiate_scheduler_list():
     config = CoresetSelectionConfig(
         downsampling_config=MultiDownsamplingConfig(downsampling_list=get_configs(), downsampling_thresholds=[7]),
         maximum_keys_in_memory=maximum_keys_in_memory,
-        tail_triggers=0,
+        tail_triggers=None,
     )
     pipeline_id = 0
 

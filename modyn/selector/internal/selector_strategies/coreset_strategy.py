@@ -4,7 +4,6 @@ from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.config import CoresetSelectionConfig
-from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
@@ -40,9 +39,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
         else:
-            raise NotImplementedError(
-                f"Unknown storage backend \"{self._config.storage_backend}\". Supported: database"
-            )
+            raise NotImplementedError(f'Unknown storage backend "{self._config.storage_backend}". Supported: database')
         return storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:

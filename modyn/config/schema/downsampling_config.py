@@ -1,7 +1,10 @@
-from typing import Annotated, Literal, Union
+from __future__ import annotations
+
+from typing import Annotated, List, Literal, Union
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
-from pydantic import Field
+from pydantic import Field, model_validator
+from typing_extensions import Self
 
 
 class BaseDownsamplingConfig(ModynBaseModel):
@@ -93,16 +96,22 @@ class NoDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the No downsampling strategy."""
 
     strategy: Literal["No"] = "No"
-    ratio: int = Field(100, description="For No downsampling, the ratio must be 100.")
+    ratio: Literal[100] = 100
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
+    sample_then_batch: Literal[False] = False
+    holdout_set_ratio: int = Field(
+        description=("How much of the training set is used as the holdout set."),
+        min=0,
+        max=100,
+    )
 
 
-DownsamplingConfig = Annotated[
+SingleDownsamplingConfig = Annotated[
     Union[
         UncertaintyDownsamplingConfig,
         KcenterGreedyDownsamplingConfig,
@@ -116,3 +125,21 @@ DownsamplingConfig = Annotated[
     ],
     Field(discriminator="strategy"),
 ]
+
+
+class MultiDownsamplingConfig(ModynBaseModel):
+    downsampling_list: List[SingleDownsamplingConfig] = Field(description="An array of downsampling strategies.")
+    downsampling_thresholds: List[int] = Field(
+        description=(
+            "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
+            "transition from the i-th downsampler to the (i+1)-th. This array should have one less item than the list "
+            "of downsamplers. For example, if we have 3 downsamplers [A, B, C], and two thresholds [5, 10], the "
+            "downsampler A is used for triggers 0-4, B for triggers 5-9, and C for triggers 10 and above."
+        )
+    )
+
+    @model_validator(mode="after")
+    def validate_downsampling_thresholds(self) -> Self:
+        if len(self.downsampling_thresholds) != len(self.downsampling_list) - 1:
+            raise ValueError("The downsampling_thresholds list should have one less item than the downsampling_list.")
+        return self

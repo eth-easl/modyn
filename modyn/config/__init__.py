@@ -24,11 +24,11 @@ from .schema.config import (
     TensorboardConfig,
     TrainingServerConfig,
 )
+from .schema.downsampling_config import MultiDownsamplingConfig, SingleDownsamplingConfig  # noqa: F401
 from .schema.pipeline import (  # noqa: F401
     CheckpointingConfig,
     CoresetSelectionConfig,
     DataConfig,
-    DownsamplingConfig,
     EvalDataConfig,
     EvaluationConfig,
     FreshnessSamplingConfig,
@@ -38,7 +38,6 @@ from .schema.pipeline import (  # noqa: F401
     Metric,
     ModelConfig,
     ModynPipelineConfig,
-    MultiDownsamplingConfig,
     NewDataSelectionConfig,
     OptimizationCriterion,
     OptimizerConfig,
@@ -82,8 +81,7 @@ __all__ = [
     "IncrementalModelStrategy",
     "PipelineModelStorageConfig",
     "PresamplingConfig",
-    "DownsamplingConfig",
-    "MultiDownsamplingConfig",
+    "SingleDownsamplingConfig",
     "SelectionStrategy",
     "CheckpointingConfig",
     "OptimizerParamGroup",

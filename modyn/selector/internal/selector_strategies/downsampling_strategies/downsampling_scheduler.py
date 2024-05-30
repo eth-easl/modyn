@@ -1,6 +1,6 @@
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
-from modyn.config import CoresetSelectionConfig, DownsamplingConfig, MultiDownsamplingConfig
+from modyn.config import CoresetSelectionConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -11,7 +11,7 @@ class DownsamplingScheduler:
         self,
         modyn_config: dict,
         pipeline_id: int,
-        downsampling_configs: List[DownsamplingConfig],
+        downsampling_configs: list[SingleDownsamplingConfig],
         downsampling_thresholds: list[int],
         maximum_keys_in_memory: int,
     ):

@@ -41,15 +41,16 @@ class NewDataStrategy(AbstractSelectionStrategy):
 
     def _init_storage_backend(self) -> AbstractStorageBackend:
         if self._config.storage_backend == "local":
-            _storage_backend = LocalStorageBackend(
-                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-            )
+            _storage_backend = LocalStorageBackend(self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory)
         elif self._config.storage_backend == "database":
             _storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
         else:
-            raise NotImplementedError(f'Unknown storage backend "{self._config.storage_backend}". Supported: local, database')
+            raise NotImplementedError(
+                f'Unknown storage backend "{
+                    self._config.storage_backend}". Supported: local, database'
+            )
         return _storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:

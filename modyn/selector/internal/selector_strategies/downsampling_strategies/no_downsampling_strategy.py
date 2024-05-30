@@ -18,8 +18,6 @@ class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
         maximum_keys_in_memory: int,
     ):
         # just to deal with exceptions in parent class
-        if downsampling_config.ratio != 100:
-            raise ValueError("NoDownsamplingStrategy must have a downsampling ratio of 100%")
         downsampling_config.sample_then_batch = True  # useless, just to avoid ValueErrors
 
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
