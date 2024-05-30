@@ -27,7 +27,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
             database.add_selector_state_metadata_trigger(self._pipeline_id, seen_in_trigger_id)
         log["trigger_creation_time"] = swt.stop()
 
-        if self._disable_mt or (self._is_test and self._is_mac):
+        if self.insertion_threads == 1:
             swt.start("persist_samples_time")
             DatabaseStorageBackend._persist_samples_impl(
                 keys, timestamps, labels, self._pipeline_id, self._modyn_config, seen_in_trigger_id
@@ -44,13 +44,13 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         self, keys: list[int], timestamps: list[int], labels: list[int], seen_in_trigger_id: int, log: dict
     ) -> None:
         swt = Stopwatch()
-        samples_per_proc = int(len(keys) / self._insertion_threads)
+        samples_per_proc = int(len(keys) / self.insertion_threads)
         processes: list[mp.Process] = []
         swt.start("persist_samples_time")
 
-        for i in range(self._insertion_threads):
+        for i in range(self.insertion_threads):
             start_idx = i * samples_per_proc
-            end_idx = start_idx + samples_per_proc if i < self._insertion_threads - 1 else len(keys)
+            end_idx = start_idx + samples_per_proc if i < self.insertion_threads - 1 else len(keys)
             proc_keys = keys[start_idx:end_idx]
             proc_timestamps = timestamps[start_idx:end_idx]
             proc_labels = labels[start_idx:end_idx]
