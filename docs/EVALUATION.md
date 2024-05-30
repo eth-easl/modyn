@@ -101,13 +101,13 @@ When plotting this there are several cases:
 
 - When we have more continuous data where we cannot evaluate at every point in time, can either plot vertical lines (same value for a certain time range) or interpolate. In the latter case it's fair to plot the points for each evaluation interval at the interval center and connect the points with lines (linear interpolation).
 
-##### Rolling windows (new)
+##### Sliding window (new)
 
 (centered around points in time where we intend to query evaluation metrics)
 
-We want to address the problem of not being able to capture the full time resolution of the dataset when slicing it into partitions. We cannot shrink the slices arbitrarily as this would decrease the number of samples in every evaluation split and therefore the reliability of the evaluation results.
+We want to address the problem of not being able to capture the full time resolution of the dataset when slicing it into partitions. We cannot shrink the slices arbitrarily as this would decrease the number of samples in every evaluation split and therefore the reliability of the evaluation results. The reason for the shrinkage in samples when reducing the slice size is that our slicing basically is a form of tumbling window.
 
-We can therefore use rolling windows that theoretically allow to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models.
+We can therefore use rolling windows. For that we modify the definition of what `Performance at a certain point in time` is. We now not only use the data exactly at that point in time but within a sliding window centered around this point. When the window is set big enough, this gives us enough data to have meaningful accuracy results for every point in time we wish to evaluate. Theoretically it allows to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models.
 
 #### 3.2.2 Comparison of a multiple pipeline runs (comparing the different models)
 
