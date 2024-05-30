@@ -107,7 +107,7 @@ When plotting this there are several cases:
 
 We want to address the problem of not being able to capture the full time resolution of the dataset when slicing it into partitions. We cannot shrink the slices arbitrarily as this would decrease the number of samples in every evaluation split and therefore the reliability of the evaluation results. The reason for the shrinkage in samples when reducing the slice size is that our slicing basically is a form of tumbling window.
 
-We can therefore use rolling windows. For that we modify the definition of what `Performance at a certain point in time` is. We now not only use the data exactly at that point in time but within a sliding window centered around this point. When the window is set big enough, this gives us enough data to have meaningful accuracy results for every point in time we wish to evaluate. Theoretically it allows to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models.
+We can therefore use sliding windows. For that we modify the definition of what `Performance at a certain point in time` is. We now not only use the data exactly at that point in time but within a sliding window centered around this point. When the window is set big enough, this gives us enough data to have meaningful accuracy results for every point in time we wish to evaluate. Theoretically it allows to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models.
 
 #### 3.2.2 Comparison of a multiple pipeline runs (comparing the different models)
 
@@ -138,7 +138,7 @@ We expect to see spikes in the pipeline performances when a new model is trained
 trigger policies we expect to see different patterns in the pipeline performance (as retraining takes place at different points in time).
 </details>
 
-An interesting realization is that when comparing arbitrary different trigger policy pipelines, we cannot rely on equidistant triggering timestamps, as different pipeline runs could have evaluations centered around different points in time (currently evaluations are done after training). The MatrixEvaluationStrategy partially addresses this but the rolling window approach feels more natural here.
+An interesting realization is that when comparing arbitrary different trigger policy pipelines, we cannot rely on equidistant triggering timestamps, as different pipeline runs could have evaluations centered around different points in time (currently evaluations are done after training). The MatrixEvaluationStrategy partially addresses this but the sliding window approach feels more natural here.
 
 Evaluation at regular intervals would look sth like this:
 
@@ -182,7 +182,7 @@ gantt
   <summary><b>Plot 4 (matrix plot, x=time up to which samples where used for training, y=model (categorical), color=accuracy of model at this point)</b></summary>
 
 Similar to already existing plots from `MatrixEvaluationStrategy`, but with a different x-axis, not using the triggers as the x-axis discretization,
-but the time up to which samples were used for training. We can use use the rolling window approach described above.
+but the time up to which samples were used for training. We can use use the sliding window approach described above.
 
 Compared to the current approach this diagram integrates a fair representation of "time" (x-axis). As triggers aren't spaced equally in an abstract trigger policy the current assumptions don't hold anymore. Also this brings the advantage that we would see how drift / model degradation accumulates over **realtime** (not trigger indexes).
 
