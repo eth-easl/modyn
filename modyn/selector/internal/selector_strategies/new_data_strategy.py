@@ -52,19 +52,20 @@ class NewDataStrategy(AbstractSelectionStrategy):
             if self.limit_reset_strategy not in self.supported_limit_reset_strategies:
                 raise ValueError(f"Unsupported limit reset strategy: {self.limit_reset_strategy}")
 
-        self._storage_backend: AbstractStorageBackend
-        if config["storage_backend"] == "local":
-            self._storage_backend = LocalStorageBackend(
+    def _init_storage_backend(self) -> AbstractStorageBackend:
+        if self._config["storage_backend"] == "local":
+            storage_backend: AbstractStorageBackend = LocalStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
-        elif config["storage_backend"] == "database":
-            self._storage_backend = DatabaseStorageBackend(
+        elif self._config["storage_backend"] == "database":
+            storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
         else:
             raise NotImplementedError(
-                f"Unknown storage backend \"{config['storage_backend']}\". Supported: local, database"
+                f"Unknown storage backend \"{self._config['storage_backend']}\". Supported: local, database"
             )
+        return storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)

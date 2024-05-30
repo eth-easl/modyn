@@ -492,6 +492,7 @@ class PipelineLogs(BaseModel):
             pipeline_logdir.rename(backup_dir)
 
         pipeline_logdir.mkdir(parents=True, exist_ok=True)
+        (pipeline_logdir / ".name").write_text(self.config.pipeline.pipeline.name)
 
         # output logs
 
