@@ -47,14 +47,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return rho_pipeline_id
 
     def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection) -> int:
-        rho_pipeline_id = database.register_pipeline(
-            num_workers=1,
-            model_class_name="RHOLoss",
-            model_config="{}",
-            amp=False,
-            selection_strategy="random",
-            selection_strategy_config="{}",
-        )
+        rho_pipeline_id = 0 # database.register_pipeline()
         database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
         return rho_pipeline_id
 
