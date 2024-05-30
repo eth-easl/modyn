@@ -120,7 +120,8 @@ StorageBackend = Literal["database", "local"]
 
 class _BaseSelectionStrategy(ModynBaseModel):
     maximum_keys_in_memory: int = Field(
-        description="Limits how many keys should be materialized at a time in the strategy."
+        description="Limits how many keys should be materialized at a time in the strategy.",
+        ge=1,
     )
     processor_type: Optional[str] = Field(
         None,
