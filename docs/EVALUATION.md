@@ -223,6 +223,10 @@ Let's visualize this in the Gantt diagram from 2.1 above:
 
 > E.g. Assume there was no `Trigger5`. Then we should have a really long period where model 4 is used. It becomes clear very fast, that this model has a higher impact on the total aggregated pipeline performance than the a model that was only used for a short period of time (e.g. 1 year).
 
+We propose to run evaluation request for the intervals between two model switches capturing the model performance at exactly the time it was served for inference. We can then calculate the pipeline performance as the weighted average of the model performances w.r.t. the served time.
+
+> Note: It is not desireable to aggregate / average the evaluation metrics we got from periodic evaluations. This is because of the low potential number of samples in such a smaller time range. If e.g. in the serving period of a model there is one time range with many samples and one with almost none. We would get a biased performance metric if we would average the two as we have far less confidence in the performance of the model in the time range with few samples.
+
 #### 3.2.3 Refined pipeline run model
 
 Accounting for the afore mentioned assumptions that training takes some time, we can visualize a pipeline run as follows:
