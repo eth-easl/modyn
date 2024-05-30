@@ -122,7 +122,7 @@ def test_label_balanced_force_same_size():
 
     strategy_config = get_coreset_strategy_config()
     strategy_config.maximum_keys_in_memory = 100
-    strategy_config.reset_after_trigger = False
+    strategy_config.tail_triggers = None
     strategy_config.presampling_config.force_column_balancing = True
     strategy_config.presampling_config.ratio = 90
 
@@ -405,14 +405,14 @@ def test_newdata() -> None:
     assert len(total_samples) == 6
 
 
-def test_abstract_downsampler(reset_after_trigger) -> None:
+def test_abstract_downsampler(reset_after_trigger: bool) -> None:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
 
     # sampling every datapoint
     strategy_config = get_coreset_strategy_config()
     strategy_config.maximum_keys_in_memory = 50000
-    strategy_config.reset_after_trigger = reset_after_trigger
+    strategy_config.tail_triggers = 0 if reset_after_trigger else None
     strategy_config.presampling_config.ratio = 20
     strategy_config.presampling_config.strategy = "Random"
     strategy_config.downsampling_config = SingleDownsamplingConfig(strategy="Loss", ratio=10, sample_then_batch=False)
@@ -561,7 +561,7 @@ def test_empty_triggers() -> None:
 
     # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = get_newdata_strategy_config()
-    strategy_config.reset_after_trigger = False
+    strategy_config.tail_triggers = None
 
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
@@ -727,7 +727,7 @@ def test_many_samples_evenly_distributed():
     # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = get_newdata_strategy_config()
     strategy_config.maximum_keys_in_memory = 5000
-    strategy_config.reset_after_trigger = False
+    strategy_config.tail_triggers = None
 
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
@@ -795,7 +795,7 @@ def test_many_samples_unevenly_distributed():
     # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = get_newdata_strategy_config()
     strategy_config.maximum_keys_in_memory = 4999
-    strategy_config.reset_after_trigger = False
+    strategy_config.tail_triggers = None
 
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
@@ -864,7 +864,7 @@ def test_get_available_labels(reset_after_trigger: bool):
     # TODO(MaxiBoether): use local strategy here as well after implementing it
     strategy_config = get_newdata_strategy_config()
     strategy_config.maximum_keys_in_memory = 2
-    strategy_config.reset_after_trigger = reset_after_trigger
+    strategy_config.tail_triggers = 0 if reset_after_trigger else None
 
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
