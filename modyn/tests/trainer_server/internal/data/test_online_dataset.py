@@ -68,6 +68,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer=None,
             log_path=None,
+            shuffle=False,
             num_prefetched_partitions=1,
             parallel_prefetch_requests=1,
         )._init_transforms()
@@ -84,6 +85,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer="",
             log_path=None,
+            shuffle=False,
             num_prefetched_partitions=1,
             parallel_prefetch_requests=1,
         )._init_transforms()
@@ -109,6 +111,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
     )
@@ -143,6 +146,7 @@ def test_get_keys_and_weights_from_selector(
             "training_id": 42,
             "tokenizer": None,
             "log_path": None,
+            "shuffle": False,
             "num_prefetched_partitions": 1,
             "parallel_prefetch_requests": 1,
         }
@@ -152,7 +156,7 @@ def test_get_keys_and_weights_from_selector(
         online_dataset._key_source._uses_weights = return_weights
         online_dataset._init_grpc()
         online_dataset._key_source.init_worker()
-        keys, weights = online_dataset._key_source.get_keys_and_weights(0, 0)
+        keys, weights = online_dataset._key_source.get_keys_and_weights(0, 0, False)
         assert keys == [1, 2, 3]
         assert weights == [1.0, 1.0, 1.0] if return_weights else weights is None
 
@@ -179,6 +183,7 @@ def test_get_data_from_storage(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=0,
         parallel_prefetch_requests=1,
     )
@@ -258,6 +263,7 @@ def test_deserialize_torchvision_transforms(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
     )
@@ -309,6 +315,7 @@ def test_dataset_iter(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -357,6 +364,7 @@ def test_dataset_iter_with_parsing(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -405,6 +413,7 @@ def test_dataloader_dataset(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -454,6 +463,7 @@ def test_dataloader_dataset_weighted(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -511,6 +521,7 @@ def test_dataloader_dataset_multi_worker(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=num_workers)
     for batch in dataloader:
@@ -542,6 +553,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
         parallel_prefetch_requests=1,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
 
     assert online_dataset._storagestub is None
@@ -579,6 +591,7 @@ def test_init_transforms(
         parallel_prefetch_requests=1,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
 
     assert online_dataset._bytes_parser_function is None
@@ -643,6 +656,7 @@ def test_iter_multi_partition(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     idx = 0
@@ -705,6 +719,7 @@ def test_iter_multi_partition_weighted(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
 
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
@@ -770,6 +785,7 @@ def test_iter_multi_partition_cross(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     # Note batch size 6 instead of 4 here
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=6)
@@ -843,6 +859,7 @@ def test_iter_multi_partition_multi_workers(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=num_workers)
     idx = 0
@@ -898,6 +915,7 @@ def test_multi_epoch_dataloader_dataset(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for _ in range(5):
