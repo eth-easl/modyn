@@ -4,8 +4,8 @@ from modyn.config.schema.pipeline import (
     CoresetStrategyConfig,
     NewDataStrategyConfig,
     PresamplingConfig,
-    SingleDownsamplingConfig,
 )
+from modyn.config.schema.sampling.downsampling_config import LossDownsamplingConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetAvailableLabelsRequest,
@@ -415,7 +415,7 @@ def test_abstract_downsampler(reset_after_trigger: bool) -> None:
     strategy_config.tail_triggers = 0 if reset_after_trigger else None
     strategy_config.presampling_config.ratio = 20
     strategy_config.presampling_config.strategy = "Random"
-    strategy_config.downsampling_config = SingleDownsamplingConfig(strategy="Loss", ratio=10, sample_then_batch=False)
+    strategy_config.downsampling_config = LossDownsamplingConfig(ratio=10, sample_then_batch=False)
 
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())

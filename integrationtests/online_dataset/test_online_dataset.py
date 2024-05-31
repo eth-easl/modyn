@@ -206,7 +206,7 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
     strategy_config = NewDataStrategyConfig(
-        maximum_keys_in_memory=2, limit=-1, reset_after_trigger=True, storage_backend="database"
+        maximum_keys_in_memory=2, limit=-1, tail_triggers=0, storage_backend="database"
     )
     pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config.model_dump(by_alias=True))
     init_metadata_db(get_modyn_config())
