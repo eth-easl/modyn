@@ -42,7 +42,7 @@ def gen_pipeline_config(name: str, trigger: TriggerConfig, eval_strategy: EvalSt
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
             selection_strategy=NewDataStrategyConfig(
-                maximum_keys_in_memory=1000, storage_backend="database", limit=-1, reset_after_trigger=True
+                maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
             ),
         ),
         data=DataConfig(
