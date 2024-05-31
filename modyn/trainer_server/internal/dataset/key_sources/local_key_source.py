@@ -27,7 +27,7 @@ class LocalKeySource(AbstractKeySource):
         if shuffle:
             combined = list(zip(keys_list, weights_list))
             random.shuffle(combined)
-            keys_list, weights_list = zip(*combined)
+            keys_list, weights_list = map(list, zip(*combined))
 
         return keys_list, weights_list
 
