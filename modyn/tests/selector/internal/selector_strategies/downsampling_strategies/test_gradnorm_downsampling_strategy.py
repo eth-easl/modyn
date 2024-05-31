@@ -1,13 +1,11 @@
+from modyn.config.schema.sampling.downsampling_config import GradNormDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import GradNormDownsamplingStrategy
 
 
 def test_init_gradnorm():
     # Test init works
     strat = GradNormDownsamplingStrategy(
-        {
-            "ratio": 10,
-            "sample_then_batch": True,
-        },
+        GradNormDownsamplingConfig(ratio=10, sample_then_batch=True),
         {},
         0,
         1000,

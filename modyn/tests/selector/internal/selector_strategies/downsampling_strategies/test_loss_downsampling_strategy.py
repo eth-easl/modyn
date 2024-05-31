@@ -2,6 +2,7 @@ import os
 import pathlib
 import tempfile
 
+from modyn.config.schema.sampling.downsampling_config import LossDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import LossDownsamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
@@ -11,10 +12,7 @@ TMP_DIR = tempfile.mkdtemp()
 def test_init_loss():
     # Test init works
     strat = LossDownsamplingStrategy(
-        {
-            "ratio": 10,
-            "sample_then_batch": True,
-        },
+        LossDownsamplingConfig(ratio=10, sample_then_batch=True),
         {},
         0,
         1000,

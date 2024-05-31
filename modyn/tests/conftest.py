@@ -25,7 +25,7 @@ from modyn.config.schema.pipeline import (
     Metric,
     ModelConfig,
     ModynPipelineConfig,
-    NewDataSelectionStrategy,
+    NewDataStrategyConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
@@ -170,7 +170,10 @@ def pipeline_training_config() -> TrainingConfig:
         ],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
         checkpointing=CheckpointingConfig(activated=False),
-        selection_strategy=NewDataSelectionStrategy(maximum_keys_in_memory=10),
+        selection_strategy=NewDataStrategyConfig(
+            maximum_keys_in_memory=10,
+            tail_triggers=None,
+        ),
     )
 
 

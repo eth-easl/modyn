@@ -34,7 +34,7 @@ training:
     maximum_keys_in_memory: 10
     storage_backend: "database"
     limit: -1
-    reset_after_trigger: True
+    tail_triggers: 0
 data:
   dataset_id: tiny_dataset
   bytes_parser_function: |

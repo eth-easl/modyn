@@ -50,7 +50,7 @@ training:
     name: NewDataStrategy
     maximum_keys_in_memory: 500000
     limit: -1
-    reset_after_trigger: True
+    tail_triggers: 0
     storage_backend: database
     processor_type: basic_processor_strategy
 data:
