@@ -7,6 +7,7 @@ import logging
 import os
 import pathlib
 import threading
+import random
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
 import grpc
@@ -46,6 +47,7 @@ class OnlineDataset(IterableDataset):
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
+        shuffle: bool,
         tokenizer: Optional[str],
         log_path: Optional[pathlib.Path],
     ):
@@ -87,6 +89,8 @@ class OnlineDataset(IterableDataset):
         self._next_partition_to_fetch = 0
         self._launched_prefetches = 0
         self._start_prefetch_lock: Optional[threading.Lock] = None
+        self._shuffle = shuffle
+        self._shuffled_partition_indices: Optional[list[int]] = None
 
         if log_path is None:
             logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
@@ -163,10 +167,11 @@ class OnlineDataset(IterableDataset):
         partition_locks: Optional[dict],
         partition_signals: Optional[dict],
         callback: Optional[Callable],
+        shuffled_partition_id: Optional[int]
     ) -> None:
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
-        keys, weights = self._key_source.get_keys_and_weights(worker_id, partition_id)
+        keys, weights = self._key_source.get_keys_and_weights(worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id)
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)
 
@@ -305,6 +310,9 @@ class OnlineDataset(IterableDataset):
 
                 callback = callback_func
 
+            # We implement shuffling on a partition level by mapping everything to increasing indices but actually load
+            # different partition data.
+            shuffle_partition =  self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
             self._data_threads[self._next_partition_to_fetch] = threading.Thread(
                 target=self._get_data,
                 args=(
@@ -316,6 +324,7 @@ class OnlineDataset(IterableDataset):
                     self._partition_locks,
                     self._partition_signals,
                     callback,
+                    shuffle_partition
                 ),
             )
 
@@ -329,7 +338,8 @@ class OnlineDataset(IterableDataset):
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        self._get_data(container, worker_id, partition_id, None, None, None, None, None)
+        shuffle_partition =  self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+        self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):
@@ -356,9 +366,7 @@ class OnlineDataset(IterableDataset):
                 self._thread_data_container[partition_id]["data"][idx]
             ), self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
                 "weights"
-            ][
-                idx
-            ]
+            ][idx]
 
     def _wait_for_new_partition_data(self, partition_id: int) -> None:
         with self._partition_signals[partition_id]:
@@ -368,7 +376,6 @@ class OnlineDataset(IterableDataset):
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         last_idx = -1
-
         while not self._is_partition_fetched(partition_id):
             max_idx = self._partition_max_index(partition_id)
             if max_idx <= last_idx:  # No new data
@@ -456,6 +463,12 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
+
+        # TODO seed workers
+        if self._shuffle:
+            self._shuffled_partition_indices = list(range(0, self._num_partitions))
+            random.shuffle(self._shuffled_partition_indices)
+
         self._info(
             f"Total number of partitions will be {self._num_partitions}.\n"
             + f"Parallel prefetch requests = {self._parallel_prefetch_requests}\n"
