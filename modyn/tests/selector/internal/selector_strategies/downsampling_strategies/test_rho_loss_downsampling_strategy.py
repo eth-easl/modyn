@@ -11,6 +11,7 @@ from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, R
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline, Pipeline
+from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy import (
     RHOLossDownsamplingStrategy,
@@ -77,9 +78,9 @@ def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[T
     ".get_trigger_dataset_size"
 )
 def test__prepare_holdout_set(
-        mock_get_trigger_dataset_size,
-        mock_store_training_set,
-        il_training_config: ILTrainingConfig,
+    mock_get_trigger_dataset_size,
+    mock_store_training_set,
+    il_training_config: ILTrainingConfig,
 ):
     pipeline_id = 42
     rho_pipeline_id = 24
@@ -187,3 +188,77 @@ def test__create_rho_pipeline_id(il_training_config: ILTrainingConfig):
         assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
         assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
         assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
+
+
+def register_pipeline() -> int:
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        pipeline_id = database.register_pipeline(
+            num_workers=1,
+            model_class_name="ResNet18",
+            model_config=json.dumps({"num_classes": 2}),
+            amp=False,
+            selection_strategy="{}",
+            full_model_strategy=ModelStorageStrategyConfig(name="PyTorchFullModel"),
+        )
+        database.session.commit()
+    return pipeline_id
+
+
+def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrainingConfig):
+    pipeline_id = register_pipeline()
+    rho_pipeline_id = register_pipeline()
+
+    modyn_config = get_minimal_modyn_config()
+    with MetadataDatabaseConnection(modyn_config) as database:
+        database.session.add(AuxiliaryPipeline(pipeline_id=pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
+        database.session.commit()
+
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
+
+    with patch.object(
+        RHOLossDownsamplingStrategy, "_create_rho_pipeline_id", wraps=strategy._create_rho_pipeline_id
+    ) as mock_create_rho_pipeline_id:
+        actual_rho_pipeline_id = strategy._get_or_create_rho_pipeline_id()
+        mock_create_rho_pipeline_id.assert_not_called()
+        assert actual_rho_pipeline_id == rho_pipeline_id
+
+
+def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig):
+    pipeline_id = register_pipeline()
+
+    modyn_config = get_minimal_modyn_config()
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
+
+    recorded_returned_rho_pipeline_id = None
+    original_create_rho_pipeline_id = strategy._create_rho_pipeline_id
+
+    def _create_rho_pipeline_id_wrapper(database: MetadataDatabaseConnection) -> int:
+        nonlocal recorded_returned_rho_pipeline_id
+        recorded_returned_rho_pipeline_id = original_create_rho_pipeline_id(database)
+        return recorded_returned_rho_pipeline_id
+
+    with patch.object(
+        RHOLossDownsamplingStrategy, "_create_rho_pipeline_id", wraps=_create_rho_pipeline_id_wrapper
+    ) as mock_create_rho_pipeline_id:
+        rho_pipeline_id = strategy._get_or_create_rho_pipeline_id()
+        mock_create_rho_pipeline_id.assert_called_once()
+        assert rho_pipeline_id == recorded_returned_rho_pipeline_id
+
+    # check that the created rho pipeline id is stored in the database
+    with MetadataDatabaseConnection(modyn_config) as database:
+        stored_rho_pipeline_id = (
+            database.session.query(AuxiliaryPipeline.auxiliary_pipeline_id)
+            .filter(AuxiliaryPipeline.pipeline_id == pipeline_id)
+            .scalar()
+        )
+        assert stored_rho_pipeline_id == rho_pipeline_id

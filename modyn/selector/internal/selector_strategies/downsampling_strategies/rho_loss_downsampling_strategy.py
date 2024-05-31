@@ -1,7 +1,6 @@
 import json
 from typing import Any, Iterable
 
-from modyn.config import FullModelStrategy
 from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -12,15 +11,12 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from modyn.supervisor.internal.supervisor import Supervisor
 from sqlalchemy import Select, func, select
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
-    IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig.from_config(
-        Supervisor.get_model_strategy(FullModelStrategy(name="PyTorchFullModel"))
-    )
+    IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig(name="PyTorchFullModel")
 
     def __init__(
         self,
