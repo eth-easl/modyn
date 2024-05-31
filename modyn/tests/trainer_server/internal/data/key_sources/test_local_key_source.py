@@ -48,7 +48,7 @@ def test_read():
     assert keysource.get_num_data_partitions() == 4
 
     for i in range(keysource.get_num_data_partitions()):
-        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i, shuffle=False)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
@@ -57,7 +57,7 @@ def test_read():
     assert keysource.get_num_data_partitions() == 6
 
     for i in range(keysource.get_num_data_partitions()):
-        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i, shuffle=False)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
@@ -73,7 +73,9 @@ def test_read_dirty_directory():
 
     write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory=maximum_keys_in_memory)
 
-    keysource = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
+    keysource = LocalKeySource(
+        pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST, shuffle=False
+    )
 
     assert keysource.get_num_data_partitions() == 0
     assert keysource.get_keys_and_weights(0, 0) == ([], [])
@@ -85,7 +87,7 @@ def test_read_dirty_directory():
     assert keysource.get_num_data_partitions() == 4
 
     for i in range(keysource.get_num_data_partitions()):
-        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i)
+        keys, weights = keysource.get_keys_and_weights(worker_id=0, partition_id=i, shuffle=False)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
@@ -117,11 +119,11 @@ def test_reads_pro():
 
     assert writer.get_number_of_partitions() == 2
 
-    k00, w00 = reader.get_keys_and_weights(worker_id=0, partition_id=0)
+    k00, w00 = reader.get_keys_and_weights(worker_id=0, partition_id=0, shuffle=False)
     assert k00 == list(range(1, 26))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k00, w00))  # get the correct key
 
-    k10, w10 = reader.get_keys_and_weights(worker_id=0, partition_id=1)
+    k10, w10 = reader.get_keys_and_weights(worker_id=0, partition_id=1, shuffle=False)
     assert k10 == list(range(26, 51))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k10, w10))  # get the correct key
 
@@ -139,7 +141,7 @@ def test_reads_pro():
     assert reader.get_num_data_partitions() == 3
 
     # check that everything is ok
-    k20, w20 = reader.get_keys_and_weights(worker_id=0, partition_id=2)
+    k20, w20 = reader.get_keys_and_weights(worker_id=0, partition_id=2, shuffle=False)
     assert k20 == list(range(1000, 1004))
     assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(k20, w20))  # get the correct key
 
