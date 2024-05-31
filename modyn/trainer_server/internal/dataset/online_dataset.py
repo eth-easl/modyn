@@ -470,7 +470,6 @@ class OnlineDataset(IterableDataset):
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
 
-        # TODO seed workers
         if self._shuffle:
             self._shuffled_partition_indices = list(range(0, self._num_partitions))
             random.shuffle(self._shuffled_partition_indices)
