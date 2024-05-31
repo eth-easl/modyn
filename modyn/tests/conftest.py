@@ -174,6 +174,7 @@ def pipeline_training_config() -> TrainingConfig:
             maximum_keys_in_memory=10,
             tail_triggers=None,
         ),
+        shuffle=False,
     )
 
 

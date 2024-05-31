@@ -73,9 +73,7 @@ def test_read_dirty_directory():
 
     write_directory(other_pipeline, 1, TMP_PATH_TEST, number_of_files=10, maximum_keys_in_memory=maximum_keys_in_memory)
 
-    keysource = LocalKeySource(
-        pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST, shuffle=False
-    )
+    keysource = LocalKeySource(pipeline_id=current_pipeline, trigger_id=1, offline_dataset_path=TMP_PATH_TEST)
 
     assert keysource.get_num_data_partitions() == 0
     assert keysource.get_keys_and_weights(0, 0) == ([], [])
@@ -98,7 +96,7 @@ def test_read_dirty_directory():
     assert ks_other.get_num_data_partitions() == 10
 
     for i in range(ks_other.get_num_data_partitions()):
-        keys, weights = ks_other.get_keys_and_weights(worker_id=0, partition_id=i)
+        keys, weights = ks_other.get_keys_and_weights(worker_id=0, partition_id=i, shuffle=False)
         assert keys == list(range(1 + i * maximum_keys_in_memory, 1 + (i + 1) * maximum_keys_in_memory))
         assert all(math.isclose(k * v, 1, abs_tol=1e-5) for k, v in zip(keys, weights))
 
