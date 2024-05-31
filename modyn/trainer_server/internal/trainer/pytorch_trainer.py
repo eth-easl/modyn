@@ -169,6 +169,7 @@ class PytorchTrainer:
             training_info.training_id,
             training_info.num_prefetched_partitions,
             training_info.parallel_prefetch_requests,
+            training_info.shuffle,
             training_info.tokenizer,
             self._dataset_log_path,
         )

@@ -220,6 +220,7 @@ class DataDriftTrigger(Trigger):
             selector_address=f"{self.context.modyn_config.selector.address}",
             num_prefetched_partitions=training_config.num_prefetched_partitions,
             parallel_prefetch_requests=training_config.parallel_prefetch_requests,
+            shuffle=training_config.shuffle,
             tokenizer=data_config.tokenizer,
         )
 

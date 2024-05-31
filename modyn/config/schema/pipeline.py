@@ -109,11 +109,11 @@ class DownsamplingConfig(BaseModel):
         # for exact configurable fields.
         extra = "allow"
 
-    strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
-        Field(
-            description="Strategy used to downsample the data."
-            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
-        )
+    strategy: Literal[
+        "Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"
+    ] = Field(
+        description="Strategy used to downsample the data."
+        "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
     )
     sample_then_batch: bool = Field(
         False,
@@ -330,6 +330,12 @@ class TrainingConfig(BaseModel):
         description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
     )
     batch_size: int = Field(description="The batch size to be used during training.", ge=1)
+    shuffle: bool = Field(
+        description=(
+            "If True, we shuffle the order of partitions and the data within each partition at each worker."
+            "Otherwise, the output order is deterministic."
+        )
+    )
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "

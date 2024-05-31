@@ -90,7 +90,7 @@ class OnlineDataset(IterableDataset):
         self._launched_prefetches = 0
         self._start_prefetch_lock: Optional[threading.Lock] = None
         self._shuffle = shuffle
-        self._shuffled_partition_indices: Optional[list[int]] = None
+        self._shuffled_partition_indices: list[int] = []
 
         if log_path is None:
             logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
@@ -172,7 +172,7 @@ class OnlineDataset(IterableDataset):
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(
-            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id
+            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id, self._shuffle
         )
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)

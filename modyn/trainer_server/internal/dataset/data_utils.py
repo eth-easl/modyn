@@ -88,6 +88,7 @@ def prepare_per_class_dataloader_from_online_dataset(
         initial_filtered_label,
         online_dataset._num_prefetched_partitions,
         online_dataset._parallel_prefetch_requests,
+        online_dataset._shuffle,
         online_dataset._tokenizer_name,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)

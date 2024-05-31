@@ -399,9 +399,9 @@ def test_dataset() -> None:
 
     keys = get_data_keys()
 
-    for num_dataworkers in [4]:  # [0, 1, 2, 4, 8, 16]:
+    for num_dataworkers in [0, 1, 2, 4, 8, 16]:
         pipeline_id, trigger_id = prepare_selector(num_dataworkers, keys)
-        for prefetched_partitions in [4]:  # [0, 1, 2, 3, 4, 5, 999]:
+        for prefetched_partitions in [0, 1, 2, 3, 4, 5, 999]:
             ppr_list = [999]
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]

@@ -55,6 +55,7 @@ message StartTrainingRequest {
   optional int32 seed = 21;
   optional PythonString tokenizer = 22;
   int64 num_samples_to_pass = 23;
+  bool shuffle = 24;
 }
 
 message StartTrainingResponse {

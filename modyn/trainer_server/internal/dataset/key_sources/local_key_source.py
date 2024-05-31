@@ -18,14 +18,18 @@ class LocalKeySource(AbstractKeySource):
         path = self._trigger_sample_storage.get_file_path(self._pipeline_id, self._trigger_id, partition_id, worker_id)
         tuples_list = self._trigger_sample_storage.parse_file(path)
 
-        if shuffle:
-            random.shuffle(tuples_list)
-
         if len(tuples_list) == 0:
             return [], []
         keys, weights = zip(*tuples_list)  # type: ignore
+        keys_list = list(keys)
+        weights_list = list(weights)
 
-        return list(keys), list(weights)
+        if shuffle:
+            combined = list(zip(keys_list, weights_list))
+            random.shuffle(combined)
+            keys_list, weights_list = zip(*combined)
+
+        return keys_list, weights_list
 
     def uses_weights(self) -> bool:
         return True
