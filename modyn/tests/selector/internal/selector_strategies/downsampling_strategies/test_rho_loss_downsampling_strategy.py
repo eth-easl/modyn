@@ -183,7 +183,7 @@ def test__create_rho_pipeline_id(il_training_config: ILTrainingConfig):
         assert rho_pipeline.model_class_name == il_training_config.il_model_id
         assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
         assert rho_pipeline.amp == il_training_config.amp
-        assert rho_pipeline.selection_strategy == "{}"
+        assert rho_pipeline.selection_strategy == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
         assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name
         assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
         assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
@@ -261,4 +261,4 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
             .filter(AuxiliaryPipeline.pipeline_id == pipeline_id)
             .scalar()
         )
-        assert stored_rho_pipeline_id == rho_pipeline_id
+    assert stored_rho_pipeline_id == rho_pipeline_id

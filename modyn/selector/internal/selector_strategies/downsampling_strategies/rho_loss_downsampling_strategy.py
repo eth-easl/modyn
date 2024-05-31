@@ -17,6 +17,7 @@ from sqlalchemy import Select, func, select
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
     IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig(name="PyTorchFullModel")
+    IL_MODEL_DUMMY_SELECTION_STRATEGY = "{}"
 
     def __init__(
         self,
@@ -69,7 +70,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             model_class_name=self.il_training_config.il_model_id,
             model_config=json.dumps(self.il_training_config.il_model_config),
             amp=self.il_training_config.amp,
-            selection_strategy="{}",
+            selection_strategy=self.IL_MODEL_DUMMY_SELECTION_STRATEGY,
             full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
         database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
