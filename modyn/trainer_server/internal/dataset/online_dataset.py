@@ -468,6 +468,7 @@ class OnlineDataset(IterableDataset):
         if self._shuffle:
             self._shuffled_partition_indices = list(range(0, self._num_partitions))
             random.shuffle(self._shuffled_partition_indices)
+            self._info(f"Shuffled partitions into random order: {self._shuffled_partition_indices}", worker_id)
 
         self._info(
             f"Total number of partitions will be {self._num_partitions}.\n"

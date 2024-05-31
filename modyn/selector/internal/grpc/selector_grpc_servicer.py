@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import threading
+import random
 from typing import Iterable
 
 import grpc
@@ -56,13 +57,16 @@ class SelectorGRPCServicer(SelectorServicer):
         )
         tid = threading.get_native_id()
         pid = os.getpid()
+        shuffle = request.HasField("shuffle") and request.shuffle
 
         logger.info(
             f"[{pid}][{tid}][Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id}"
-            + f" and worker id {worker_id} and partition id {partition_id}"
+            + f" and worker id {worker_id} and partition id {partition_id}. shuffle = {shuffle}"
         )
 
         samples = self.selector_manager.get_sample_keys_and_weights(pipeline_id, trigger_id, worker_id, partition_id)
+        if shuffle:
+            random.shuffle(samples)
 
         num_samples = len(samples)
         if num_samples == 0:
