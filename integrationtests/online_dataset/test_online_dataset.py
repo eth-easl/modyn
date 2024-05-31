@@ -329,7 +329,7 @@ def test_dataset_impl(
         + f"expected_min = {expected_min_batches}, expected_max = {expected_max_batches}"
     )
 
-    assert set(all_samples) == set(items)
+    assert set(all_samples) == set(items), f"all_samples = {all_samples} \n\n items = {items}"
     assert set(all_labels) == set(range(len(items)))
 
     trans = transforms.Compose([transforms.ToPILImage()])
