@@ -8,7 +8,9 @@ class AbstractKeySource(ABC):
         self._trigger_id = trigger_id
 
     @abstractmethod
-    def get_keys_and_weights(self, worker_id: int, partition_id: int, shuffle: bool) -> tuple[list[int], Optional[list[float]]]:
+    def get_keys_and_weights(
+        self, worker_id: int, partition_id: int, shuffle: bool
+    ) -> tuple[list[int], Optional[list[float]]]:
         raise NotImplementedError()
 
     @abstractmethod

@@ -6,8 +6,8 @@ import json
 import logging
 import os
 import pathlib
-import threading
 import random
+import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
 import grpc
@@ -167,11 +167,13 @@ class OnlineDataset(IterableDataset):
         partition_locks: Optional[dict],
         partition_signals: Optional[dict],
         callback: Optional[Callable],
-        shuffled_partition_id: Optional[int]
+        shuffled_partition_id: Optional[int],
     ) -> None:
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
-        keys, weights = self._key_source.get_keys_and_weights(worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id)
+        keys, weights = self._key_source.get_keys_and_weights(
+            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id
+        )
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)
 
@@ -312,7 +314,9 @@ class OnlineDataset(IterableDataset):
 
             # We implement shuffling on a partition level by mapping everything to increasing indices but actually load
             # different partition data.
-            shuffle_partition =  self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+            shuffle_partition = (
+                self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+            )
             self._data_threads[self._next_partition_to_fetch] = threading.Thread(
                 target=self._get_data,
                 args=(
@@ -324,7 +328,7 @@ class OnlineDataset(IterableDataset):
                     self._partition_locks,
                     self._partition_signals,
                     callback,
-                    shuffle_partition
+                    shuffle_partition,
                 ),
             )
 
@@ -338,7 +342,7 @@ class OnlineDataset(IterableDataset):
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        shuffle_partition =  self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+        shuffle_partition = self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
         self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
@@ -366,7 +370,9 @@ class OnlineDataset(IterableDataset):
                 self._thread_data_container[partition_id]["data"][idx]
             ), self._thread_data_container[partition_id]["labels"][idx], self._thread_data_container[partition_id][
                 "weights"
-            ][idx]
+            ][
+                idx
+            ]
 
     def _wait_for_new_partition_data(self, partition_id: int) -> None:
         with self._partition_signals[partition_id]:

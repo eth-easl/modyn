@@ -275,7 +275,7 @@ def test_dataset_impl(
     pipeline_id: int,
     trigger_id: int,
     items: list[int],
-    consistency_check: Optional[str] = None
+    consistency_check: Optional[str] = None,
 ) -> None:
     shuffle = consistency_check is not None and consistency_check == "shuffle"
     dataloader, _ = prepare_dataloaders(
@@ -341,11 +341,10 @@ def test_dataset_impl(
         image_bytes = pil_image.tobytes()
         if image_bytes not in FIRST_ADDED_IMAGES:
             raise ValueError(f"Could not find image {idx} in created images, all_samples = {all_samples}")
-        
-    
+
     if consistency_check is None:
         return
-    
+
     print("Iterating again to check across epochs.")
 
     second_samples = []
@@ -367,6 +366,8 @@ def test_dataset_impl(
             second_data.append(sample)  # iterate over batch dimension to extract samples
         second_labels.extend(batch[2].tolist())
 
+    assert consistency_check in ["twice", "shuffle"]
+
     if consistency_check == "twice":
         # Validate exact same order
         assert second_samples == all_samples
@@ -376,13 +377,15 @@ def test_dataset_impl(
     if consistency_check == "shuffle":
         # Same content, but not same order
         assert second_samples != all_samples
-        assert not any(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
+        assert not all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
+        print([torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data)])
         assert second_labels != all_labels
 
         assert set(second_samples) == set(all_samples)
         assert set(second_labels) == set(all_labels)
         for data1 in second_data:
             assert any(torch.allclose(data1, data2) for data2 in all_data)
+
 
 def test_dataset() -> None:
     NUM_IMAGES = 10
@@ -396,9 +399,9 @@ def test_dataset() -> None:
 
     keys = get_data_keys()
 
-    for num_dataworkers in  [4]: #[0, 1, 2, 4, 8, 16]:
+    for num_dataworkers in [4]:  # [0, 1, 2, 4, 8, 16]:
         pipeline_id, trigger_id = prepare_selector(num_dataworkers, keys)
-        for prefetched_partitions in [4]: #[0, 1, 2, 3, 4, 5, 999]:
+        for prefetched_partitions in [4]:  # [0, 1, 2, 3, 4, 5, 999]:
             ppr_list = [999]
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]
@@ -423,7 +426,7 @@ def test_dataset() -> None:
                             pipeline_id,
                             trigger_id,
                             keys,
-                            consistency_check
+                            consistency_check,
                         )
                         gc.collect()
 
