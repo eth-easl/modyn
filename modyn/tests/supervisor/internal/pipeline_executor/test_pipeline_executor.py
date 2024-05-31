@@ -103,13 +103,11 @@ def dummy_stage_log() -> StageLog:
 @overload
 def get_non_connecting_pipeline_executor(
     system_config: ModynConfig, pipeline_config: ModynPipelineConfig
-) -> PipelineExecutor:
-    ...
+) -> PipelineExecutor: ...
 
 
 @overload
-def get_non_connecting_pipeline_executor(pipeline_args: PipelineExecutionParams) -> PipelineExecutor:
-    ...
+def get_non_connecting_pipeline_executor(pipeline_args: PipelineExecutionParams) -> PipelineExecutor: ...
 
 
 def get_non_connecting_pipeline_executor(

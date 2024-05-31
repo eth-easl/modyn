@@ -109,11 +109,11 @@ class DownsamplingConfig(BaseModel):
         # for exact configurable fields.
         extra = "allow"
 
-    strategy: Literal[
-        "Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"
-    ] = Field(
-        description="Strategy used to downsample the data."
-        "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
+    strategy: Literal["Craig", "GradMatch", "GradNorm", "KcenterGreedy", "Loss", "No", "Submodular", "Uncertainty"] = (
+        Field(
+            description="Strategy used to downsample the data."
+            "Only the prefix, i.e. without `DownsamplingStrategy`, is needed."
+        )
     )
     sample_then_batch: bool = Field(
         False,
