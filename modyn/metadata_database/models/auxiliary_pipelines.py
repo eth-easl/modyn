@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey
-
-from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.metadata_database.metadata_base import MetadataBase
+from modyn.metadata_database.models.pipelines import Pipeline
+from sqlalchemy import Column, ForeignKey, Integer
 
 
 class AuxiliaryPipeline(MetadataBase):

@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import shutil
@@ -6,9 +7,10 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
-from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
+from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
+from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline, Pipeline
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy import (
     RHOLossDownsamplingStrategy,
@@ -45,6 +47,15 @@ def setup_and_teardown():
     shutil.rmtree(TMP_DIR)
 
 
+@pytest.fixture
+def il_training_config():
+    return ILTrainingConfig(
+        num_workers=1,
+        il_model_id="ResNet18",
+        il_model_config={"num_classes": 2},
+    )
+
+
 def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[Tuple[int, int, int]]) -> None:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         for key, timestamp, label in key_ts_label_tuples:
@@ -66,8 +77,9 @@ def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[T
     ".get_trigger_dataset_size"
 )
 def test__prepare_holdout_set(
-    mock_get_trigger_dataset_size,
-    mock_store_training_set,
+        mock_get_trigger_dataset_size,
+        mock_store_training_set,
+        il_training_config: ILTrainingConfig,
 ):
     pipeline_id = 42
     rho_pipeline_id = 24
@@ -76,6 +88,7 @@ def test__prepare_holdout_set(
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
         holdout_set_ratio=50,
+        il_training_config=il_training_config,
     )
     maximum_keys_in_memory = 4
     trigger_id2dataset_size = [13, 24, 5]
@@ -141,3 +154,36 @@ def test__prepare_holdout_set(
         )
         training_set_producer = mock_store_training_set.call_args[0][3]
         validate_training_set_producer(training_set_producer, trigger_id)
+
+
+def test__create_rho_pipeline_id(il_training_config: ILTrainingConfig):
+    modyn_config = get_minimal_modyn_config()
+    pipline_id = 42
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipline_id, 4)
+    with MetadataDatabaseConnection(modyn_config) as database:
+        rho_pipeline_id = strategy._create_rho_pipeline_id(database)
+        database.session.commit()
+
+    with MetadataDatabaseConnection(modyn_config) as database:
+        stored_rho_pipeline_id = (
+            database.session.query(AuxiliaryPipeline.auxiliary_pipeline_id)
+            .filter(AuxiliaryPipeline.pipeline_id == pipline_id)
+            .scalar()
+        )
+        assert stored_rho_pipeline_id == rho_pipeline_id
+        rho_pipeline = database.session.query(Pipeline).filter(Pipeline.pipeline_id == rho_pipeline_id).first()
+
+        assert rho_pipeline.num_workers == il_training_config.num_workers
+        assert rho_pipeline.model_class_name == il_training_config.il_model_id
+        assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
+        assert rho_pipeline.amp == il_training_config.amp
+        assert rho_pipeline.selection_strategy == "{}"
+        assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name
+        assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
+        assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
+        assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config

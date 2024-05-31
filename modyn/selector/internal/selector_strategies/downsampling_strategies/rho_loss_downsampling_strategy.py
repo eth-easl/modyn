@@ -2,24 +2,23 @@ import json
 from typing import Any, Iterable
 
 from modyn.config import FullModelStrategy
-from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline
 from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
+from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import Select, func, select
-
 from modyn.supervisor.internal.supervisor import Supervisor
+from sqlalchemy import Select, func, select
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
-    IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig(
+    IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig.from_config(
         Supervisor.get_model_strategy(FullModelStrategy(name="PyTorchFullModel"))
     )
 
@@ -32,6 +31,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     ):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
+        self.il_training_config = downsampling_config.il_training_config
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
@@ -66,13 +66,12 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
     def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection) -> int:
         rho_pipeline_id = database.register_pipeline(
-            num_workers=self.downsampling_config['il_training_config']['num_workers'],
-            model_class_name=self.downsampling_config['il_training_config']['model_id'],
-
-            model_config=json.dumps(self.downsampling_config['il_training_config']['model_config']),
-            amp=self.downsampling_config['il_training_config']['amp'],
+            num_workers=self.il_training_config.num_workers,
+            model_class_name=self.il_training_config.il_model_id,
+            model_config=json.dumps(self.il_training_config.il_model_config),
+            amp=self.il_training_config.amp,
             selection_strategy="{}",
-            full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY
+            full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
         database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
         return rho_pipeline_id
