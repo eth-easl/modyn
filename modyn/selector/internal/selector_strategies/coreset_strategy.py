@@ -3,6 +3,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.config import CoresetStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
@@ -18,39 +19,27 @@ logger = logging.getLogger(__name__)
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
-
-        # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
+    def __init__(self, config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int):
+        super().__init__(config, modyn_config, pipeline_id)
+        # a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
-        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(
-            config, modyn_config, pipeline_id, maximum_keys_in_memory
-        )
-
+        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, modyn_config, pipeline_id)
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, self._storage_backend
         )
 
     def _init_storage_backend(self) -> AbstractStorageBackend:
-        if "storage_backend" in self._config:
-            if self._config["storage_backend"] == "local":
-                # TODO(#324): Support local backend on CoresetStrategy
-                raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
+        if self._config.storage_backend == "local":
+            # TODO(#324): Support local backend on CoresetStrategy
+            raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
 
-            if self._config["storage_backend"] == "database":
-                storage_backend = DatabaseStorageBackend(
-                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown storage backend \"{self._config['storage_backend']}\". Supported: database"
-                )
-        else:
-            logger.info("CoresetStrategy defaulting to database backend.")
+        if self._config.storage_backend == "database":
             storage_backend = DatabaseStorageBackend(
                 self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
             )
+        else:
+            raise NotImplementedError(f'Unknown storage backend "{self._config.storage_backend}". Supported: database')
         return storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:

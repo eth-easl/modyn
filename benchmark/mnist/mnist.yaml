@@ -34,7 +34,7 @@ training:
     maximum_keys_in_memory: 1000
     storage_backend: "database"
     limit: -1
-    reset_after_trigger: True
+    tail_triggers: 0
 data:
   dataset_id: mnist
   transformations: ["transforms.ToTensor()",

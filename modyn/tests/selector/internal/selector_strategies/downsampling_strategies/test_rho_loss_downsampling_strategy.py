@@ -6,6 +6,7 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
+from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
@@ -72,11 +73,10 @@ def test__prepare_holdout_set(
     rho_pipeline_id = 24
     modyn_config = get_minimal_modyn_config()
 
-    downsampling_config = {
-        "sample_then_batch": False,
-        "ratio": 60,
-        "holdout_set_ratio": 50,
-    }
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+    )
     maximum_keys_in_memory = 4
     trigger_id2dataset_size = [13, 24, 5]
 

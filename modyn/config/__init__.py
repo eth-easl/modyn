@@ -1,6 +1,10 @@
 from pathlib import Path
 
 import yaml
+from modyn.config.schema.sampling.downsampling_config import (  # noqa: F401
+    MultiDownsamplingConfig,
+    SingleDownsamplingConfig,
+)
 
 from .schema.config import (
     BinaryFileByteOrder,
@@ -24,19 +28,20 @@ from .schema.config import (
     TensorboardConfig,
     TrainingServerConfig,
 )
-from .schema.pipeline import (
+from .schema.pipeline import (  # noqa: F401
     CheckpointingConfig,
+    CoresetStrategyConfig,
     DataConfig,
-    DownsamplingConfig,
     EvalDataConfig,
     EvaluationConfig,
+    FreshnessSamplingStrategyConfig,
     FullModelStrategy,
     IncrementalModelStrategy,
     LrSchedulerConfig,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
-    MultiDownsamplingConfig,
+    NewDataStrategyConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
@@ -79,8 +84,8 @@ __all__ = [
     "IncrementalModelStrategy",
     "PipelineModelStorageConfig",
     "PresamplingConfig",
-    "DownsamplingConfig",
-    "MultiDownsamplingConfig",
+    "SingleDownsamplingConfig",
+    "FreshnessSamplingStrategyConfig",
     "SelectionStrategy",
     "CheckpointingConfig",
     "OptimizerParamGroup",
