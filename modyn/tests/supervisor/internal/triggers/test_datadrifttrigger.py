@@ -5,7 +5,7 @@ from typing import Optional
 from unittest.mock import patch
 
 from modyn.config.schema.config import ModynConfig
-from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
+from modyn.config.schema.pipeline.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
 from modyn.supervisor.internal.triggers.trigger import TriggerContext

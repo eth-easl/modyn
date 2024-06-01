@@ -3,12 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from modyn.config.schema.modyn_base_model import ModynBaseModel
+
 
 # ------------------------------------------------------ MIXINS ------------------------------------------------------ #
 
 
-class HostnamePortMixin(BaseModel):
+class HostnamePortMixin(ModynBaseModel):
     """
     Mixin for hostname and port configuration.
     """
@@ -35,7 +38,7 @@ class DatabaseMixin(HostnamePortMixin):
 # ------------------------------------------------------ PROJECT ----------------------------------------------------- #
 
 
-class ProjectConfig(BaseModel):
+class ProjectConfig(ModynBaseModel):
     """
     Represents the configuration of a project.
     """
@@ -50,7 +53,7 @@ class ProjectConfig(BaseModel):
 BinaryFileByteOrder = Literal["big", "little"]
 
 
-class _DatasetBaseFileWrapperConfig(BaseModel):
+class _DatasetBaseFileWrapperConfig(ModynBaseModel):
     """
     Represents a dataset file used by modyn.
     """
@@ -107,7 +110,7 @@ DatasetFileWrapperConfig = Union[
 ]
 
 
-class DatasetsConfig(BaseModel):
+class DatasetsConfig(ModynBaseModel):
     """
     Configures a dataset to be used by modyn.
     """
@@ -316,7 +319,7 @@ class MetadataProcessorConfig(HostnamePortMixin):
 # ---------------------------------------------------- TENSORBOARD --------------------------------------------------- #
 
 
-class TensorboardConfig(BaseModel):
+class TensorboardConfig(ModynBaseModel):
     """
     Configuration for modyn's Tensorboard.
     """
@@ -338,7 +341,7 @@ class SupervisorConfig(HostnamePortMixin):
 # ------------------------------------------------------ CONFIG ------------------------------------------------------ #
 
 
-class ModynConfig(BaseModel):
+class ModynConfig(ModynBaseModel):
     """Configuration for the Modyn system. Please adapt the fields as needed."""
 
     project: ProjectConfig = Field(default_factory=ProjectConfig)

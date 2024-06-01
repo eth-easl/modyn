@@ -10,7 +10,7 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import EvalDataConfig, ResultWriterType
+from modyn.config.schema.pipeline.pipeline import EvalDataConfig, ResultWriterType
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason

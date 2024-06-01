@@ -12,7 +12,7 @@ from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
 from modyn.config.schema.config import ModynConfig
-from modyn.config.schema.pipeline import ModynPipelineConfig
+from modyn.config.schema.pipeline.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from pydantic import BaseModel, Field, model_serializer, model_validator

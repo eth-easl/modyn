@@ -8,7 +8,7 @@ from evidently import ColumnMapping
 from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
-from modyn.config.schema.pipeline import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.pipeline import DataDriftTriggerConfig
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
 
 # pylint: disable-next=no-name-in-module

@@ -7,7 +7,7 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
-from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
+from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline, Pipeline

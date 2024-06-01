@@ -1,6 +1,6 @@
 import logging
 
-from modyn.config.schema.pipeline import ModynPipelineConfig
+from modyn.config.schema.pipeline.pipeline import ModynPipelineConfig
 from modynclient.client.client import Client
 from modynclient.config.schema.client_config import ModynClientConfig
 

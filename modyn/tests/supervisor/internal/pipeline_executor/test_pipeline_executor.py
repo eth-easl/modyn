@@ -12,7 +12,7 @@ from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
 from modyn.config.schema.config import DatasetsConfig, ModynConfig, SupervisorConfig
-from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
+from modyn.config.schema.pipeline.pipeline import EvaluationConfig, ModynPipelineConfig
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason

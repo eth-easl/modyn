@@ -1,5 +1,5 @@
 import pytest
-from modyn.config.schema.pipeline import (
+from modyn.config.schema.pipeline.pipeline import (
     EvalStrategyModel,
     EvaluationConfig,
     MatrixEvalStrategyConfig,

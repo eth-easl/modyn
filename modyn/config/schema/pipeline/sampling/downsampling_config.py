@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated, List, Literal, Union
+from typing import Annotated, List, Literal, Union, Optional, Dict, Any
 
+from modyn.config.schema.pipeline import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
 from pydantic import Field, model_validator
 from typing_extensions import Self
@@ -106,6 +107,21 @@ class ILTrainingConfig(ModynBaseModel):
         default_factory=dict, description="Configuration dictionary that will be passed to the model on initialization."
     )
     amp: bool = Field(False, description="Whether to use automatic mixed precision.")
+    device: str = Field(description="The device to use to train IL model.")
+    batch_size: int = Field(description="The batch size to use for training the IL model.", min=1)
+    epochs: int = Field(description="The number of epochs to train the IL model.", min=1)
+    optimizers: List[OptimizerConfig] = Field(description="The optimizer configuration for the IL model.")
+    optimization_criterion: OptimizationCriterion = Field(
+        description="Configuration for the optimization criterion that we optimize",
+    )
+    lr_scheduler: Optional[LrSchedulerConfig] = Field(
+        None,
+        description="Configuration for the Torch-based Learning Rate (LR) scheduler used for training.",
+    )
+    grad_scaler_config: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
+    )
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
@@ -119,6 +135,8 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
         max=100,
     )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
+    # somehow copy the DataConfig from pipeline.py
+    # il_data_config: DataConfig = Field(description="The configuration for the IL data.")
 
 
 SingleDownsamplingConfig = Annotated[
