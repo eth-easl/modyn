@@ -19,7 +19,7 @@ from integrationtests.utils import (
     init_metadata_db,
     register_pipeline,
 )
-from modyn.config.schema.pipeline.pipeline import NewDataStrategyConfig
+from modyn.config.schema.pipeline import NewDataStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (

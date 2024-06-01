@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import yaml
-from modyn.config.schema.pipeline.sampling.downsampling_config import (  # noqa: F401
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import (  # noqa: F401
     MultiDownsamplingConfig,
     SingleDownsamplingConfig,
 )
@@ -28,7 +28,7 @@ from .schema.config import (
     TensorboardConfig,
     TrainingServerConfig,
 )
-from modyn.config.schema.pipeline.pipeline import (  # noqa: F401
+from modyn.config.schema.pipeline import (  # noqa: F401
     CoresetStrategyConfig,
     DataConfig,
     EvalDataConfig,

@@ -3,9 +3,9 @@ from __future__ import annotations
 from functools import cached_property
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
-from modyn.config.schema.pipeline import CheckpointingConfig, OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
+from modyn.config.schema.pipeline_component import CheckpointingConfig, OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
-from modyn.config.schema.pipeline.sampling.downsampling_config import (
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import (
     MultiDownsamplingConfig,
     NoDownsamplingConfig,
     SingleDownsamplingConfig,

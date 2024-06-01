@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Generator
 
-from modyn.config.schema.pipeline.pipeline import TimeTriggerConfig
+from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
 
 

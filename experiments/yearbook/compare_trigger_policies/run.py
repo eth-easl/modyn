@@ -1,5 +1,5 @@
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
-from modyn.config.schema.pipeline.pipeline import (
+from modyn.config.schema.pipeline import (
     DataAmountTriggerConfig,
     ModynPipelineConfig,
     OffsetEvalStrategyConfig,

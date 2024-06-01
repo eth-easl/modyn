@@ -1,4 +1,4 @@
-from modyn.config.schema.pipeline.pipeline import (
+from modyn.config.schema.pipeline import (
     DataConfig,
     EvalDataConfig,
     EvalStrategyModel,

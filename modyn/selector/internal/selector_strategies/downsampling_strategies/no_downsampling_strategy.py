@@ -1,6 +1,6 @@
 from typing import Dict
 
-from modyn.config.schema.pipeline.sampling.downsampling_config import NoDownsamplingConfig
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import NoDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 
 

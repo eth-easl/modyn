@@ -1,6 +1,6 @@
 from typing import Generator
 
-from modyn.config.schema.pipeline.pipeline import DataAmountTriggerConfig
+from modyn.config.schema.pipeline import DataAmountTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
 
 

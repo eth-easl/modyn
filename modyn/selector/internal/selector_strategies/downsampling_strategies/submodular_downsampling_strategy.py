@@ -1,4 +1,4 @@
-from modyn.config.schema.pipeline.sampling.downsampling_config import SubmodularDownsamplingConfig
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import SubmodularDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
 

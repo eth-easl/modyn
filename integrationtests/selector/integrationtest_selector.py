@@ -1,7 +1,7 @@
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
-from modyn.config.schema.pipeline.pipeline import CoresetStrategyConfig, NewDataStrategyConfig, PresamplingConfig
-from modyn.config.schema.pipeline.sampling.downsampling_config import LossDownsamplingConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig, NewDataStrategyConfig, PresamplingConfig
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import LossDownsamplingConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
     GetAvailableLabelsRequest,

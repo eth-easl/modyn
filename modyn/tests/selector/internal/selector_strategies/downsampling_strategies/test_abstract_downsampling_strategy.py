@@ -1,7 +1,7 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name,abstract-class-instantiated
 from unittest.mock import patch
 
-from modyn.config.schema.pipeline.sampling.downsampling_config import BaseDownsamplingConfig
+from modyn.config.schema.pipeline_component.sampling.downsampling_config import BaseDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
 

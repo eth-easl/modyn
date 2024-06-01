@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, List, Literal, Union, Optional, Dict, Any
 
-from modyn.config.schema.pipeline import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
+from modyn.config.schema.pipeline_component import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
 from pydantic import Field, model_validator
 from typing_extensions import Self
