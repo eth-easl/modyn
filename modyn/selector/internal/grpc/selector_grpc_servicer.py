@@ -65,6 +65,7 @@ class SelectorGRPCServicer(SelectorServicer):
         )
 
         samples = self.selector_manager.get_sample_keys_and_weights(pipeline_id, trigger_id, worker_id, partition_id)
+        print(f"got samples pre-shuffle = {samples}")
         if shuffle:
             random.shuffle(samples)
 

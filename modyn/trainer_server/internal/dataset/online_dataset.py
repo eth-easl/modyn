@@ -177,6 +177,8 @@ class OnlineDataset(IterableDataset):
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)
 
+        print(f"got keys: {keys}")
+
         self._info("Getting data from storage", worker_id)
         self._sw.start(f"GetDataPart{partition_id}", overwrite=True)
         all_response_times = []
@@ -343,10 +345,12 @@ class OnlineDataset(IterableDataset):
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
         shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
+        print(f"fetching no prefetch {partition_id} ({shuffle_partition_id})")
         self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):
+            print(f"yielding key {container["keys"][idx]}")
             yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
                 "weights"
             ][idx]
