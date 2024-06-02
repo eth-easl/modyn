@@ -342,8 +342,8 @@ class OnlineDataset(IterableDataset):
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        shuffle_partition = self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
-        self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition)
+        shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
+        self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         for idx in range(len(container["keys"])):

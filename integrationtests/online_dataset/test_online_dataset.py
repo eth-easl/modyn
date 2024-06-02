@@ -407,7 +407,7 @@ def test_dataset() -> None:
                 ppr_list = [1, 2, 5, 999]
 
             consistency_checks = [None]
-            if num_dataworkers == 4 and prefetched_partitions in [0, 4]:
+            if num_dataworkers in [0, 4] and prefetched_partitions in [0, 4]:
                 consistency_checks = [None, "twice", "shuffle"]
 
             for parallel_prefetch_requests in ppr_list:
