@@ -8,7 +8,7 @@ from unittest.mock import ANY, patch
 
 import pytest
 
-from modyn.config import OptimizerConfig, OptimizerParamGroup, OptimizationCriterion
+from modyn.config import OptimizerConfig, OptimizerParamGroup, OptimizationCriterion, DataConfig
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -70,6 +70,14 @@ def il_training_config():
     )
 
 
+@pytest.fixture
+def il_data_config():
+    return DataConfig(
+        dataset_id="test",
+        bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
+    )
+
+
 def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[Tuple[int, int, int]]) -> None:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         for key, timestamp, label in key_ts_label_tuples:
@@ -94,6 +102,7 @@ def test__prepare_holdout_set(
     mock_get_trigger_dataset_size,
     mock_store_training_set,
     il_training_config: ILTrainingConfig,
+    il_data_config: DataConfig,
 ):
     pipeline_id = 42
     rho_pipeline_id = 24
@@ -103,6 +112,7 @@ def test__prepare_holdout_set(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        il_data_config=il_data_config,
     )
     maximum_keys_in_memory = 4
     trigger_id2dataset_size = [13, 24, 5]
@@ -184,7 +194,10 @@ def register_pipeline() -> int:
     return pipeline_id
 
 
-def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrainingConfig):
+def test__get_or_create_rho_pipeline_id_when_present(
+        il_training_config: ILTrainingConfig,
+        il_data_config: DataConfig,
+):
     # we create the main pipeline and rho pipeline and their link in db in advance
     pipeline_id = register_pipeline()
     rho_pipeline_id = register_pipeline()
@@ -198,6 +211,7 @@ def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrain
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        il_data_config=il_data_config,
     )
 
     with patch.object(RHOLossDownsamplingStrategy, "_create_rho_pipeline_id") as mock_create_rho_pipeline_id:
@@ -206,7 +220,10 @@ def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrain
         assert strategy.rho_pipeline_id == rho_pipeline_id
 
 
-def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig):
+def test__get_or_create_rho_pipeline_id_when_absent(
+        il_training_config: ILTrainingConfig,
+        il_data_config: DataConfig,
+):
     pipeline_id = register_pipeline()
 
     modyn_config = get_minimal_modyn_config()
@@ -214,6 +231,7 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        il_data_config=il_data_config,
     )
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)

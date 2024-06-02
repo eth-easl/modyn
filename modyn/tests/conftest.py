@@ -16,7 +16,6 @@ from modyn.config.schema.config import (
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
     DataAmountTriggerConfig,
-    DataConfig,
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
@@ -30,7 +29,7 @@ from modyn.config.schema.pipeline import (
     PipelineModelStorageConfig,
     TrainingConfig,
 )
-from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion
+from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion, DataConfig
 
 
 # --------------------------------------------------- Modyn config --------------------------------------------------- #

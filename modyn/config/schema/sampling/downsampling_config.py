@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, List, Literal, Union, Dict, Any, Optional
 
+from modyn.config.schema.data.data_config import DataConfig
 from modyn.config.schema.optimizer.optimizer_config import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
 from pydantic import Field, model_validator
@@ -135,6 +136,9 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
         max=100,
     )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
+    il_data_config: DataConfig = Field(
+        description="The configuration for the IL data. Should be the same as the data config in the main pipeline."
+    )
 
 
 SingleDownsamplingConfig = Annotated[

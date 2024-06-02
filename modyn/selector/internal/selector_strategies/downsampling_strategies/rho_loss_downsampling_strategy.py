@@ -29,6 +29,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
+        self.il_data_config = downsampling_config.il_data_config
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
         self.rho_pipeline_id: int = self._get_or_create_rho_pipeline_id()
 
@@ -37,9 +38,11 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
         self._prepare_holdout_set(next_trigger_id, self.rho_pipeline_id, selector_storage_backend)
-        # Step 3: Issue training request to the trainer server, with pipeline_id as rho_pipeline_id and trigger_id
-        # as next_trigger_id. Wait for the training to complete. Store the model. Record model id in
-        # downsampling_params, so that it can be fetched and used for downsampling.
+        model_id = self._train_il_model(next_trigger_id, self.rho_pipeline_id)
+        raise NotImplementedError
+
+
+    def _train_il_model(self, trigger_id: int, rho_pipeline_id: int) -> int:
         raise NotImplementedError
 
     def _get_or_create_rho_pipeline_id(self) -> int:

@@ -1,6 +1,5 @@
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
-    DataConfig,
     EvalDataConfig,
     EvalStrategyModel,
     EvaluationConfig,
@@ -14,7 +13,7 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
     TriggerConfig,
 )
-from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion
+from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion, DataConfig
 
 
 def gen_pipeline_config(name: str, trigger: TriggerConfig, eval_strategy: EvalStrategyModel) -> ModynPipelineConfig:
