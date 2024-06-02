@@ -196,6 +196,15 @@ class CheckpointingConfig(ModynBaseModel):
         description="The path on the training node where the checkpoints are stored.",
     )
 
+    @model_validator(mode="after")
+    def validate_activation(self) -> Self:
+        if self.activated:
+            if self.interval is None:
+                raise ValueError("If checkpointing is activated, the interval must be set.")
+            if self.path is None:
+                raise ValueError("If checkpointing is activated, the path must be set.")
+        return self
+
 
 class TrainingConfig(ModynBaseModel):
     gpus: int = Field(description="The number of GPUs that should be used for training.", ge=1)
@@ -422,10 +431,6 @@ class EvalDataConfig(DataConfig):
     metrics: List[Metric] = Field(
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
-    )
-    tokenizer: Optional[str] = Field(
-        None,
-        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )
 
 

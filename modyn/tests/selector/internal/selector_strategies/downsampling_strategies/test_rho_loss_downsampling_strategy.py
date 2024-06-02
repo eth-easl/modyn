@@ -7,7 +7,8 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
-from modyn.config import DataConfig, OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
+from modyn.config.schema.data.data_config import DataConfig
+from modyn.config.schema.optimizer.optimizer_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata

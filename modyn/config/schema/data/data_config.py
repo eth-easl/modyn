@@ -22,8 +22,8 @@ class DataConfig(ModynBaseModel):
             "For example, this can be torchvision transformations."
         ),
     )
-    label_transformer_function: Optional[str] = Field(
-        None, description="Function used to transform the label (tensors of integers)."
+    label_transformer_function: str = Field(
+        "", description="Function used to transform the label (tensors of integers)."
     )
     tokenizer: Optional[str] = Field(
         None,

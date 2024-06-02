@@ -10,6 +10,8 @@ from concurrent import futures
 from typing import Any, Callable, Generator, Optional
 
 import grpc
+from modyn.config import TrainingConfig
+from modyn.config.schema.data.data_config import DataConfig
 
 # pylint: disable=no-name-in-module
 from modyn.supervisor.internal.utils import TrainingStatusReporter
@@ -187,7 +189,8 @@ class TrainerServerGRPCHandlerMixin:
         self,
         pipeline_id: int,
         trigger_id: int,
-        pipeline_config: dict,
+        training_config: TrainingConfig,
+        data_config: DataConfig,
         previous_model_id: Optional[int],
         num_samples_to_pass: Optional[int] = None,
     ) -> int:
@@ -196,80 +199,61 @@ class TrainerServerGRPCHandlerMixin:
             raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
 
         optimizers_config = {}
-        for optimizer in pipeline_config["training"]["optimizers"]:
-            optimizer_config = {"algorithm": optimizer["algorithm"], "source": optimizer["source"], "param_groups": []}
-            for param_group in optimizer["param_groups"]:
-                config_dict = param_group.get("config") or {}
-                optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
-            optimizers_config[optimizer["name"]] = optimizer_config
+        for optimizer in training_config.optimizers:
+            optimizer_config: dict[str, Any] = {
+                "algorithm": optimizer.algorithm,
+                "source": optimizer.source,
+                "param_groups": []
+            }
+            for param_group in optimizer.param_groups:
+                optimizer_config["param_groups"].append({"module": param_group.module, "config": param_group.config})
+            optimizers_config[optimizer.name] = optimizer_config
 
-        lr_scheduler_configs = {}
-        if pipeline_config["training"].get("lr_scheduler"):
-            lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
-            lr_scheduler_configs["config"] = lr_scheduler_configs.get("config") or {}
+        lr_scheduler_configs: dict[str, Any] = {}
+        if training_config.lr_scheduler is not None:
+            lr_scheduler_configs = training_config.lr_scheduler
+            lr_scheduler_configs["config"] = lr_scheduler_configs.config
 
-        criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"].get("config") or {})
+        criterion_config = json.dumps(training_config.optimization_criterion.config)
 
-        epochs_per_trigger = pipeline_config["training"].get("epochs_per_trigger") or 1
+        epochs_per_trigger = training_config.epochs_per_trigger
+        num_prefetched_partitions = training_config.num_prefetched_partitions
+        parallel_prefetch_requests = training_config.parallel_prefetch_requests
 
-        if pipeline_config["training"].get("num_prefetched_partitions"):
-            num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
-        else:
-            if pipeline_config["training"].get("prefetched_partitions"):
-                raise ValueError(
-                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
-                    + " Please rename/remove that configuration"
-                )
-            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
-            num_prefetched_partitions = 1
+        seed = training_config.seed
+        tokenizer = data_config.tokenizer
+        transform_list = data_config.transformations
+        label_transformer = data_config.label_transformer_function
 
-        if pipeline_config["training"].get("parallel_prefetch_requests"):
-            parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
-        else:
-            logger.warning(
-                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
-            )
-            parallel_prefetch_requests = 1
-
-        seed = pipeline_config["training"].get("seed", None)
-        tokenizer = pipeline_config["data"].get("tokenizer", None)
-        transform_list = pipeline_config["data"].get("transformations") or []
-        label_transformer = pipeline_config["data"].get("label_transformer_function") or ""
-
-        if pipeline_config["training"]["checkpointing"]["activated"]:
-            if (
-                pipeline_config["training"]["checkpointing"].get("interval") is None
-                or pipeline_config["training"]["checkpointing"].get("path") is None
-            ):
-                raise ValueError("Checkpointing is enabled, but interval or path not given.")
-
+        if training_config.checkpointing.activated:
+            # the None-ility of the two fields are already validated by pydantic
             checkpoint_info = CheckpointInfo(
-                checkpoint_interval=pipeline_config["training"]["checkpointing"]["interval"],
-                checkpoint_path=pipeline_config["training"]["checkpointing"]["path"],
+                checkpoint_interval=training_config.checkpointing.interval,  # type: ignore[arg-type]
+                checkpoint_path=str(training_config.checkpointing.path),  # type: ignore[arg-type]
             )
         else:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
-        grad_scaler_config = pipeline_config["training"].get("grad_scaler_config") or {}
+        grad_scaler_config = training_config.grad_scaler_config if training_config.grad_scaler_config else {}
 
         start_training_kwargs = {
             "pipeline_id": pipeline_id,
             "trigger_id": trigger_id,
-            "device": pipeline_config["training"]["device"],
+            "device": training_config.device,
             "use_pretrained_model": previous_model_id is not None,
             "pretrained_model_id": previous_model_id or -1,
             "load_optimizer_state": False,  # TODO(#137): Think about this.
-            "batch_size": pipeline_config["training"]["batch_size"],
+            "batch_size": training_config.batch_size,
             "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            "torch_criterion": pipeline_config["training"]["optimization_criterion"]["name"],
+            "torch_criterion": training_config.optimization_criterion.name,
             "criterion_parameters": TrainerServerJsonString(value=criterion_config),
             "data_info": Data(
-                dataset_id=pipeline_config["data"]["dataset_id"],
-                num_dataloaders=pipeline_config["training"]["dataloader_workers"],
+                dataset_id=data_config.dataset_id,
+                num_dataloaders=training_config.dataloader_workers,
             ),
             "checkpoint_info": checkpoint_info,
             "transform_list": transform_list,
-            "bytes_parser": PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
+            "bytes_parser": PythonString(value=data_config.bytes_parser_function),
             "label_transformer": PythonString(value=label_transformer),
             "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
@@ -281,7 +265,7 @@ class TrainerServerGRPCHandlerMixin:
             "num_samples_to_pass": num_samples_to_pass,
         }
 
-        cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
+        cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}
 
         req = StartTrainingRequest(**cleaned_kwargs)
 

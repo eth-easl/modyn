@@ -639,7 +639,11 @@ def test__execute_triggers_within_batch_trigger_timespan(
 @patch.object(GRPCHandler, "store_trained_model")
 @patch.object(GRPCHandler, "wait_for_training_completion")
 @patch.object(GRPCHandler, "start_training")
+@patch.object(GRPCHandler, "get_number_of_samples", return_value=34)
+@patch.object(GRPCHandler, "get_status_bar_scale", return_value=40)
 def test_train_and_store_model(
+    test_get_status_bar_scale: MagicMock,
+    test_get_number_of_samples: MagicMock,
     test_start_training: MagicMock,
     test_wait_for_training_completion: MagicMock,
     test_store_trained_model: MagicMock,
@@ -661,16 +665,19 @@ def test_train_and_store_model(
     assert pe.state.previous_model_id == model_id
     assert pe.state.current_training_id == training_id
 
-    test_wait_for_training_completion.assert_called_once_with(training_id, 42, trigger_id)
-    test_start_training.assert_called_once_with(42, trigger_id, ANY, None, None)
-    test_wait_for_training_completion.assert_called_once_with(training_id, 42, trigger_id)
+    test_wait_for_training_completion.assert_called_once_with(training_id, ANY)
+    test_start_training.assert_called_once_with(42, trigger_id, ANY, ANY, None, None)
     test_store_trained_model.assert_called_once_with(training_id)
 
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
 @patch.object(GRPCHandler, "wait_for_training_completion", return_value={})
+@patch.object(GRPCHandler, "get_number_of_samples", return_value=34)
+@patch.object(GRPCHandler, "get_status_bar_scale", return_value=40)
 def test_run_training_set_num_samples_to_pass(
+    test_get_status_bar_scale: MagicMock,
+    test_get_number_of_samples: MagicMock,
     test_wait_for_training_completion: MagicMock,
     test_start_training: MagicMock,
     test_store_trained_model: MagicMock,
@@ -681,16 +688,16 @@ def test_run_training_set_num_samples_to_pass(
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
 
     pe._train_and_store_model(pe.state, pe.logs, trigger_id=21)
-    test_start_training.assert_called_once_with(42, 21, ANY, None, 73)
+    test_start_training.assert_called_once_with(42, 21, ANY, ANY, None, 73)
     test_start_training.reset_mock()
 
-    # trigger is added to trigger list _execute_triggers, as we are not calling it here, we fake the it
+    # trigger is added to trigger list _execute_triggers, as we are not calling it here, we fake the id
     pe.state.triggers.append(21)
 
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
     pe._train_and_store_model(pe.state, pe.logs, trigger_id=22)
-    test_start_training.assert_called_once_with(42, 22, ANY, 101, None)
+    test_start_training.assert_called_once_with(42, 22, ANY, ANY, 101, None)
 
 
 @pytest.mark.parametrize("test_failure", [False, True])

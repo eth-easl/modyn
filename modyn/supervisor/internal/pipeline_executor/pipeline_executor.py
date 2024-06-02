@@ -651,7 +651,8 @@ class PipelineExecutor:
         s.current_training_id = self.grpc.start_training(
             s.pipeline_id,
             trigger_id,
-            s.pipeline_config.model_dump(by_alias=True),
+            s.pipeline_config.training,
+            s.pipeline_config.data,
             s.previous_model_id,
             num_samples_to_pass,
         )
