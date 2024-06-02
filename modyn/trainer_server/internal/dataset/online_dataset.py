@@ -314,7 +314,7 @@ class OnlineDataset(IterableDataset):
 
             # We implement shuffling on a partition level by mapping everything to increasing indices but actually load
             # different partition data.
-            shuffle_partition = (
+            shuffle_partition_id = (
                 self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
             )
             self._data_threads[self._next_partition_to_fetch] = threading.Thread(
@@ -328,7 +328,7 @@ class OnlineDataset(IterableDataset):
                     self._partition_locks,
                     self._partition_signals,
                     callback,
-                    shuffle_partition,
+                    shuffle_partition_id,
                 ),
             )
 
