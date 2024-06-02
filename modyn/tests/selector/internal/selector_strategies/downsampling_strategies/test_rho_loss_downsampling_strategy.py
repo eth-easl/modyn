@@ -7,6 +7,8 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
+
+from modyn.config import OptimizerConfig, OptimizerParamGroup, OptimizationCriterion
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -54,6 +56,17 @@ def il_training_config():
         num_workers=1,
         il_model_id="ResNet18",
         il_model_config={"num_classes": 2},
+        amp=False,
+        device="cpu",
+        batch_size=16,
+        epochs=1,
+        optimizers=[OptimizerConfig(
+            name="default",
+            algorithm="SGD",
+            source="PyTorch",
+            param_groups=[OptimizerParamGroup(module="model", config={'lr': 0.01})],
+        )],
+        optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
     )
 
 

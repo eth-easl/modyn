@@ -37,14 +37,10 @@ from .schema.pipeline import (  # noqa: F401
     FreshnessSamplingStrategyConfig,
     FullModelStrategy,
     IncrementalModelStrategy,
-    LrSchedulerConfig,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
     Pipeline,
     PipelineModelStorageConfig,
     PresamplingConfig,
@@ -54,6 +50,8 @@ from .schema.pipeline import (  # noqa: F401
     TrainingConfig,
     TriggerConfig,
 )
+from .schema.optimizer.optimizer_config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion, \
+    LrSchedulerConfig
 
 __all__ = [
     # Modyn config models
@@ -88,10 +86,6 @@ __all__ = [
     "FreshnessSamplingStrategyConfig",
     "SelectionStrategy",
     "CheckpointingConfig",
-    "OptimizerParamGroup",
-    "OptimizerConfig",
-    "OptimizationCriterion",
-    "LrSchedulerConfig",
     "TrainingConfig",
     "DataConfig",
     "TriggerConfig",

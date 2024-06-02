@@ -9,14 +9,12 @@ from modyn.config.schema.pipeline import (
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
     Pipeline,
     PipelineModelStorageConfig,
     TrainingConfig,
     TriggerConfig,
 )
+from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion
 
 
 def gen_pipeline_config(name: str, trigger: TriggerConfig, eval_strategy: EvalStrategyModel) -> ModynPipelineConfig:
