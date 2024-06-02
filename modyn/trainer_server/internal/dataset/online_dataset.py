@@ -187,6 +187,8 @@ class OnlineDataset(IterableDataset):
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
+            print(f"keys in reply from storage: {stor_keys}")
+
             all_response_times.append(response_time)
             num_items = len(stor_keys)
             with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
