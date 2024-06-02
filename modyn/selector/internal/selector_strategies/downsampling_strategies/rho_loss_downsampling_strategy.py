@@ -30,20 +30,13 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
+        self.rho_pipeline_id: int = self._get_or_create_rho_pipeline_id()
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
-        # The logic to train an IL model will be implemented here
-        # Step 1: Fetch or create the rho_pipeline_id from metadata database
-        #
-        # Will create a new table (pipeline_id, rho_pipeline_id) representing the mapping
-        # between pipeline_id and rho_pipeline_id, primary key being pipeline_id.
-        rho_pipeline_id = self._get_or_create_rho_pipeline_id()
-        # Step 2: Prepare the training data for the IL model, by randomly sampling a predefined ratio of samples
-        # from next_trigger_id's data and storing them as a TSS with identifier (rho_pipeline_id, next_trigger_id).
-        self._prepare_holdout_set(next_trigger_id, rho_pipeline_id, selector_storage_backend)
+        self._prepare_holdout_set(next_trigger_id, self.rho_pipeline_id, selector_storage_backend)
         # Step 3: Issue training request to the trainer server, with pipeline_id as rho_pipeline_id and trigger_id
         # as next_trigger_id. Wait for the training to complete. Store the model. Record model id in
         # downsampling_params, so that it can be fetched and used for downsampling.

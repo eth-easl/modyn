@@ -157,39 +157,6 @@ def test__prepare_holdout_set(
         validate_training_set_producer(training_set_producer, trigger_id)
 
 
-def test__create_rho_pipeline_id(il_training_config: ILTrainingConfig):
-    modyn_config = get_minimal_modyn_config()
-    pipline_id = 42
-    downsampling_config = RHOLossDownsamplingConfig(
-        ratio=60,
-        holdout_set_ratio=50,
-        il_training_config=il_training_config,
-    )
-    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipline_id, 4)
-    with MetadataDatabaseConnection(modyn_config) as database:
-        rho_pipeline_id = strategy._create_rho_pipeline_id(database)
-        database.session.commit()
-
-    with MetadataDatabaseConnection(modyn_config) as database:
-        stored_rho_pipeline_id = (
-            database.session.query(AuxiliaryPipeline.auxiliary_pipeline_id)
-            .filter(AuxiliaryPipeline.pipeline_id == pipline_id)
-            .scalar()
-        )
-        assert stored_rho_pipeline_id == rho_pipeline_id
-        rho_pipeline = database.session.query(Pipeline).filter(Pipeline.pipeline_id == rho_pipeline_id).first()
-
-        assert rho_pipeline.num_workers == il_training_config.num_workers
-        assert rho_pipeline.model_class_name == il_training_config.il_model_id
-        assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
-        assert rho_pipeline.amp == il_training_config.amp
-        assert rho_pipeline.selection_strategy == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
-        assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name
-        assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
-        assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
-        assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
-
-
 def register_pipeline() -> int:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         pipeline_id = database.register_pipeline(
@@ -205,6 +172,7 @@ def register_pipeline() -> int:
 
 
 def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrainingConfig):
+    # we create the main pipeline and rho pipeline and their link in db in advance
     pipeline_id = register_pipeline()
     rho_pipeline_id = register_pipeline()
 
@@ -218,14 +186,11 @@ def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrain
         holdout_set_ratio=50,
         il_training_config=il_training_config,
     )
-    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
 
-    with patch.object(
-        RHOLossDownsamplingStrategy, "_create_rho_pipeline_id", wraps=strategy._create_rho_pipeline_id
-    ) as mock_create_rho_pipeline_id:
-        actual_rho_pipeline_id = strategy._get_or_create_rho_pipeline_id()
+    with patch.object(RHOLossDownsamplingStrategy, "_create_rho_pipeline_id") as mock_create_rho_pipeline_id:
+        strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
         mock_create_rho_pipeline_id.assert_not_called()
-        assert actual_rho_pipeline_id == rho_pipeline_id
+        assert strategy.rho_pipeline_id == rho_pipeline_id
 
 
 def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig):
@@ -237,22 +202,8 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         holdout_set_ratio=50,
         il_training_config=il_training_config,
     )
+
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
-
-    recorded_returned_rho_pipeline_id = None
-    original_create_rho_pipeline_id = strategy._create_rho_pipeline_id
-
-    def _create_rho_pipeline_id_wrapper(database: MetadataDatabaseConnection) -> int:
-        nonlocal recorded_returned_rho_pipeline_id
-        recorded_returned_rho_pipeline_id = original_create_rho_pipeline_id(database)
-        return recorded_returned_rho_pipeline_id
-
-    with patch.object(
-        RHOLossDownsamplingStrategy, "_create_rho_pipeline_id", wraps=_create_rho_pipeline_id_wrapper
-    ) as mock_create_rho_pipeline_id:
-        rho_pipeline_id = strategy._get_or_create_rho_pipeline_id()
-        mock_create_rho_pipeline_id.assert_called_once()
-        assert rho_pipeline_id == recorded_returned_rho_pipeline_id
 
     # check that the created rho pipeline id is stored in the database
     with MetadataDatabaseConnection(modyn_config) as database:
@@ -261,4 +212,16 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
             .filter(AuxiliaryPipeline.pipeline_id == pipeline_id)
             .scalar()
         )
-    assert stored_rho_pipeline_id == rho_pipeline_id
+        assert stored_rho_pipeline_id == strategy.rho_pipeline_id
+
+        rho_pipeline = database.session.query(Pipeline).filter(Pipeline.pipeline_id == strategy.rho_pipeline_id).first()
+
+        assert rho_pipeline.num_workers == il_training_config.num_workers
+        assert rho_pipeline.model_class_name == il_training_config.il_model_id
+        assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
+        assert rho_pipeline.amp == il_training_config.amp
+        assert rho_pipeline.selection_strategy == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
+        assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name
+        assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
+        assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
+        assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
