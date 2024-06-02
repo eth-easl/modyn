@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import Literal, Dict, Any, List
-from typing_extensions import Self
-
-from pydantic import Field, model_validator
+from typing import Any, Dict, List, Literal
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
+from pydantic import Field, model_validator
+from typing_extensions import Self
 
 OptimizerSource = Literal["PyTorch", "APEX"]
 

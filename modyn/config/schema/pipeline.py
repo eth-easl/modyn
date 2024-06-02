@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
 from modyn.config.schema.data.data_config import DataConfig
-from modyn.config.schema.optimizer.optimizer_config import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.optimizer.optimizer_config import LrSchedulerConfig, OptimizationCriterion, OptimizerConfig
 from modyn.config.schema.sampling.downsampling_config import (
     MultiDownsamplingConfig,
     NoDownsamplingConfig,

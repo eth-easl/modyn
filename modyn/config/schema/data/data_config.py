@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional, Callable
-
-from pydantic import Field, field_validator
+from typing import Callable, List, Optional
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
 from modyn.utils import deserialize_function
+from pydantic import Field, field_validator
 
 
 class DataConfig(ModynBaseModel):

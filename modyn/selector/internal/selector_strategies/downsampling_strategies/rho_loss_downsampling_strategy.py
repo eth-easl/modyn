@@ -38,9 +38,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
         self._prepare_holdout_set(next_trigger_id, self.rho_pipeline_id, selector_storage_backend)
-        model_id = self._train_il_model(next_trigger_id, self.rho_pipeline_id)
+        self._train_il_model(next_trigger_id, self.rho_pipeline_id)
         raise NotImplementedError
-
 
     def _train_il_model(self, trigger_id: int, rho_pipeline_id: int) -> int:
         raise NotImplementedError

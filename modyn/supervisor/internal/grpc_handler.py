@@ -10,6 +10,7 @@ from typing import Any, Iterable, Optional, Sequence
 
 import grpc
 from modyn.common.benchmark import Stopwatch
+from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -44,27 +45,13 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
-    PythonString,
-    StartTrainingRequest,
-    StartTrainingResponse,
-    StoreFinalModelRequest,
-    StoreFinalModelResponse,
-    TrainerAvailableRequest,
-    TrainerAvailableResponse,
-    TrainingStatusRequest,
-    TrainingStatusResponse,
-)
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import grpc_common_config, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
 
-class GRPCHandler:
+class GRPCHandler(TrainerServerGRPCHandlerMixin):
     # pylint: disable=too-many-instance-attributes
 
     # pylint: disable=unused-argument
@@ -75,13 +62,12 @@ class GRPCHandler:
         training_status_queue: Optional[mp.Queue] = None,
         eval_status_queue: Optional[mp.Queue] = None,
     ) -> None:
+        super().__init__(modyn_config=modyn_config, training_status_queue=training_status_queue)
         self.config = modyn_config
         self.pipeline_status_queue = pipeline_status_queue
-        self.training_status_queue = training_status_queue
         self.eval_status_queue = eval_status_queue
 
         self.connected_to_storage = False
-        self.connected_to_trainer_server = False
         self.connected_to_selector = False
         self.connected_to_evaluator = False
 
@@ -89,8 +75,6 @@ class GRPCHandler:
         self.storage_channel: Optional[grpc.Channel] = None
         self.selector: Optional[SelectorStub] = None
         self.selector_channel: Optional[grpc.Channel] = None
-        self.trainer_server: Optional[TrainerServerStub] = None
-        self.trainer_server_channel: Optional[grpc.Channel] = None
         self.evaluator: Optional[EvaluatorStub] = None
         self.evaluator_channel: Optional[grpc.Channel] = None
 
@@ -123,18 +107,6 @@ class GRPCHandler:
         self.selector = SelectorStub(self.selector_channel)
         logger.info("Successfully connected to selector.")
         self.connected_to_selector = self.selector is not None
-
-    def init_trainer_server(self) -> None:
-        assert self.config is not None
-        trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
-        self.trainer_server_channel = grpc.insecure_channel(trainer_server_address, options=grpc_common_config())
-
-        if not grpc_connection_established(self.trainer_server_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to trainer server at {trainer_server_address}.")
-
-        self.trainer_server = TrainerServerStub(self.trainer_server_channel)
-        logger.info("Successfully connected to trainer server.")
-        self.connected_to_trainer_server = self.trainer_server is not None
 
     def init_evaluator(self) -> None:
         assert self.config is not None
@@ -238,142 +210,6 @@ class GRPCHandler:
         logging.info(f"Informed selector about trigger. Got trigger id {trigger_id}.")
         return trigger_id, json.loads(response.log.value)
 
-    def trainer_server_available(self) -> bool:
-        assert self.trainer_server is not None
-
-        if not self.connected_to_trainer_server:
-            raise ConnectionError("Tried to check whether server is available, but Supervisor is not even connected!")
-
-        logger.info("Checking whether trainer server is available.")
-
-        request = TrainerAvailableRequest()
-        response: TrainerAvailableResponse = self.trainer_server.trainer_available(request)
-
-        logger.info(f"Trainer Server Availability = {response.available}")
-
-        return response.available
-
-    # pylint: disable-next=unused-argument
-    def stop_training_at_trainer_server(self, training_id: int) -> None:
-        # TODO(#130): Implement this at trainer server.
-        logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
-
-    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
-    def start_training(
-        self,
-        pipeline_id: int,
-        trigger_id: int,
-        pipeline_config: dict,
-        previous_model_id: Optional[int],
-        num_samples_to_pass: Optional[int] = None,
-    ) -> int:
-        assert self.trainer_server is not None
-        if not self.connected_to_trainer_server:
-            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
-
-        optimizers_config = {}
-        for optimizer in pipeline_config["training"]["optimizers"]:
-            optimizer_config = {}
-            optimizer_config["algorithm"] = optimizer["algorithm"]
-            optimizer_config["source"] = optimizer["source"]
-            optimizer_config["param_groups"] = []
-            for param_group in optimizer["param_groups"]:
-                config_dict = param_group.get("config") or {}
-                optimizer_config["param_groups"].append({"module": param_group["module"], "config": config_dict})
-            optimizers_config[optimizer["name"]] = optimizer_config
-
-        lr_scheduler_configs = {}
-        if pipeline_config["training"].get("lr_scheduler"):
-            lr_scheduler_configs = pipeline_config["training"]["lr_scheduler"]
-            lr_scheduler_configs["config"] = lr_scheduler_configs.get("config") or {}
-
-        criterion_config = json.dumps(pipeline_config["training"]["optimization_criterion"].get("config") or {})
-
-        epochs_per_trigger = pipeline_config["training"].get("epochs_per_trigger") or 1
-
-        if pipeline_config["training"].get("num_prefetched_partitions"):
-            num_prefetched_partitions = pipeline_config["training"]["num_prefetched_partitions"]
-        else:
-            if pipeline_config["training"].get("prefetched_partitions"):
-                raise ValueError(
-                    "Found `prefetched_partitions` instead of `num_prefetched_partitions`in training configuration."
-                    + " Please rename/remove that configuration"
-                )
-            logger.warning("Number of prefetched partitions not explicitly given in training config - defaulting to 1.")
-            num_prefetched_partitions = 1
-
-        if pipeline_config["training"].get("parallel_prefetch_requests"):
-            parallel_prefetch_requests = pipeline_config["training"]["parallel_prefetch_requests"]
-        else:
-            logger.warning(
-                "Number of parallel prefetch requests not explicitly given in training config - defaulting to 1."
-            )
-            parallel_prefetch_requests = 1
-
-        seed = pipeline_config["training"].get("seed", None)
-        tokenizer = pipeline_config["data"].get("tokenizer", None)
-        transform_list = pipeline_config["data"].get("transformations") or []
-        label_transformer = pipeline_config["data"].get("label_transformer_function") or ""
-
-        if pipeline_config["training"]["checkpointing"]["activated"]:
-            if (
-                pipeline_config["training"]["checkpointing"].get("interval") is None
-                or pipeline_config["training"]["checkpointing"].get("path") is None
-            ):
-                raise ValueError("Checkpointing is enabled, but interval or path not given.")
-
-            checkpoint_info = CheckpointInfo(
-                checkpoint_interval=pipeline_config["training"]["checkpointing"]["interval"],
-                checkpoint_path=pipeline_config["training"]["checkpointing"]["path"],
-            )
-        else:
-            checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
-
-        grad_scaler_config = pipeline_config["training"].get("grad_scaler_config") or {}
-
-        start_training_kwargs = {
-            "pipeline_id": pipeline_id,
-            "trigger_id": trigger_id,
-            "device": pipeline_config["training"]["device"],
-            "use_pretrained_model": previous_model_id is not None,
-            "pretrained_model_id": previous_model_id or -1,
-            "load_optimizer_state": False,  # TODO(#137): Think about this.
-            "batch_size": pipeline_config["training"]["batch_size"],
-            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            "torch_criterion": pipeline_config["training"]["optimization_criterion"]["name"],
-            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
-            "data_info": Data(
-                dataset_id=pipeline_config["data"]["dataset_id"],
-                num_dataloaders=pipeline_config["training"]["dataloader_workers"],
-            ),
-            "checkpoint_info": checkpoint_info,
-            "transform_list": transform_list,
-            "bytes_parser": PythonString(value=pipeline_config["data"]["bytes_parser_function"]),
-            "label_transformer": PythonString(value=label_transformer),
-            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            "epochs_per_trigger": epochs_per_trigger,
-            "num_prefetched_partitions": num_prefetched_partitions,
-            "parallel_prefetch_requests": parallel_prefetch_requests,
-            "seed": seed,
-            "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
-            "num_samples_to_pass": num_samples_to_pass,
-        }
-
-        cleaned_kwargs = {k: v for k, v in start_training_kwargs.items() if v is not None}
-
-        req = StartTrainingRequest(**cleaned_kwargs)
-
-        response: StartTrainingResponse = self.trainer_server.start_training(req)
-
-        if not response.training_started:
-            raise RuntimeError(f"Starting training at trainer did go wrong: {response}")
-
-        training_id = response.training_id
-        logger.info(f"Started training {training_id} at trainer server.")
-
-        return training_id
-
     def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
         assert self.selector is not None
 
@@ -389,88 +225,6 @@ class GRPCHandler:
         response: StatusBarScaleResponse = self.selector.get_status_bar_scale(request)
 
         return response.status_bar_scale
-
-    # pylint: disable=too-many-nested-blocks
-    def wait_for_training_completion(
-        self, training_id: int, pipeline_id: int, trigger_id: int
-    ) -> dict[str, Any]:  # pragma: no cover
-        assert self.training_status_queue is not None
-        assert self.pipeline_status_queue is not None
-        assert self.trainer_server is not None
-        if not self.connected_to_trainer_server:
-            raise ConnectionError(
-                "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
-            )
-        logger.debug("wait for training completion")
-
-        total_samples = self.get_number_of_samples(pipeline_id, trigger_id)
-        status_bar_scale = self.get_status_bar_scale(pipeline_id)
-        training_reporter = TrainingStatusReporter(
-            self.training_status_queue, trigger_id, training_id, total_samples, status_bar_scale
-        )
-        training_reporter.create_tracker()
-        blocked_in_a_row = 0
-
-        while True:
-            req = TrainingStatusRequest(training_id=training_id)
-            res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
-
-            if not res.valid:
-                raise RuntimeError(f"Training {training_id} is invalid at server:\n{res}\n")
-
-            if res.blocked:
-                blocked_in_a_row += 1
-
-                if blocked_in_a_row >= 3:
-                    logger.warning(
-                        f"Trainer Server returned {blocked_in_a_row} blocked responses in a row, cannot update status."
-                    )
-
-            else:
-                if res.HasField("exception") and res.exception is not None:
-                    raise RuntimeError(f"Exception at trainer server occurred during training:\n{res.exception}\n\n")
-
-                blocked_in_a_row = 0
-
-                if res.state_available:
-                    assert (res.HasField("samples_seen") and res.HasField("batches_seen")) or (
-                        res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
-                    ), f"Inconsistent server response:\n{res}"
-
-                    training_reporter.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
-                    # status_tracker.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
-
-                elif res.is_running:
-                    logger.warning("Trainer server is not blocked and running, but no state is available.")
-
-            if res.is_running:
-                sleep(2)
-            else:
-                trainer_log = json.loads(res.log.value)
-                break
-
-        training_reporter.close_counter()
-        # status_tracker.close_counter()
-
-        return trainer_log
-
-    def store_trained_model(self, training_id: int) -> int:
-        assert self.trainer_server is not None
-
-        logger.info(f"Storing trained model for training {training_id}")
-
-        req = StoreFinalModelRequest(training_id=training_id)
-        res: StoreFinalModelResponse = self.trainer_server.store_final_model(req)
-
-        if not res.valid_state:
-            raise RuntimeError(
-                f"Cannot fetch trained model for training {training_id}"
-                + " since training is invalid or training still running"
-            )
-
-        logger.info(f"Model {res.model_id} has been stored successfully")
-
-        return res.model_id
 
     def seed_selector(self, seed: int) -> None:
         assert self.selector is not None
@@ -488,6 +242,7 @@ class GRPCHandler:
 
         assert success, "Something went wrong while seeding the selector"
 
+    # pylint: disable=too-many-locals
     @staticmethod
     def prepare_evaluation_request(
         dataset_config: dict,

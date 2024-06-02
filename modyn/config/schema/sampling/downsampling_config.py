@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Annotated, List, Literal, Union, Dict, Any, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.config.schema.data.data_config import DataConfig
-from modyn.config.schema.optimizer.optimizer_config import OptimizerConfig, OptimizationCriterion, LrSchedulerConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.optimizer.optimizer_config import LrSchedulerConfig, OptimizationCriterion, OptimizerConfig
 from pydantic import Field, model_validator
 from typing_extensions import Self
 

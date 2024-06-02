@@ -13,6 +13,8 @@ from modyn.config.schema.config import (
     StorageConfig,
     TrainingServerConfig,
 )
+from modyn.config.schema.data.data_config import DataConfig
+from modyn.config.schema.optimizer.optimizer_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.pipeline import (
     CheckpointingConfig,
     DataAmountTriggerConfig,
@@ -29,8 +31,6 @@ from modyn.config.schema.pipeline import (
     PipelineModelStorageConfig,
     TrainingConfig,
 )
-from modyn.config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion, DataConfig
-
 
 # --------------------------------------------------- Modyn config --------------------------------------------------- #
 

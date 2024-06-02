@@ -43,7 +43,7 @@ from modyn.supervisor.internal.pipeline_executor.models import (
 )
 from modyn.supervisor.internal.triggers import Trigger
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
-from modyn.supervisor.internal.utils import EvaluationStatusReporter
+from modyn.supervisor.internal.utils import EvaluationStatusReporter, TrainingStatusReporter
 from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
 from modyn.utils.utils import current_time_micros
@@ -655,7 +655,14 @@ class PipelineExecutor:
             s.previous_model_id,
             num_samples_to_pass,
         )
-        trainer_log = self.grpc.wait_for_training_completion(s.current_training_id, s.pipeline_id, trigger_id)
+
+        total_samples = self.grpc.get_number_of_samples(s.pipeline_id, trigger_id)
+        status_bar_scale = self.grpc.get_status_bar_scale(s.pipeline_id)
+        training_reporter = TrainingStatusReporter(
+            self.state.training_status_queue, trigger_id, s.current_training_id, total_samples, status_bar_scale
+        )
+
+        trainer_log = self.grpc.wait_for_training_completion(s.current_training_id, training_reporter)
 
         # add log data
         log.info = TrainingInfo(

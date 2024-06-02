@@ -49,9 +49,6 @@ from .schema.pipeline import (  # noqa: F401
     TrainingConfig,
     TriggerConfig,
 )
-from .schema.data.data_config import DataConfig
-from .schema.optimizer.optimizer_config import OptimizerParamGroup, OptimizerConfig, OptimizationCriterion, \
-    LrSchedulerConfig
 
 __all__ = [
     # Modyn config models

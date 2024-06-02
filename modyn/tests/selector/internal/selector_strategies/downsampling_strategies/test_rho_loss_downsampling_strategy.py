@@ -7,8 +7,7 @@ from typing import List, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
-
-from modyn.config import OptimizerConfig, OptimizerParamGroup, OptimizationCriterion, DataConfig
+from modyn.config import DataConfig, OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -60,12 +59,14 @@ def il_training_config():
         device="cpu",
         batch_size=16,
         epochs=1,
-        optimizers=[OptimizerConfig(
-            name="default",
-            algorithm="SGD",
-            source="PyTorch",
-            param_groups=[OptimizerParamGroup(module="model", config={'lr': 0.01})],
-        )],
+        optimizers=[
+            OptimizerConfig(
+                name="default",
+                algorithm="SGD",
+                source="PyTorch",
+                param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.01})],
+            )
+        ],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
     )
 
@@ -195,8 +196,8 @@ def register_pipeline() -> int:
 
 
 def test__get_or_create_rho_pipeline_id_when_present(
-        il_training_config: ILTrainingConfig,
-        il_data_config: DataConfig,
+    il_training_config: ILTrainingConfig,
+    il_data_config: DataConfig,
 ):
     # we create the main pipeline and rho pipeline and their link in db in advance
     pipeline_id = register_pipeline()
@@ -221,8 +222,8 @@ def test__get_or_create_rho_pipeline_id_when_present(
 
 
 def test__get_or_create_rho_pipeline_id_when_absent(
-        il_training_config: ILTrainingConfig,
-        il_data_config: DataConfig,
+    il_training_config: ILTrainingConfig,
+    il_data_config: DataConfig,
 ):
     pipeline_id = register_pipeline()
 
