@@ -370,19 +370,20 @@ def test_dataset_impl(
 
     if consistency_check == "twice":
         # Validate exact same order
-        assert second_samples == all_samples
+        assert second_samples == all_samples, f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
         assert all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
-        assert second_labels == all_labels
+        assert second_labels == all_labels, f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
 
     if consistency_check == "shuffle":
         # Same content, but not same order
-        assert second_samples != all_samples
+        assert second_samples != all_samples, f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
         assert not all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
-        print([torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data)])
-        assert second_labels != all_labels
+        assert second_labels != all_labels, f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
 
-        assert set(second_samples) == set(all_samples)
-        assert set(second_labels) == set(all_labels)
+        assert set(second_samples) == set(
+            all_samples
+        ), f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
+        assert set(second_labels) == set(all_labels), f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
         for data1 in second_data:
             assert any(torch.allclose(data1, data2) for data2 in all_data)
 
