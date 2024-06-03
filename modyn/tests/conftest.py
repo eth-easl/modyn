@@ -170,11 +170,7 @@ def pipeline_training_config() -> TrainingConfig:
         ],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
         checkpointing=CheckpointingConfig(activated=False),
-        selection_strategy=NewDataStrategyConfig(
-            maximum_keys_in_memory=10,
-            tail_triggers=None,
-        ),
-        shuffle=False,
+        shuffle=False
     )
 
 
@@ -215,4 +211,8 @@ def dummy_pipeline_config(pipeline_training_config: TrainingConfig) -> ModynPipe
             bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
         ),
         trigger=DataAmountTriggerConfig(num_samples=1),
+        selection_strategy=NewDataStrategyConfig(
+            maximum_keys_in_memory=10,
+            tail_triggers=None,
+        ),
     )

@@ -31,12 +31,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
-    storage_backend: "database"
-    limit: -1
-    tail_triggers: 0
   seed: 42
   epochs_per_trigger: 1
 data:
@@ -54,7 +48,12 @@ trigger:
   metric: model
   metric_config:
     threshold: 0.7
-  
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
 evaluation:
   eval_strategy:
     name: MatrixEvalStrategy

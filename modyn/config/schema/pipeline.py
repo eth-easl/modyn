@@ -301,7 +301,6 @@ class TrainingConfig(ModynBaseModel):
             "modyn_config."
         ),
     )
-    selection_strategy: SelectionStrategy = Field(description="Configuration for the Selector")
     initial_model: Literal["random", "pretrained"] = Field(
         description="What type of initial model should be used (random or pretrained)."
     )
@@ -584,4 +583,5 @@ class ModynPipelineConfig(ModynBaseModel):
     training: TrainingConfig
     data: DataConfig
     trigger: TriggerConfig
+    selection_strategy: SelectionStrategy
     evaluation: EvaluationConfig | None = Field(None)
