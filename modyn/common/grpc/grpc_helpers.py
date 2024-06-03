@@ -153,7 +153,6 @@ class TrainerServerGRPCHandlerMixin:
         self.trainer_server_channel: Optional[grpc.Channel] = None
 
     def init_trainer_server(self) -> None:
-        assert self.config is not None
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
         self.trainer_server_channel = grpc.insecure_channel(trainer_server_address, options=grpc_common_config())
 
@@ -203,7 +202,7 @@ class TrainerServerGRPCHandlerMixin:
             optimizer_config: dict[str, Any] = {
                 "algorithm": optimizer.algorithm,
                 "source": optimizer.source,
-                "param_groups": []
+                "param_groups": [],
             }
             for param_group in optimizer.param_groups:
                 optimizer_config["param_groups"].append({"module": param_group.module, "config": param_group.config})
@@ -211,8 +210,7 @@ class TrainerServerGRPCHandlerMixin:
 
         lr_scheduler_configs: dict[str, Any] = {}
         if training_config.lr_scheduler is not None:
-            lr_scheduler_configs = training_config.lr_scheduler
-            lr_scheduler_configs["config"] = lr_scheduler_configs.config
+            lr_scheduler_configs = training_config.lr_scheduler.model_dump(by_alias=True)
 
         criterion_config = json.dumps(training_config.optimization_criterion.config)
 
