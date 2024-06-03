@@ -373,6 +373,8 @@ class PytorchTrainer:
             self._info(f"Training will stop when the number of samples to pass reaches {self.num_samples_to_pass}.")
 
         if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            # assertion since model validation by pydantic should catch this.
+            assert self._downsampler.supports_bts, "The downsampler does not support batch then sample"
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
             post_downsampling_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
             assert post_downsampling_size < self._batch_size
@@ -691,7 +693,7 @@ class PytorchTrainer:
         self.start_embedding_recording_if_needed()
 
         with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
-            big_batch_output = self._model.model(data)
+            big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
             self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
 
@@ -830,7 +832,7 @@ class PytorchTrainer:
             with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
                 with torch.autocast(self._device_type, enabled=self._amp):
                     # compute the scores and accumulate them
-                    model_output = self._model.model(data)
+                    model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
                     embeddings = self.get_embeddings_if_recorded()
                     self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
 
