@@ -177,8 +177,6 @@ class OnlineDataset(IterableDataset):
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)
 
-        print(f"got keys: {keys}")
-
         self._info("Getting data from storage", worker_id)
         self._sw.start(f"GetDataPart{partition_id}", overwrite=True)
         all_response_times = []
@@ -187,7 +185,6 @@ class OnlineDataset(IterableDataset):
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
-            print(f"keys in reply from storage: {stor_keys}")
 
             all_response_times.append(response_time)
             num_items = len(stor_keys)
@@ -347,15 +344,13 @@ class OnlineDataset(IterableDataset):
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
         shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
-        print(f"fetching no prefetch {partition_id} ({shuffle_partition_id})")
         self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
         if self._shuffle:
-            self._shuffle_partition(partition_id, worker_id)
+            self._shuffle_partition(partition_id, worker_id, container=container)
 
         for idx in range(len(container["keys"])):
-            print(f"yielding key {container['keys'][idx]}")
             yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
                 "weights"
             ][idx]
@@ -387,25 +382,27 @@ class OnlineDataset(IterableDataset):
         with self._partition_signals[partition_id]:
             self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
 
-    def _shuffle_partition(self, partition_id: int, worker_id: int) -> None:
-        assert self._is_partition_fetched(partition_id)
+    def _shuffle_partition(self, partition_id: int, worker_id: int, container: Optional[dict] = None) -> None:
+        assert container is not None or self._is_partition_fetched(partition_id)
         assert self._shuffle
+
+        container = container if container is not None else self._thread_data_container[partition_id]
 
         self._info(f"Shuffling partition {partition_id}", worker_id)
 
-        data_length = len(self._thread_data_container[partition_id]["data"])
+        data_length = len(container["data"])
         indices = list(range(data_length))
         random.shuffle(indices)
 
-        new_data = [self._thread_data_container[partition_id]["data"][i] for i in indices]
-        new_keys = [self._thread_data_container[partition_id]["keys"][i] for i in indices]
-        new_labels = [self._thread_data_container[partition_id]["labels"][i] for i in indices]
-        new_weights = [self._thread_data_container[partition_id]["weights"][i] for i in indices]
+        new_data = [container["data"][i] for i in indices]
+        new_keys = [container["keys"][i] for i in indices]
+        new_labels = [container["labels"][i] for i in indices]
+        new_weights = [container["weights"][i] for i in indices]
 
-        self._thread_data_container[partition_id]["data"] = new_data
-        self._thread_data_container[partition_id]["keys"] = new_keys
-        self._thread_data_container[partition_id]["labels"] = new_labels
-        self._thread_data_container[partition_id]["weights"] = new_weights
+        container["data"] = new_data
+        container["keys"] = new_keys
+        container["labels"] = new_labels
+        container["weights"] = new_weights
 
         self._info(f"Shuffled partition {partition_id}", worker_id)
 
@@ -424,6 +421,9 @@ class OnlineDataset(IterableDataset):
                 yield from self._get_partition_data(last_idx, max_idx, partition_id)
                 last_idx = max_idx
         else:
+            while not self._is_partition_fetched(partition_id):
+                self._wait_for_new_partition_data(partition_id)
+
             self._shuffle_partition(partition_id, worker_id)
 
         # Yield potential remaining data (when not shuffling) or all data (when shuffling)
