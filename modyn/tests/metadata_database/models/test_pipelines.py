@@ -27,6 +27,7 @@ def test_add_pipeline(session):
         model_config=json.dumps({"num_classes": 10}),
         amp=True,
         selection_strategy="{}",
+        data_config="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
@@ -37,6 +38,8 @@ def test_add_pipeline(session):
     assert extracted_pipeline is not None
     assert extracted_pipeline.num_workers == 10
     assert extracted_pipeline.model_class_name == "ResNet18"
+    assert extracted_pipeline.selection_strategy == "{}"
+    assert extracted_pipeline.data_config == "{}"
     assert json.loads(extracted_pipeline.model_config)["num_classes"] == 10
     assert extracted_pipeline.amp
     assert extracted_pipeline.full_model_strategy_name == "PyTorchFullModel"
@@ -52,6 +55,7 @@ def test_update_pipeline(session):
         model_config="{}",
         amp=True,
         selection_strategy="{}",
+        data_config="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
@@ -79,6 +83,7 @@ def test_delete_pipeline(session):
         model_config="{}",
         amp=False,
         selection_strategy="{}",
+        data_config="{}",
         full_model_strategy_name="PyTorchFullModel",
     )
     session.add(pipeline)
