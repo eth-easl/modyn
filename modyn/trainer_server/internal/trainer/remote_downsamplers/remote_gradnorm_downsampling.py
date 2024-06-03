@@ -90,3 +90,10 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
 
         selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
         return selected_ids, weights
+
+    @property
+    def requires_grad(self) -> bool:
+        if isinstance(self.per_sample_loss_fct, torch.nn.CrossEntropyLoss):
+            return False
+
+        return True

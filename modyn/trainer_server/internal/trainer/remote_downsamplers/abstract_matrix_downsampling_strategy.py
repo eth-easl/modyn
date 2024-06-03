@@ -120,3 +120,8 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         # Here is where the actual selection happens
         raise NotImplementedError()
+
+    @property
+    def requires_grad(self) -> bool:
+        # Default to true if None
+        return self.matrix_content is None or self.matrix_content == MatrixContent.GRADIENTS
