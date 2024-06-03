@@ -119,7 +119,7 @@ def test_init():
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
 @patch.object(grpc, "insecure_channel", return_value=None)
 def test_init_cluster_connection(*args):
-    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
 
     assert handler.connected_to_storage
@@ -136,7 +136,7 @@ def test_init_cluster_connection(*args):
 def test_init_storage(test_insecure_channel, test_connection_established):
     handler = None
     handler = GRPCHandler(
-        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+        get_simple_config()
     )  # don't call init storage in constructor
 
     assert handler is not None
@@ -157,7 +157,7 @@ def test_init_storage(test_insecure_channel, test_connection_established):
 def test_init_storage_throws(test_insecure_channel, test_connection_established):
     handler = None
     handler = GRPCHandler(
-        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+        get_simple_config()
     )  # don't call init storage in constructor
 
     assert handler is not None
@@ -176,7 +176,7 @@ def test_init_storage_throws(test_insecure_channel, test_connection_established)
 def test_init_selector(test_insecure_channel, test_connection_established):
     handler = None
     handler = GRPCHandler(
-        get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue()
+        get_simple_config()
     )  # don't call init storage in constructor
 
     assert handler is not None
@@ -219,7 +219,7 @@ def test_get_new_data_since_throws():
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
 def test_get_new_data_since(*args):
-    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
@@ -234,7 +234,7 @@ def test_get_new_data_since(*args):
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
 def test_get_new_data_since_batched(*args):
-    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetNewDataSince") as mock:
@@ -276,7 +276,7 @@ def test_get_data_in_interval(*args):
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
 def test_get_data_in_interval_batched(*args):
-    handler = GRPCHandler(get_simple_config(), mp.Queue(), mp.Queue(), mp.Queue())
+    handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
 
     with patch.object(handler.storage, "GetDataInInterval") as mock:
@@ -469,16 +469,16 @@ def test_wait_for_evaluation_completion(*args):
     handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
     assert handler.evaluator is not None
-
+    eval_status_queue = mp.Queue()
     evaluations = {
         1: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=1, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=1, eval_status_queue=eval_status_queue
         ),
         2: EvaluationStatusReporter(
-            dataset_id="MNIST_big", dataset_size=5000, evaluation_id=2, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_big", dataset_size=5000, evaluation_id=2, eval_status_queue=eval_status_queue
         ),
         3: EvaluationStatusReporter(
-            dataset_id="MNIST_large", dataset_size=10000, evaluation_id=3, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_large", dataset_size=10000, evaluation_id=3, eval_status_queue=eval_status_queue
         ),
     }
 
@@ -511,13 +511,13 @@ def test_store_evaluation_results(*args):
         valid=True,
         evaluation_data=[EvaluationData(metric="Accuracy", result=0.5), EvaluationData(metric="F1-score", result=0.75)],
     )
-
+    eval_status_queue = mp.Queue()
     evaluations = {
         10: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=eval_status_queue
         ),
         15: EvaluationStatusReporter(
-            dataset_id="MNIST_large", dataset_size=5000, evaluation_id=15, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_large", dataset_size=5000, evaluation_id=15, eval_status_queue=eval_status_queue
         ),
     }
 
@@ -584,7 +584,7 @@ def test_store_evaluation_results_invalid(*args):
 
     evaluations = {
         10: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=handler.eval_status_queue
+            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=mp.Queue()
         )
     }
 
