@@ -42,8 +42,9 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         per_sample_loss: Any,
         device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
-        self.matrix_content = MatrixContent.GRADIENTS
+        super().__init__(
+            pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device, MatrixContent.GRADIENTS
+        )
 
         self.selection_batch = params_from_selector["selection_batch"]
 

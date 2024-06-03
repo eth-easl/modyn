@@ -19,7 +19,7 @@ def get_sampler_config(balance=False):
         "args": {},
         "balance": balance,
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu"
+    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu", MatrixContent.GRADIENTS
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
@@ -28,14 +28,14 @@ def test_init():
 
     assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements
-    assert amds.matrix_content is None
+    assert amds.matrix_content == MatrixContent.GRADIENTS
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
 def test_collect_embeddings():
     amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
+    amds.matrix_content = MatrixContent.EMBEDDINGS
     with torch.inference_mode(mode=(not amds.requires_grad)):
-        amds.matrix_content = MatrixContent.EMBEDDINGS
 
         assert amds.requires_coreset_supporting_module
         assert not amds.matrix_elements  # thank you pylint! amds.matrix_elements == []
@@ -66,9 +66,8 @@ def test_collect_embeddings():
 )
 def test_collect_embedding_balance(test_amds):
     amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(True))
+    amds.matrix_content = MatrixContent.EMBEDDINGS
     with torch.inference_mode(mode=(not amds.requires_grad)):
-        amds.matrix_content = MatrixContent.EMBEDDINGS
-
         assert amds.requires_coreset_supporting_module
         assert amds.requires_data_label_by_label
         assert not amds.matrix_elements  # thank you pylint! amds.matrix_elements == []
@@ -100,8 +99,6 @@ def test_collect_embedding_balance(test_amds):
 def test_collect_gradients():
     amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
     with torch.inference_mode(mode=(not amds.requires_grad)):
-        amds.matrix_content = MatrixContent.GRADIENTS
-
         first_output = torch.randn((4, 2))
         first_output.requires_grad = True
         first_target = torch.tensor([1, 1, 1, 0])
