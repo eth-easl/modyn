@@ -403,6 +403,8 @@ def test_dataset() -> None:
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]
 
+            # By default, we do neither test shuffle nor cross-epoch consistency
+            # Only in a selected case, we test it to avoid blowing up the test further.
             shuffles = [False]
             consistency_checks = [False]
             if num_dataworkers in [0, 4] and prefetched_partitions in [0, 4]:
