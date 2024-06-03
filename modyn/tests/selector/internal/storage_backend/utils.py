@@ -4,7 +4,6 @@ from modyn.selector.internal.storage_backend import AbstractStorageBackend
 
 
 class MockStorageBackend(AbstractStorageBackend):
-
     # pylint: disable=super-init-not-called
     def __init__(self, pipeline_id: int, modyn_config: dict, maximum_keys_in_memory: int):
         self.insertion_threads = 1

@@ -16,7 +16,6 @@ class TriggerContext:
 
 
 class Trigger(ABC):
-
     # pylint: disable=unnecessary-pass
     def init_trigger(self, context: TriggerContext) -> None:
         """The supervisor initializes the concrete Trigger with Trigger-type-specific configurations
