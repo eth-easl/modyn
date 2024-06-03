@@ -32,6 +32,7 @@ def prepare_trigger_dataloader_by_trigger(
         dataloader_info.training_id,
         dataloader_info.num_prefetched_partitions,
         dataloader_info.parallel_prefetch_requests,
+        dataloader_info.shuffle,
         dataloader_info.tokenizer,
         sample_prob,
     )

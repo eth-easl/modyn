@@ -17,6 +17,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 64
+  shuffle: True
   optimizers:
     - name: "default"
       algorithm: "SGD"

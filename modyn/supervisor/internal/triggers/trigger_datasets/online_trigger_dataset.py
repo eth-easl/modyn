@@ -31,6 +31,7 @@ class OnlineTriggerDataset(OnlineDataset, IterableDataset):
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
+        shuffle: bool,
         tokenizer: Optional[str] = None,
         sample_prob: Optional[float] = None,
     ):
@@ -46,6 +47,7 @@ class OnlineTriggerDataset(OnlineDataset, IterableDataset):
             training_id,
             num_prefetched_partitions,
             parallel_prefetch_requests,
+            shuffle,
             tokenizer,
             None,
         )

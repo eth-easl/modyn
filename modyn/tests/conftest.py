@@ -170,6 +170,7 @@ def pipeline_training_config() -> TrainingConfig:
         ],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
         checkpointing=CheckpointingConfig(activated=False),
+        shuffle=False,
     )
 
 
