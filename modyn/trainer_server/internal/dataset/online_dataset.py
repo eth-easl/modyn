@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import threading
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
@@ -46,6 +47,7 @@ class OnlineDataset(IterableDataset):
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
+        shuffle: bool,
         tokenizer: Optional[str],
         log_path: Optional[pathlib.Path],
     ):
@@ -87,6 +89,8 @@ class OnlineDataset(IterableDataset):
         self._next_partition_to_fetch = 0
         self._launched_prefetches = 0
         self._start_prefetch_lock: Optional[threading.Lock] = None
+        self._shuffle = shuffle
+        self._shuffled_partition_indices: list[int] = []
 
         if log_path is None:
             logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
@@ -163,10 +167,13 @@ class OnlineDataset(IterableDataset):
         partition_locks: Optional[dict],
         partition_signals: Optional[dict],
         callback: Optional[Callable],
+        shuffled_partition_id: Optional[int],
     ) -> None:
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
-        keys, weights = self._key_source.get_keys_and_weights(worker_id, partition_id)
+        keys, weights = self._key_source.get_keys_and_weights(
+            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id
+        )
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)
 
@@ -178,6 +185,7 @@ class OnlineDataset(IterableDataset):
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
+
             all_response_times.append(response_time)
             num_items = len(stor_keys)
             with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
@@ -305,6 +313,11 @@ class OnlineDataset(IterableDataset):
 
                 callback = callback_func
 
+            # We implement shuffling on a partition level by mapping everything to increasing indices but actually load
+            # different partition data.
+            shuffle_partition_id = (
+                self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+            )
             self._data_threads[self._next_partition_to_fetch] = threading.Thread(
                 target=self._get_data,
                 args=(
@@ -316,6 +329,7 @@ class OnlineDataset(IterableDataset):
                     self._partition_locks,
                     self._partition_signals,
                     callback,
+                    shuffle_partition_id,
                 ),
             )
 
@@ -329,8 +343,12 @@ class OnlineDataset(IterableDataset):
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         assert self._num_prefetched_partitions < 1
         container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        self._get_data(container, worker_id, partition_id, None, None, None, None, None)
+        shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
+        self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
+
+        if self._shuffle:
+            self._shuffle_partition(partition_id, worker_id, container=container)
 
         for idx in range(len(container["keys"])):
             yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
@@ -364,20 +382,51 @@ class OnlineDataset(IterableDataset):
         with self._partition_signals[partition_id]:
             self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
 
+    def _shuffle_partition(self, partition_id: int, worker_id: int, container: Optional[dict] = None) -> None:
+        assert container is not None or self._is_partition_fetched(partition_id)
+        assert self._shuffle
+
+        container = container if container is not None else self._thread_data_container[partition_id]
+
+        self._info(f"Shuffling partition {partition_id}", worker_id)
+
+        data_length = len(container["data"])
+        indices = list(range(data_length))
+        random.shuffle(indices)
+
+        new_data = [container["data"][i] for i in indices]
+        new_keys = [container["keys"][i] for i in indices]
+        new_labels = [container["labels"][i] for i in indices]
+        new_weights = [container["weights"][i] for i in indices]
+
+        container["data"] = new_data
+        container["keys"] = new_keys
+        container["labels"] = new_labels
+        container["weights"] = new_weights
+
+        self._info(f"Shuffled partition {partition_id}", worker_id)
+
     def prefetched_partition_generator(
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         last_idx = -1
+        if not self._shuffle:
+            # If we do not shuffle, we can emit data as soon as it streamed over
+            # Otherwise, we have to wait for the transfer to finish
+            while not self._is_partition_fetched(partition_id):
+                max_idx = self._partition_max_index(partition_id)
+                if max_idx <= last_idx:  # No new data
+                    self._wait_for_new_partition_data(partition_id)
 
-        while not self._is_partition_fetched(partition_id):
-            max_idx = self._partition_max_index(partition_id)
-            if max_idx <= last_idx:  # No new data
+                yield from self._get_partition_data(last_idx, max_idx, partition_id)
+                last_idx = max_idx
+        else:
+            while not self._is_partition_fetched(partition_id):
                 self._wait_for_new_partition_data(partition_id)
 
-            yield from self._get_partition_data(last_idx, max_idx, partition_id)
-            last_idx = max_idx
+            self._shuffle_partition(partition_id, worker_id)
 
-        # Yield potential remaining data
+        # Yield potential remaining data (when not shuffling) or all data (when shuffling)
         self._info(f"Joining thread for partition {partition_id}", worker_id)
         self._data_threads[partition_id].join()
         self._info(f"Thread for partition {partition_id} joined", worker_id)
@@ -456,6 +505,12 @@ class OnlineDataset(IterableDataset):
 
         assert self._transform is not None
         self._num_partitions = self._key_source.get_num_data_partitions()
+
+        if self._shuffle:
+            self._shuffled_partition_indices = list(range(0, self._num_partitions))
+            random.shuffle(self._shuffled_partition_indices)
+            self._info(f"Shuffled partitions into random order: {self._shuffled_partition_indices}", worker_id)
+
         self._info(
             f"Total number of partitions will be {self._num_partitions}.\n"
             + f"Parallel prefetch requests = {self._parallel_prefetch_requests}\n"

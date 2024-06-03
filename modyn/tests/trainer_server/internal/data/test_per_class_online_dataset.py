@@ -76,6 +76,7 @@ def test_dataloader_dataset(
         num_prefetched_partitions=prefetched_partitions,
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
 
