@@ -237,7 +237,7 @@ def test_get_dataset_selector_batch_size_given(
     pe = get_non_connecting_pipeline_executor(
         system_config=minimal_system_config, pipeline_config=minimal_pipeline_config
     )
-    pe.state.selector_batch_size == 2048
+    assert pe.state.selector_batch_size == 2048
 
 
 def test_shutdown_trainer() -> None:
