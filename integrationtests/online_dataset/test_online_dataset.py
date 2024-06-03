@@ -275,9 +275,9 @@ def test_dataset_impl(
     pipeline_id: int,
     trigger_id: int,
     items: list[int],
-    consistency_check: Optional[str] = None,
+    shuffle: bool,
+    consistency_check: bool,
 ) -> None:
-    shuffle = consistency_check is not None and consistency_check == "shuffle"
     dataloader, _ = prepare_dataloaders(
         pipeline_id,
         trigger_id,
@@ -342,7 +342,7 @@ def test_dataset_impl(
         if image_bytes not in FIRST_ADDED_IMAGES:
             raise ValueError(f"Could not find image {idx} in created images, all_samples = {all_samples}")
 
-    if consistency_check is None:
+    if not consistency_check:
         return
 
     print("Iterating again to check across epochs.")
@@ -366,26 +366,22 @@ def test_dataset_impl(
             second_data.append(sample)  # iterate over batch dimension to extract samples
         second_labels.extend(batch[2].tolist())
 
-    assert consistency_check in ["twice", "shuffle"]
+    # Same content, but not same order
+    # (even without shuffle, the storage may return samples in a slightly different order)
 
-    if consistency_check == "twice":
-        # Validate exact same order
-        assert second_samples == all_samples, f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
-        assert all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
-        assert second_labels == all_labels, f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
+    assert set(second_samples) == set(
+        all_samples
+    ), f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
+    assert set(second_labels) == set(all_labels), f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
+    for data1 in second_data:
+        assert any(torch.allclose(data1, data2) for data2 in all_data)
 
-    if consistency_check == "shuffle":
-        # Same content, but not same order
+    # when shuffling, we expect a different order
+
+    if shuffle:
         assert second_samples != all_samples, f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
         assert not all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
         assert second_labels != all_labels, f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
-
-        assert set(second_samples) == set(
-            all_samples
-        ), f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
-        assert set(second_labels) == set(all_labels), f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
-        for data1 in second_data:
-            assert any(torch.allclose(data1, data2) for data2 in all_data)
 
 
 def test_dataset() -> None:
@@ -407,29 +403,33 @@ def test_dataset() -> None:
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]
 
-            consistency_checks = [None]
+            shuffles = [False]
+            consistency_checks = [False]
             if num_dataworkers in [0, 4] and prefetched_partitions in [0, 4]:
-                consistency_checks = [None, "twice", "shuffle"]
+                shuffles = [False, True]
+                consistency_checks = [True]
 
             for parallel_prefetch_requests in ppr_list:
                 for batch_size in [1, 2, 10]:
                     for consistency_check in consistency_checks:
-                        print(
-                            f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
-                            + f"batch_size = {batch_size}, parallel_prefetch_requests={parallel_prefetch_requests}"
-                            + f" consistency_check = {consistency_check}"
-                        )
-                        test_dataset_impl(
-                            num_dataworkers,
-                            batch_size,
-                            prefetched_partitions,
-                            parallel_prefetch_requests,
-                            pipeline_id,
-                            trigger_id,
-                            keys,
-                            consistency_check,
-                        )
-                        gc.collect()
+                        for shuffle in shuffles:
+                            print(
+                                f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
+                                + f"batch_size = {batch_size}, parallel_prefetch_requests={parallel_prefetch_requests}"
+                                + f" consistency_check = {consistency_check} shuffle = {shuffle}"
+                            )
+                            test_dataset_impl(
+                                num_dataworkers,
+                                batch_size,
+                                prefetched_partitions,
+                                parallel_prefetch_requests,
+                                pipeline_id,
+                                trigger_id,
+                                keys,
+                                shuffle,
+                                consistency_check,
+                            )
+                            gc.collect()
 
 
 def main() -> None:

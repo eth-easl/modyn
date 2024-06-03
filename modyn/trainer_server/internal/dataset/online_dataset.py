@@ -351,8 +351,11 @@ class OnlineDataset(IterableDataset):
         self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
         assert "data" in container and "labels" in container and "keys" in container and "weights" in container
 
+        if self._shuffle:
+            self._shuffle_partition(partition_id, worker_id)
+
         for idx in range(len(container["keys"])):
-            print(f"yielding key {container["keys"][idx]}")
+            print(f"yielding key {container['keys'][idx]}")
             yield container["keys"][idx], memoryview(container["data"][idx]), container["labels"][idx], container[
                 "weights"
             ][idx]
@@ -384,19 +387,46 @@ class OnlineDataset(IterableDataset):
         with self._partition_signals[partition_id]:
             self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
 
+    def _shuffle_partition(self, partition_id: int, worker_id: int) -> None:
+        assert self._is_partition_fetched(partition_id)
+        assert self._shuffle
+
+        self._info(f"Shuffling partition {partition_id}", worker_id)
+
+        data_length = len(self._thread_data_container[partition_id]["data"])
+        indices = list(range(data_length))
+        random.shuffle(indices)
+
+        new_data = [self._thread_data_container[partition_id]["data"][i] for i in indices]
+        new_keys = [self._thread_data_container[partition_id]["keys"][i] for i in indices]
+        new_labels = [self._thread_data_container[partition_id]["labels"][i] for i in indices]
+        new_weights = [self._thread_data_container[partition_id]["weights"][i] for i in indices]
+
+        self._thread_data_container[partition_id]["data"] = new_data
+        self._thread_data_container[partition_id]["keys"] = new_keys
+        self._thread_data_container[partition_id]["labels"] = new_labels
+        self._thread_data_container[partition_id]["weights"] = new_weights
+
+        self._info(f"Shuffled partition {partition_id}", worker_id)
+
     def prefetched_partition_generator(
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         last_idx = -1
-        while not self._is_partition_fetched(partition_id):
-            max_idx = self._partition_max_index(partition_id)
-            if max_idx <= last_idx:  # No new data
-                self._wait_for_new_partition_data(partition_id)
+        if not self._shuffle:
+            # If we do not shuffle, we can emit data as soon as it streamed over
+            # Otherwise, we have to wait for the transfer to finish
+            while not self._is_partition_fetched(partition_id):
+                max_idx = self._partition_max_index(partition_id)
+                if max_idx <= last_idx:  # No new data
+                    self._wait_for_new_partition_data(partition_id)
 
-            yield from self._get_partition_data(last_idx, max_idx, partition_id)
-            last_idx = max_idx
+                yield from self._get_partition_data(last_idx, max_idx, partition_id)
+                last_idx = max_idx
+        else:
+            self._shuffle_partition(partition_id, worker_id)
 
-        # Yield potential remaining data
+        # Yield potential remaining data (when not shuffling) or all data (when shuffling)
         self._info(f"Joining thread for partition {partition_id}", worker_id)
         self._data_threads[partition_id].join()
         self._info(f"Thread for partition {partition_id} joined", worker_id)
