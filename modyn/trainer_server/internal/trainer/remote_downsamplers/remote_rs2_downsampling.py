@@ -28,8 +28,8 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
         self.forward_required = False
         self.supports_bts = False
-        self._all_sample_ids = []
-        self._subsets = []
+        self._all_sample_ids: list[int] = []
+        self._subsets: list[list[int]] = []
         self._current_subset = -1
         self._with_replacement: bool = params_from_selector["replacement"]
         self._max_subset = -1
