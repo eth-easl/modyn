@@ -201,7 +201,6 @@ class AbstractSelectionStrategy(ABC):
 
             swt.start("store_triggersamples", overwrite=True)
             if insertion_threads == 1:
-
                 AbstractSelectionStrategy._store_triggersamples_impl(
                     partition,
                     target_trigger_id,

@@ -16,6 +16,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 96
+  shuffle: True
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -30,12 +31,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 10000
-    storage_backend: "database"
-    limit: -1
-    tail_triggers: 0
   seed: 42
   epochs_per_trigger: 1
 data:
@@ -49,7 +44,12 @@ trigger:
   id: DataDriftTrigger
   detection_interval_data_points: 100000
   sample_size: 5000
-  
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 10000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
 evaluation:
   eval_strategy:
     name: MatrixEvalStrategy

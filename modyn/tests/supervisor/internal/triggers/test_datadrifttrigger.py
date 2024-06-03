@@ -42,6 +42,7 @@ def noop_dataloader_info_constructor_mock(
     selector_address: str,
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
+    shuffle: bool,
     tokenizer: Optional[None],
 ) -> None:
     pass

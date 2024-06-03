@@ -5,7 +5,6 @@ from modyn.utils.timer import timed_generator
 
 
 def test_timed_generator() -> None:
-
     def gen(r: int) -> Generator[int, None, None]:
         time.sleep(0.01)
         for i in range(r):

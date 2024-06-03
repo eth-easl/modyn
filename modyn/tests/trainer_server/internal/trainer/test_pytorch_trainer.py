@@ -129,6 +129,7 @@ def mock_get_dataloaders(
     training_id,
     prefetched_partitions,
     num_parallel_requests,
+    shuffle,
     tokenizer,
     log_path,
     num_batches: int = 100,

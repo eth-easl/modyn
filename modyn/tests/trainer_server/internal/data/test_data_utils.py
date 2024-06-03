@@ -30,7 +30,7 @@ def test_prepare_dataloaders(
     test_weights, test_insecure_channel, test_grpc_connection_established, test_grpc_connection_established_selector
 ):
     train_dataloader, _ = prepare_dataloaders(
-        1, 1, "MNIST", 4, 128, get_mock_bytes_parser(), [], "", "", 42, 5, 5, None, None
+        1, 1, "MNIST", 4, 128, get_mock_bytes_parser(), [], "", "", 42, 5, 5, False, None, None
     )
 
     assert train_dataloader.num_workers == 4

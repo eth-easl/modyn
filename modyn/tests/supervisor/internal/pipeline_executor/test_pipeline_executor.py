@@ -144,12 +144,10 @@ def test_initialization(non_connecting_pipeline_executor: PipelineExecutor) -> N
 
 
 def test_pipeline_stage_decorator(dummy_pipeline_args: PipelineExecutionParams) -> None:
-
     class TestStageLogInfo(StageInfo):
         name: str
 
     class TestPipelineExecutor(PipelineExecutor):
-
         @pipeline_stage(PipelineStage.INIT, log=True, track=True)
         def _stage_func(self, s: ExecutionState, log: StageLog) -> int:
             time.sleep(0.1)
@@ -170,7 +168,6 @@ def test_pipeline_stage_decorator(dummy_pipeline_args: PipelineExecutionParams) 
 
 
 def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecutionParams) -> None:
-
     class TestStageLogInfo(StageInfo):
         elements: list[int]
         finalized: bool = False
@@ -182,7 +179,6 @@ def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecuti
             yield i
 
     class TestPipelineExecutor(PipelineExecutor):
-
         @pipeline_stage(PipelineStage.INIT, log=True, track=True)
         def _stage_func(self, s: ExecutionState, log: StageLog) -> Generator[int, None, None]:
             try:
@@ -237,7 +233,7 @@ def test_get_dataset_selector_batch_size_given(
     pe = get_non_connecting_pipeline_executor(
         system_config=minimal_system_config, pipeline_config=minimal_pipeline_config
     )
-    pe.state.selector_batch_size == 2048
+    assert pe.state.selector_batch_size == 2048
 
 
 def test_shutdown_trainer() -> None:

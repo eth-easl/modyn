@@ -24,6 +24,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 64
+  shuffle: False
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -46,13 +47,6 @@ training:
     activated: True
     interval: 10
     path: "results"
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 500000
-    limit: -1
-    tail_triggers: 0
-    storage_backend: database
-    processor_type: basic_processor_strategy
 data:
   dataset_id: mnist
   transformations: ["transforms.ToTensor()",
@@ -65,6 +59,13 @@ data:
 trigger:
   id: DataAmountTrigger
   num_samples: 100
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 500000
+  limit: -1
+  tail_triggers: 0
+  storage_backend: database
+  processor_type: basic_processor_strategy
 evaluation:
   eval_strategy:
     name: "MatrixEvalStrategy"

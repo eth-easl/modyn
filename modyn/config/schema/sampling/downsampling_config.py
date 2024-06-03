@@ -125,6 +125,7 @@ class ILTrainingConfig(ModynBaseModel):
     )
 
 
+
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
@@ -136,9 +137,6 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
         max=100,
     )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
-    il_data_config: DataConfig = Field(
-        description="The configuration for the IL data. Should be the same as the data config in the main pipeline."
-    )
 
 
 SingleDownsamplingConfig = Annotated[

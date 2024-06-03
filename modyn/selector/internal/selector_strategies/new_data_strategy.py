@@ -50,8 +50,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
             )
         else:
             raise NotImplementedError(
-                f'Unknown storage backend "{
-                    self._config.storage_backend}". Supported: local, database'
+                f'Unknown storage backend "{self._config.storage_backend}". Supported: local, database'
             )
         return _storage_backend
 

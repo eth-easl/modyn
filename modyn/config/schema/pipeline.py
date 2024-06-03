@@ -236,6 +236,12 @@ class TrainingConfig(ModynBaseModel):
         description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
     )
     batch_size: int = Field(description="The batch size to be used during training.", ge=1)
+    shuffle: bool = Field(
+        description=(
+            "If True, we shuffle the order of partitions and the data within each partition at each worker."
+            "Otherwise, the output order is deterministic."
+        )
+    )
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
@@ -250,7 +256,6 @@ class TrainingConfig(ModynBaseModel):
             "modyn_config."
         ),
     )
-    selection_strategy: SelectionStrategy = Field(description="Configuration for the Selector")
     initial_model: Literal["random", "pretrained"] = Field(
         description="What type of initial model should be used (random or pretrained)."
     )
@@ -484,4 +489,5 @@ class ModynPipelineConfig(ModynBaseModel):
     training: TrainingConfig
     data: DataConfig
     trigger: TriggerConfig
+    selection_strategy: SelectionStrategy
     evaluation: EvaluationConfig | None = Field(None)
