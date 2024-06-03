@@ -161,7 +161,7 @@ class Supervisor:
                     model_class_name=pipeline_config.modyn_model.id,
                     model_config=model_config_str,
                     amp=pipeline_config.training.amp,
-                    selection_strategy=pipeline_config.training.selection_strategy.model_dump_json(),
+                    selection_strategy=pipeline_config.selection_strategy.model_dump_json(),
                     full_model_strategy=full_model_strategy,
                     incremental_model_strategy=incremental_model_strategy,
                     full_model_interval=full_model_interval,

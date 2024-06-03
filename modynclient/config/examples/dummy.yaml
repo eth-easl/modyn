@@ -29,12 +29,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 10
-    storage_backend: "database"
-    limit: -1
-    tail_triggers: 0
 data:
   dataset_id: tiny_dataset
   bytes_parser_function: |
@@ -48,3 +42,9 @@ data:
 trigger:
   id: DataAmountTrigger
   num_samples: 2
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 10
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
