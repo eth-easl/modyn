@@ -225,7 +225,7 @@ Let's visualize this in the Gantt diagram from 2.1 above:
 
 We propose to run evaluation request for the intervals between two model switches capturing the model performance at exactly the time it was served for inference. We can then calculate the pipeline performance as the weighted average of the model performances w.r.t. the served time.
 
-> Note: It is not desireable to aggregate / average the evaluation metrics we got from periodic evaluations. This is because of the low potential number of samples in such a smaller time range. If e.g. in the serving period of a model there is one time range with many samples and one with almost none. We would get a biased performance metric if we would average the two as we have far less confidence in the performance of the model in the time range with few samples.
+> Note: It is not desireable to aggregate / average the evaluation metrics we got from periodic evaluations. This is because of the low potential number of samples in such a smaller time range. If e.g. in the serving period of a model there is one time range with many samples and one with almost none. We would get a biased performance metric if we would average the two as we have far less confidence in the performance of the model in the time range with few samples. When using the evaluation technique described above, we are less likely to face that issues as model serving periods are usually long enough have enough samples for high confidence in the model performance in that range.
 
 #### 3.2.3 Refined pipeline run model
 
