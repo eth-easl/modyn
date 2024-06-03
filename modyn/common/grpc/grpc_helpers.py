@@ -273,7 +273,7 @@ class TrainerServerGRPCHandlerMixin:
 
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
-        self, training_id: int, training_reporter: TrainingStatusReporter
+        self, training_id: int, training_reporter: Optional[TrainingStatusReporter] = None
     ) -> dict[str, Any]:  # pragma: no cover
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
@@ -281,7 +281,8 @@ class TrainerServerGRPCHandlerMixin:
                 "Tried to wait for training to finish at trainer server, but not there is no gRPC connection."
             )
         logger.debug("wait for training completion")
-        training_reporter.create_tracker()
+        if training_reporter is not None:
+            training_reporter.create_tracker()
         blocked_in_a_row = 0
 
         while True:
@@ -310,7 +311,12 @@ class TrainerServerGRPCHandlerMixin:
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
 
-                    training_reporter.progress_counter(res.samples_seen, res.downsampling_samples_seen, res.is_training)
+                    if training_reporter is not None:
+                        training_reporter.progress_counter(
+                            res.samples_seen,
+                            res.downsampling_samples_seen,
+                            res.is_training
+                        )
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
@@ -321,7 +327,8 @@ class TrainerServerGRPCHandlerMixin:
                 trainer_log = json.loads(res.log.value)
                 break
 
-        training_reporter.close_counter()
+        if training_reporter is not None:
+            training_reporter.close_counter()
 
         return trainer_log
 

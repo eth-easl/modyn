@@ -1,5 +1,5 @@
 import json
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Tuple, Optional
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig
@@ -35,17 +35,32 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config(self._pipeline_id)
         self.rho_pipeline_id: int = rho_pipeline_id
         self.data_config = data_config
+        self.il_model_id: Optional[int] = None
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
         self._prepare_holdout_set(next_trigger_id, self.rho_pipeline_id, selector_storage_backend)
-        self._train_il_model(next_trigger_id, self.rho_pipeline_id)
-        raise NotImplementedError
+        self.il_model_id = self._train_il_model(next_trigger_id, self.rho_pipeline_id)
+
+    def _build_downsampling_params(self) -> dict:
+        config = super()._build_downsampling_params()
+        assert self.il_model_id is not None
+        config["il_model_id"] = self.il_model_id
+        return config
 
     def _train_il_model(self, trigger_id: int, rho_pipeline_id: int) -> int:
-        raise NotImplementedError
+        training_id = self.grpc.start_training(
+            pipeline_id=rho_pipeline_id,
+            trigger_id=trigger_id,
+            training_config=self.il_training_config,
+            data_config=self.data_config,
+            previous_model_id=None,
+        )
+        self.grpc.wait_for_training_completion(training_id)
+        model_id = self.grpc.store_trained_model(training_id)
+        return model_id
 
     def _get_or_create_rho_pipeline_id_and_get_data_config(self, main_pipeline_id: int) -> Tuple[int, DataConfig]:
 
