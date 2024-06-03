@@ -4,7 +4,7 @@ import shutil
 import tempfile
 
 import pytest
-from modyn.config import CoresetStrategyConfig, PresamplingConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies import CoresetStrategy
 from modyn.selector.internal.selector_strategies.presampling_strategies import RandomNoReplacementPresamplingStrategy

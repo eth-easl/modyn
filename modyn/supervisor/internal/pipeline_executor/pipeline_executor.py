@@ -5,16 +5,30 @@ import logging
 import sys
 import traceback
 import types
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta
+from functools import partial
 from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import EvalDataConfig, ResultWriterType
+from modyn.config.schema.pipeline import ModynPipelineConfig
+from modyn.config.schema.pipeline.evaluation import (
+    AfterTrainingEvalTriggerConfig,
+    EvalDataConfig,
+    ResultWriterType,
+    UntilNextTriggerEvalStrategyConfig,
+    _MatrixEvalTriggerConfig,
+)
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.supervisor.internal.eval.handler import EvalHandler
+from modyn.supervisor.internal.eval.strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.supervisor.internal.eval.triggers.after_training_trigger import AfterTrainingTrigger
+from modyn.supervisor.internal.eval.triggers.eval_trigger import EvalRequest, EvalTrigger
+from modyn.supervisor.internal.eval.triggers.periodic_eval_trigger import PeriodicEvalTrigger
+from modyn.supervisor.internal.eval.triggers.static_eval_trigger import StaticEvalTrigger
 from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
 from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
@@ -48,6 +62,8 @@ from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
 from modyn.utils.utils import current_time_micros
 from typing_extensions import Concatenate, ParamSpec
+
+eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
@@ -146,7 +162,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 batch_idx=state.current_batch_index,
                 sample_idx=state.current_sample_index,
                 sample_time=state.current_sample_time,
-                trigger_idx=len(state.triggers),
+                trigger_idx=state.current_trigger_idx,
             )
             result = func(self, state, stage_log, *args, **kwargs)  # type: ignore[call-arg]
             stage_log.end = datetime.now()
@@ -186,6 +202,7 @@ class PipelineExecutor:
 
         # pipeline controllers objects
         self.trigger = self._setup_trigger()
+        self.eval_handlers = self._setup_eval_handlers(options.pipeline_config)
         self.grpc = GRPCHandler(
             self.state.modyn_config.model_dump(by_alias=True),
             self.state.pipeline_status_queue,
@@ -204,6 +221,7 @@ class PipelineExecutor:
 
         if self.state.experiment_mode:
             self._replay_data(self.state, self.logs)
+            self._post_pipeline_evaluation(self.state, self.logs)
         else:
             self._serve_online_data(self.state, self.logs)
 
@@ -376,7 +394,7 @@ class PipelineExecutor:
             pipeline_stage_msg(
                 PipelineStage.PROCESS_NEW_DATA,
                 MsgType.COUNTER,
-                counter_submsg(CounterAction.CREATE, {"new_data_len": new_data_len}),
+                counter_submsg(CounterAction.CREATE, {"title": "Processing New Samples", "new_data_len": new_data_len}),
             )
         )
 
@@ -390,7 +408,7 @@ class PipelineExecutor:
                 pipeline_stage_msg(
                     PipelineStage.PROCESS_NEW_DATA,
                     MsgType.COUNTER,
-                    counter_submsg(CounterAction.UPDATE, {"batch_size": batch_size}),
+                    counter_submsg(CounterAction.UPDATE, {"increment": batch_size}),
                 )
             )
 
@@ -434,6 +452,9 @@ class PipelineExecutor:
 
         # Inform selector about remaining data
         self._inform_selector_remaining_data(s, self.logs, batch, handled_triggers)
+
+        # Evaluation EvalPolicies for batches (StaticEvalTriggerConfig and PeriodicEvalTriggerConfig)
+        self._evaluate_scheduled_evaluation_triggers(s, self.logs, batch)
 
         return handled_triggers
 
@@ -493,6 +514,7 @@ class PipelineExecutor:
 
             self._handle_single_trigger(s, self.logs, trigger_data, i, trigger_index)
             s.triggers.append(trigger_index)
+            s.current_trigger_idx += 1
             s.current_sample_index += len(trigger_data)
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
@@ -567,7 +589,15 @@ class PipelineExecutor:
             training_id, model_id = self._train_and_store_model(s, self.logs, trigger_id)
             self.trigger.inform_previous_model(model_id)
 
+            for eval_handler in self.eval_handlers:
+                # negligible overhead
+                if eval_handler.trigger:
+                    eval_handler.trigger.inform_about_training(
+                        trigger_id, training_id, model_id, first_timestamp, last_timestamp
+                    )
+
             if s.pipeline_config.evaluation:
+                # Evaluate the trained model and store the results: AfterEveryTrainingEvalTriggerConfig
                 self._evaluate_and_store_results(
                     s, self.logs, trigger_id, training_id, model_id, first_timestamp, last_timestamp
                 )
@@ -642,9 +672,8 @@ class PipelineExecutor:
             pipeline_stage_msg(PipelineStage.TRAIN, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
         num_samples_to_pass_per_trigger = s.pipeline_config.training.num_samples_to_pass or []
-        current_trigger_index = len(s.triggers)
-        if current_trigger_index <= len(num_samples_to_pass_per_trigger) - 1:
-            num_samples_to_pass = num_samples_to_pass_per_trigger[current_trigger_index]
+        if s.current_trigger_idx <= len(num_samples_to_pass_per_trigger) - 1:
+            num_samples_to_pass = num_samples_to_pass_per_trigger[s.current_trigger_idx]
         else:
             num_samples_to_pass = None
 
@@ -695,7 +724,20 @@ class PipelineExecutor:
 
     # Evaluation
 
-    @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.PROCESS_NEW_DATA_BATCH, track=True)
+    def _evaluate_scheduled_evaluation_triggers(
+        self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]
+    ) -> None:
+        """Pass a batch of data to all registered PeriodicEvalTriggers and StaticEvalTriggers.
+
+        The triggers will append EvaluationRequests to their internal backlogs (side-effects).
+        Queued EvaluationRequests will be processed after the core pipeline is done.
+        """
+        for eval_handler in self.eval_handlers:
+            if eval_handler.trigger:
+                eval_handler.trigger.inform(batch)
+
+    @pipeline_stage(PipelineStage.EVALUATE_EVAL_TRIGGERS, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
     def _evaluate_and_store_results(
         self,
         s: ExecutionState,
@@ -713,73 +755,82 @@ class PipelineExecutor:
             pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
 
-        eval_strategy_config = self.state.pipeline_config.evaluation.eval_strategy
-        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
-        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.name)(
-            eval_strategy_config.config.model_dump(by_alias=True)
-        )
+        for eval_handler in self.state.pipeline_config.evaluation.handlers:
+            if not isinstance(eval_handler.trigger, AfterTrainingEvalTriggerConfig) or (
+                eval_handler.strategy.type == "UntilNextTriggerEvalStrategy"
+            ):
+                # those cases are handled via the _post_pipeline_evaluation setup
+                continue
 
-        for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
-            for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
-                results = self._single_evaluation(
-                    s, self.logs, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end
-                )
-                if results:
-                    self._store_evaluation_results(
-                        s,
-                        self.logs,
-                        trigger_id,
-                        model_id,
-                        eval_dataset_config.dataset_id,
-                        results,
-                        interval_start,
-                        interval_end,
+            eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_handler.strategy.type)(
+                eval_handler.strategy
+            )
+
+            for eval_dataset_config in [
+                self.state.pipeline_config.evaluation.datasets[dataset_ref] for dataset_ref in eval_handler.datasets
+            ]:
+                for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
+                    eval_req = EvalRequest(
+                        trigger_id=trigger_id,
+                        training_id=training_id,
+                        model_id=model_id,
+                        most_recent_model=True,
+                        interval_start=interval_start,
+                        interval_end=interval_end,
                     )
+                    results = self._single_evaluation(s, self.logs, eval_req, eval_handler.name, eval_dataset_config)
+                    if results:
+                        self._store_evaluation_results(
+                            s, self.logs, eval_req, eval_handler.name, eval_dataset_config.dataset_id, results
+                        )
 
     @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, track=True)
     def _single_evaluation(
         self,
         s: ExecutionState,
         log: StageLog,
-        trigger_id: int,
-        training_id: int,
-        model_id: int,
+        eval_request: EvalRequest,
+        eval_handler: str,
         eval_dataset_config: EvalDataConfig,
-        interval_start: int | None,
-        interval_end: int | None,
     ) -> dict[int, EvaluationStatusReporter] | None:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.state.pipeline_config.evaluation
         logger.info(
-            f"Evaluation Starts for model {model_id} on split {interval_start} to {interval_end}"
+            f"Evaluation Starts for model {eval_request.model_id} on split {eval_request.interval_start}"
+            f" to {eval_request.interval_end}"
             f" of dataset {eval_dataset_config.dataset_id}."
         )
         request = GRPCHandler.prepare_evaluation_request(
             eval_dataset_config.model_dump(by_alias=True),
-            model_id,
+            eval_request.model_id,
             self.state.pipeline_config.evaluation.device,
-            interval_start,
-            interval_end,
+            eval_request.interval_start,
+            eval_request.interval_end,
         )
         response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
         log.info = SingleEvaluationInfo(
-            trigger_id=trigger_id,
-            id_model=model_id,
+            trigger_id=eval_request.trigger_id,
+            id_model=eval_request.model_id,
+            eval_handler=eval_handler,
+            most_recent_model=eval_request.most_recent_model,
             dataset_id=eval_dataset_config.dataset_id,
-            interval_start=interval_start,
-            interval_end=interval_end,
+            interval_start=eval_request.interval_start,
+            interval_end=eval_request.interval_end,
         )
         if not response.evaluation_started:
             log.info.failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
                 response.eval_aborted_reason
             ].name
             logger.error(
-                f"Evaluation for model {model_id} on split {interval_start} to {interval_end} not started with "
-                f"reason: {log.info.failure_reason}."
+                f"Evaluation for model {eval_request.model_id} on split {eval_request.interval_start} to"
+                f" {eval_request.interval_end} not started with reason: {log.info.failure_reason}."
             )
             return None
 
-        logger.info(f"Evaluation started for model {model_id} on split {interval_start} to {interval_end}.")
+        logger.info(
+            f"Evaluation started for model {eval_request.model_id} on split {eval_request.interval_start}"
+            f" to {eval_request.interval_end}."
+        )
         reporter = EvaluationStatusReporter(
             self.state.eval_status_queue,
             response.evaluation_id,
@@ -788,7 +839,7 @@ class PipelineExecutor:
         )
         evaluation = {response.evaluation_id: reporter}
         reporter.create_tracker()
-        self.grpc.wait_for_evaluation_completion(training_id, evaluation)
+        self.grpc.wait_for_evaluation_completion(eval_request.training_id, evaluation)
         return evaluation
 
     @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, track=True)
@@ -796,26 +847,133 @@ class PipelineExecutor:
         self,
         s: ExecutionState,
         log: StageLog,
-        trigger_id: int,
-        model_id: int,
+        eval_request: EvalRequest,
+        eval_handler: str,
         dataset_id: int,
         evaluation: dict[int, EvaluationStatusReporter],
-        interval_start: int | None,
-        interval_end: int | None,
     ) -> None:
-        eval_result_writer = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
+        eval_result_writer = self._init_evaluation_writer(s.pipeline_id, "json", eval_request.trigger_id)
         self.grpc.store_evaluation_results([eval_result_writer], evaluation)
         assert isinstance(eval_result_writer, JsonResultWriter)
 
         log.info = StoreEvaluationInfo(
-            trigger_id=trigger_id,
-            id_model=model_id,
+            trigger_id=eval_request.trigger_id,
+            id_model=eval_request.model_id,
+            eval_handler=eval_handler,
+            most_recent_model=eval_request.most_recent_model,
             dataset_id=dataset_id,
-            interval_start=interval_start,
-            interval_end=interval_end,
+            interval_start=eval_request.interval_start,
+            interval_end=eval_request.interval_end,
             results=(
                 eval_result_writer.results["datasets"][0][dataset_id] if eval_result_writer.results["datasets"] else {}
             ),
+        )
+
+    # post core pipeline evaluation
+
+    @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.EVALUATE, track=False)
+    def _post_pipeline_evaluation(self, s: ExecutionState, log: StageLog) -> None:  # pylint: disable=too-many-locals
+        """Evaluate the trained model and store the results."""
+        if not self.state.pipeline_config.evaluation:
+            return
+
+        df_triggers = self.state.tracking.get(PipelineStage.HANDLE_SINGLE_TRIGGER.name)
+        df_store_models = self.state.tracking.get(PipelineStage.STORE_TRAINED_MODEL.name)
+        if df_triggers is None or df_store_models is None:
+            logger.warning("Could not run evaluations as no training was found in the tracking info dataframes")
+            return
+        df_trainings = df_triggers[["trigger_id", "first_timestamp", "last_timestamp"]].merge(
+            df_store_models[["id_model", "training_id", "trigger_id"]], on="trigger_id"
+        )
+
+        s.pipeline_status_queue.put(
+            pipeline_stage_msg(
+                PipelineStage.POST_EVALUATION,
+                MsgType.COUNTER,
+                counter_submsg(
+                    CounterAction.CREATE,
+                    {"title": "Post pipeline evaluations", "new_data_len": None},  # length unknown in advance
+                ),
+            )
+        )
+
+        # The time measurements for evaluation requests is negligible, let's parallelization to speed up evaluation;
+        # As we are io bound by the evaluator server, GIL locking isn't a concerns. This enables multithreading.
+
+        # s.modyn_config.supervisor.post_pipeline_evaluation_workers
+        with ThreadPoolExecutor(max_workers=30) as pool:
+            tasks: list[Future] = []
+
+            for eval_handler in self.eval_handlers:
+                assert eval_handler.trigger
+                for eval_dataset_config in [
+                    self.state.pipeline_config.evaluation.datasets[dataset_ref]
+                    for dataset_ref in eval_handler.config.datasets
+                ]:
+                    eval_requests: list[EvalRequest] = []
+                    if isinstance(eval_handler.config.strategy, UntilNextTriggerEvalStrategyConfig):
+                        assert isinstance(eval_handler.trigger, AfterTrainingTrigger)
+
+                        # we have the model and interval values already in the AfterTrainingTrigger
+                        eval_requests = eval_handler.trigger.get_eval_requests(df_trainings)
+
+                    else:
+                        # we have the trigger invocation timestamp in the EvalTrigger
+                        # however, we need to match those to trigger_ids and model_ids
+                        build_matrix = (
+                            eval_handler.config.trigger.matrix
+                            if isinstance(eval_handler.config.trigger, _MatrixEvalTriggerConfig)
+                            else False
+                        )
+                        raw_eval_requests = eval_handler.trigger.get_eval_requests(df_trainings, build_matrix)
+
+                        eval_strategy: AbstractEvalStrategy = getattr(
+                            eval_strategy_module, eval_handler.config.strategy.type
+                        )(eval_handler.config.strategy)
+
+                        eval_requests = [
+                            EvalRequest(
+                                trigger_id=raw_eval_req.trigger_id,
+                                training_id=raw_eval_req.model_id,
+                                model_id=raw_eval_req.model_id,
+                                most_recent_model=raw_eval_req.most_recent_model,
+                                interval_start=interval_start,
+                                interval_end=interval_end,
+                            )
+                            for raw_eval_req in raw_eval_requests
+                            for interval_start, interval_end in (
+                                eval_strategy.get_eval_intervals(
+                                    raw_eval_req.interval_start, raw_eval_req.interval_end  # type: ignore
+                                )
+                            )
+                        ]
+
+                    def eval_thread_job(
+                        eval_req: EvalRequest, dataset_config: EvalDataConfig, eval_handler_name: str
+                    ) -> None:
+                        results = self._single_evaluation(s, self.logs, eval_req, eval_handler_name, dataset_config)
+                        if results:
+                            self._store_evaluation_results(
+                                s, self.logs, eval_req, eval_handler_name, dataset_config.dataset_id, results
+                            )
+                        s.pipeline_status_queue.put(
+                            pipeline_stage_msg(
+                                PipelineStage.POST_EVALUATION,
+                                MsgType.COUNTER,
+                                counter_submsg(CounterAction.UPDATE, {"increment": 1}),
+                            )
+                        )
+
+                    for eval_req in eval_requests:
+                        task = partial(eval_thread_job, eval_req, eval_dataset_config, eval_handler.config.name)
+                        tasks.append(pool.submit(task))
+
+            # join threads
+            for t in tasks:
+                t.result()
+
+        s.pipeline_status_queue.put(
+            pipeline_stage_msg(PipelineStage.POST_EVALUATION, MsgType.COUNTER, counter_submsg(CounterAction.CLOSE))
         )
 
     # Teardown
@@ -854,6 +1012,32 @@ class PipelineExecutor:
             trigger.inform_previous_model(self.state.previous_model_id)
 
         return trigger
+
+    def _setup_eval_handlers(self, pipeline_config: ModynPipelineConfig) -> list[EvalHandler]:
+        """Register trigger for StaticEvalTriggerConfig and PeriodicEvalTriggerConfig."""
+        if not pipeline_config.evaluation:
+            return []
+
+        handlers: list[EvalHandler] = []
+        for eval_handler in pipeline_config.evaluation.handlers:
+            if eval_handler.trigger.mode == "after_training" and (
+                eval_handler.strategy.type != "UntilNextTriggerEvalStrategy"
+            ):
+                continue  # processed directly after training
+
+            eval_trigger: EvalTrigger | None = None
+            if eval_handler.trigger.mode == "after_training":
+                eval_trigger = AfterTrainingTrigger()
+            elif eval_handler.trigger.mode == "static":
+                eval_trigger = StaticEvalTrigger(eval_handler.trigger)
+            elif eval_handler.trigger.mode == "periodic":
+                eval_trigger = PeriodicEvalTrigger(eval_handler.trigger)
+            else:
+                raise ValueError(f"Unknown evaluation trigger mode: {eval_handler.trigger.mode}")
+
+            handlers.append(EvalHandler(eval_handler, eval_trigger))
+
+        return handlers
 
     # pipeline run
 

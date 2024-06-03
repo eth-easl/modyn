@@ -16,7 +16,6 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +97,12 @@ class ExecutionState(PipelineExecutionParams):
     """The current stage of the pipeline executor."""
 
     seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
+
+    # for logging
     current_batch_index: int = 0
     current_sample_index: int = 0
     current_sample_time: int = 0  # unix timestamp
+    current_trigger_idx: int = 0
     """The unix timestamp of the last sample seen and processed by the pipeline executor."""
 
     # this is to store the first and last timestamp of the remaining data after handling all triggers
@@ -156,7 +158,6 @@ class FetchDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed in the new data.")
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.num_samples, str(self.trigger_indexes))], columns=["num_samples", "trigger_indexes"])
@@ -167,7 +168,6 @@ class ProcessNewDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed")
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.fetch_time, self.num_samples)], columns=["fetch_time", "num_samples"])
@@ -179,7 +179,6 @@ class EvaluateTriggerInfo(StageInfo):
     trigger_eval_times: list[int] = Field(default_factory=list)
     """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.batch_size, list(self.trigger_indexes))], columns=["batch_size", "trigger_indexes"])
@@ -200,7 +199,6 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     selector_log: dict[str, Any]
     num_samples_in_trigger: int
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
@@ -213,7 +211,6 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     first_timestamp: int | None
     last_timestamp: int | None
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
@@ -230,7 +227,6 @@ class _TrainInfoMixin(StageInfo):
 class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame([(self.trigger_id, self.training_id)], columns=["trigger_id", "training_id"])
@@ -239,7 +235,6 @@ class TrainingInfo(_TrainInfoMixin):
 class StoreModelInfo(_TrainInfoMixin):
     id_model: int  # model_ prefix not allowed in pydantic
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
@@ -251,16 +246,35 @@ class StoreModelInfo(_TrainInfoMixin):
 class _ModelEvalInfo(StageInfo):
     trigger_id: int
     id_model: int
+    eval_handler: str
+    most_recent_model: bool
     dataset_id: str
     interval_start: int | None
     interval_end: int | None
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
-            [(self.trigger_id, self.id_model, self.dataset_id, self.interval_start, self.interval_end)],
-            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end"],
+            [
+                (
+                    self.trigger_id,
+                    self.id_model,
+                    self.eval_handler,
+                    self.most_recent_model,
+                    self.dataset_id,
+                    self.interval_start,
+                    self.interval_end,
+                )
+            ],
+            columns=[
+                "trigger_id",
+                "id_model",
+                "eval_handler_ref",
+                "most_recent_model",
+                "dataset_id",
+                "interval_start",
+                "interval_end",
+            ],
         )
 
 
@@ -278,6 +292,8 @@ class StoreEvaluationInfo(_ModelEvalInfo):
                 (
                     self.trigger_id,
                     self.id_model,
+                    self.eval_handler,
+                    self.most_recent_model,
                     self.dataset_id,
                     self.interval_start,
                     self.interval_end,
@@ -286,7 +302,17 @@ class StoreEvaluationInfo(_ModelEvalInfo):
                 )
                 for metric in self.results["metrics"]
             ],
-            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end", "metric", "value"],
+            columns=[
+                "trigger_id",
+                "id_model",
+                "eval_handler_ref",
+                "most_recent_model",
+                "dataset_id",
+                "interval_start",
+                "interval_end",
+                "metric",
+                "value",
+            ],
         )
 
 
@@ -295,7 +321,6 @@ class SelectorInformInfo(StageInfo):
     remaining_data: bool
     trigger_indexes: list[int]
 
-    @override
     @property
     def df(self) -> pd.DataFrame:
         return pd.DataFrame(
@@ -492,7 +517,7 @@ class PipelineLogs(BaseModel):
             pipeline_logdir.rename(backup_dir)
 
         pipeline_logdir.mkdir(parents=True, exist_ok=True)
-        (pipeline_logdir / ".name").write_text(self.config.pipeline.pipeline.name)
+        (pipeline_logdir / ".name").write_text(self.config.pipeline.name)
 
         # output logs
 

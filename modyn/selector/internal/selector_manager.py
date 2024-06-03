@@ -8,7 +8,7 @@ from multiprocessing.managers import DictProxy
 from pathlib import Path
 from typing import Any, Optional
 
-from modyn.config import SelectionStrategy as SelectionStrategyModel
+from modyn.config.schema.pipeline import SelectionStrategy as SelectionStrategyModel
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy

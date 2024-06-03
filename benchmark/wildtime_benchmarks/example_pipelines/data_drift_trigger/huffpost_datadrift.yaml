@@ -53,16 +53,20 @@ trigger:
     bootstrap: False
   
 evaluation:
-  eval_strategy:
-    name: MatrixEvalStrategy
-    config: 
-      eval_every: 100s
-      eval_start_from: 0
-      eval_end_at: 300
+  handlers:
+    - strategy:
+        type: MatrixEvalStrategy
+        eval_every: 100s
+        eval_start_from: 0
+        eval_end_at: 300
+      trigger:
+        mode: after_training
+      datasets: ["huffpost_test"]
   device: "cuda:0"
   result_writers: ["json"]
   datasets:
-    - dataset_id: huffpost_test
+    huffpost_test:
+      dataset_id: huffpost_test
       bytes_parser_function: |
         def bytes_parser_function(data: bytes) -> str:
           return str(data, "utf8")

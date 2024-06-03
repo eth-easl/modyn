@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.config import NewDataStrategyConfig
+from modyn.config.schema.pipeline import NewDataStrategyConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy

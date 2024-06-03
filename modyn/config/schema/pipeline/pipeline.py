@@ -2,18 +2,19 @@ from __future__ import annotations
 
 from functools import cached_property
 from pathlib import Path
-from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
+from typing import Annotated, Any, Dict, List, Literal, Optional, Union
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.pipeline.base import REGEX_TIME_UNIT
+from modyn.config.schema.pipeline.data import DataConfig
+from modyn.config.schema.pipeline.evaluation import EvaluationConfig
 from modyn.config.schema.sampling.downsampling_config import (
     MultiDownsamplingConfig,
     NoDownsamplingConfig,
     SingleDownsamplingConfig,
 )
-from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
-from modyn.utils import validate_timestr
-from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
-from pydantic import Field, NonNegativeInt, field_validator, model_validator
+from modyn.utils.utils import SECONDS_PER_UNIT
+from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
@@ -342,62 +343,15 @@ class TrainingConfig(ModynBaseModel):
         return self
 
 
-# ------------------------------------------------------- Data ------------------------------------------------------- #
-
-
-class DataConfig(ModynBaseModel):
-    dataset_id: str = Field(description="ID of dataset to be used.")
-    bytes_parser_function: str = Field(
-        description=(
-            "Function used to convert bytes received from the Storage, to a format useful for further transformations "
-            "(e.g. Tensors) This function is called before any other transformations are performed on the data."
-        )
-    )
-    transformations: List[str] = Field(
-        default_factory=list,
-        description=(
-            "Further transformations to be applied on the data after bytes_parser_function has been applied."
-            "For example, this can be torchvision transformations."
-        ),
-    )
-    label_transformer_function: Optional[str] = Field(
-        None, description="Function used to transform the label (tensors of integers)."
-    )
-    tokenizer: Optional[str] = Field(
-        None,
-        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
-    )
-
-    @field_validator("bytes_parser_function", mode="before")
-    @classmethod
-    def validate_bytes_parser_function(cls, value: str) -> str:
-        try:
-            res = deserialize_function(value, "bytes_parser_function")
-            if not callable(res):
-                raise ValueError("Function 'bytes_parser_function' must be callable!")
-        except AttributeError as exc:
-            raise ValueError("Function 'bytes_parser_function' could not be parsed!") from exc
-        return value
-
-    @property
-    def bytes_parser_function_deserialized(self) -> Callable:
-        func = deserialize_function(self.bytes_parser_function, "bytes_parser_function")
-        if func is None:
-            raise ValueError("Function 'bytes_parser_function' could not be parsed!")
-        return func
-
-
-# ------------------------------------------------------ TRIGGER ----------------------------------------------------- #
-
-_REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
-
-
 class TimeTriggerConfig(ModynBaseModel):
     id: Literal["TimeTrigger"] = Field("TimeTrigger")
     every: str = Field(
         description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
-        pattern=rf"^\d+{_REGEX_TIME_UNIT}$",
+        pattern=rf"^\d+{REGEX_TIME_UNIT}$",
     )
+    sample_size: int | None = Field(None, description="The number of samples used for the metric calculation.", ge=1)
+    metric: str = Field("model", description="The metric used for drift detection.")
+    metric_config: dict[str, Any] = Field(default_factory=dict, description="Configuration for the evidently metric.")
 
     @cached_property
     def every_seconds(self) -> int:
@@ -424,146 +378,6 @@ class DataDriftTriggerConfig(ModynBaseModel):
 TriggerConfig = Annotated[
     Union[TimeTriggerConfig, DataAmountTriggerConfig, DataDriftTriggerConfig], Field(discriminator="id")
 ]
-
-
-# ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
-
-
-class Metric(ModynBaseModel):
-    name: str = Field(description="The name of the evaluation metric.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
-    evaluation_transformer_function: str | None = Field(
-        None,
-        description="A function used to transform the model output before evaluation.",
-    )
-
-    @field_validator("evaluation_transformer_function", mode="before")
-    @classmethod
-    def validate_evaluation_transformer_function(cls, value: str) -> str | None:
-        if not value:
-            return None
-        try:
-            deserialize_function(value, "evaluation_transformer_function")
-        except AttributeError as exc:
-            raise ValueError("Function 'evaluation_transformer_function' could not be parsed!") from exc
-        return value
-
-    @property
-    def evaluation_transformer_function_deserialized(self) -> Callable | None:
-        if self.evaluation_transformer_function:
-            return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
-        return None
-
-
-class MatrixEvalStrategyConfig(ModynBaseModel):
-    eval_every: str = Field(
-        description="The interval length for the evaluation "
-        "specified by an integer followed by a time unit (e.g. '100s')."
-    )
-    eval_start_from: NonNegativeInt = Field(
-        description="The timestamp from which the evaluation should start (inclusive). This timestamp is in seconds."
-    )
-    eval_end_at: NonNegativeInt = Field(
-        description="The timestamp at which the evaluation should end (exclusive). This timestamp is in seconds."
-    )
-
-    @field_validator("eval_every")
-    @classmethod
-    def validate_eval_every(cls, value: str) -> str:
-        if not validate_timestr(value):
-            raise ValueError("eval_every must be a valid time string")
-        return value
-
-    @model_validator(mode="after")
-    def eval_end_at_must_be_larger(self) -> Self:
-        if self.eval_start_from >= self.eval_end_at:
-            raise ValueError("eval_end_at must be larger than eval_start_from")
-        return self
-
-
-class OffsetEvalStrategyConfig(ModynBaseModel):
-    offsets: List[str] = Field(
-        description=(
-            "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
-            "OffsetEvalStrategy."
-        ),
-        min_length=1,
-    )
-
-    @field_validator("offsets")
-    @classmethod
-    def validate_offsets(cls, value: List[str]) -> List[str]:
-        for offset in value:
-            if offset not in [OffsetEvalStrategy.NEGATIVE_INFINITY, OffsetEvalStrategy.INFINITY]:
-                if not validate_timestr(offset):
-                    raise ValueError(f"offset {offset} must be a valid time string")
-        return value
-
-
-class MatrixEvalStrategyModel(ModynBaseModel):
-    name: Literal["MatrixEvalStrategy"]
-    config: MatrixEvalStrategyConfig
-
-
-class OffsetEvalStrategyModel(ModynBaseModel):
-    name: Literal["OffsetEvalStrategy"]
-    config: OffsetEvalStrategyConfig
-
-
-EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
-
-
-class EvalDataConfig(DataConfig):
-    batch_size: int = Field(description="The batch size to be used during evaluation.", ge=1)
-    dataloader_workers: int = Field(
-        description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
-    )
-    metrics: List[Metric] = Field(
-        description="All metrics used to evaluate the model on the given dataset.",
-        min_length=1,
-    )
-    tokenizer: Optional[str] = Field(
-        None,
-        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
-    )
-
-
-class ResultWriter(ModynBaseModel):
-    name: str = Field(description="The name of the result writer.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
-
-
-ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
-"""
-- json: appends the evaluations to the standard json logfile.
-- json_dedicated: dumps the results into dedicated json files for each evaluation.
-- tensorboard: output the evaluation to dedicated tensorboard files."""
-
-
-class EvaluationConfig(ModynBaseModel):
-    eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
-    device: str = Field(description="The device the model should be put on.")
-    result_writers: List[ResultWriterType] = Field(
-        ["json"],
-        description=(
-            "List of names that specify in which formats to store the evaluation results. We currently support "
-            "json and tensorboard."
-        ),
-        min_length=1,
-    )
-    datasets: List[EvalDataConfig] = Field(
-        description="An array of all datasets on which the model is evaluated.",
-        min_length=1,
-    )
-
-    @field_validator("datasets")
-    @classmethod
-    def validate_datasets(cls, value: List[EvalDataConfig]) -> List[EvalDataConfig]:
-        dataset_ids = [dataset.dataset_id for dataset in value]
-        if len(dataset_ids) != len(set(dataset_ids)):
-            raise ValueError("Dataset IDs must be unique.")
-        return value
-
 
 # ----------------------------------------------------- PIPELINE ----------------------------------------------------- #
 

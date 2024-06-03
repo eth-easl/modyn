@@ -55,16 +55,20 @@ trigger:
     threshold: 0.7
   
 evaluation:
-  eval_strategy:
-    name: MatrixEvalStrategy
-    config: 
-      eval_every: 100s
-      eval_start_from: 0
-      eval_end_at: 300
+  handlers:
+    - strategy:
+        type: MatrixEvalStrategy
+        eval_every: 100s
+        eval_start_from: 0
+        eval_end_at: 300
+      trigger:
+        mode: after_training
+      datasets: ["yearbook_test"]
   device: "cuda:0"
   result_writers: ["json"]
   datasets:
-    - dataset_id: yearbook_test
+    yearbook_test: 
+      dataset_id: yearbook_test
       bytes_parser_function: |
         import torch
         import numpy as np

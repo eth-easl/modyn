@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterable, Optional
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
-from modyn.config import SelectionStrategy
+from modyn.config.schema.pipeline import SelectionStrategy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.storage_backend import AbstractStorageBackend

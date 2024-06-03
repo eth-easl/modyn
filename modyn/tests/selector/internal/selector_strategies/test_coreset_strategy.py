@@ -5,10 +5,11 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
-from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, PresamplingConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig, PresamplingConfig
 from modyn.config.schema.sampling.downsampling_config import (
     GradNormDownsamplingConfig,
     LossDownsamplingConfig,
+    MultiDownsamplingConfig,
     NoDownsamplingConfig,
 )
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection

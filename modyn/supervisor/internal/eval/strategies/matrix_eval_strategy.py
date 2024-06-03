@@ -1,6 +1,7 @@
 from typing import Iterable, Optional
 
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.config.schema.pipeline.evaluation import MatrixEvalStrategyConfig
+from modyn.supervisor.internal.eval.strategies.abstract_eval_strategy import AbstractEvalStrategy
 from modyn.utils import convert_timestr_to_seconds
 
 
@@ -14,11 +15,11 @@ class MatrixEvalStrategy(AbstractEvalStrategy):
     be smaller than `eval_every`.
     """
 
-    def __init__(self, eval_strategy_config: dict):
-        super().__init__(eval_strategy_config)
-        self.eval_every = convert_timestr_to_seconds(self.eval_strategy_config["eval_every"])
-        self.eval_start_from = self.eval_strategy_config["eval_start_from"]
-        self.eval_end_at = self.eval_strategy_config["eval_end_at"]
+    def __init__(self, config: MatrixEvalStrategyConfig):
+        super().__init__(config)
+        self.eval_every = convert_timestr_to_seconds(config.eval_every)
+        self.eval_start_from = config.eval_start_from
+        self.eval_end_at = config.eval_end_at
 
     def get_eval_intervals(
         self, first_timestamp: int, last_timestamp: int
