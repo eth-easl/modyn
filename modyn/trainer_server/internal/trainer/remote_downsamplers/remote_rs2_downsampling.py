@@ -1,12 +1,11 @@
 import logging
+import random
 from typing import Any, Optional
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
-import random
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._first_epoch = True
 
     def init_downsampler(self) -> None:
-        pass # We take care of that in inform_samples
+        pass  # We take care of that in inform_samples
 
     def inform_samples(
         self,
@@ -51,7 +50,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
             self._all_sample_ids.extend(sample_ids)
 
     def _epoch_step_wr(self, target_size: int) -> None:
-        self._subsets = [ self._all_sample_ids[:target_size]  ]
+        self._subsets = [self._all_sample_ids[:target_size]]
         self._current_subset = 0
 
     def _epoch_step_r(self, target_size: int) -> None:
@@ -59,7 +58,9 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._current_subset += 1
         if self._current_subset >= self._max_subset or len(self._subsets) == 0:
             self._current_subset = 0
-            self._subsets = [self._all_sample_ids[i * target_size : (i + 1) * target_size] for i in range(self._max_subset)]
+            self._subsets = [
+                self._all_sample_ids[i * target_size : (i + 1) * target_size] for i in range(self._max_subset)
+            ]
 
     def _epoch_step(self) -> None:
         target_size = max(int(self.downsampling_ratio * len(self._all_sample_ids) / 100), 1)
@@ -74,7 +75,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._first_epoch = False
         self._epoch_step()
         return self._subsets[self._current_subset], torch.ones(len(self._subsets[self._current_subset]))
-    
+
     @property
     def requires_grad(self) -> bool:
         return False

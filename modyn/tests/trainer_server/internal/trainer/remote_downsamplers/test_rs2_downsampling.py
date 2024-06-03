@@ -2,9 +2,7 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rs2_downsampling import (
-    RemoteRS2Downsampling,
-)
+from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rs2_downsampling import RemoteRS2Downsampling
 
 
 def test_init():
@@ -23,14 +21,14 @@ def test_init():
     assert downsampler.trigger_id == trigger_id
     assert downsampler.batch_size == batch_size
     assert downsampler.device == device
-    assert downsampler.forward_required == False
-    assert downsampler.supports_bts == False
+    assert not downsampler.forward_required
+    assert not downsampler.supports_bts
     assert downsampler._all_sample_ids == []
     assert downsampler._subsets == []
     assert downsampler._current_subset == -1
     assert downsampler._with_replacement == params_from_selector["replacement"]
     assert downsampler._max_subset == -1
-    assert downsampler._first_epoch == True
+    assert downsampler._first_epoch
 
 
 def test_inform_samples():
@@ -58,7 +56,8 @@ def test_inform_samples():
     downsampler.select_points()
     downsampler.inform_samples(sample_ids, forward_output, target)
     assert set(downsampler._all_sample_ids) == set(sample_ids)
-    assert len(downsampler._all_sample_ids) == 2* len(sample_ids)
+    assert len(downsampler._all_sample_ids) == 2 * len(sample_ids)
+
 
 def test_multiple_epochs_with_replacement():
     pipeline_id = 0
@@ -124,7 +123,7 @@ def test_multiple_epochs_without_replacement():
         assert len(set(epoch2_ids)) == 5
         assert weights.shape == (5,)
         assert all(idx in sample_ids for idx in epoch2_ids)
-        assert not any(idx in epoch1_ids for idx in epoch2_ids) # No overlap across epochs
+        assert not any(idx in epoch1_ids for idx in epoch2_ids)  # No overlap across epochs
         assert sampled_data.shape == (5, 10)
         assert sampled_target.shape == (5,)
 
@@ -136,8 +135,9 @@ def test_multiple_epochs_without_replacement():
         assert len(set(epoch3_ids)) == 5
         assert weights.shape == (5,)
         assert all(idx in sample_ids for idx in epoch3_ids)
-        assert all(idx in epoch1_ids or idx in epoch2_ids for idx in epoch3_ids) # There needs to be overlap now
-        assert any(idx not in epoch1_ids for idx in epoch3_ids) # but (with very high probability, this might be flaky lets see) there is some difference
+        assert all(idx in epoch1_ids or idx in epoch2_ids for idx in epoch3_ids)  # There needs to be overlap now
+        # but (with very high probability, this might be flaky lets see) there is some difference
+        assert any(idx not in epoch1_ids for idx in epoch3_ids)
         assert sampled_data.shape == (5, 10)
         assert sampled_target.shape == (5,)
 
