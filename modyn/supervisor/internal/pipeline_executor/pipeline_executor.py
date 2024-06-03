@@ -186,12 +186,7 @@ class PipelineExecutor:
 
         # pipeline controllers objects
         self.trigger = self._setup_trigger()
-        self.grpc = GRPCHandler(
-            self.state.modyn_config.model_dump(by_alias=True),
-            self.state.pipeline_status_queue,
-            self.state.training_status_queue,
-            self.state.eval_status_queue,
-        )
+        self.grpc = GRPCHandler(self.state.modyn_config.model_dump(by_alias=True))
 
     def run(self) -> None:
         """Execute the main pipeline."""

@@ -52,20 +52,11 @@ logger = logging.getLogger(__name__)
 
 
 class GRPCHandler(TrainerServerGRPCHandlerMixin):
-    # pylint: disable=too-many-instance-attributes
 
     # pylint: disable=unused-argument
-    def __init__(
-        self,
-        modyn_config: dict,
-        pipeline_status_queue: Optional[mp.Queue] = None,
-        training_status_queue: Optional[mp.Queue] = None,
-        eval_status_queue: Optional[mp.Queue] = None,
-    ) -> None:
-        super().__init__(modyn_config=modyn_config, training_status_queue=training_status_queue)
+    def __init__(self, modyn_config: dict) -> None:
+        super().__init__(modyn_config=modyn_config)
         self.config = modyn_config
-        self.pipeline_status_queue = pipeline_status_queue
-        self.eval_status_queue = eval_status_queue
 
         self.connected_to_storage = False
         self.connected_to_selector = False
@@ -85,7 +76,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         self.init_evaluator()
 
     def init_storage(self) -> None:
-        assert self.config is not None
         storage_address = f"{self.config['storage']['hostname']}:{self.config['storage']['port']}"
         self.storage_channel = grpc.insecure_channel(storage_address, options=grpc_common_config())
 
@@ -97,7 +87,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         self.connected_to_storage = self.storage is not None
 
     def init_selector(self) -> None:
-        assert self.config is not None
         selector_address = f"{self.config['selector']['hostname']}:{self.config['selector']['port']}"
         self.selector_channel = grpc.insecure_channel(selector_address, options=grpc_common_config())
 
@@ -109,7 +98,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         self.connected_to_selector = self.selector is not None
 
     def init_evaluator(self) -> None:
-        assert self.config is not None
         evaluator_address = f"{self.config['evaluator']['hostname']}:{self.config['evaluator']['port']}"
         self.evaluator_channel = grpc.insecure_channel(evaluator_address, options=grpc_common_config())
 

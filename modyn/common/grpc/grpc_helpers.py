@@ -139,15 +139,9 @@ class GenericGRPCServer:
 
 
 class TrainerServerGRPCHandlerMixin:
-    def __init__(
-        self,
-        modyn_config: dict,
-        training_status_queue: Optional[mp.Queue] = None,
-        **kwargs: Any,
-    ) -> None:
+    def __init__(self, modyn_config: dict, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.config = modyn_config
-        self.training_status_queue = training_status_queue
         self.connected_to_trainer_server = False
         self.trainer_server: Optional[TrainerServerStub] = None
         self.trainer_server_channel: Optional[grpc.Channel] = None
@@ -281,7 +275,6 @@ class TrainerServerGRPCHandlerMixin:
     def wait_for_training_completion(
         self, training_id: int, training_reporter: TrainingStatusReporter
     ) -> dict[str, Any]:  # pragma: no cover
-        assert self.training_status_queue is not None
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(

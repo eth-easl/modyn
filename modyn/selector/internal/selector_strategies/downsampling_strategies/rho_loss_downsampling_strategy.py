@@ -1,6 +1,7 @@
 import json
 from typing import Any, Iterable
 
+from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -32,6 +33,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.il_data_config = downsampling_config.il_data_config
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
         self.rho_pipeline_id: int = self._get_or_create_rho_pipeline_id()
+        self.grpc = TrainerServerGRPCHandlerMixin(modyn_config)
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
