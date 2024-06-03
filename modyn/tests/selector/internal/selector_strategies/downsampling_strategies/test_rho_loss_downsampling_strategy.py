@@ -3,14 +3,14 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
+from modyn.config import DataConfig
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata
-from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline, Pipeline
+from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy import (
@@ -57,6 +57,14 @@ def il_training_config():
     )
 
 
+@pytest.fixture
+def data_config():
+    return DataConfig(
+        dataset_id="test",
+        bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
+    )
+
+
 def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[Tuple[int, int, int]]) -> None:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         for key, timestamp, label in key_ts_label_tuples:
@@ -72,6 +80,22 @@ def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[T
         database.session.commit()
 
 
+def register_pipeline(auxiliary_pipeline_id: Optional[int], data_config: DataConfig) -> int:
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        pipeline_id = database.register_pipeline(
+            num_workers=1,
+            model_class_name="ResNet18",
+            model_config=json.dumps({"num_classes": 2}),
+            amp=False,
+            selection_strategy="{}",
+            data_config=data_config.model_dump_json(by_alias=True),
+            full_model_strategy=ModelStorageStrategyConfig(name="PyTorchFullModel"),
+            auxiliary_pipeline_id=auxiliary_pipeline_id,
+        )
+        database.session.commit()
+    return pipeline_id
+
+
 @patch.object(AbstractSelectionStrategy, "store_training_set")
 @patch(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy"
@@ -81,9 +105,10 @@ def test__prepare_holdout_set(
     mock_get_trigger_dataset_size,
     mock_store_training_set,
     il_training_config: ILTrainingConfig,
+    data_config: DataConfig,
 ):
-    pipeline_id = 42
-    rho_pipeline_id = 24
+    pipeline_id = register_pipeline(None, data_config)
+
     modyn_config = get_minimal_modyn_config()
 
     downsampling_config = RHOLossDownsamplingConfig(
@@ -114,6 +139,7 @@ def test__prepare_holdout_set(
     )
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    rho_pipeline_id = strategy.rho_pipeline_id
     storage_backend = MockStorageBackend(pipeline_id, modyn_config, maximum_keys_in_memory)
 
     def validate_training_set_producer(producer, trigger_id):
@@ -157,29 +183,14 @@ def test__prepare_holdout_set(
         validate_training_set_producer(training_set_producer, trigger_id)
 
 
-def register_pipeline() -> int:
-    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
-        pipeline_id = database.register_pipeline(
-            num_workers=1,
-            model_class_name="ResNet18",
-            model_config=json.dumps({"num_classes": 2}),
-            amp=False,
-            selection_strategy="{}",
-            full_model_strategy=ModelStorageStrategyConfig(name="PyTorchFullModel"),
-        )
-        database.session.commit()
-    return pipeline_id
-
-
-def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrainingConfig):
+def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
+    il_training_config: ILTrainingConfig, data_config: DataConfig
+):
     # we create the main pipeline and rho pipeline and their link in db in advance
-    pipeline_id = register_pipeline()
-    rho_pipeline_id = register_pipeline()
+    rho_pipeline_id = register_pipeline(None, data_config)
+    main_pipeline_id = register_pipeline(rho_pipeline_id, data_config)
 
     modyn_config = get_minimal_modyn_config()
-    with MetadataDatabaseConnection(modyn_config) as database:
-        database.session.add(AuxiliaryPipeline(pipeline_id=pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
-        database.session.commit()
 
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
@@ -188,13 +199,14 @@ def test__get_or_create_rho_pipeline_id_when_present(il_training_config: ILTrain
     )
 
     with patch.object(RHOLossDownsamplingStrategy, "_create_rho_pipeline_id") as mock_create_rho_pipeline_id:
-        strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
+        strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, main_pipeline_id, 4)
         mock_create_rho_pipeline_id.assert_not_called()
         assert strategy.rho_pipeline_id == rho_pipeline_id
+        assert strategy.data_config == data_config
 
 
-def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig):
-    pipeline_id = register_pipeline()
+def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig, data_config: DataConfig):
+    pipeline_id = register_pipeline(None, data_config)
 
     modyn_config = get_minimal_modyn_config()
     downsampling_config = RHOLossDownsamplingConfig(
@@ -204,21 +216,18 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
     )
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
-
+    assert strategy.data_config == data_config
     # check that the created rho pipeline id is stored in the database
     with MetadataDatabaseConnection(modyn_config) as database:
-        stored_rho_pipeline_id = (
-            database.session.query(AuxiliaryPipeline.auxiliary_pipeline_id)
-            .filter(AuxiliaryPipeline.pipeline_id == pipeline_id)
-            .scalar()
-        )
-        assert stored_rho_pipeline_id == strategy.rho_pipeline_id
+        main_pipeline = database.session.get(Pipeline, pipeline_id)
+        assert main_pipeline.auxiliary_pipeline_id == strategy.rho_pipeline_id
 
-        rho_pipeline = database.session.query(Pipeline).filter(Pipeline.pipeline_id == strategy.rho_pipeline_id).first()
+        rho_pipeline = database.session.get(Pipeline, strategy.rho_pipeline_id)
 
         assert rho_pipeline.num_workers == il_training_config.num_workers
         assert rho_pipeline.model_class_name == il_training_config.il_model_id
         assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
+        assert DataConfig.model_validate_json(rho_pipeline.data_config) == data_config
         assert rho_pipeline.amp == il_training_config.amp
         assert rho_pipeline.selection_strategy == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
         assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name

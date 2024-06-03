@@ -89,6 +89,7 @@ def prepare_model() -> int:
             json.dumps({"num_classes": 10}),
             False,
             "{}",
+            "{}",
             ModelStorageStrategyConfig("PyTorchFullModel"),
             None,
             None,

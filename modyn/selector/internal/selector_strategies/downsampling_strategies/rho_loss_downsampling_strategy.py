@@ -1,10 +1,10 @@
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Tuple
 
+from modyn.config import DataConfig
 from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import SelectorStateMetadata
-from modyn.metadata_database.models.auxiliary_pipelines import AuxiliaryPipeline
+from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
@@ -30,7 +30,9 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
-        self.rho_pipeline_id: int = self._get_or_create_rho_pipeline_id()
+        rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config(self._pipeline_id)
+        self.rho_pipeline_id: int = rho_pipeline_id
+        self.data_config = data_config
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
@@ -42,19 +44,22 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         # downsampling_params, so that it can be fetched and used for downsampling.
         raise NotImplementedError
 
-    def _get_or_create_rho_pipeline_id(self) -> int:
+    def _get_or_create_rho_pipeline_id_and_get_data_config(self, main_pipeline_id: int) -> Tuple[int, DataConfig]:
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            aux_pipeline = database.session.get(AuxiliaryPipeline, self._pipeline_id)
-            if aux_pipeline is not None:
-                return aux_pipeline.auxiliary_pipeline_id
+            main_pipeline = database.session.get(Pipeline, main_pipeline_id)
+            assert main_pipeline is not None
+            data_config_str = main_pipeline.data_config
+            if main_pipeline.auxiliary_pipeline_id is not None:
+                rho_pipeline_id = main_pipeline.auxiliary_pipeline_id
+            else:
+                # register rho pipeline
+                rho_pipeline_id = self._create_rho_pipeline_id(database, data_config_str)
+                main_pipeline.auxiliary_pipeline_id = rho_pipeline_id
+                database.session.commit()
+        return rho_pipeline_id, DataConfig.model_validate_json(data_config_str)
 
-            # register rho pipeline
-            rho_pipeline_id = self._create_rho_pipeline_id(database)
-            database.session.commit()
-        return rho_pipeline_id
-
-    def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection) -> int:
+    def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection, data_config_str: str) -> int:
         # Actually we don't need to store configs in the database as we just need the existence of the rho pipline.
         # We fetch configs directly from the object fields.
         # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
@@ -64,9 +69,9 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             model_config=json.dumps(self.il_training_config.il_model_config),
             amp=self.il_training_config.amp,
             selection_strategy=self.IL_MODEL_DUMMY_SELECTION_STRATEGY,
+            data_config=data_config_str,
             full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
-        database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
         return rho_pipeline_id
 
     def _prepare_holdout_set(

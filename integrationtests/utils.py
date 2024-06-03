@@ -126,6 +126,7 @@ def register_pipeline(pipeline_config: dict, modyn_config: dict) -> int:
             model_config=model_config,
             amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
             selection_strategy=json.dumps(pipeline_config["training"]["selection_strategy"]),
+            data_config=json.dumps(pipeline_config["data"]),
             full_model_strategy=full_model_strategy,
             incremental_model_strategy=incremental_model_strategy,
             full_model_interval=full_model_interval,
