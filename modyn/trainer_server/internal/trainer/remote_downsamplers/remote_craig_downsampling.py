@@ -199,3 +199,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         if self.balance:
             self.already_selected_samples = []
             self.already_selected_weights = torch.tensor([]).float()
+
+    @property
+    def requires_grad(self) -> bool:
+        return True

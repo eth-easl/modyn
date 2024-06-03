@@ -29,49 +29,49 @@ def test_init():
 
 def test_collect_scores():
     amds = RemoteUncertaintyDownsamplingStrategy(*get_sampler_config())
+    with torch.inference_mode(mode=(not amds.requires_grad)):
+        first_output = torch.randn((4, 5))
+        second_output = torch.randn((3, 5))
+        amds.inform_samples([1, 2, 3, 4], first_output, None, None)
+        assert len(amds.scores) == 4
+        amds.inform_samples([21, 31, 41], second_output, None, None)
+        assert len(amds.scores) == 7
 
-    first_output = torch.randn((4, 5))
-    second_output = torch.randn((3, 5))
-    amds.inform_samples([1, 2, 3, 4], first_output, None, None)
-    assert len(amds.scores) == 4
-    amds.inform_samples([21, 31, 41], second_output, None, None)
-    assert len(amds.scores) == 7
+        assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
-    assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
+        third_output = torch.randn((23, 5))
+        amds.inform_samples(list(range(1000, 1023)), third_output, None, None)
 
-    third_output = torch.randn((23, 5))
-    amds.inform_samples(list(range(1000, 1023)), third_output, None, None)
-
-    assert len(amds.scores) == 30
-    assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41] + list(range(1000, 1023))
+        assert len(amds.scores) == 30
+        assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41] + list(range(1000, 1023))
 
 
 def test_collect_embedding_balance():
     amds = RemoteUncertaintyDownsamplingStrategy(*get_sampler_config(True))
+    with torch.inference_mode(mode=(not amds.requires_grad)):
+        first_output = torch.randn((4, 5))
+        second_output = torch.randn((3, 5))
+        amds.inform_samples([1, 2, 3, 4], first_output, None, None)
+        assert len(amds.scores) == 4
+        amds.inform_samples([21, 31, 41], second_output, None, None)
+        assert len(amds.scores) == 7
 
-    first_output = torch.randn((4, 5))
-    second_output = torch.randn((3, 5))
-    amds.inform_samples([1, 2, 3, 4], first_output, None, None)
-    assert len(amds.scores) == 4
-    amds.inform_samples([21, 31, 41], second_output, None, None)
-    assert len(amds.scores) == 7
+        assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
-    assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
+        amds.inform_end_of_current_label()
+        assert len(amds.already_selected_ids) == 3
+        assert len(amds.already_selected_weights) == 3
+        assert len(amds.scores) == 0
+        assert len(amds.index_sampleid_map) == 0
 
-    amds.inform_end_of_current_label()
-    assert len(amds.already_selected_ids) == 3
-    assert len(amds.already_selected_weights) == 3
-    assert len(amds.scores) == 0
-    assert len(amds.index_sampleid_map) == 0
+        third_output = torch.randn((23, 5))
+        amds.inform_samples(list(range(1000, 1023)), third_output, None, None)
 
-    third_output = torch.randn((23, 5))
-    amds.inform_samples(list(range(1000, 1023)), third_output, None, None)
+        assert len(amds.scores) == 23
+        assert amds.index_sampleid_map == list(range(1000, 1023))
 
-    assert len(amds.scores) == 23
-    assert amds.index_sampleid_map == list(range(1000, 1023))
-
-    amds.inform_end_of_current_label()
-    assert len(amds.already_selected_ids) == 14
-    assert len(amds.already_selected_weights) == 14
-    assert len(amds.scores) == 0
-    assert len(amds.index_sampleid_map) == 0
+        amds.inform_end_of_current_label()
+        assert len(amds.already_selected_ids) == 14
+        assert len(amds.already_selected_weights) == 14
+        assert len(amds.scores) == 0
+        assert len(amds.index_sampleid_map) == 0

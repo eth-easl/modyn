@@ -35,8 +35,9 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         per_sample_loss: Any,
         device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
-        self.matrix_content = MatrixContent.GRADIENTS
+        super().__init__(
+            pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device, MatrixContent.GRADIENTS
+        )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         cur_val_gradients = np.mean(matrix, axis=0)
