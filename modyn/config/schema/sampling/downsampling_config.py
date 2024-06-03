@@ -116,17 +116,22 @@ class RS2DownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["RS2"] = "RS2"
     with_replacement: bool = Field(
-        description="Whether we resample from the full TTS each epoch (= True) or train on all the data with a different subset each epoch (= False)."
+        description=(
+            "Whether we resample from the full TTS each epoch (= True) or train "
+            "on all the data with a different subset each epoch (= False)."
+        )
     )
 
     @field_validator("sample_then_batch")
-    def sample_then_batch_must_be_true(self, v: bool) -> bool:
+    @classmethod
+    def sample_then_batch_must_be_true(cls, v: bool) -> bool:
         if not v:
             raise ValueError("sample_then_batch must be set to True for this config.")
         return v
 
     @field_validator("period")
-    def only_support_period_one(self, v: int) -> int:
+    @classmethod
+    def only_support_period_one(cls, v: int) -> int:
         if v != 0:
             # RS2 requires us to resample every epoch.
             raise ValueError("period must be set to 1 for this config.")
