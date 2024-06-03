@@ -47,7 +47,7 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
 def send_metadata_and_check_database(processor_client: MetadataProcessorClient, config: dict) -> int:
     with MetadataDatabaseConnection(config) as database:
         pipeline_id = database.register_pipeline(
-            2, "ResNet18", "{}", False, ModelStorageStrategyConfig("PyTorchFullModel")
+            2, "ResNet18", "{}", False, "{}", "{}", ModelStorageStrategyConfig("PyTorchFullModel")
         )
 
     req = TrainingMetadataRequest(
