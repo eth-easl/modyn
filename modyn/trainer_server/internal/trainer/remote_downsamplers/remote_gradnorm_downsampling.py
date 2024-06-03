@@ -37,17 +37,16 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
     def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         if isinstance(self.per_sample_loss_fct, torch.nn.CrossEntropyLoss):
             # no need to autograd if cross entropy loss is used since closed form solution exists.
-            with torch.inference_mode():
-                # Because CrossEntropyLoss includes the softmax, we need to apply the
-                # softmax to the forward output to obtain the probabilities
-                probs = torch.nn.functional.softmax(forward_output, dim=1)
-                num_classes = forward_output.shape[-1]
+            # Because CrossEntropyLoss includes the softmax, we need to apply the
+            # softmax to the forward output to obtain the probabilities
+            probs = torch.nn.functional.softmax(forward_output, dim=1)
+            num_classes = forward_output.shape[-1]
 
-                # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
-                one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
-                    target, num_classes=num_classes
-                )
-                scores = torch.norm(probs - one_hot_targets, dim=-1)
+            # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
+            one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
+                target, num_classes=num_classes
+            )
+            scores = torch.norm(probs - one_hot_targets, dim=-1)
         else:
             sample_losses = self.per_sample_loss_fct(forward_output, target)
             last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
