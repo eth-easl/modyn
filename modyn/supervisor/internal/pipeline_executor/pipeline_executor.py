@@ -899,9 +899,10 @@ class PipelineExecutor:
 
         # The time measurements for evaluation requests is negligible, let's parallelization to speed up evaluation;
         # As we are io bound by the evaluator server, GIL locking isn't a concerns. This enables multithreading.
-
-        # s.modyn_config.supervisor.post_pipeline_evaluation_workers
-        with ThreadPoolExecutor(max_workers=30) as pool:
+        num_threads = 10
+        if s.modyn_config.supervisor:
+            num_threads = s.modyn_config.supervisor.post_pipeline_evaluation_workers
+        with ThreadPoolExecutor(max_workers=num_threads) as pool:
             tasks: list[Future] = []
 
             for eval_handler in self.eval_handlers:
