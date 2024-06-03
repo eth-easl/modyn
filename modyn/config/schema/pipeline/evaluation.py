@@ -10,6 +10,7 @@ core pipeline logic with potential additional configurations, we decided to crea
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Annotated, Any, Dict, List, Literal, Optional, Union, cast, get_args
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
@@ -18,7 +19,6 @@ from modyn.config.schema.pipeline.data import DataConfig
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
-from pyparsing import cached_property
 from typing_extensions import Self
 
 # -------------------------------------------------------------------------------------------------------------------- #
