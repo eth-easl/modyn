@@ -1,9 +1,8 @@
 import json
-
-from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from typing import Any, Iterable, Tuple
 
-from modyn.config import DataConfig
+from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
+from modyn.config.schema.pipeline import DataConfig
 from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
@@ -68,7 +67,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         # We fetch configs directly from the object fields.
         # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
         rho_pipeline_id = database.register_pipeline(
-            num_workers=self.il_training_config.num_workers,
+            num_workers=self.il_training_config.dataloader_workers,
             model_class_name=self.il_training_config.il_model_id,
             model_config=json.dumps(self.il_training_config.il_model_config),
             amp=self.il_training_config.amp,
@@ -76,21 +75,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             data_config=data_config_str,
             full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
-        return rho_pipeline_id
-
-    def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection) -> int:
-        # Actually we don't need to store configs in the database as we just need the existence of the rho pipline.
-        # We fetch configs directly from the object fields.
-        # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
-        rho_pipeline_id = database.register_pipeline(
-            num_workers=self.il_training_config.num_workers,
-            model_class_name=self.il_training_config.il_model_id,
-            model_config=json.dumps(self.il_training_config.il_model_config),
-            amp=self.il_training_config.amp,
-            selection_strategy=self.IL_MODEL_DUMMY_SELECTION_STRATEGY,
-            full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
-        )
-        database.session.add(AuxiliaryPipeline(pipeline_id=self._pipeline_id, auxiliary_pipeline_id=rho_pipeline_id))
         return rho_pipeline_id
 
     def _prepare_holdout_set(

@@ -10,8 +10,8 @@ from concurrent import futures
 from typing import Any, Callable, Generator, Optional
 
 import grpc
-from modyn.config import TrainingConfig
-from modyn.config.schema.data.data_config import DataConfig
+from modyn.config.schema.pipeline import DataConfig
+from modyn.config.schema.training.training_config import TrainingConfig
 
 # pylint: disable=no-name-in-module
 from modyn.supervisor.internal.utils import TrainingStatusReporter

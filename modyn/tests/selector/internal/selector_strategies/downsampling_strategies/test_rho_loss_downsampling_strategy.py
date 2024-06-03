@@ -7,10 +7,9 @@ from typing import List, Optional, Tuple
 from unittest.mock import ANY, patch
 
 import pytest
-
-from modyn.config.schema.optimizer.optimizer_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
-from modyn.config import DataConfig
+from modyn.config.schema.pipeline import DataConfig
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
+from modyn.config.schema.training.training_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -53,13 +52,14 @@ def setup_and_teardown():
 @pytest.fixture
 def il_training_config():
     return ILTrainingConfig(
-        num_workers=1,
+        dataloader_workers=1,
         il_model_id="ResNet18",
         il_model_config={"num_classes": 2},
         amp=False,
         device="cpu",
         batch_size=16,
-        epochs=1,
+        epochs_per_trigger=1,
+        shuffle=True,
         optimizers=[
             OptimizerConfig(
                 name="default",
@@ -239,7 +239,7 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
 
         rho_pipeline = database.session.get(Pipeline, strategy.rho_pipeline_id)
 
-        assert rho_pipeline.num_workers == il_training_config.num_workers
+        assert rho_pipeline.num_workers == il_training_config.dataloader_workers
         assert rho_pipeline.model_class_name == il_training_config.il_model_id
         assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
         assert DataConfig.model_validate_json(rho_pipeline.data_config) == data_config

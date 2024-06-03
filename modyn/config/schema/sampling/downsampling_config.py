@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Annotated, List, Literal, Union
 
-from modyn.config.schema.data.data_config import DataConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
-from modyn.config.schema.optimizer.optimizer_config import LrSchedulerConfig, OptimizationCriterion, OptimizerConfig
+from modyn.config.schema.training.training_config import CheckpointingConfig, TrainingConfig
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
@@ -101,29 +100,24 @@ class NoDownsamplingConfig(BaseDownsamplingConfig):
     ratio: Literal[100] = 100
 
 
-class ILTrainingConfig(ModynBaseModel):
-    num_workers: int = Field("Number of workers to use for training.", min=1)
-    il_model_id: str = Field("The model class name to use as the IL model.")
-    il_model_config: dict = Field(
-        default_factory=dict, description="Configuration dictionary that will be passed to the model on initialization."
-    )
-    amp: bool = Field(False, description="Whether to use automatic mixed precision.")
-    device: str = Field(description="The device to use to train IL model.")
-    batch_size: int = Field(description="The batch size to use for training the IL model.", min=1)
-    epochs: int = Field(description="The number of epochs to train the IL model.", min=1)
-    optimizers: List[OptimizerConfig] = Field(description="The optimizer configuration for the IL model.")
-    optimization_criterion: OptimizationCriterion = Field(
-        description="Configuration for the optimization criterion that we optimize",
-    )
-    lr_scheduler: Optional[LrSchedulerConfig] = Field(
-        None,
-        description="Configuration for the Torch-based Learning Rate (LR) scheduler used for training.",
-    )
-    grad_scaler_config: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
-    )
+class NoCheckpointingConfig(CheckpointingConfig):
+    activated: Literal[False] = False
+    interval: Literal[None] = None
+    path: Literal[None] = None
 
+
+class ILTrainingConfig(TrainingConfig):
+    # new fields introduced
+    il_model_id: str = Field(description="The model class name to use as the IL model.")
+    il_model_config: dict = Field(default_factory=dict, description="The model configuration to use as the IL model.")
+
+    # hardcode values that are not relevant in the IL training
+    gpus: Literal[1] = 1
+    num_samples_to_pass: Literal[None] = None
+    use_previous_model: Literal[False] = False
+    initial_model: Literal["random"] = "random"
+    initial_model_id: Literal[None] = None
+    checkpointing: NoCheckpointingConfig = Field(default=NoCheckpointingConfig())
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):

@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 from functools import cached_property
-from pathlib import Path
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Union
 
-from modyn.config.schema.data.data_config import DataConfig
 from modyn.config.schema.modyn_base_model import ModynBaseModel
-from modyn.config.schema.optimizer.optimizer_config import LrSchedulerConfig, OptimizationCriterion, OptimizerConfig
 from modyn.config.schema.sampling.downsampling_config import (
     MultiDownsamplingConfig,
     NoDownsamplingConfig,
     SingleDownsamplingConfig,
 )
+from modyn.config.schema.training.training_config import TrainingConfig
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
@@ -186,120 +184,49 @@ SelectionStrategy = Annotated[
 ]
 
 
-class CheckpointingConfig(ModynBaseModel):
-    """Configuration for checkpointing during training."""
-
-    activated: bool = Field(description="Whether we checkpoint or not.")
-    interval: int | None = Field(None, description="In what interval we checkpoint.")
-    path: Path | None = Field(
-        None,
-        description="The path on the training node where the checkpoints are stored.",
-    )
-
-    @model_validator(mode="after")
-    def validate_activation(self) -> Self:
-        if self.activated:
-            if self.interval is None:
-                raise ValueError("If checkpointing is activated, the interval must be set.")
-            if self.path is None:
-                raise ValueError("If checkpointing is activated, the path must be set.")
-        return self
+# ------------------------------------------------------- Data ------------------------------------------------------- #
 
 
-class TrainingConfig(ModynBaseModel):
-    gpus: int = Field(description="The number of GPUs that should be used for training.", ge=1)
-    epochs_per_trigger: int = Field(1, description="The number of epochs that should be trained per trigger.")
-    num_samples_to_pass: list[int] | None = Field(
-        None,
+class DataConfig(ModynBaseModel):
+    dataset_id: str = Field(description="ID of dataset to be used.")
+    bytes_parser_function: str = Field(
         description=(
-            "If it is set, during the i-th trigger, the number of samples to train on (multiple passes counted as "
-            "exactly multiple times, e.g. if we train for 2 epochs then each sample is counted twice) is the i-th "
-            "element in the array. If the array is not long enough, out-of-range triggers will fall back to "
-            "the `epochs_per_trigger` constraint. `epochs_per_trigger` has to effect to in-range triggers."
-        ),
-        min_length=1,
-    )
-    num_prefetched_partitions: int = Field(
-        1,
-        description="The number of partitions that are prefetched per DataLoader worker.",
-    )
-    parallel_prefetch_requests: int = Field(
-        1, description="The number of parallel prefetch requests per DataLoader worker."
-    )
-    device: str = Field(
-        "cpu",
-        description="The device the model should be put on.",
-        pattern=r"^(cpu|cuda:\d+)$",
-    )
-    amp: bool = Field(False, description="Whether to use automatic mixed precision.")
-    dataloader_workers: int = Field(
-        description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
-    )
-    batch_size: int = Field(description="The batch size to be used during training.", ge=1)
-    shuffle: bool = Field(
-        description=(
-            "If True, we shuffle the order of partitions and the data within each partition at each worker."
-            "Otherwise, the output order is deterministic."
+            "Function used to convert bytes received from the Storage, to a format useful for further transformations "
+            "(e.g. Tensors) This function is called before any other transformations are performed on the data."
         )
     )
-    use_previous_model: bool = Field(
+    transformations: List[str] = Field(
+        default_factory=list,
         description=(
-            "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
-            "we start with random weights. If initial_model is 'pretrained', cannot be False."
-        )
-    )
-    seed: Optional[int] = Field(
-        None,
-        description=(
-            "If provided, every random python function (torch, numpy..) is seeded with this number. Must be in the "
-            "range [0,100]. Please be aware that if you want to seed postgres you must specify its seed in the "
-            "modyn_config."
+            "Further transformations to be applied on the data after bytes_parser_function has been applied."
+            "For example, this can be torchvision transformations."
         ),
     )
-    initial_model: Literal["random", "pretrained"] = Field(
-        description="What type of initial model should be used (random or pretrained)."
+    label_transformer_function: str = Field(
+        "", description="Function used to transform the label (tensors of integers)."
     )
-    initial_model_id: Optional[int] = Field(
+    tokenizer: Optional[str] = Field(
         None,
-        description="The ID of the model that should be used as the initial model.",
-    )
-    checkpointing: CheckpointingConfig = Field(description="Configuration of checkpointing during training")
-    optimizers: List[OptimizerConfig] = Field(
-        description="An array of the optimizers for the training",
-        min_length=1,
-    )
-    optimization_criterion: OptimizationCriterion = Field(
-        description="Configuration for the optimization criterion that we optimize",
-    )
-    lr_scheduler: Optional[LrSchedulerConfig] = Field(
-        None,
-        description="Configuration for the Torch-based Learning Rate (LR) scheduler used for training.",
-    )
-    grad_scaler_config: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
+        description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )
 
-    # [Additional validation]
-
-    @field_validator("gpus")
+    @field_validator("bytes_parser_function", mode="before")
     @classmethod
-    def validate_gpus(cls, value: int) -> int:
-        if value > 1:
-            raise ValueError("Currently, only single GPU training is supported.")
+    def validate_bytes_parser_function(cls, value: str) -> str:
+        try:
+            res = deserialize_function(value, "bytes_parser_function")
+            if not callable(res):
+                raise ValueError("Function 'bytes_parser_function' must be callable!")
+        except AttributeError as exc:
+            raise ValueError("Function 'bytes_parser_function' could not be parsed!") from exc
         return value
 
-    @model_validator(mode="after")
-    def validate_pretrained(self) -> Self:
-        if self.initial_model == "pretrained":
-            if not self.use_previous_model:
-                raise ValueError(
-                    "Cannot have use_previous_model == False and use a pretrained initial model."
-                    "Initial model would get lost after first trigger."
-                )
-            if not self.initial_model_id:
-                raise ValueError("Initial model set to pretrained, but no initial_model_id given")
-        return self
+    @property
+    def bytes_parser_function_deserialized(self) -> Callable:
+        func = deserialize_function(self.bytes_parser_function, "bytes_parser_function")
+        if func is None:
+            raise ValueError("Function 'bytes_parser_function' could not be parsed!")
+        return func
 
 
 # ------------------------------------------------------ TRIGGER ----------------------------------------------------- #

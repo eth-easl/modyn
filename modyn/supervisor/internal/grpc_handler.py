@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import logging
-import multiprocessing as mp
 from collections import deque
 from time import sleep
 from typing import Any, Iterable, Optional, Sequence
@@ -285,7 +284,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
     def wait_for_evaluation_completion(
         self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]
     ) -> None:
-        assert self.pipeline_status_queue is not None
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")

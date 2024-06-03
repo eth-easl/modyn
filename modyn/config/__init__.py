@@ -29,7 +29,6 @@ from .schema.config import (
     TrainingServerConfig,
 )
 from .schema.pipeline import (  # noqa: F401
-    CheckpointingConfig,
     CoresetStrategyConfig,
     EvalDataConfig,
     EvaluationConfig,
@@ -46,7 +45,6 @@ from .schema.pipeline import (  # noqa: F401
     ResultWriter,
     SelectionStrategy,
     StorageBackend,
-    TrainingConfig,
     TriggerConfig,
 )
 
@@ -82,8 +80,6 @@ __all__ = [
     "SingleDownsamplingConfig",
     "FreshnessSamplingStrategyConfig",
     "SelectionStrategy",
-    "CheckpointingConfig",
-    "TrainingConfig",
     "TriggerConfig",
     "Metric",
     "EvalDataConfig",
