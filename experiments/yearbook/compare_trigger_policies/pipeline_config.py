@@ -7,7 +7,6 @@ from modyn.config.schema.pipeline import (
     Metric,
     ModelConfig,
     ModynPipelineConfig,
-    NewDataSelectionStrategy,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
@@ -17,6 +16,7 @@ from modyn.config.schema.pipeline import (
     TriggerConfig,
 )
 from modyn.config.schema.pipeline.evaluation import EvalHandlerConfig
+from modyn.config.schema.pipeline.pipeline import NewDataStrategyConfig
 
 
 def gen_pipeline_config(
@@ -43,9 +43,9 @@ def gen_pipeline_config(
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
-            selection_strategy=NewDataSelectionStrategy(
-                maximum_keys_in_memory=1000, storage_backend="database", limit=-1, reset_after_trigger=True
-            ),
+        ),
+        selection_strategy=NewDataStrategyConfig(
+            maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
             dataset_id="yearbook",
@@ -83,6 +83,7 @@ def gen_pipeline_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
+                            config={"num_classes": 2, "average": "weighted"},
                         ),
                         Metric(
                             name="F1-score",
@@ -91,7 +92,16 @@ def gen_pipeline_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 10, "average": "macro"},
+                            config={"num_classes": 2, "average": "weighted"},
+                        ),
+                        Metric(
+                            name="WeightedF1-score",
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            config={"num_classes": 2, "average": "weighted"},
                         ),
                     ],
                 )

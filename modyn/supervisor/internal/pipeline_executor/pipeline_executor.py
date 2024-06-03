@@ -784,7 +784,7 @@ class PipelineExecutor:
                             s, self.logs, eval_req, eval_handler.name, eval_dataset_config.dataset_id, results
                         )
 
-    @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, track=True)
+    @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, log=False, track=False)
     def _single_evaluation(
         self,
         s: ExecutionState,
@@ -842,7 +842,7 @@ class PipelineExecutor:
         self.grpc.wait_for_evaluation_completion(eval_request.training_id, evaluation)
         return evaluation
 
-    @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, track=True)
+    @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, log=False, track=False)
     def _store_evaluation_results(
         self,
         s: ExecutionState,
@@ -871,7 +871,7 @@ class PipelineExecutor:
 
     # post core pipeline evaluation
 
-    @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.EVALUATE, track=False)
+    @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.EVALUATE, log=False, track=False)
     def _post_pipeline_evaluation(self, s: ExecutionState, log: StageLog) -> None:  # pylint: disable=too-many-locals
         """Evaluate the trained model and store the results."""
         if not self.state.pipeline_config.evaluation:

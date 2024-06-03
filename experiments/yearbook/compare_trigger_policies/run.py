@@ -20,7 +20,7 @@ def run_experiment() -> None:
 
     eval_handlers = [
         EvalHandlerConfig(
-            name="scheduled",
+            name="scheduled+-1",
             datasets=["yearbook-test"],
             strategy=IntervalEvalStrategyConfig(interval="(-1d, +1d)"),  # timestamps faked (y -> d)
             trigger=PeriodicEvalTriggerConfig(
@@ -28,7 +28,7 @@ def run_experiment() -> None:
             ),
         ),
         EvalHandlerConfig(
-            name="scheduled",
+            name="scheduled+-2",
             datasets=["yearbook-test"],
             strategy=IntervalEvalStrategyConfig(interval="(-2d, +2d)"),  # timestamps faked (y -> d)
             trigger=PeriodicEvalTriggerConfig(
@@ -38,7 +38,7 @@ def run_experiment() -> None:
         EvalHandlerConfig(
             name="scheduled",
             datasets=["yearbook-test"],
-            strategy=IntervalEvalStrategyConfig(interval="(-2d, +2d)"),  # timestamps faked (y -> d)
+            strategy=IntervalEvalStrategyConfig(interval="(-5d, +5d)"),  # timestamps faked (y -> d)
             trigger=PeriodicEvalTriggerConfig(
                 every="1d", start_timestamp=0, end_timestamp=(2013 - 1930) * SECONDS_PER_UNIT["d"], matrix=True
             ),

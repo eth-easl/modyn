@@ -334,7 +334,7 @@ class SupervisorConfig(HostnamePortMixin):
 
     eval_directory: str | Path = Field(description="The directory to store the evaluation results.")
     post_pipeline_evaluation_workers: int = Field(
-        10, description="Number of workers (threads) in supervisor to use for simultaneous evaluations."
+        20, description="Number of workers (threads) in supervisor to use for simultaneous evaluations."
     )
 
 
