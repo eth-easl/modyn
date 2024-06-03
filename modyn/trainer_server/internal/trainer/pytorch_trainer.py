@@ -690,9 +690,12 @@ class PytorchTrainer:
         self._model.model.eval()
         self._downsampler.init_downsampler()
         self.start_embedding_recording_if_needed()
-        big_batch_output = self._model.model(data)
-        embeddings = self.get_embeddings_if_recorded()
-        self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+
+        with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+            big_batch_output = self._model.model(data)
+            embeddings = self.get_embeddings_if_recorded()
+            self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+
         self.end_embedding_recorder_if_needed()
 
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
@@ -825,11 +828,12 @@ class PytorchTrainer:
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 
-            with torch.autocast(self._device_type, enabled=self._amp):
-                # compute the scores and accumulate them
-                model_output = self._model.model(data)
-                embeddings = self.get_embeddings_if_recorded()
-                self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
+            with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+                with torch.autocast(self._device_type, enabled=self._amp):
+                    # compute the scores and accumulate them
+                    model_output = self._model.model(data)
+                    embeddings = self.get_embeddings_if_recorded()
+                    self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
 
         return batch_number, number_of_samples
 
