@@ -24,6 +24,7 @@ def prepare_dataloaders(
     training_id: int,
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
+    shuffle: bool,
     tokenizer: Optional[str],
     log_path: Optional[pathlib.Path],
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
@@ -39,6 +40,7 @@ def prepare_dataloaders(
         bytes_parser (str): Serialized Python code,
             used for converting bytes to a form useful for further transformations (such as Tensors).
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
+        shuffle: Whether to shuffle the order of partitions and data within partitions
         tokenizer (optional[str]): Optional tokenizer for NLP tasks
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
@@ -58,6 +60,7 @@ def prepare_dataloaders(
         training_id,
         num_prefetched_partitions,
         parallel_prefetch_requests,
+        shuffle,
         tokenizer,
         log_path,
     )
@@ -85,6 +88,7 @@ def prepare_per_class_dataloader_from_online_dataset(
         initial_filtered_label,
         online_dataset._num_prefetched_partitions,
         online_dataset._parallel_prefetch_requests,
+        online_dataset._shuffle,
         online_dataset._tokenizer_name,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)

@@ -79,3 +79,8 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     @abstractmethod
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def requires_grad(self) -> bool:
+        raise NotImplementedError

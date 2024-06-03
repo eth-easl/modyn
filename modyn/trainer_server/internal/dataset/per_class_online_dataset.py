@@ -22,6 +22,7 @@ class PerClassOnlineDataset(OnlineDataset):
         initial_filtered_label: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
+        shuffle: bool,
         tokenizer: Optional[str],
     ):
         super().__init__(
@@ -35,6 +36,7 @@ class PerClassOnlineDataset(OnlineDataset):
             training_id,
             num_prefetched_partitions,
             parallel_prefetch_requests,
+            shuffle,
             tokenizer,
             None,
         )
