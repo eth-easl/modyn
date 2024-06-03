@@ -30,12 +30,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
-    storage_backend: "database"
-    limit: -1
-    tail_triggers: 0
 data:
   dataset_id: yearbook
   transformations: []
@@ -50,3 +44,9 @@ data:
 trigger:
   id: TimeTrigger
   every: 1d
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
