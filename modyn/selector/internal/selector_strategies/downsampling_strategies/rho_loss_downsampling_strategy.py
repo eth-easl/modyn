@@ -1,5 +1,5 @@
 import json
-from typing import Any, Iterable, Tuple, Optional
+from typing import Any, Iterable, Optional, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig
@@ -31,8 +31,9 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
         self.grpc = TrainerServerGRPCHandlerMixin(modyn_config)
+        self.grpc.init_trainer_server()
         self.remote_downsampling_strategy_name = "RemoteRHOLossDownsampling"
-        rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config(self._pipeline_id)
+        rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config()
         self.rho_pipeline_id: int = rho_pipeline_id
         self.data_config = data_config
         self.il_model_id: Optional[int] = None
@@ -41,8 +42,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
-        self._prepare_holdout_set(next_trigger_id, self.rho_pipeline_id, selector_storage_backend)
-        self.il_model_id = self._train_il_model(next_trigger_id, self.rho_pipeline_id)
+        self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
+        self.il_model_id = self._train_il_model(next_trigger_id)
 
     def _build_downsampling_params(self) -> dict:
         config = super()._build_downsampling_params()
@@ -50,9 +51,9 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         config["il_model_id"] = self.il_model_id
         return config
 
-    def _train_il_model(self, trigger_id: int, rho_pipeline_id: int) -> int:
+    def _train_il_model(self, trigger_id: int) -> int:
         training_id = self.grpc.start_training(
-            pipeline_id=rho_pipeline_id,
+            pipeline_id=self.rho_pipeline_id,
             trigger_id=trigger_id,
             training_config=self.il_training_config,
             data_config=self.data_config,
@@ -62,10 +63,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         model_id = self.grpc.store_trained_model(training_id)
         return model_id
 
-    def _get_or_create_rho_pipeline_id_and_get_data_config(self, main_pipeline_id: int) -> Tuple[int, DataConfig]:
+    def _get_or_create_rho_pipeline_id_and_get_data_config(self) -> Tuple[int, DataConfig]:
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            main_pipeline = database.session.get(Pipeline, main_pipeline_id)
+            main_pipeline = database.session.get(Pipeline, self._pipeline_id)
             assert main_pipeline is not None
             data_config_str = main_pipeline.data_config
             if main_pipeline.auxiliary_pipeline_id is not None:
@@ -92,9 +93,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         )
         return rho_pipeline_id
 
-    def _prepare_holdout_set(
-        self, next_trigger_id: int, rho_pipeline_id: int, selector_storage_backend: AbstractStorageBackend
-    ) -> None:
+    def _prepare_holdout_set(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         current_trigger_dataset_size = get_trigger_dataset_size(
             selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
         )
@@ -112,7 +111,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
                     yield [(sample, 1.0) for sample in samples], {}
 
         AbstractSelectionStrategy.store_training_set(
-            rho_pipeline_id,
+            self.rho_pipeline_id,
             next_trigger_id,
             self._modyn_config,
             training_set_producer,

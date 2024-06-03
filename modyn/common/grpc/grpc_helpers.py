@@ -313,9 +313,7 @@ class TrainerServerGRPCHandlerMixin:
 
                     if training_reporter is not None:
                         training_reporter.progress_counter(
-                            res.samples_seen,
-                            res.downsampling_samples_seen,
-                            res.is_training
+                            res.samples_seen, res.downsampling_samples_seen, res.is_training
                         )
 
                 elif res.is_running:

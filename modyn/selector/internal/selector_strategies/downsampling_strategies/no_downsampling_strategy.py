@@ -23,4 +23,6 @@ class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.requires_remote_computation = False
         self.remote_downsampling_strategy_name = ""
-        self.downsampling_params: Dict[None, None] = {}
+
+    def _build_downsampling_params(self) -> dict:
+        return {}

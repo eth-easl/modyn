@@ -110,8 +110,7 @@ class ILTrainingConfig(TrainingConfig):
     # new fields introduced
     il_model_id: str = Field(description="The model class name to use as the IL model.")
     il_model_config: dict = Field(
-        default_factory=dict,
-        description="Configuration dictionary that will be passed to the model on initialization."
+        default_factory=dict, description="Configuration dictionary that will be passed to the model on initialization."
     )
 
     # hardcode values that are not relevant in the IL training
