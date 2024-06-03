@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-import random
 import threading
 from typing import Iterable
 
@@ -46,7 +45,7 @@ class SelectorGRPCServicer(SelectorServicer):
         self.selector_manager = selector_manager
         self._sample_batch_size = sample_batch_size
 
-    def get_sample_keys_and_weights(  # pylint: disable=unused-argument,too-many-locals
+    def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
         self, request: GetSamplesRequest, context: grpc.ServicerContext
     ) -> Iterable[SamplesResponse]:
         pipeline_id, trigger_id, worker_id, partition_id = (
@@ -57,17 +56,13 @@ class SelectorGRPCServicer(SelectorServicer):
         )
         tid = threading.get_native_id()
         pid = os.getpid()
-        shuffle = request.HasField("shuffle") and request.shuffle
 
         logger.info(
             f"[{pid}][{tid}][Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id}"
-            + f" and worker id {worker_id} and partition id {partition_id}. shuffle = {shuffle}"
+            + f" and worker id {worker_id} and partition id {partition_id}"
         )
 
         samples = self.selector_manager.get_sample_keys_and_weights(pipeline_id, trigger_id, worker_id, partition_id)
-        print(f"got samples pre-shuffle = {samples}")
-        if shuffle:
-            random.shuffle(samples)
 
         num_samples = len(samples)
         if num_samples == 0:

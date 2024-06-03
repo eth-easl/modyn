@@ -172,7 +172,7 @@ class OnlineDataset(IterableDataset):
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(
-            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id, self._shuffle
+            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id
         )
         get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
         get_data_log["num_items"] = len(keys)

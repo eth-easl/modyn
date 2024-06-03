@@ -51,7 +51,6 @@ message GetSamplesRequest {
   int32 trigger_id = 2;
   int32 partition_id = 3;
   int32 worker_id = 4;
-  optional bool shuffle = 5;
 }
 
 message SamplesResponse {

@@ -23,18 +23,12 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = None  # connection is made when the pytorch worker is started
         self._uses_weights: Optional[bool] = None  # get via gRPC, so unavailable if the connection is not yet made.
 
-    def get_keys_and_weights(
-        self, worker_id: int, partition_id: int, shuffle: bool
-    ) -> tuple[list[int], Optional[list[float]]]:
+    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         assert self._selectorstub is not None
         assert self._uses_weights is not None
 
         req = GetSamplesRequest(
-            pipeline_id=self._pipeline_id,
-            trigger_id=self._trigger_id,
-            worker_id=worker_id,
-            partition_id=partition_id,
-            shuffle=shuffle,
+            pipeline_id=self._pipeline_id, trigger_id=self._trigger_id, worker_id=worker_id, partition_id=partition_id
         )
 
         if self._uses_weights:

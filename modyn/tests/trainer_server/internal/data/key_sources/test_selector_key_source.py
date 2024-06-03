@@ -79,14 +79,14 @@ def test_weighted_key_source(test_grp, test_connection):
     assert keysource.uses_weights()
     assert keysource.get_num_data_partitions() == 2
 
-    keys, weights = keysource.get_keys_and_weights(0, 0, False)
+    keys, weights = keysource.get_keys_and_weights(0, 0)
     assert keys == [1, 2, 3] and weights == [-1.0, -2.0, -3.0]
-    keys, weights = keysource.get_keys_and_weights(0, 1, False)
+    keys, weights = keysource.get_keys_and_weights(0, 1)
     assert keys == [10, 20, 30] and weights == [-10.0, -20.0, -30.0]
 
-    keys, weights = keysource.get_keys_and_weights(1, 0, False)
+    keys, weights = keysource.get_keys_and_weights(1, 0)
     assert keys == [100, 200, 300] and weights == [-100.0, -200.0, -300.0]
-    keys, weights = keysource.get_keys_and_weights(1, 1, False)
+    keys, weights = keysource.get_keys_and_weights(1, 1)
     assert keys == [110, 220, 330] and weights == [-110.0, -220.0, -330.0]
 
     with pytest.raises(AssertionError):
@@ -94,7 +94,7 @@ def test_weighted_key_source(test_grp, test_connection):
 
     # artificially switch to unweighted
     keysource._uses_weights = False
-    keys, weights = keysource.get_keys_and_weights(0, 0, False)
+    keys, weights = keysource.get_keys_and_weights(0, 0)
     assert weights is None
     assert keys == [1, 2, 3]
 
@@ -120,14 +120,14 @@ def test_unweighted_key_source(test_grp, test_connection):
     assert not keysource.uses_weights()
     assert keysource.get_num_data_partitions() == 2
 
-    keys, weights = keysource.get_keys_and_weights(0, 0, False)
+    keys, weights = keysource.get_keys_and_weights(0, 0)
     assert keys == [1, 2, 3] and weights is None
-    keys, weights = keysource.get_keys_and_weights(0, 1, False)
+    keys, weights = keysource.get_keys_and_weights(0, 1)
     assert keys == [10, 20, 30] and weights is None
 
-    keys, weights = keysource.get_keys_and_weights(1, 0, False)
+    keys, weights = keysource.get_keys_and_weights(1, 0)
     assert keys == [100, 200, 300] and weights is None
-    keys, weights = keysource.get_keys_and_weights(1, 1, False)
+    keys, weights = keysource.get_keys_and_weights(1, 1)
     assert keys == [110, 220, 330] and weights is None
 
     with pytest.raises(AssertionError):
@@ -135,6 +135,6 @@ def test_unweighted_key_source(test_grp, test_connection):
 
     # artificially switch to weighted
     keysource._uses_weights = True
-    keys, weights = keysource.get_keys_and_weights(0, 0, False)
+    keys, weights = keysource.get_keys_and_weights(0, 0)
     assert weights == [-1.0, -2.0, -3.0]
     assert keys == [1, 2, 3]

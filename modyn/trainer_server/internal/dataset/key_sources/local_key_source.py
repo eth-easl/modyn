@@ -1,4 +1,3 @@
-import random
 from typing import Optional
 
 from modyn.common.trigger_sample import TriggerSampleStorage
@@ -12,24 +11,15 @@ class LocalKeySource(AbstractKeySource):
         self._trigger_sample_storage = TriggerSampleStorage(offline_dataset_path)
         self.offline_dataset_path = offline_dataset_path
 
-    def get_keys_and_weights(
-        self, worker_id: int, partition_id: int, shuffle: bool
-    ) -> tuple[list[int], Optional[list[float]]]:
+    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         path = self._trigger_sample_storage.get_file_path(self._pipeline_id, self._trigger_id, partition_id, worker_id)
         tuples_list = self._trigger_sample_storage.parse_file(path)
 
         if len(tuples_list) == 0:
             return [], []
         keys, weights = zip(*tuples_list)  # type: ignore
-        keys_list = list(keys)
-        weights_list = list(weights)
 
-        if shuffle:
-            combined = list(zip(keys_list, weights_list))
-            random.shuffle(combined)
-            keys_list, weights_list = map(list, zip(*combined))
-
-        return keys_list, weights_list
+        return list(keys), list(weights)
 
     def uses_weights(self) -> bool:
         return True
