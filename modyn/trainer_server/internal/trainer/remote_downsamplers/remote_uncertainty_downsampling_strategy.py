@@ -120,3 +120,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
 
     def _select_indexes_from_scores(self, target_size: int) -> tuple[list[int], torch.Tensor]:
         return np.argsort(self.scores[::-1])[:target_size], torch.ones(target_size).float()
+
+    @property
+    def requires_grad(self) -> bool:
+        return False
