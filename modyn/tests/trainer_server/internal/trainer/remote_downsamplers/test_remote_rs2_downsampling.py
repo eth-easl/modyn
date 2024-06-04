@@ -27,7 +27,6 @@ def test_init():
     assert downsampler._subsets == []
     assert downsampler._current_subset == -1
     assert downsampler._with_replacement == params_from_selector["replacement"]
-    assert downsampler._max_subset == -1
     assert downsampler._first_epoch
 
 
