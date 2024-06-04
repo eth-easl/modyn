@@ -94,15 +94,6 @@ def gen_pipeline_config(
                             ),
                             config={"num_classes": 2, "average": "weighted"},
                         ),
-                        Metric(
-                            name="WeightedF1-score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 2, "average": "weighted"},
-                        ),
                     ],
                 )
                 for yb_dataset_name in ["yearbook", "yearbook-test"]

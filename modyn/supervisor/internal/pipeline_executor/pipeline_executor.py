@@ -784,7 +784,7 @@ class PipelineExecutor:
                             s, self.logs, eval_req, eval_handler.name, eval_dataset_config.dataset_id, results
                         )
 
-    @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, log=False, track=False)
+    @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, log=True, track=False)
     def _single_evaluation(
         self,
         s: ExecutionState,
@@ -842,7 +842,7 @@ class PipelineExecutor:
         self.grpc.wait_for_evaluation_completion(eval_request.training_id, evaluation)
         return evaluation
 
-    @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, log=False, track=False)
+    @pipeline_stage(PipelineStage.STORE_EVALUATION_RESULTS, parent=PipelineStage.EVALUATE, log=True, track=False)
     def _store_evaluation_results(
         self,
         s: ExecutionState,
