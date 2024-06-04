@@ -5,8 +5,10 @@ import grpc
 # pylint: disable-next=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetNumberOfPartitionsRequest,
+    GetNumberOfSamplesRequest,
     GetSamplesRequest,
     NumberOfPartitionsResponse,
+    NumberOfSamplesResponse,
     UsesWeightsRequest,
     UsesWeightsResponse,
 )
@@ -102,3 +104,12 @@ class SelectorKeySource(AbstractKeySource):
 
     def end_of_trigger_cleaning(self) -> None:
         pass
+
+    def get_number_of_samples(self) -> int:
+        assert self._selectorstub is not None
+        assert self._uses_weights is not None
+
+        req = GetNumberOfSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id)
+        res: NumberOfSamplesResponse = self._selectorstub.get_number_of_samples(req)
+
+        return res.num_samples

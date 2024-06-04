@@ -466,6 +466,12 @@ class OnlineDataset(IterableDataset):
             else:
                 yield from self._fetch_partition_noprefetch(worker_id, partition_id)
 
+    def __len__(self) -> int:
+        if self._first_call:
+            self._key_source.init_worker()
+
+        return self._key_source.get_number_of_samples()
+
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 
     def __iter__(self) -> Generator:

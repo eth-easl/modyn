@@ -32,3 +32,6 @@ class LocalKeySource(AbstractKeySource):
 
     def end_of_trigger_cleaning(self) -> None:
         self._trigger_sample_storage.clean_trigger_data(self._pipeline_id, self._trigger_id)
+
+    def get_number_of_samples(self) -> int:
+        return self._trigger_sample_storage.get_number_of_samples(self._pipeline_id, self._trigger_id)
