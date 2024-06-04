@@ -5,6 +5,7 @@ import os
 import pathlib
 
 import yaml
+from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -14,16 +15,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # We need to do this at the top because other dependencies otherwise set fork.
-# Especially the import of the SelectorGRPCServer will transivitly cause errors
 try:
     mp.set_start_method("spawn")
 except RuntimeError as error:
     if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
         logger.error(f"Start method is already set to {mp.get_start_method()}")
         raise error
-
-# pylint: disable-next=wrong-import-position
-from modyn.selector.internal.grpc.selector_server import SelectorGRPCServer  # fmt: skip  # noqa  # isort:skip
 
 
 def setup_argparser() -> argparse.ArgumentParser:
