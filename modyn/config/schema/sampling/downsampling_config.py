@@ -99,6 +99,15 @@ class NoDownsamplingConfig(BaseDownsamplingConfig):
     ratio: Literal[100] = 100
 
 
+class ILTrainingConfig(ModynBaseModel):
+    num_workers: int = Field("Number of workers to use for training.", min=1)
+    il_model_id: str = Field("The model class name to use as the IL model.")
+    il_model_config: dict = Field(
+        default_factory=dict, description="Configuration dictionary that will be passed to the model on initialization."
+    )
+    amp: bool = Field(False, description="Whether to use automatic mixed precision.")
+
+
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
@@ -109,6 +118,7 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
         min=0,
         max=100,
     )
+    il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
 
 
 class RS2DownsamplingConfig(BaseDownsamplingConfig):

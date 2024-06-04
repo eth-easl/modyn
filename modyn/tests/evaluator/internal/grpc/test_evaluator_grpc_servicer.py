@@ -63,6 +63,7 @@ def setup_and_teardown():
             json.dumps({}),
             True,
             "{}",
+            "{}",
             ModelStorageStrategyConfig(name="PyTorchFullModel"),
             incremental_model_strategy=None,
             full_model_interval=None,

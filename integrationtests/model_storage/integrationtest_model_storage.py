@@ -93,6 +93,7 @@ def insert_triggers_into_database(
             json.dumps({"num_classes": 10}),
             False,
             "{}",
+            "{}",
             full_strategy,
             inc_strategy,
             full_model_interval,

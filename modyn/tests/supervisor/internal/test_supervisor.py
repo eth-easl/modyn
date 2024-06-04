@@ -86,10 +86,12 @@ class MockDatabaseConnection:
         model_config: str,
         amp: bool,
         selection_strategy: str,
+        data_config: str,
         full_model_strategy: ModelStorageStrategyConfig,
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
         full_model_interval: Optional[int] = None,
-    ) -> Optional[int]:
+        auxiliary_pipeline_id: Optional[int] = None,
+    ) -> int:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1
         return pid
