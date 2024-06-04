@@ -232,7 +232,7 @@ class PytorchTrainer:
                 stopw.stop()
 
             stopw.start("IndivFetchBatch", overwrite=True)
-            # -------------------------------- stopw.start("FetchBatch", resume=True) -------------------------------- #
+            stopw.start("FetchBatch", resume=True)
             for batch_number, batch in enumerate(self._train_dataloader):
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
