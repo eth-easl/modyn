@@ -27,6 +27,5 @@ class Accuracy(AbstractDecomposableMetric):
 
         return float(self.total_correct) / self.samples_seen
 
-    @staticmethod
-    def get_name() -> str:
+    def get_name(self) -> str:
         return "Accuracy"
