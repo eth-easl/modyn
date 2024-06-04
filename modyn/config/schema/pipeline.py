@@ -10,6 +10,7 @@ from modyn.config.schema.sampling.downsampling_config import (
     NoDownsamplingConfig,
     SingleDownsamplingConfig,
 )
+from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
@@ -458,6 +459,15 @@ class Metric(ModynBaseModel):
         if self.evaluation_transformer_function:
             return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
         return None
+
+    @model_validator(mode="after")
+    def can_instantiate_metric(self) -> Self:
+        try:
+            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
+        except NotImplementedError as exc:
+            raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
+        
+        return self
 
 
 class MatrixEvalStrategyConfig(ModynBaseModel):

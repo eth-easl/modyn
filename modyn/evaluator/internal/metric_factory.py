@@ -11,7 +11,7 @@ class MetricFactory:
         name: str, evaluation_transform_func: str, config: dict[str, Any]
     ) -> AbstractEvaluationMetric:
         for metric in all_metrics:
-            if metric.__name__ == name:
+            if metric.__name__.lower() == name.lower():
                 return metric(evaluation_transform_func, config)
         raise NotImplementedError(f"Metric {name} is not available!")
 
