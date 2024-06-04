@@ -132,7 +132,7 @@ class RS2DownsamplingConfig(BaseDownsamplingConfig):
     @field_validator("period")
     @classmethod
     def only_support_period_one(cls, v: int) -> int:
-        if v != 0:
+        if v != 1:
             # RS2 requires us to resample every epoch.
             raise ValueError("period must be set to 1 for this config.")
         return v
