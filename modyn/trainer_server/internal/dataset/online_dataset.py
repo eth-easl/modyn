@@ -467,6 +467,7 @@ class OnlineDataset(IterableDataset):
                 yield from self._fetch_partition_noprefetch(worker_id, partition_id)
 
     def __len__(self) -> int:
+        raise ValueError("calling len!")
         if self._first_call:
             self._key_source.init_worker()
 
