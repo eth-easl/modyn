@@ -16,7 +16,7 @@ We are facing two use cases that require us to run evaluations:
 
 1) **Online evaluations**: We want to run evaluations during the execution of the core pipeline so we can feed back this information into performance-aware triggering policies. For example, we may want to trigger a policy that will retrain a model if the model's performance degrades below a certain threshold.
 
-2) **Post-hoc offline analysis**: We want to run evaluations for experiments so we determine the performance of a model **at a certain point in time (3.2.1)** over the course of a whole pipeline run (also for intervals where it has long been replaced with a newer model). Orthogonally to this  we are interested in the **total pipeline performance (3.2.2)** aggregated over the whole time of the pipeline run (= pipeline performance). For this we are only interested in the freshest model at each point in time as this is the model that a production system would use for inference queries.
+2) **Post-hoc offline analysis**: We want to run evaluations for experiments so we determine the performance of a model **at certain points in time (3.2.1)** over the course of a whole pipeline run (also for intervals where it has long been replaced with a newer model). Orthogonally to this  we are interested in the **total pipeline performance (3.2.2)** aggregated over the whole time of the pipeline run (= pipeline performance). For this we are only interested in the freshest model at each point in time as this is the model that a production system would use for inference queries.
 
 ## 2. Background
 
@@ -46,15 +46,13 @@ gantt
         model 7 active          :a7, after a6, 5y
 ```
 
-> TODO: visualize that we use a set of evaluation metrics
-
 ### 2.3 Evaluation methods
 
 One evaluation method consists of three main aspects:
 
 1) A set of evaluation metrics (e.g. F1, accuracy, precision, recall, etc.)
 2) The points in time when the evaluations are run
-3) The evaluation data for the different evaluation triggers (set of samples that are used for an evaluation). Note that this data can be in form of pre-determined dataset slices, or dynamically determined based on the e.g. time time of evaluation (e.g. interval around the evaluation time).
+3) The evaluation data for the different evaluation triggers (set of samples that are used for an evaluation). Note that this data can be in form of pre-determined dataset slices, or dynamically determined based on the e.g. time of evaluation (e.g. interval around the evaluation time).
 
 ## 3. Implementation
 
@@ -66,7 +64,7 @@ In this case we have to account for the time we spend evaluating as it can be co
 
 During the core pipeline execution, we cannot access future data for evaluation as a production system also wouldn't be able to do that. It might make sense to allow modyn to build a holdout dataset that is isn't used for training but only for evaluations. A simplifying assumption would be to only evaluate on new data since the last training run that has not been seen by the training server. (Let's try that first?)
 
-> We haven't put much though into what samples should be taken into account (i.e. how far into the past samples should be taken from)
+> We haven't put much thought into what samples should be taken into account (i.e. how far into the past samples should be taken from)
 
 ### 3.2 Post-hoc offline analysis
 
@@ -74,7 +72,7 @@ In experiment mode we can potentially utilize the full evaluation split over the
 
 #### Which dimensions are there? (controllable & observable)
 
-Naturally when running a pipeline we can a observe $m$ models being trained over time at the triggers $t_i \in T$. We refer to $m_i$ as the ith model trained after trigger $t_i$.
+Naturally when running a pipeline we can a observe $m$ models being trained over time at the triggers $t_1, ..., t_i \in T$. We refer to $m_i$ as the $i$-th model trained after trigger $t_i$.
 
 Every of these $m$ models can be evaluated at any point in time (bounded by the dataset time range). As we are potentially interested in more than one evaluation metric $q_i \in Q$ ($Q$ being the set of evaluation metrics that are of interest to us), we can evaluate every model at every point in time with every evaluation metric. We therefore get a time series of evaluation results for combination in $M \times Q$.
 
@@ -84,7 +82,7 @@ Every of these $m$ models can be evaluated at any point in time (bounded by the 
   <summary><b>Plot 1: (line plot, x=time, y=eval metric, color=model)
 </b></summary>
 
-When analyzing how a single pipeline run performed over time, we can line-plot the evaluation results over time using time as the $x$ dimension, the evaluation metric as the $y$ dimension and the model as a color coded dimension. If using the same plot for all evaluation metrics overloads the plot, we can do one plot per evaluation metric.
+When analyzing how a single pipeline run performed over time, we can line-plot the evaluation results over time using time as the $x$ dimension, the evaluation metric value as the $y$ dimension and the model as a color coded dimension. The different evaluation metrics can be plotted in different plots using facets.
 
 Using this plot we expect to see that every model performs best at the interval it was trained (and intended to be served in). Accuracy should decay in both directions from the training interval.
 
@@ -105,9 +103,9 @@ When plotting this there are several cases:
 
 (centered around points in time where we intend to query evaluation metrics)
 
-We want to address the problem of not being able to capture the full time resolution of the dataset when slicing it into partitions. We cannot shrink the slices arbitrarily as this would decrease the number of samples in every evaluation split and therefore the reliability of the evaluation results. The reason for the shrinkage in samples when reducing the slice size is that our slicing basically is a form of tumbling window.
+We want to address the problem of not being able to capture the full time resolution of the dataset when slicing it into partitions. We cannot shrink the slices arbitrarily as this would decrease the number of samples in every evaluation split and therefore the reliability of the evaluation results. The reason for the shrinkage in samples when reducing the slice size is that our slicing is a form of tumbling window.
 
-We can therefore use sliding windows. For that we modify the definition of what `Performance at a certain point in time` is. We now not only use the data exactly at that point in time but within a sliding window centered around this point. When the window is set big enough, this gives us enough data to have meaningful accuracy results for every point in time we wish to evaluate. Theoretically it allows to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models.
+We can therefore use sliding windows. For that we modify the definition of what `Performance at a certain point in time` is. We now not only use the data exactly at that point in time but within a sliding window centered around this point. When the window is set big enough, this gives us enough data to have meaningful accuracy results for every point in time we wish to evaluate. Theoretically it allows to assign evaluation metrics to every step in time. This is enabled by the fact that the intervals used for evaluation can overlap here. We can therefore evaluate the model at every point with slightly shifted evaluation data. We definitely don't need to do this at sample level in our use cases but it gives us more flexibility in how we want to evaluate the models. Generally we expect smoother heatmap evaluation matrix plots when using bigger sliding windows.
 
 #### 3.2.2 Comparison of a multiple pipeline runs (comparing the different models)
 
@@ -124,7 +122,7 @@ From now on we will assume the different categorical evaluation metrics will be 
 
 What is more, the model dimension is not of any interest anymore here, as we compare at pipeline run level.
 
-That leaves us with the following dimensions: time, evaluation metric value, pipeline run. However, we don't have a unified time series of evaluation results available just jet for the whole pipeline (only on model level). It can be argued that the pipeline performance at time $t$ is the performance of the most up to date model at time $t$. At pipeline level, we do e.g. not care anymore, how an outdated and stale model form the pipeline start performs at the end of the pipeline - it wouldn't be used for inference. Through **post-processing** we can stich the curves of the different models together to get a pipeline performance curve. By doing so we create a unified time series of evaluation results for the whole pipeline run that 
+That leaves us with the following dimensions: time, evaluation metric value, pipeline run. However, we don't have a unified time series of evaluation results available just yet for the whole pipeline (only on model level). It can be argued that the pipeline performance at time $t$ is the performance of the most up to date model at time $t$. At pipeline level, we do e.g. not care anymore, how an outdated and stale model form the pipeline start performs at the end of the pipeline - it wouldn't be used for inference. Through **post-processing** we can stich the curves of the different models together to get a pipeline performance curve. By doing so we create a unified time series of evaluation results for the whole pipeline run that 
 always uses the newest model.
 
 > Note: when considering the pipeline as an **ensemble model** of the different models, we can highlight this curve in plot 1 above.
@@ -138,7 +136,7 @@ We expect to see spikes in the pipeline performances when a new model is trained
 trigger policies we expect to see different patterns in the pipeline performance (as retraining takes place at different points in time).
 </details>
 
-An interesting realization is that when comparing arbitrary different trigger policy pipelines, we cannot rely on equidistant triggering timestamps, as different pipeline runs could have evaluations centered around different points in time (currently evaluations are done after training). The MatrixEvaluationStrategy partially addresses this but the sliding window approach feels more natural here.
+An interesting realization is that when comparing arbitrary different trigger policy pipelines, we cannot rely on equidistant triggering timestamps, as different pipeline runs could have produced evaluations centered around different points in time (currently evaluations are done after training). The MatrixEvaluationStrategy partially addresses this but the sliding window approach feels more natural here.
 
 Evaluation at regular intervals would look sth like this:
 
@@ -186,12 +184,13 @@ but the time up to which samples were used for training. We can use use the slid
 
 Compared to the current approach this diagram integrates a fair representation of "time" (x-axis). As triggers aren't spaced equally in an abstract trigger policy the current assumptions don't hold anymore. Also this brings the advantage that we would see how drift / model degradation accumulates over **realtime** (not trigger indexes).
 
+</details>
+
 ##### 3.2.2.1 Total pipeline performance
 
-The next will start considering not only the performance of a pipeline, but also the cost of running the pipeline - which is mainly
-made up of training costs, policy evaluation costs and data loading costs.
+Next, we start considering not only the performance of a pipeline, but also the cost of running the pipeline - which is mainly made up of training costs, policy evaluation costs and data loading costs.
 
-Contiouing from the previous section, we are left  with the following dimensions:
+Continuing from the previous section, we are left with the following dimensions:
 
 - time
 - evaluation metric value
@@ -205,14 +204,20 @@ For a cost/performance tradeoff comparison there are two usefull plotting strate
 
 When plotting the cost (cumulative/non-cumulative) over time using the same x-axis scale as the performance plot, we can compare the cost and performance of the different pipelines. We just have to align the plots under each other.
 
+With this plot we can nicely visualize pipeline triggering policy decision as at points in time, where triggers occur,
+we can see spikes in training costs. Also, with a cumulative barplot we can compare how
+training costs cumulate over time in relation to other cost factors.
+
+> TODO: determine what other cost factors are worth considering (e.g. data loading costs, policy evaluation costs, ...)
+
 </details>
 
 <details>
     <summary><b>Plot 5 (scatterplot, x=total cost (aggregated over time), y=total cost per pipeline run (aggregated over time), color=pipeline)</b></summary>
-    
-    To unify both dimensions (cost and performance) into one plot, we can plot the total cost of a pipeline run against the total performance of a pipeline run. This allows us to compare the cost/performance tradeoff of different pipelines.
 
-    When a user has decided how much he is willing to sacrifice in training time to get rid of a certain amount of performance degradation, this ratio can be visualized in this plot as a straight line that cuts through origin. Policies below this line are not desirable as they overspend. The steeper gradient $y(y) / x(p)$ of a point in the plot, the more efficient the pipeline run is in terms of cost/performance tradeoff. The question remains how we acquire the total (aggregated) performance of a pipeline w.r.t. to a fixed evaluation metric.
+To unify both dimensions (cost and performance) into one plot, we can plot the total cost of a pipeline run against the total performance of a pipeline run. This allows us to compare the cost/performance tradeoff of different pipelines.
+
+When a user has decided how much he is willing to sacrifice in training time to get rid of a certain amount of performance degradation, this ratio can be visualized in this plot as a straight line that cuts through origin. Policies below this line are not desirable as they overspend. The steeper gradient $y(y) / x(p)$ of a point in the plot, the more efficient the pipeline run is in terms of cost/performance tradeoff. The question remains how we acquire the total (aggregated) performance of a pipeline w.r.t. to a fixed evaluation metric.
 </details>
 
 ##### 3.2.2.2 Aggregated pipeline performance
@@ -229,7 +234,7 @@ We propose to run evaluation request for the intervals between two model switche
 
 #### 3.2.3 Refined pipeline run model
 
-Accounting for the afore mentioned assumptions that training takes some time, we can visualize a pipeline run as follows:
+Accounting for the afore mentioned assumptions and the fact that training takes some time, we can visualize a pipeline run as follows:
 
 
 ```mermaid
@@ -259,13 +264,13 @@ gantt
         model 4 active          :a42, after a41, 10y
 ```
 
-The difference to our simplified model earlier is that we not assume `training_time=0` anymore and therefore cannot ignore `training_<i>` .
+The difference to our simplified model earlier is that we not assume `training_time=0` anymore and therefore cannot ignore `training_<i>` . The evaluation intervals would shift by the training times.
 
 > **Remark/Assumptions**: It can be argued though that evaluating one model on the data between two triggers still gives us a good estimate. They are not exactly the same, as we would still use the old model while a training is going on (see diagram below). However, we claim that the difference is negligible as (1) we don't expect much drift between the samples directly after the trigger and after the training (close in time). And (2) compared to the time between two triggers (often years in our case), the duration of a training process is rather small and therefore doesn't have a big impact on the evaluation.
 
 ## 3. State of modyn (at the time of writing)
 
-We currectly evaluate a model directly after training it (e.g. we are now at `Trigger 4`) and have now robust approach of combining the results of the single model evaluations to a pipeline performance. We support a `OffsetEvaluationStrategy` that specifies the interval in which we want to evaluate the models. We also support `MatrixEvaluationStrategy` where we evaluate on a predefined grid of evaluation points.
+We currently evaluate a model directly after training it (e.g. we are now at `Trigger 4`) and don't have a robust approach of combining the results of the single model evaluations to a pipeline performance. We support a `OffsetEvaluationStrategy` that specifies the interval in which we want to evaluate the models. We also support `MatrixEvaluationStrategy` where we evaluate on a predefined grid of evaluation points.
 
 We face several problems:
 
