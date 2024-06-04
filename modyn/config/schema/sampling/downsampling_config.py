@@ -121,6 +121,20 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
 
 
+class RS2DownsamplingConfig(BaseDownsamplingConfig):
+    """Config for the RS2 downsampling strategy."""
+
+    strategy: Literal["RS2"] = "RS2"
+    period: Literal[1] = 1  # RS2 needs to sample every epoch
+    sample_then_batch: Literal[True] = True  # RS2 only supports StB
+    with_replacement: bool = Field(
+        description=(
+            "Whether we resample from the full TTS each epoch (= True) or train "
+            "on all the data with a different subset each epoch (= False)."
+        )
+    )
+
+
 SingleDownsamplingConfig = Annotated[
     Union[
         UncertaintyDownsamplingConfig,
