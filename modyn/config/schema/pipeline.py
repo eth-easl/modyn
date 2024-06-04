@@ -10,7 +10,6 @@ from modyn.config.schema.sampling.downsampling_config import (
     NoDownsamplingConfig,
     SingleDownsamplingConfig,
 )
-from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT, deserialize_function
@@ -462,6 +461,11 @@ class Metric(ModynBaseModel):
 
     @model_validator(mode="after")
     def can_instantiate_metric(self) -> Self:
+        # We have to import the MetricFactory here to avoid issues with the multiprocessing context
+        # If we move it up, then we'll have `spawn` everywhere, and then the unit tests on Github
+        # are way too slow.
+        # pylint: disable-next=wrong-import-position
+        from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
         try:
             MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
         except NotImplementedError as exc:
