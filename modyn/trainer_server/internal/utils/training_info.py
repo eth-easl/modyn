@@ -56,6 +56,8 @@ class TrainingInfo:
         self.pretrained_model_path = pretrained_model_path
         self.log_file_path = log_file_path
 
+        self.shuffle = request.shuffle
+
         if self.use_pretrained_model:
             assert self.pretrained_model_path, "Inconsistent pretrained model configuration"
 

@@ -24,79 +24,82 @@ def get_sampler_config(balance=False):
 
 def test_select():
     sampler = RemoteGradMatchDownsamplingStrategy(*get_sampler_config())
-    sample_ids = [1, 2, 3]
-    forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
-    forward_output.requires_grad = True
-    target = torch.tensor([1, 1, 1])
-    embedding = torch.randn(3, 10)
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
+        sample_ids = [1, 2, 3]
+        forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
+        forward_output.requires_grad = True
+        target = torch.tensor([1, 1, 1])
+        embedding = torch.randn(3, 10)
 
-    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_output, target, embedding)
 
-    assert len(sampler.matrix_elements) == 1
-    assert sampler.matrix_elements[0].shape == (3, 55)
+        assert len(sampler.matrix_elements) == 1
+        assert sampler.matrix_elements[0].shape == (3, 55)
 
-    sample_ids = [10, 11, 12, 13]
-    forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
-    forward_output.requires_grad = True
-    target = torch.tensor([1, 1, 1, 1])  # 4 target labels
-    embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
+        sample_ids = [10, 11, 12, 13]
+        forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
+        forward_output.requires_grad = True
+        target = torch.tensor([1, 1, 1, 1])  # 4 target labels
+        embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
 
-    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_output, target, embedding)
 
-    assert len(sampler.matrix_elements) == 2
-    assert sampler.matrix_elements[0].shape == (3, 55)
-    assert sampler.matrix_elements[1].shape == (4, 55)
-    assert sampler.index_sampleid_map == [1, 2, 3, 10, 11, 12, 13]
+        assert len(sampler.matrix_elements) == 2
+        assert sampler.matrix_elements[0].shape == (3, 55)
+        assert sampler.matrix_elements[1].shape == (4, 55)
+        assert sampler.index_sampleid_map == [1, 2, 3, 10, 11, 12, 13]
 
-    selected_points, selected_weights = sampler.select_points()
+        selected_points, selected_weights = sampler.select_points()
 
-    assert len(selected_points) == 3
-    assert len(selected_weights) == 3
-    assert all(weight > 0 for weight in selected_weights)
-    assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
+        assert len(selected_points) == 3
+        assert len(selected_weights) == 3
+        assert all(weight > 0 for weight in selected_weights)
+        assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
 
 
 def test_select_balanced():
     sampler = RemoteGradMatchDownsamplingStrategy(*get_sampler_config(True))
-    sample_ids = [1, 2, 3]
-    forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
-    forward_output.requires_grad = True
-    target = torch.tensor([1, 1, 1])
-    embedding = torch.randn(3, 10)
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
 
-    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sample_ids = [1, 2, 3]
+        forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
+        forward_output.requires_grad = True
+        target = torch.tensor([1, 1, 1])
+        embedding = torch.randn(3, 10)
 
-    assert len(sampler.matrix_elements) == 1
-    assert sampler.matrix_elements[0].shape == (3, 55)
+        sampler.inform_samples(sample_ids, forward_output, target, embedding)
 
-    sampler.inform_end_of_current_label()
-    assert len(sampler.matrix_elements) == 0
-    assert len(sampler.already_selected_samples) == 1
-    assert len(sampler.already_selected_weights) == 1
+        assert len(sampler.matrix_elements) == 1
+        assert sampler.matrix_elements[0].shape == (3, 55)
 
-    sample_ids = [10, 11, 12, 13]
-    forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
-    forward_output.requires_grad = True
-    target = torch.tensor([1, 1, 1, 1])  # 4 target labels
-    embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
+        sampler.inform_end_of_current_label()
+        assert len(sampler.matrix_elements) == 0
+        assert len(sampler.already_selected_samples) == 1
+        assert len(sampler.already_selected_weights) == 1
 
-    sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sample_ids = [10, 11, 12, 13]
+        forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
+        forward_output.requires_grad = True
+        target = torch.tensor([1, 1, 1, 1])  # 4 target labels
+        embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
 
-    assert len(sampler.matrix_elements) == 1
-    assert sampler.matrix_elements[0].shape == (4, 55)
-    assert sampler.index_sampleid_map == [10, 11, 12, 13]
+        sampler.inform_samples(sample_ids, forward_output, target, embedding)
 
-    sampler.inform_end_of_current_label()
-    assert len(sampler.matrix_elements) == 0
-    assert len(sampler.already_selected_samples) == 3
-    assert len(sampler.already_selected_weights) == 3
+        assert len(sampler.matrix_elements) == 1
+        assert sampler.matrix_elements[0].shape == (4, 55)
+        assert sampler.index_sampleid_map == [10, 11, 12, 13]
 
-    selected_points, selected_weights = sampler.select_points()
+        sampler.inform_end_of_current_label()
+        assert len(sampler.matrix_elements) == 0
+        assert len(sampler.already_selected_samples) == 3
+        assert len(sampler.already_selected_weights) == 3
 
-    assert len(selected_points) == 3
-    assert len(selected_weights) == 3
-    assert all(weight > 0 for weight in selected_weights)
-    assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
+        selected_points, selected_weights = sampler.select_points()
+
+        assert len(selected_points) == 3
+        assert len(selected_weights) == 3
+        assert all(weight > 0 for weight in selected_weights)
+        assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
 
 
 def test_matching_results_with_deepcore():
@@ -181,28 +184,30 @@ def test_matching_results_with_deepcore():
             BCEWithLogitsLoss(reduction="none"),
             "cpu",
         )
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
-        assert sampler.index_sampleid_map == list(range(10))
-        selected_samples, selected_weights = sampler.select_points()
-        assert len(selected_samples) == len(selected_weights)
+        with torch.inference_mode(mode=(not sampler.requires_grad)):
 
-        # sort the results
-        combined = list(zip(selected_samples, selected_weights))
-        combined.sort(key=lambda x: x[0])
-        selected_samples_sorted, selected_weights_sorted = zip(*combined)
+            sampler.inform_samples(sample_ids, forward_output, target, embedding)
+            assert sampler.index_sampleid_map == list(range(10))
+            selected_samples, selected_weights = sampler.select_points()
+            assert len(selected_samples) == len(selected_weights)
 
-        # sort the expected deepcore results
-        combined = list(
-            zip(selected_samples_deepcore[num_of_target_samples], selected_weights_deepcore[num_of_target_samples])
-        )
-        combined.sort(key=lambda x: x[0])
-        selected_samples_sorted_deepcore, selected_weights_sorted_deepcore = zip(*combined)
+            # sort the results
+            combined = list(zip(selected_samples, selected_weights))
+            combined.sort(key=lambda x: x[0])
+            selected_samples_sorted, selected_weights_sorted = zip(*combined)
 
-        assert selected_samples_sorted_deepcore == selected_samples_sorted
-        assert all(
-            np.isclose(expected, computed)
-            for expected, computed in zip(selected_weights_sorted_deepcore, selected_weights_sorted)
-        )
+            # sort the expected deepcore results
+            combined = list(
+                zip(selected_samples_deepcore[num_of_target_samples], selected_weights_deepcore[num_of_target_samples])
+            )
+            combined.sort(key=lambda x: x[0])
+            selected_samples_sorted_deepcore, selected_weights_sorted_deepcore = zip(*combined)
+
+            assert selected_samples_sorted_deepcore == selected_samples_sorted
+            assert all(
+                np.isclose(expected, computed)
+                for expected, computed in zip(selected_weights_sorted_deepcore, selected_weights_sorted)
+            )
 
 
 def test_matching_results_with_deepcore_permutation_fancy_ids():
@@ -225,23 +230,24 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
     sampler = RemoteGradMatchDownsamplingStrategy(
         0, 0, 5, {"downsampling_ratio": 50, "balance": False}, BCEWithLogitsLoss(reduction="none"), "cpu"
     )
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
+        dummy_model.embedding_recorder.start_recording()
+        forward_output = dummy_model(samples).float()
+        embedding = dummy_model.embedding
 
-    dummy_model.embedding_recorder.start_recording()
-    forward_output = dummy_model(samples).float()
-    embedding = dummy_model.embedding
+        sampler.inform_samples(index_mapping, forward_output, targets, embedding)
 
-    sampler.inform_samples(index_mapping, forward_output, targets, embedding)
+        selected_samples, selected_weights = sampler.select_points()
 
-    selected_samples, selected_weights = sampler.select_points()
+        combined = list(zip(selected_samples, selected_weights))
+        combined.sort(key=lambda x: x[0])
+        selected_samples_sorted, selected_weights_sorted = zip(*combined)
 
-    combined = list(zip(selected_samples, selected_weights))
-    combined.sort(key=lambda x: x[0])
-    selected_samples_sorted, selected_weights_sorted = zip(*combined)
+        assert len(selected_samples_sorted) == 4
+        assert len(selected_weights_sorted) == 4
 
-    assert len(selected_samples_sorted) == 4
-    assert len(selected_weights_sorted) == 4
-
-    assert selected_samples_deepcore == list(selected_samples_sorted)
-    assert all(
-        np.isclose(expected, computed) for expected, computed in zip(selected_weights_deepcore, selected_weights_sorted)
-    )
+        assert selected_samples_deepcore == list(selected_samples_sorted)
+        assert all(
+            np.isclose(expected, computed)
+            for expected, computed in zip(selected_weights_deepcore, selected_weights_sorted)
+        )

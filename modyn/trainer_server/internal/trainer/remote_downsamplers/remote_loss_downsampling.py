@@ -71,3 +71,7 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
 
         selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
         return selected_ids, weights
+
+    @property
+    def requires_grad(self) -> bool:
+        return False
