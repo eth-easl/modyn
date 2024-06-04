@@ -32,7 +32,6 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._subsets: list[list[int]] = []
         self._current_subset = -1
         self._with_replacement: bool = params_from_selector["replacement"]
-        self._max_subset = -1
         self._first_epoch = True
 
     def init_downsampler(self) -> None:
@@ -54,13 +53,12 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._current_subset = 0
 
     def _epoch_step_r(self, target_size: int) -> None:
-        self._max_subset = len(self._all_sample_ids) // target_size
+        max_subset = len(self._all_sample_ids) // target_size
         self._current_subset += 1
-        if self._current_subset >= self._max_subset or len(self._subsets) == 0:
+        # len(self._subsets) == 0 holds in the very first epoch
+        if self._current_subset >= max_subset or len(self._subsets) == 0:
             self._current_subset = 0
-            self._subsets = [
-                self._all_sample_ids[i * target_size : (i + 1) * target_size] for i in range(self._max_subset)
-            ]
+            self._subsets = [self._all_sample_ids[i * target_size : (i + 1) * target_size] for i in range(max_subset)]
 
     def _epoch_step(self) -> None:
         target_size = max(int(self.downsampling_ratio * len(self._all_sample_ids) / 100), 1)
