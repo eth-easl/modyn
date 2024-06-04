@@ -466,7 +466,7 @@ class Metric(ModynBaseModel):
             MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
         except NotImplementedError as exc:
             raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
-        
+
         return self
 
 
