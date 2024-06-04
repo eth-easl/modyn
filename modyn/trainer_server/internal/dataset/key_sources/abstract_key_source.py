@@ -28,3 +28,7 @@ class AbstractKeySource(ABC):
     def end_of_trigger_cleaning(self) -> None:
         # remove temporary files when the trigger ends
         raise NotImplementedError()
+
+    @abstractmethod
+    def get_number_of_samples(self) -> int:
+        raise NotImplementedError()

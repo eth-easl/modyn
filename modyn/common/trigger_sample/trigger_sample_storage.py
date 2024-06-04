@@ -266,6 +266,13 @@ class TriggerSampleStorage:
 
         self._write_files(samples_files, trigger_samples, data_lengths)
 
+        with open(Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_meta", "w") as file:
+            file.write(str(len(trigger_samples)))
+
+    def get_number_of_samples(self, pipeline_id: int, trigger_id: int) -> int:
+        with open(Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_meta", "r") as file:
+            return int(file.read())
+
     def get_file_path(self, pipeline_id: int, trigger_id: int, partition_id: int, worker_id: int) -> Path:
         return Path(self.trigger_sample_directory) / f"{pipeline_id}_{trigger_id}_{partition_id}_{worker_id}.npy"
 

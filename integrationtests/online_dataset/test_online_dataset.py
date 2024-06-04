@@ -296,6 +296,8 @@ def test_dataset_impl(
         None,
     )
 
+    assert len(dataloader) == len(items)
+
     expected_min_batches = math.floor(len(items) / batch_size)
     # max one excess batch per worker
     expected_max_batches = expected_min_batches if num_dataworkers <= 1 else expected_min_batches + num_dataworkers
