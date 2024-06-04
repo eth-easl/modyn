@@ -464,7 +464,7 @@ class Metric(ModynBaseModel):
         # We have to import the MetricFactory here to avoid issues with the multiprocessing context
         # If we move it up, then we'll have `spawn` everywhere, and then the unit tests on Github
         # are way too slow.
-        # pylint: disable-next=wrong-import-position
+        # pylint: disable-next=wrong-import-position,import-outside-toplevel
         from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
         try:
             MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
