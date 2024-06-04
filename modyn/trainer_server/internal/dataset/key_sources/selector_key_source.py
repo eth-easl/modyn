@@ -112,4 +112,6 @@ class SelectorKeySource(AbstractKeySource):
         req = GetNumberOfSamplesRequest(pipeline_id=self._pipeline_id, trigger_id=self._trigger_id)
         res: NumberOfSamplesResponse = self._selectorstub.get_number_of_samples(req)
 
+        raise ValueError(res.num_samples)
+
         return res.num_samples
