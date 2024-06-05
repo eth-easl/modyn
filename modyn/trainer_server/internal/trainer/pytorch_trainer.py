@@ -6,6 +6,7 @@ import io
 import itertools
 import json
 import logging
+import math
 import multiprocessing as mp
 import os
 import pathlib
@@ -24,10 +25,10 @@ from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
-    GetSelectionStrategyRequest,
-    SelectionStrategyResponse,
     GetNumberOfSamplesRequest,
-    NumberOfSamplesResponse
+    GetSelectionStrategyRequest,
+    NumberOfSamplesResponse,
+    SelectionStrategyResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import (
@@ -150,7 +151,6 @@ class PytorchTrainer:
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self.selector_address = training_info.selector_address
 
-
         downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
         if downsampling_enabled:
             self._setup_downsampling(criterion_func, downsampler_config, strategy_name, training_info)
@@ -158,12 +158,22 @@ class PytorchTrainer:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
         num_samples_in_trigger = self.get_num_samples_in_trigger()
-        self._expected_num_batches = num_samples_in_trigger // self._batch_size
+        batches_per_epoch = num_samples_in_trigger // self._batch_size  # We reuse this later
+        self._expected_num_batches = batches_per_epoch
+
+        num_samples_per_epoch = (
+            self._expected_num_batches * self._batch_size
+        )  # scale up again to multiples of batch size
 
         if downsampling_enabled:
-            num_samples = self._expected_num_batches * self._batch_size # scale up again to multiples of batch size
-            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * num_samples / 100), 1)            
-            self._expected_num_batches = post_downsampling_size // self._batch_size
+            num_samples_per_epoch = max(int(self._downsampler.downsampling_ratio * num_samples_per_epoch / 100), 1)
+
+        self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
+        self._expected_num_epochs = self.epochs_per_trigger
+        if self.num_samples_to_pass > 0:
+            self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
+            self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -191,7 +201,7 @@ class PytorchTrainer:
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
 
-        self._step_lr_every = training_info.lr_scheduler["step_every"]
+        self._step_lr_every = training_info.lr_scheduler.get("step_every", "batch")
 
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
@@ -373,13 +383,12 @@ class PytorchTrainer:
     def _step_lr_if_necessary(self, is_batch: bool) -> None:
         if self._lr_scheduler is None:
             return
-        
+
         if is_batch and self._step_lr_every == "batch":
             self._lr_scheduler.step()
-        
+
         if not is_batch and self._step_lr_every == "epoch":
             self._lr_scheduler.step()
-
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -417,6 +426,7 @@ class PytorchTrainer:
                 )
             batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
+        trained_batches = 0
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
@@ -500,6 +510,7 @@ class PytorchTrainer:
 
                 self._scaler.update()
                 stopw.stop("OptimizerStep")
+                trained_batches += 1
 
                 self._step_lr_if_necessary(True)
 
@@ -568,6 +579,14 @@ class PytorchTrainer:
         self._log["num_samples"] = self._num_samples
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
+
+        assert (
+            self._expected_num_epochs == epoch + 1
+        ), f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
+        assert self._expected_num_batches == trained_batches, (
+            f"Something went wrong! We expected to train on {self._expected_num_batches},"
+            + f" but trained for {trained_batches} batches!"
+        )
 
         self._load_dataset_log()
         self._persist_pipeline_log()

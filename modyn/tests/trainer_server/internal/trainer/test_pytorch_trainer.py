@@ -256,6 +256,7 @@ def get_training_info(
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "get_num_samples_in_trigger")
 @patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def get_mock_trainer(
     query_queue: mp.Queue,
@@ -267,6 +268,7 @@ def get_mock_trainer(
     lr_scheduler: str,
     transform_label: bool,
     mock_weights: MagicMock,
+    mock_get_num_samples: MagicMock,
     mock_selection_strategy: MagicMock,
     mock_selector_connection: MagicMock,
     lr_scheduler_dynamic_module_patch: MagicMock,
@@ -280,6 +282,7 @@ def get_mock_trainer(
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
+    mock_get_num_samples.return_value = batch_size * 100
 
     if downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
         mock_selection_strategy.return_value = (
@@ -783,7 +786,9 @@ def test_train(
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+@patch.object(PytorchTrainer, "get_num_samples_in_trigger", return_value=42)
 def test_create_trainer_with_exception(
+    test_get_num_samples_in_trigger,
     test_weighs_handling,
     test_selector_connection,
     test_election_strategy,

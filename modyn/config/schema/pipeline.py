@@ -235,18 +235,18 @@ class LrSchedulerConfig(ModynBaseModel):
 
     name: str = Field(description="The name of the LR scheduler.")
     source: LrSchedulerSource = Field(description="Source of the LR scheduler.")
-    step_every: Literal["epoch", "batch"] = Field(
-        description="Whether to call scheduler.step() every batch or epoch."
-    ) 
+    step_every: Literal["epoch", "batch"] = Field(description="Whether to call scheduler.step() every batch or epoch.")
     optimizers: List[str] = Field(
         description="List of optimizers that this scheduler is responsible for.",
         min_length=1,
     )
     config: Dict[str, Any] = Field(
         default_factory=dict,
-        description=("Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict."
-                    "You can use MODYN_NUM_BATCHES and MODYN_NUM_EPOCHS as string literal and "
-                    "Modyn will replace it with the number of epochs/batches we will train the model on."),
+        description=(
+            "Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict."
+            "You can use MODYN_NUM_BATCHES and MODYN_NUM_EPOCHS as string literal and "
+            "Modyn will replace it with the number of epochs/batches we will train the model on."
+        ),
     )
 
     @model_validator(mode="after")
