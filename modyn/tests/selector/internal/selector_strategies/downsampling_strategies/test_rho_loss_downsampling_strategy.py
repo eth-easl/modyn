@@ -7,7 +7,10 @@ from typing import List, Optional, Tuple
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
+from pydantic import TypeAdapter
+
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
+from modyn.config import SelectionStrategy as SelectionStrategyModel
 from modyn.config.schema.pipeline import DataConfig
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
 from modyn.config.schema.training.training_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
@@ -252,7 +255,8 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
         assert DataConfig.model_validate_json(rho_pipeline.data_config) == data_config
         assert rho_pipeline.amp == il_training_config.amp
-        assert rho_pipeline.selection_strategy == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
+        selection_strategy_config = TypeAdapter(SelectionStrategyModel).validate_json(rho_pipeline.selection_strategy)
+        assert selection_strategy_config == strategy.IL_MODEL_DUMMY_SELECTION_STRATEGY
         assert rho_pipeline.full_model_strategy_name == strategy.IL_MODEL_STORAGE_STRATEGY.name
         assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
         assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
