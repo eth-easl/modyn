@@ -597,25 +597,7 @@ class PytorchTrainer:
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
-        if True or self._lr_scheduler is not None:  # todo remove true
-            assert self._expected_num_epochs == epoch + 1, (
-                f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
-                + "\nWe fail since we trained using a LR scheduler that might depend on this."
-            )
-            assert self._expected_num_batches == trained_batches, (
-                f"Something went wrong! We expected to train on {self._expected_num_batches},"
-                + f" but trained for {trained_batches} batches!"
-                + "\nWe fail since we trained using a LR scheduler that might depend on this."
-            )
-        else:
-            if self._expected_num_epochs != epoch + 1 or self._expected_num_batches != trained_batches:
-                self._error(
-                    "Inconsistent expected batches. Not failing since no lr scheduler was used.\n"
-                    + f" We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!\n"
-                    + f"We expected to train on {self._expected_num_batches},"
-                    + f" but trained for {trained_batches} batches!"
-                )
-
+        self._validate_training_size(epoch, trained_batches)
         self._load_dataset_log()
         self._persist_pipeline_log()
 
@@ -635,6 +617,26 @@ class PytorchTrainer:
 
         self._info("Training complete!")
         self._persist_pipeline_log()
+
+    def _validate_training_size(self, epoch, trained_batches) -> None:
+        if self._lr_scheduler is not None:
+            assert self._expected_num_epochs == epoch + 1, (
+                f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+            assert self._expected_num_batches == trained_batches, (
+                f"Something went wrong! We expected to train on {self._expected_num_batches},"
+                + f" but trained for {trained_batches} batches!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+        else:
+            if self._expected_num_epochs != epoch + 1 or self._expected_num_batches != trained_batches:
+                self._error(
+                    "Inconsistent expected batches. Not failing since no lr scheduler was used.\n"
+                    + f" We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!\n"
+                    + f"We expected to train on {self._expected_num_batches},"
+                    + f" but trained for {trained_batches} batches!"
+                )
 
     @staticmethod
     def _assert_data_size(
