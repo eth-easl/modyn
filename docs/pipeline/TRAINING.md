@@ -15,6 +15,15 @@ stateDiagram-v2
             OnBatchBeginCallbacks --> PreprocessBatch
             PreprocessBatch --> DownsampleBTS
             DownsampleBTS --> Forward
+
+            state PreprocessBatch {
+                [*] --> PreprocSampleIDs
+                PreprocSampleIDs --> LabelTransform
+                LabelTransform --> MoveLabelToGPU
+                MoveLabelToGPU --> MoveDataToGPU
+                MoveDataToGPU --> [*]
+            }
+
             PreprocessBatch --> Forward
             Forward --> Loss
             Loss --> OnBatchBeforeUpdate
