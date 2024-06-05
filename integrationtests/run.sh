@@ -26,6 +26,8 @@ echo "Running evaluator integration tests"
 python $SCRIPT_DIR/evaluator/integrationtest_evaluator.py
 echo "Running supervisor integration tests"
 python $SCRIPT_DIR/supervisor/integrationtest_supervisor.py
+echo "Running metadata processor integration tests"
+python $SCRIPT_DIR/metadata_processor/integrationtest_metadata_processor.py
 echo "Running modynclient integration tests"
 python $SCRIPT_DIR/modynclient/integrationtest_modynclient.py
 echo "Successfully ran all integration tests."
