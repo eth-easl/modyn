@@ -13,12 +13,12 @@ import queue
 import shutil
 import tempfile
 import traceback
-from enum import Enum
-from typing import Any, Iterable, Optional, Tuple, Union
+from typing import Any, Iterable, Literal, Optional, Tuple, Union
 
 import grpc
 import numpy as np
 import torch
+
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -57,7 +57,7 @@ from modyn.utils import (
     seed_everything,
 )
 
-AvailableQueues = Enum("AvailableQueues", ["TRAINING", "DOWNSAMPLING"])
+AvailableQueues = Literal["TRAINING", "DOWNSAMPLING"]
 
 
 class PytorchTrainer:
@@ -81,7 +81,7 @@ class PytorchTrainer:
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
-            self.seed_trainer_server(training_info.seed)
+            self._seed_trainer_server(training_info.seed)
             self._info("Everything seeded")
 
         self._info("Initializing Pytorch Trainer")
@@ -180,174 +180,9 @@ class PytorchTrainer:
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
 
-    def _persist_pipeline_log(self) -> None:
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            json.dumps(self._log)  # Enforce serialization to catch issues
-            return  # But don't actually store in tests
-
-        if self._log_file_path is not None:
-            with open(self._log_file_path, "w", encoding="utf-8") as logfile:
-                json.dump(self._log, logfile)
-        else:
-            self.logger.error("Log file path is None, cannot persist.")
-
-    def _setup_downsampling(
-        self,
-        criterion_func: torch.nn.modules.loss,
-        downsampler_config: dict,
-        strategy_name: str,
-        training_info: TrainingInfo,
-    ) -> None:
-        self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-        self._downsampler = self.instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
-        assert "sample_then_batch" in downsampler_config
-        if downsampler_config["sample_then_batch"]:
-            self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
-            assert "downsampling_period" in downsampler_config
-            self._downsampling_period = downsampler_config["downsampling_period"]
-            self.offline_dataset_path = training_info.offline_dataset_path
-        else:
-            self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
-
-    def _setup_optimizers(self, training_info: TrainingInfo) -> None:
-        self._optimizers = {}
-        for name, optimizer_config in training_info.torch_optimizers_configuration.items():
-            if optimizer_config["source"] == "PyTorch":
-                optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
-            elif optimizer_config["source"] == "APEX":
-                if package_available_and_can_be_imported("apex"):
-                    import apex  # pylint: disable=import-outside-toplevel, import-error
-
-                    optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
-                else:
-                    raise ValueError("Apex Optimizer defined, but apex is not available in the system")
-            else:
-                raise ValueError(
-                    f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
-                )
-            optimizer_config_list = []
-            for param_group in optimizer_config["param_groups"]:
-                module = param_group["module"]
-                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
-                    f"self._model.{module}.parameters()"
-                )
-                optimizer_config_list.append(param_group["config"])
-            self._optimizers[name] = optimizer_func(optimizer_config_list)
-
-    def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
-        self._lr_scheduler = None
-        if training_info.lr_scheduler:
-            if training_info.lr_scheduler["source"] == "Custom":
-                lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
-                custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
-                optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
-                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
-            elif training_info.lr_scheduler["source"] == "PyTorch":
-                torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
-                if len(training_info.lr_scheduler["optimizers"]) > 1:
-                    self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
-                self._lr_scheduler = torch_lr_scheduler(
-                    self._optimizers[training_info.lr_scheduler["optimizers"][0]],
-                    **training_info.lr_scheduler["config"],
-                )
-            else:
-                raise ValueError(
-                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}."
-                    "PyTorch and Custom are supported"
-                )
-
-    def _info(self, msg: str) -> None:
-        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
-
-    def _warning(self, msg: str) -> None:
-        self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
-
-    def _error(self, msg: str) -> None:
-        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
-
-    def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
-        dict_to_save = {}
-        dict_to_save["model"] = self._model.model.state_dict()
-        for optimizer_name, optimizer in self._optimizers.items():
-            dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
-
-        if iteration is not None:
-            dict_to_save["iteration"] = iteration
-
-        torch.save(dict_to_save, destination)
-
-    def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
-        if path is None:
-            return
-        assert path.exists(), "Cannot load state from non-existing file"
-        self._info(f"Loading model state from {path}")
-        # We load the weights on the CPU, and `load_state_dict` moves them to GPU
-        with open(path, "rb") as state_file:
-            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
-
-        assert "model" in checkpoint
-        self._model.model.load_state_dict(checkpoint["model"])
-        if load_optimizer_state:
-            for optimizer_name, optimizer in self._optimizers.items():
-                if f"optimizer-{optimizer_name}" in checkpoint:
-                    optimizer.load_state_dict(checkpoint[f"optimizer-{optimizer_name}"])
-
-        os.remove(path)
-
-    def send_model_state_to_server(self) -> None:
-        buffer = io.BytesIO()
-        self.save_state(buffer)
-        buffer.seek(0)
-        bytes_state = buffer.read()
-        self._status_response_queue_training.put(bytes_state)
-
-    def send_status_to_server_training(self, batch_number: int) -> None:
-        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
-
-    def get_selection_strategy(self) -> tuple[bool, str, dict]:
-        req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
-
-        response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
-        downsampler_config = json.loads(response.downsampler_config.value)
-
-        return response.downsampling_enabled, response.strategy_name, downsampler_config
-
-    def seed_trainer_server(self, seed: int) -> None:
-        if not (0 <= seed <= 100 and isinstance(seed, int)):
-            raise ValueError("The seed must be an integer in the range [0,100]")
-        # seed the trainer server
-        seed_everything(seed)
-
-    def connect_to_selector(self, selector_address: str) -> SelectorStub:
-        selector_channel = grpc.insecure_channel(selector_address)
-        assert selector_channel is not None
-        if not grpc_connection_established(selector_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
-        return SelectorStub(selector_channel)
-
-    def instantiate_downsampler(
-        self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
-    ) -> AbstractRemoteDownsamplingStrategy:
-        return instantiate_class(
-            "modyn.trainer_server.internal.trainer.remote_downsamplers",
-            strategy_name,
-            self.pipeline_id,
-            self.trigger_id,
-            self._batch_size,
-            downsampler_config,
-            per_sample_loss,
-            self._device,
-        )
-
-    def sample_then_batch_this_epoch(self, epoch: int) -> bool:
-        if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:
-            return False
-
-        # self._downsampling_period = 0 : downsample one time per trigger
-        if self._downsampling_period == 0:
-            return epoch == 0
-        # otherwise dowsample every self._downsampling_period epochs
-        return epoch % self._downsampling_period == 0
+    # ---------------------------------------------------------------------------------------------------------------- #
+    #                                       Core training pipeline orchestration                                       #
+    # ---------------------------------------------------------------------------------------------------------------- #
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -392,8 +227,8 @@ class PytorchTrainer:
             self._log["epochs"].append({})
             batch_timings = []
 
-            if self.sample_then_batch_this_epoch(epoch):
-                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=False)
+            if self._sample_then_batch_this_epoch(epoch):
+                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
                 stopw.start("DownsampleSTB")
                 self.downsample_trigger_training_set()
                 stopw.stop()
@@ -410,7 +245,7 @@ class PytorchTrainer:
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
                 stopw.stop()
 
-                self.update_queue(AvailableQueues.TRAINING, batch_number, self._num_samples, training_active=True)
+                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
 
                 stopw.start("PreprocessBatch", resume=True)
                 sample_ids, target, data = self.preprocess_batch(batch, stopw)
@@ -455,7 +290,7 @@ class PytorchTrainer:
                         loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                     else:
                         loss = self._criterion(output, target)
-                stopw.stop("Loss")
+                    stopw.stop("Loss")
 
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
@@ -559,78 +394,86 @@ class PytorchTrainer:
         self._info("Training complete!")
         self._persist_pipeline_log()
 
-    @staticmethod
-    def _assert_data_size(
-        expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor
-    ) -> None:
-        assert (
-            all(tensor.shape[0] == expected_size for tensor in data.values())
-            if isinstance(data, dict)
-            else data.shape[0] == expected_size
-        ), (
-            f"expected size: {expected_size} actual size: "
-            + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
+    # ---------------------------------------------------------------------------------------------------------------- #
+    #                                                  Training stages                                                 #
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    # --------------------------------------------- Core training stages --------------------------------------------- #
+
+    def downsample_trigger_training_set(self) -> None:
+        """
+        Function to score every datapoint in the current PRESAMPLED DATASET and sample a fraction of it
+        Used for downsampling strategies in SAMPLE_THEN_BATCH mode
+
+        """
+        assert self._downsampler is not None
+        assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
+
+        # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
+        self._model.model.eval()
+        # keys must be taken from the selector.
+        # This operation is needed only when we sample several times (otherwise the source is already the selector)
+        selector_key_source = SelectorKeySource(
+            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, selector_address=self.selector_address
         )
-        assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
-        assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
+        self._train_dataloader.dataset.change_key_source(selector_key_source)
+        self._downsampler.init_downsampler()
 
-    def _load_dataset_log(self) -> None:
-        worker_log = {}
-        for filename in glob.glob(str(self._dataset_log_path / "*.log")):
-            filepath = pathlib.Path(filename)
-            key = filepath.stem
+        self.start_embedding_recording_if_needed()
 
-            with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
-                worker_log[key] = json.load(logfile)
+        if self._downsampler.requires_data_label_by_label:
+            assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
+            available_labels = self.get_available_labels_from_selector()
 
-        self._log["dataset_worker_log"] = worker_log
+            number_of_samples = 0
+            batch_number = 0
+            first_label = True
+            for label in available_labels:
+                if first_label:
+                    per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
+                        self._train_dataloader.dataset, self._batch_size, self._num_dataloaders, label
+                    )
+                    first_label = False
+                else:
+                    assert per_class_dataloader is not None
+                    per_class_dataloader.dataset.filtered_label = label
 
-        try:
-            if self._dataset_log_path.exists():
-                shutil.rmtree(self._dataset_log_path)
-        except OSError as exp:
-            self._error("Error while deleting OnlineDataset logging directory.")
-            self._error(str(exp))
-
-    def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
-        # whether the dataloader returned the weights.
-        retrieve_weights_from_dataloader = batch_len == 4  # key, sample, label, weight
-
-        # we want to use weighted optimization if we get weights from the dataloader or if we compute them in the
-        # training loop (BATCH_THEN_SAMPLE downsampling mode)
-        weighted_optimization = (
-            retrieve_weights_from_dataloader or self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
-        )
-
-        return retrieve_weights_from_dataloader, weighted_optimization
-
-    def update_queue(
-        self, queue_name: AvailableQueues, batch_number: int, number_of_samples: int, training_active: bool
-    ) -> None:
-        if queue_name == AvailableQueues.TRAINING:
-            queue_in = self._status_query_queue_training
-            queue_out = self._status_response_queue_training
-        elif queue_name == AvailableQueues.DOWNSAMPLING:
-            queue_in = self._status_query_queue_downsampling
-            queue_out = self._status_response_queue_downsampling
-        else:
-            raise AssertionError(f"Queue {queue_name} does not exist.")
-
-        # As empty() is unreliable
-        # we try to fetch an element within 10ms. If there is no
-        # element within that timeframe returned, we continue.
-        try:
-            req = queue_in.get(timeout=0.01)
-            if req == TrainerMessages.STATUS_QUERY_MESSAGE:
-                queue_out.put(
-                    {"num_batches": batch_number, "num_samples": number_of_samples, "training_active": training_active}
+                batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
+                    per_class_dataloader,
+                    previous_batch_number=batch_number,
+                    previous_number_of_samples=number_of_samples,
                 )
-            elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
-                self.send_model_state_to_server()
-            else:
-                raise ValueError("Unknown message in the status query queue")
-        except queue.Empty:
-            pass
+                self._downsampler.inform_end_of_current_label()
+        else:
+            batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
+
+        selected_ids, weights = self._downsampler.select_points()
+
+        self.end_embedding_recorder_if_needed()
+
+        # to store all the selected (sample, weight).
+        # TODO(#283) investigate which size performs the best
+        file_size = self._num_dataloaders * self._batch_size
+        local_dataset = LocalDatasetWriter(
+            self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
+        )
+
+        # store the selected samples (id and weight)
+        local_dataset.inform_samples(sample_ids=selected_ids, sample_weights=weights)
+
+        # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
+        # we need to manually trigger the store
+        local_dataset.finalize()
+
+        # instead of getting keys from the selector, now are taken from the local storage
+        new_key_source = LocalKeySource(
+            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, offline_dataset_path=self.offline_dataset_path
+        )
+        self._train_dataloader.dataset.change_key_source(new_key_source)
+
+        self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=True)
+        # set the model to train
+        self._model.model.train()
 
     def preprocess_batch(
         self, batch: tuple, stopw: Optional[Stopwatch] = None
@@ -729,80 +572,225 @@ class PytorchTrainer:
             assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.end_recording()
 
-    def downsample_trigger_training_set(self) -> None:
-        """
-        Function to score every datapoint in the current PRESAMPLED DATASET and sample a fraction of it
-        Used for downsampling strategies in SAMPLE_THEN_BATCH mode
+    def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
+        # whether the dataloader returned the weights.
+        retrieve_weights_from_dataloader = batch_len == 4  # key, sample, label, weight
 
-        """
-        assert self._downsampler is not None
-        assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
-
-        # set the model to eval to avoid errors like Expected more than 1 value per channel when training, got ...
-        self._model.model.eval()
-        # keys must be taken from the selector.
-        # This operation is needed only when we sample several times (otherwise the source is already the selector)
-        selector_key_source = SelectorKeySource(
-            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, selector_address=self.selector_address
+        # we want to use weighted optimization if we get weights from the dataloader or if we compute them in the
+        # training loop (BATCH_THEN_SAMPLE downsampling mode)
+        weighted_optimization = (
+            retrieve_weights_from_dataloader or self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
         )
-        self._train_dataloader.dataset.change_key_source(selector_key_source)
-        self._downsampler.init_downsampler()
 
-        self.start_embedding_recording_if_needed()
+        return retrieve_weights_from_dataloader, weighted_optimization
 
-        if self._downsampler.requires_data_label_by_label:
-            assert isinstance(self._downsampler, AbstractPerLabelRemoteDownsamplingStrategy)
-            available_labels = self._get_available_labels_from_selector()
+    # ------------------------------------------------------ IO ------------------------------------------------------ #
 
-            number_of_samples = 0
-            batch_number = 0
-            first_label = True
-            for label in available_labels:
-                if first_label:
-                    per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
-                        self._train_dataloader.dataset, self._batch_size, self._num_dataloaders, label
-                    )
-                    first_label = False
-                else:
-                    assert per_class_dataloader is not None
-                    per_class_dataloader.dataset.filtered_label = label
+    def connect_to_selector(self, selector_address: str) -> SelectorStub:
+        selector_channel = grpc.insecure_channel(selector_address)
+        assert selector_channel is not None
+        if not grpc_connection_established(selector_channel):
+            raise ConnectionError(f"Could not establish gRPC connection to selector at address {selector_address}.")
+        return SelectorStub(selector_channel)
 
-                batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(
-                    per_class_dataloader,
-                    previous_batch_number=batch_number,
-                    previous_number_of_samples=number_of_samples,
-                )
-                self._downsampler.inform_end_of_current_label()
+    def get_available_labels_from_selector(self) -> list[int]:
+        req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)
+
+        response: AvailableLabelsResponse = self.selector_stub.get_available_labels(req)
+
+        return response.available_labels
+
+    def send_model_state_to_server(self) -> None:
+        buffer = io.BytesIO()
+        self.save_state(buffer)
+        buffer.seek(0)
+        bytes_state = buffer.read()
+        self._status_response_queue_training.put(bytes_state)
+
+    def send_status_to_server_training(self, batch_number: int) -> None:
+        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
+
+    def get_selection_strategy(self) -> tuple[bool, str, dict]:
+        req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
+
+        response: SelectionStrategyResponse = self.selector_stub.get_selection_strategy(req)
+        downsampler_config = json.loads(response.downsampler_config.value)
+
+        return response.downsampling_enabled, response.strategy_name, downsampler_config
+
+    def update_queue(
+        self, queue_name: AvailableQueues, batch_number: int, number_of_samples: int, training_active: bool
+    ) -> None:
+        if queue_name == "TRAINING":
+            queue_in = self._status_query_queue_training
+            queue_out = self._status_response_queue_training
+        elif queue_name == "DOWNSAMPLING":
+            queue_in = self._status_query_queue_downsampling
+            queue_out = self._status_response_queue_downsampling
         else:
-            batch_number, number_of_samples = self._iterate_dataloader_and_compute_scores(self._train_dataloader)
+            raise AssertionError(f"Queue {queue_name} does not exist.")
 
-        selected_ids, weights = self._downsampler.select_points()
+        # As empty() is unreliable
+        # we try to fetch an element within 10ms. If there is no
+        # element within that timeframe returned, we continue.
+        try:
+            req = queue_in.get(timeout=0.01)
+            if req == TrainerMessages.STATUS_QUERY_MESSAGE:
+                queue_out.put(
+                    {"num_batches": batch_number, "num_samples": number_of_samples, "training_active": training_active}
+                )
+            elif req == TrainerMessages.MODEL_STATE_QUERY_MESSAGE:
+                self.send_model_state_to_server()
+            else:
+                raise ValueError("Unknown message in the status query queue")
+        except queue.Empty:
+            pass
 
-        self.end_embedding_recorder_if_needed()
+    # ----------------------------------------------- State management ----------------------------------------------- #
 
-        # to store all the selected (sample, weight).
-        # TODO(#283) investigate which size performs the best
-        file_size = self._num_dataloaders * self._batch_size
-        local_dataset = LocalDatasetWriter(
-            self.pipeline_id, self.trigger_id, self._num_dataloaders, file_size, self.offline_dataset_path
+    def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
+        dict_to_save = {}
+        dict_to_save["model"] = self._model.model.state_dict()
+        for optimizer_name, optimizer in self._optimizers.items():
+            dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
+
+        if iteration is not None:
+            dict_to_save["iteration"] = iteration
+
+        torch.save(dict_to_save, destination)
+
+    def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
+        if path is None:
+            return
+        assert path.exists(), "Cannot load state from non-existing file"
+        self._info(f"Loading model state from {path}")
+        # We load the weights on the CPU, and `load_state_dict` moves them to GPU
+        with open(path, "rb") as state_file:
+            checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
+
+        assert "model" in checkpoint
+        self._model.model.load_state_dict(checkpoint["model"])
+        if load_optimizer_state:
+            for optimizer_name, optimizer in self._optimizers.items():
+                if f"optimizer-{optimizer_name}" in checkpoint:
+                    optimizer.load_state_dict(checkpoint[f"optimizer-{optimizer_name}"])
+
+        os.remove(path)
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+    #                                                     Internal                                                     #
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    # ----------------------------------------------------- Setup ---------------------------------------------------- #
+
+    def _persist_pipeline_log(self) -> None:
+        if "PYTEST_CURRENT_TEST" in os.environ:
+            json.dumps(self._log)  # Enforce serialization to catch issues
+            return  # But don't actually store in tests
+
+        if self._log_file_path is not None:
+            with open(self._log_file_path, "w", encoding="utf-8") as logfile:
+                json.dump(self._log, logfile)
+        else:
+            self.logger.error("Log file path is None, cannot persist.")
+
+    def _setup_downsampling(
+        self,
+        criterion_func: torch.nn.modules.loss,
+        downsampler_config: dict,
+        strategy_name: str,
+        training_info: TrainingInfo,
+    ) -> None:
+        self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
+        self._downsampler = self._instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
+        assert "sample_then_batch" in downsampler_config
+        if downsampler_config["sample_then_batch"]:
+            self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
+            assert "downsampling_period" in downsampler_config
+            self._downsampling_period = downsampler_config["downsampling_period"]
+            self.offline_dataset_path = training_info.offline_dataset_path
+        else:
+            self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
+
+    def _instantiate_downsampler(
+        self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
+    ) -> AbstractRemoteDownsamplingStrategy:
+        return instantiate_class(
+            "modyn.trainer_server.internal.trainer.remote_downsamplers",
+            strategy_name,
+            self.pipeline_id,
+            self.trigger_id,
+            self._batch_size,
+            downsampler_config,
+            per_sample_loss,
+            self._device,
         )
 
-        # store the selected samples (id and weight)
-        local_dataset.inform_samples(sample_ids=selected_ids, sample_weights=weights)
+    def _setup_optimizers(self, training_info: TrainingInfo) -> None:
+        self._optimizers = {}
+        for name, optimizer_config in training_info.torch_optimizers_configuration.items():
+            if optimizer_config["source"] == "PyTorch":
+                optimizer_func = getattr(torch.optim, optimizer_config["algorithm"])
+            elif optimizer_config["source"] == "APEX":
+                if package_available_and_can_be_imported("apex"):
+                    import apex  # pylint: disable=import-outside-toplevel, import-error
 
-        # samples are automatically stored when the desired file size is reached. Since the last file might be smaller
-        # we need to manually trigger the store
-        local_dataset.finalize()
+                    optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
+                else:
+                    raise ValueError("Apex Optimizer defined, but apex is not available in the system")
+            else:
+                raise ValueError(
+                    f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
+                )
+            optimizer_config_list = []
+            for param_group in optimizer_config["param_groups"]:
+                module = param_group["module"]
+                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
+                    f"self._model.{module}.parameters()"
+                )
+                optimizer_config_list.append(param_group["config"])
+            self._optimizers[name] = optimizer_func(optimizer_config_list)
 
-        # instead of getting keys from the selector, now are taken from the local storage
-        new_key_source = LocalKeySource(
-            pipeline_id=self.pipeline_id, trigger_id=self.trigger_id, offline_dataset_path=self.offline_dataset_path
-        )
-        self._train_dataloader.dataset.change_key_source(new_key_source)
+    def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
+        self._lr_scheduler = None
+        if training_info.lr_scheduler:
+            if training_info.lr_scheduler["source"] == "Custom":
+                lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
+                custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
+                optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
+                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
+            elif training_info.lr_scheduler["source"] == "PyTorch":
+                torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
+                if len(training_info.lr_scheduler["optimizers"]) > 1:
+                    self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
+                self._lr_scheduler = torch_lr_scheduler(
+                    self._optimizers[training_info.lr_scheduler["optimizers"][0]],
+                    **training_info.lr_scheduler["config"],
+                )
+            else:
+                raise ValueError(
+                    f"Unsupported LR scheduler of source {training_info.lr_scheduler['source']}."
+                    "PyTorch and Custom are supported"
+                )
 
-        self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=True)
-        # set the model to train
-        self._model.model.train()
+    def _seed_trainer_server(self, seed: int) -> None:
+        if not (0 <= seed <= 100 and isinstance(seed, int)):
+            raise ValueError("The seed must be an integer in the range [0,100]")
+        # seed the trainer server
+        seed_everything(seed)
+
+    # --------------------------------------------------- Sampling --------------------------------------------------- #
+
+    def _sample_then_batch_this_epoch(self, epoch: int) -> bool:
+        """Checks if the current epoch should downsample the dataset in SAMPLE_THEN_BATCH mode."""
+        if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:
+            return False
+
+        # self._downsampling_period = 0 : downsample one time per trigger
+        if self._downsampling_period == 0:
+            return epoch == 0
+        # otherwise downsample every self._downsampling_period epochs
+        return epoch % self._downsampling_period == 0
 
     def _iterate_dataloader_and_compute_scores(
         self,
@@ -825,7 +813,7 @@ class PytorchTrainer:
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
         for batch_number, batch in enumerate(dataloader):
-            self.update_queue(AvailableQueues.DOWNSAMPLING, batch_number, number_of_samples, training_active=False)
+            self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=False)
 
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
@@ -839,15 +827,56 @@ class PytorchTrainer:
 
         return batch_number, number_of_samples
 
+    # ---------------------------------------------------- Logging --------------------------------------------------- #
+
+    def _info(self, msg: str) -> None:
+        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
+    def _warning(self, msg: str) -> None:
+        self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
+    def _error(self, msg: str) -> None:
+        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+
+    def _load_dataset_log(self) -> None:
+        worker_log = {}
+        for filename in glob.glob(str(self._dataset_log_path / "*.log")):
+            filepath = pathlib.Path(filename)
+            key = filepath.stem
+
+            with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
+                worker_log[key] = json.load(logfile)
+
+        self._log["dataset_worker_log"] = worker_log
+
+        try:
+            if self._dataset_log_path.exists():
+                shutil.rmtree(self._dataset_log_path)
+        except OSError as exp:
+            self._error("Error while deleting OnlineDataset logging directory.")
+            self._error(str(exp))
+
+    # -------------------------------------------------- Assertions -------------------------------------------------- #
+
+    @staticmethod
+    def _assert_data_size(
+        expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor
+    ) -> None:
+        assert (
+            all(tensor.shape[0] == expected_size for tensor in data.values())
+            if isinstance(data, dict)
+            else data.shape[0] == expected_size
+        ), (
+            f"expected size: {expected_size} actual size: "
+            + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
+        )
+        assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
+        assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
+
+    # ---------------------------------------------------- Cleanup --------------------------------------------------- #
+
     def end_of_trigger_cleaning(self) -> None:
         self._train_dataloader.dataset.end_of_trigger_cleaning()
-
-    def _get_available_labels_from_selector(self) -> list[int]:
-        req = GetAvailableLabelsRequest(pipeline_id=self.pipeline_id)
-
-        response: AvailableLabelsResponse = self.selector_stub.get_available_labels(req)
-
-        return response.available_labels
 
 
 def train(
