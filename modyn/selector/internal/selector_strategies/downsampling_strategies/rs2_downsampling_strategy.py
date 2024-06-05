@@ -13,7 +13,8 @@ class RS2DownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.remote_downsampling_strategy_name = "RemoteRS2Downsampling"
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
         config["replacement"] = self.downsampling_config.with_replacement
         return config
