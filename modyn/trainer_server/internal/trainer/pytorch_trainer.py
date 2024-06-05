@@ -155,7 +155,10 @@ class PytorchTrainer:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
         num_samples_in_trigger = self.get_num_samples_in_trigger()
-        batches_per_epoch = num_samples_in_trigger // self._batch_size  # We reuse this later
+        num_samples_per_worker = num_samples_in_trigger // max(self._num_dataloaders, 1)
+        batches_per_worker = num_samples_per_worker // self._batch_size
+
+        batches_per_epoch = batches_per_worker * self._num_dataloaders  # We reuse this later
         self._expected_num_batches = batches_per_epoch
 
         num_samples_per_epoch = (
@@ -480,8 +483,6 @@ class PytorchTrainer:
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
 
-                pre_downsampling_size = target.shape[0]
-
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
                         stopw.start("DownsampleBTS", resume=True)
@@ -536,7 +537,7 @@ class PytorchTrainer:
                     self.save_state(checkpoint_file_name, batch_number)
                     stopw.stop("Checkpoint")
 
-                self._num_samples += pre_downsampling_size
+                self._num_samples += self._batch_size
 
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
@@ -596,13 +597,24 @@ class PytorchTrainer:
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
-        assert (
-            self._expected_num_epochs == epoch + 1
-        ), f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
-        assert self._expected_num_batches == trained_batches, (
-            f"Something went wrong! We expected to train on {self._expected_num_batches},"
-            + f" but trained for {trained_batches} batches!"
-        )
+        if True or self._lr_scheduler is not None:  # todo remove true
+            assert self._expected_num_epochs == epoch + 1, (
+                f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+            assert self._expected_num_batches == trained_batches, (
+                f"Something went wrong! We expected to train on {self._expected_num_batches},"
+                + f" but trained for {trained_batches} batches!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+        else:
+            if self._expected_num_epochs != epoch + 1 or self._expected_num_batches != trained_batches:
+                self._error(
+                    "Inconsistent expected batches. Not failing since no lr scheduler was used.\n"
+                    + f" We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!\n"
+                    + f"We expected to train on {self._expected_num_batches},"
+                    + f" but trained for {trained_batches} batches!"
+                )
 
         self._load_dataset_log()
         self._persist_pipeline_log()
