@@ -1,6 +1,12 @@
-from modyn.config.schema.pipeline import (
+from modyn.config import (
     CheckpointingConfig,
     DataConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
+    TrainingConfig,
+)
+from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvalStrategyModel,
     EvaluationConfig,
@@ -9,12 +15,8 @@ from modyn.config.schema.pipeline import (
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
     Pipeline,
     PipelineModelStorageConfig,
-    TrainingConfig,
     TriggerConfig,
 )
 

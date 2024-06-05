@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from modyn.config.schema.sampling.downsampling_config import SubmodularDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
@@ -18,8 +20,9 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.balance = downsampling_config.balance
         self.remote_downsampling_strategy_name = "RemoteSubmodularDownsamplingStrategy"
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @cached_property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
         config["submodular_function"] = self.submodular_function
         config["submodular_optimizer"] = self.submodular_optimizer
         config["selection_batch"] = self.selection_batch

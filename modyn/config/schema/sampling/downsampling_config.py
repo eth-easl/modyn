@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, List, Literal, Union
 
 from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.training.training_config import CheckpointingConfig, TrainingConfig
 from pydantic import Field, model_validator
 from typing_extensions import Self
 
@@ -99,13 +100,26 @@ class NoDownsamplingConfig(BaseDownsamplingConfig):
     ratio: Literal[100] = 100
 
 
-class ILTrainingConfig(ModynBaseModel):
-    num_workers: int = Field("Number of workers to use for training.", min=1)
-    il_model_id: str = Field("The model class name to use as the IL model.")
+class NoCheckpointingConfig(CheckpointingConfig):
+    activated: Literal[False] = False
+    interval: Literal[None] = None
+    path: Literal[None] = None
+
+
+class ILTrainingConfig(TrainingConfig):
+    # new fields introduced
+    il_model_id: str = Field(description="The model class name to use as the IL model.")
     il_model_config: dict = Field(
         default_factory=dict, description="Configuration dictionary that will be passed to the model on initialization."
     )
-    amp: bool = Field(False, description="Whether to use automatic mixed precision.")
+
+    # hardcode values that are not relevant in the IL training
+    gpus: Literal[1] = 1
+    num_samples_to_pass: Literal[None] = None
+    use_previous_model: Literal[False] = False
+    initial_model: Literal["random"] = "random"
+    initial_model_id: Literal[None] = None
+    checkpointing: NoCheckpointingConfig = Field(default=NoCheckpointingConfig())
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
