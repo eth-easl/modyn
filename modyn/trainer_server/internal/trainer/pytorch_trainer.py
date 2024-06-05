@@ -166,7 +166,7 @@ class PytorchTrainer:
         )  # scale up again to multiples of batch size
 
         if downsampling_enabled:
-            num_samples_per_epoch = max(int(self._downsampler.downsampling_ratio * num_samples_per_epoch / 100), 1)
+            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
         # Handle special case of num_samples_to_pass instead of specifying number of epochs
@@ -435,7 +435,7 @@ class PytorchTrainer:
 
         if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
-            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
+            post_downsampling_size = max((self._downsampler.downsampling_ratio * self._batch_size) // 100, 1)
             assert post_downsampling_size < self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
