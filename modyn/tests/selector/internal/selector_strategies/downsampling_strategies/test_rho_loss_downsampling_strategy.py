@@ -4,11 +4,13 @@ import pathlib
 import shutil
 import tempfile
 from typing import List, Optional, Tuple
-from unittest.mock import ANY, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
-from modyn.config import DataConfig
+from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
+from modyn.config.schema.pipeline import DataConfig
 from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
+from modyn.config.schema.training.training_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -51,9 +53,23 @@ def setup_and_teardown():
 @pytest.fixture
 def il_training_config():
     return ILTrainingConfig(
-        num_workers=1,
+        dataloader_workers=1,
         il_model_id="ResNet18",
         il_model_config={"num_classes": 2},
+        amp=False,
+        device="cpu",
+        batch_size=16,
+        epochs_per_trigger=1,
+        shuffle=True,
+        optimizers=[
+            OptimizerConfig(
+                name="default",
+                algorithm="SGD",
+                source="PyTorch",
+                param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.01})],
+            )
+        ],
+        optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
     )
 
 
@@ -63,6 +79,10 @@ def data_config():
         dataset_id="test",
         bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
     )
+
+
+def noop_init_trainer_server(self):
+    return
 
 
 def store_samples(pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[Tuple[int, int, int]]) -> None:
@@ -96,6 +116,7 @@ def register_pipeline(auxiliary_pipeline_id: Optional[int], data_config: DataCon
     return pipeline_id
 
 
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
 @patch.object(AbstractSelectionStrategy, "store_training_set")
 @patch(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy"
@@ -170,7 +191,7 @@ def test__prepare_holdout_set(
         mock_store_training_set.reset_mock()
         mock_get_trigger_dataset_size.return_value = trigger_id2dataset_size[trigger_id]
 
-        strategy._prepare_holdout_set(trigger_id, rho_pipeline_id, storage_backend)
+        strategy._prepare_holdout_set(trigger_id, storage_backend)
         mock_get_trigger_dataset_size.assert_called_once_with(storage_backend, pipeline_id, trigger_id, tail_triggers=0)
         mock_store_training_set.assert_called_once_with(
             rho_pipeline_id,
@@ -183,6 +204,7 @@ def test__prepare_holdout_set(
         validate_training_set_producer(training_set_producer, trigger_id)
 
 
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
 def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
     il_training_config: ILTrainingConfig, data_config: DataConfig
 ):
@@ -205,6 +227,7 @@ def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
         assert strategy.data_config == data_config
 
 
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
 def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig, data_config: DataConfig):
     pipeline_id = register_pipeline(None, data_config)
 
@@ -224,7 +247,7 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
 
         rho_pipeline = database.session.get(Pipeline, strategy.rho_pipeline_id)
 
-        assert rho_pipeline.num_workers == il_training_config.num_workers
+        assert rho_pipeline.num_workers == il_training_config.dataloader_workers
         assert rho_pipeline.model_class_name == il_training_config.il_model_id
         assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
         assert DataConfig.model_validate_json(rho_pipeline.data_config) == data_config
@@ -234,3 +257,95 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
         assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
         assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
+
+
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: DataConfig):
+    pipeline_id = register_pipeline(None, data_config)
+
+    modyn_config = get_minimal_modyn_config()
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    maximum_keys_in_memory = 4
+
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    strategy.il_model_id = 42
+
+    expected = {
+        "downsampling_ratio": 60,
+        "maximum_keys_in_memory": maximum_keys_in_memory,
+        "sample_then_batch": False,
+        "il_model_id": 42,
+    }
+    assert strategy.downsampling_params == expected
+
+
+@patch.object(TrainerServerGRPCHandlerMixin, "start_training", return_value=42)
+@patch.object(TrainerServerGRPCHandlerMixin, "wait_for_training_completion")
+@patch.object(TrainerServerGRPCHandlerMixin, "store_trained_model", return_value=33)
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+def test__train_il_model(
+    mock_store_trained_model: MagicMock,
+    mock_wait_for_training_completion: MagicMock,
+    mock_start_training: MagicMock,
+    il_training_config: ILTrainingConfig,
+    data_config: DataConfig,
+):
+    pipeline_id = register_pipeline(None, data_config)
+
+    modyn_config = get_minimal_modyn_config()
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    maximum_keys_in_memory = 4
+
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    trigger_id = 1
+    model_id = strategy._train_il_model(trigger_id)
+    mock_start_training.assert_called_once_with(
+        pipeline_id=strategy.rho_pipeline_id,
+        trigger_id=trigger_id,
+        training_config=il_training_config,
+        data_config=data_config,
+        previous_model_id=None,
+    )
+    mock_wait_for_training_completion.assert_called_once_with(mock_start_training.return_value)
+    mock_store_trained_model.assert_called_once_with(mock_start_training.return_value)
+    assert model_id == mock_store_trained_model.return_value
+
+
+@patch(
+    "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy.isinstance",
+    return_value=True,
+)
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+def test_inform_next_trigger(
+    mock_is_instance: MagicMock, il_training_config: ILTrainingConfig, data_config: DataConfig
+):
+    pipeline_id = register_pipeline(None, data_config)
+
+    modyn_config = get_minimal_modyn_config()
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+    )
+    maximum_keys_in_memory = 4
+
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    assert strategy.il_model_id is None
+    strategy._prepare_holdout_set = MagicMock()
+    strategy._train_il_model = MagicMock(return_value=42)
+
+    trigger_id = 1
+    storage_backend = MockStorageBackend(pipeline_id, modyn_config, maximum_keys_in_memory)
+    strategy.inform_next_trigger(trigger_id, storage_backend)
+
+    strategy._prepare_holdout_set.assert_called_once_with(trigger_id, storage_backend)
+    strategy._train_il_model.assert_called_once_with(trigger_id)
+    assert strategy.il_model_id == 42
