@@ -19,16 +19,15 @@ from typing import Any, Iterable, Literal, Optional, Tuple, Union
 import grpc
 import numpy as np
 import torch
-
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
-    GetSelectionStrategyRequest,
-    SelectionStrategyResponse,
     GetNumberOfSamplesRequest,
+    GetSelectionStrategyRequest,
     NumberOfSamplesResponse,
+    SelectionStrategyResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import (
@@ -683,7 +682,6 @@ class PytorchTrainer:
                 raise ValueError("Unknown message in the status query queue")
         except queue.Empty:
             pass
-
 
     def get_num_samples_in_trigger(self) -> int:
         assert self.selector_stub is not None
