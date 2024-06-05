@@ -94,9 +94,6 @@ class PytorchTrainer:
         self._setup_optimizers(training_info)
         self._info("Model and optimizer created.")
 
-        self._setup_lr_scheduler(training_info)
-        self._info("LR scheduler created.")
-
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
 
@@ -174,6 +171,9 @@ class PytorchTrainer:
         if self.num_samples_to_pass > 0:
             self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
             self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
+
+        self._setup_lr_scheduler(training_info)
+        self._info("LR scheduler created.")
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -257,21 +257,35 @@ class PytorchTrainer:
                 optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
 
+    def _update_lr_config_dict(self, lr_scheduler_config: dict[str, Any]) -> dict[str, Any]:
+        for key, value in lr_scheduler_config.items():
+            if isinstance(value, dict):
+                self._update_lr_config_dict(value)
+            elif value == "MODYN_NUM_BATCHES":
+                lr_scheduler_config[key] = self._expected_num_batches
+            elif value == "MODYN_NUM_EPOCHS":
+                lr_scheduler_config[key] = self._expected_num_epochs
+
+        return lr_scheduler_config
+
     def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
         self._lr_scheduler = None
         if training_info.lr_scheduler:
+
+            config_dict = self._update_lr_config_dict(training_info.lr_scheduler["config"])
+
             if training_info.lr_scheduler["source"] == "Custom":
                 lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
                 custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
                 optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
-                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
+                self._lr_scheduler = custom_lr_scheduler(optimizers, config_dict)
             elif training_info.lr_scheduler["source"] == "PyTorch":
                 torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
                 if len(training_info.lr_scheduler["optimizers"]) > 1:
                     self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
                 self._lr_scheduler = torch_lr_scheduler(
                     self._optimizers[training_info.lr_scheduler["optimizers"][0]],
-                    **training_info.lr_scheduler["config"],
+                    **config_dict,
                 )
             else:
                 raise ValueError(
