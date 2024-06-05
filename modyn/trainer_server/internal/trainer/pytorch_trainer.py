@@ -26,6 +26,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetAvailableLabelsRequest,
     GetSelectionStrategyRequest,
     SelectionStrategyResponse,
+    GetNumberOfSamplesRequest,
+    NumberOfSamplesResponse
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.data_utils import (
@@ -148,11 +150,20 @@ class PytorchTrainer:
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self.selector_address = training_info.selector_address
 
+
         downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
         if downsampling_enabled:
             self._setup_downsampling(criterion_func, downsampler_config, strategy_name, training_info)
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
+
+        num_samples_in_trigger = self.get_num_samples_in_trigger()
+        self._expected_num_batches = num_samples_in_trigger // self._batch_size
+
+        if downsampling_enabled:
+            num_samples = self._expected_num_batches * self._batch_size # scale up again to multiples of batch size
+            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * num_samples / 100), 1)            
+            self._expected_num_batches = post_downsampling_size // self._batch_size
 
         # setup dataloaders
         self._info("Setting up data loaders.")
@@ -179,6 +190,8 @@ class PytorchTrainer:
         self._callbacks: dict[MetricType, Any] = {
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
+        self._step_lr_every = training_info.lr_scheduler["step_every"]
 
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
@@ -312,6 +325,14 @@ class PytorchTrainer:
 
         return response.downsampling_enabled, response.strategy_name, downsampler_config
 
+    def get_num_samples_in_trigger(self) -> int:
+        assert self.selector_stub is not None
+
+        req = GetNumberOfSamplesRequest(pipeline_id=self.pipeline_id, trigger_id=self.trigger_id)
+        res: NumberOfSamplesResponse = self.selector_stub.get_number_of_samples(req)
+
+        return res.num_samples
+
     def seed_trainer_server(self, seed: int) -> None:
         if not (0 <= seed <= 100 and isinstance(seed, int)):
             raise ValueError("The seed must be an integer in the range [0,100]")
@@ -348,6 +369,17 @@ class PytorchTrainer:
             return epoch == 0
         # otherwise dowsample every self._downsampling_period epochs
         return epoch % self._downsampling_period == 0
+
+    def _step_lr_if_necessary(self, is_batch: bool) -> None:
+        if self._lr_scheduler is None:
+            return
+        
+        if is_batch and self._step_lr_every == "batch":
+            self._lr_scheduler.step()
+        
+        if not is_batch and self._step_lr_every == "epoch":
+            self._lr_scheduler.step()
+
 
     def train(self) -> None:  # pylint: disable=too-many-locals, too-many-branches
         self._info(f"Process {os.getpid()} starts training")
@@ -422,10 +454,6 @@ class PytorchTrainer:
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
 
-                # TODO(#163): where to perform lr_scheduler.step? make it configurable
-                if self._lr_scheduler is not None:
-                    self._lr_scheduler.step()
-
                 pre_downsampling_size = target.shape[0]
 
                 with torch.autocast(self._device_type, enabled=self._amp):
@@ -473,6 +501,8 @@ class PytorchTrainer:
                 self._scaler.update()
                 stopw.stop("OptimizerStep")
 
+                self._step_lr_if_necessary(True)
+
                 if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                     stopw.start("Checkpoint", resume=True)
                     checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
@@ -492,6 +522,8 @@ class PytorchTrainer:
                     break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
+
+            self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings

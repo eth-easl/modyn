@@ -65,7 +65,7 @@ def prepare_dataloaders(
         log_path,
     )
     logger.debug("Creating DataLoader.")
-    train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)
+    train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=True)
 
     # TODO(#50): what to do with the val set in the general case?
     val_dataloader = None
@@ -91,4 +91,4 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._shuffle,
         online_dataset._tokenizer_name,
     )
-    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=True)
