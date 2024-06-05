@@ -27,6 +27,7 @@ def prepare_dataloaders(
     shuffle: bool,
     tokenizer: Optional[str],
     log_path: Optional[pathlib.Path],
+    drop_last: bool = True,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -66,7 +67,7 @@ def prepare_dataloaders(
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
-        train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=True
+        train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=drop_last
     )
 
     # TODO(#50): what to do with the val set in the general case?
@@ -75,7 +76,11 @@ def prepare_dataloaders(
 
 
 def prepare_per_class_dataloader_from_online_dataset(
-    online_dataset: OnlineDataset, batch_size: int, num_workers: int, initial_filtered_label: int
+    online_dataset: OnlineDataset,
+    batch_size: int,
+    num_workers: int,
+    initial_filtered_label: int,
+    drop_last: bool = True,
 ) -> torch.utils.data.DataLoader:
     # TODO(#289): Replace inefficient per class dataloader
     dataset = PerClassOnlineDataset(
@@ -93,4 +98,4 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._shuffle,
         online_dataset._tokenizer_name,
     )
-    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=True)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last)
