@@ -62,6 +62,16 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         # CoresetSupportingModule for model implementations.
         self.requires_coreset_supporting_module = False
 
+        # Some methods might not need information from forward pass (e.g. completely random)
+        # Most do (definition), hence we default to True
+        # We might want to refactor those downsamplers to presamplers and support some
+        # adaptivity at the selector, but for now we allow random downsamplers mostly
+        # to support RS2.
+        self.forward_required = True
+
+        # Some methods might only support StB, not BtS.
+        self.supports_bts = True
+
     @abstractmethod
     def init_downsampler(self) -> None:
         raise NotImplementedError

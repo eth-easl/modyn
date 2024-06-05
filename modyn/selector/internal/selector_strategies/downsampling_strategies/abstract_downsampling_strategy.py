@@ -42,7 +42,6 @@ class AbstractDownsamplingStrategy(ABC):
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory
         self.downsampling_config = downsampling_config
-        self.downsampling_params = self._build_downsampling_params()
         self.status_bar_scale = self._compute_status_bar_scale()
 
     def _compute_status_bar_scale(self) -> int:
@@ -57,7 +56,8 @@ class AbstractDownsamplingStrategy(ABC):
             return 100
         return self.downsampling_ratio
 
-    def _build_downsampling_params(self) -> dict:
+    @property
+    def downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
             "maximum_keys_in_memory": self.maximum_keys_in_memory,

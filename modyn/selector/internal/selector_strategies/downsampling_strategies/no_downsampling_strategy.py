@@ -1,4 +1,4 @@
-from typing import Dict
+from functools import cached_property
 
 from modyn.config.schema.sampling.downsampling_config import NoDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
@@ -23,4 +23,7 @@ class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         self.requires_remote_computation = False
         self.remote_downsampling_strategy_name = ""
-        self.downsampling_params: Dict[None, None] = {}
+
+    @cached_property
+    def downsampling_params(self) -> dict:
+        return {}
