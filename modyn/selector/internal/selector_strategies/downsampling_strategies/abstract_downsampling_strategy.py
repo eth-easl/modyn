@@ -58,9 +58,6 @@ class AbstractDownsamplingStrategy(ABC):
 
     @property
     def downsampling_params(self) -> dict:
-        return self._build_downsampling_params()
-
-    def _build_downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
             "maximum_keys_in_memory": self.maximum_keys_in_memory,
@@ -73,6 +70,7 @@ class AbstractDownsamplingStrategy(ABC):
         return config
 
     # pylint: disable=unused-argument
+
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         """
         This function is used to inform the downsampler that the next trigger is reached.

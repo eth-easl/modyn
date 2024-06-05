@@ -45,8 +45,9 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
         self.il_model_id = self._train_il_model(next_trigger_id)
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
         assert self.il_model_id is not None
         config["il_model_id"] = self.il_model_id
         return config

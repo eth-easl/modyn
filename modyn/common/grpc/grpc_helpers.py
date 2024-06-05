@@ -274,7 +274,7 @@ class TrainerServerGRPCHandlerMixin:
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
         self, training_id: int, training_reporter: Optional[TrainingStatusReporter] = None
-    ) -> dict[str, Any]:  # pragma: no cover
+    ) -> dict[str, Any]:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
             raise ConnectionError(

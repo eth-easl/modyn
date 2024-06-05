@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from modyn.config.schema.sampling.downsampling_config import NoDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 
@@ -22,5 +24,6 @@ class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.requires_remote_computation = False
         self.remote_downsampling_strategy_name = ""
 
-    def _build_downsampling_params(self) -> dict:
+    @cached_property
+    def downsampling_params(self) -> dict:
         return {}

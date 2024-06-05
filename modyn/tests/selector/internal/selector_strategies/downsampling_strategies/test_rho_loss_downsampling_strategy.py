@@ -260,7 +260,7 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
 
 
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
-def test__build_downsampling_params(il_training_config: ILTrainingConfig, data_config: DataConfig):
+def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: DataConfig):
     pipeline_id = register_pipeline(None, data_config)
 
     modyn_config = get_minimal_modyn_config()

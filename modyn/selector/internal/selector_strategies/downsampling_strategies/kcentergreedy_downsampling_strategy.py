@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from modyn.config.schema.sampling.downsampling_config import KcenterGreedyDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
@@ -15,8 +17,9 @@ class KcenterGreedyDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.balance = downsampling_config.balance
         self.remote_downsampling_strategy_name = "RemoteKcenterGreedyDownsamplingStrategy"
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @cached_property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
         config["balance"] = self.balance
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
