@@ -153,26 +153,9 @@ class PytorchTrainer:
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
-        num_samples_in_trigger = self.get_num_samples_in_trigger()
-        num_samples_per_worker = num_samples_in_trigger // max(self._num_dataloaders, 1)
-        batches_per_worker = num_samples_per_worker // self._batch_size
-
-        batches_per_epoch = batches_per_worker * self._num_dataloaders  # We reuse this later
-        self._expected_num_batches = batches_per_epoch
-
-        num_samples_per_epoch = (
-            self._expected_num_batches * self._batch_size
-        )  # scale up again to multiples of batch size
-
-        if downsampling_enabled:
-            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
-
-        self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
-        # Handle special case of num_samples_to_pass instead of specifying number of epochs
-        self._expected_num_epochs = self.epochs_per_trigger
-        if self.num_samples_to_pass > 0:
-            self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
-            self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
+        self._expected_num_batches = -1
+        self._expected_num_epochs = -1
+        self._calc_expected_sizes(downsampling_enabled)
 
         self._step_lr_every: str | None = None
         self._setup_lr_scheduler(training_info)
@@ -839,6 +822,28 @@ class PytorchTrainer:
         # seed the trainer server
         seed_everything(seed)
 
+    def _calc_expected_sizes(self, downsampling_enabled: bool) -> None:
+        num_samples_in_trigger = self.get_num_samples_in_trigger()
+        num_samples_per_worker = num_samples_in_trigger // max(self._num_dataloaders, 1)
+        batches_per_worker = num_samples_per_worker // self._batch_size
+
+        batches_per_epoch = batches_per_worker * self._num_dataloaders  # We reuse this later
+        self._expected_num_batches = batches_per_epoch
+
+        num_samples_per_epoch = (
+            self._expected_num_batches * self._batch_size
+        )  # scale up again to multiples of batch size
+
+        if downsampling_enabled:
+            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
+
+        self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
+        self._expected_num_epochs = self.epochs_per_trigger
+        if self.num_samples_to_pass > 0:
+            self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
+            self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
+
     # --------------------------------------------------- Sampling --------------------------------------------------- #
 
     def _sample_then_batch_this_epoch(self, epoch: int) -> bool:
@@ -933,7 +938,7 @@ class PytorchTrainer:
         assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
         assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
 
-    def _assert_training_size(self, epoch, trained_batches) -> None:
+    def _assert_training_size(self, epoch: int, trained_batches: int) -> None:
         if self._lr_scheduler is not None:
             assert self._expected_num_epochs == epoch + 1, (
                 f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
