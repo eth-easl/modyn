@@ -102,6 +102,5 @@ class F1Score(AbstractDecomposableMetric):
         total_labels_per_class = true_positives + false_negatives
         return float(np.average(f1_scores, weights=total_labels_per_class / total_samples))
 
-    @staticmethod
-    def get_name() -> str:
-        return "F1-score"
+    def get_name(self) -> str:
+        return f"F1-{self.average.value}"

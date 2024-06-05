@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
@@ -28,14 +27,12 @@ class EvaluationInfo:
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
-        if request.dataset_info.HasField("start_timestamp"):
-            self.start_timestamp: Optional[int] = request.dataset_info.start_timestamp
-        else:
-            self.start_timestamp = None
-        if request.dataset_info.HasField("end_timestamp"):
-            self.end_timestamp: Optional[int] = request.dataset_info.end_timestamp
-        else:
-            self.end_timestamp = None
+        self.start_timestamp = (
+            request.dataset_info.start_timestamp if request.dataset_info.HasField("start_timestamp") else None
+        )
+        self.end_timestamp = (
+            request.dataset_info.end_timestamp if request.dataset_info.HasField("end_timestamp") else None
+        )
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size
@@ -49,11 +46,7 @@ class EvaluationInfo:
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
-        self.tokenizer: Optional[str] = None
-        if request.HasField("tokenizer"):
-            self.tokenizer = request.tokenizer.value
-        else:
-            self.tokenizer = None
+        self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address

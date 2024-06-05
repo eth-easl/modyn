@@ -104,7 +104,7 @@ class PytorchEvaluator:
         y_score = []
 
         self._model.model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             batch_number = -1
             for batch_number, batch in enumerate(self._dataloader):
                 # As empty() is unreliable

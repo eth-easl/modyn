@@ -273,9 +273,9 @@ TriggerConfig = Annotated[
 
 class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the evaluation metric.")
-    evaluation_transformer_function: str | None = Field(
-        None,
+    config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
+    evaluation_transformer_function: str = Field(
+        "",
         description="A function used to transform the model output before evaluation.",
     )
 
@@ -295,6 +295,20 @@ class Metric(ModynBaseModel):
         if self.evaluation_transformer_function:
             return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
         return None
+
+    @model_validator(mode="after")
+    def can_instantiate_metric(self) -> Self:
+        # We have to import the MetricFactory here to avoid issues with the multiprocessing context
+        # If we move it up, then we'll have `spawn` everywhere, and then the unit tests on Github
+        # are way too slow.
+        # pylint: disable-next=wrong-import-position,import-outside-toplevel
+        from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
+        try:
+            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
+        except NotImplementedError as exc:
+            raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
+
+        return self
 
 
 class MatrixEvalStrategyConfig(ModynBaseModel):

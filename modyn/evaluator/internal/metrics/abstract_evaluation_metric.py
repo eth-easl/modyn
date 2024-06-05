@@ -47,9 +47,8 @@ class AbstractEvaluationMetric(ABC):
     def warning(self, message: str) -> None:
         logger.warning(f"[{self.get_name()}] {message}")
 
-    @staticmethod
     @abstractmethod
-    def get_name() -> str:
+    def get_name(self) -> str:
         """
         Get the name of the metric.
 
