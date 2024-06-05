@@ -55,6 +55,5 @@ class RocAuc(AbstractHolisticMetric):
 
         return self.evaluation_result
 
-    @staticmethod
-    def get_name() -> str:
+    def get_name(self) -> str:
         return "ROC-AUC"

@@ -291,5 +291,5 @@ def test_evaluate(load_state_mock: MagicMock):
 
     # accuracy
     metric_name, metric_result = metric_result_queue.get()
-    assert metric_name == Accuracy.get_name()
+    assert metric_name == Accuracy("", {}).get_name()
     assert metric_result == pytest.approx(1)

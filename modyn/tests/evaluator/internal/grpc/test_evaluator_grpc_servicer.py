@@ -25,6 +25,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     PythonString,
 )
 from modyn.evaluator.internal.metrics import Accuracy, F1Score
+from modyn.evaluator.internal.metrics.f1_score import F1ScoreTypes
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -156,7 +157,7 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
         amp=False,
         model_config="{}",
         storage_address=storage_address,
-        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2})],
+        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2, "average": "macro"})],
         model_path=model_path,
     )
 
@@ -337,6 +338,35 @@ def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage):
         metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
         assert len(metrics) == 1
         assert isinstance(metrics[0], Accuracy)
+
+
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_setup_metrics_multiple_f1(test_connect_to_model_storage, test_connect_to_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+
+        macro_f1_config = MetricConfiguration(
+            name="F1Score",
+            config=JsonString(value=json.dumps({"num_classes": 2, "average": "macro"})),
+            evaluation_transformer=PythonString(value=""),
+        )
+
+        micro_f1_config = MetricConfiguration(
+            name="F1Score",
+            config=JsonString(value=json.dumps({"num_classes": 2, "average": "micro"})),
+            evaluation_transformer=PythonString(value=""),
+        )
+        # not double macro, but macro and micro work
+        metrics = evaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
+
+        assert len(metrics) == 2
+        assert isinstance(metrics[0], F1Score)
+        assert isinstance(metrics[1], F1Score)
+        assert metrics[0].average == F1ScoreTypes.MACRO
+        assert metrics[1].average == F1ScoreTypes.MICRO
+        assert metrics[0].get_name() == "F1-macro"
+        assert metrics[1].get_name() == "F1-micro"
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -578,9 +608,9 @@ def test_get_evaluation_result(
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_data) == 2
-        assert response.evaluation_data[0].metric == Accuracy.get_name()
+        assert response.evaluation_data[0].metric == Accuracy("", {}).get_name()
         assert response.evaluation_data[0].result == 0.5
         test_acc.assert_called_once()
-        assert response.evaluation_data[1].metric == F1Score.get_name()
+        assert response.evaluation_data[1].metric == F1Score("", {"num_classes": 2, "average": "macro"}).get_name()
         assert response.evaluation_data[1].result == 0.75
         test_f1.assert_called_once()

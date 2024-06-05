@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from modyn.config.schema.sampling.downsampling_config import UncertaintyDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
@@ -15,8 +17,9 @@ class UncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.balance = downsampling_config.balance
         self.remote_downsampling_strategy_name = "RemoteUncertaintyDownsamplingStrategy"
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @cached_property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
 
         config["score_metric"] = self.downsampling_config["score_metric"]
 

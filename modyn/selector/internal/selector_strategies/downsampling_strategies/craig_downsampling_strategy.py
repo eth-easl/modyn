@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from modyn.config.schema.sampling.downsampling_config import CraigDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
@@ -17,8 +19,9 @@ class CraigDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.greedy = downsampling_config.greedy
         self.remote_downsampling_strategy_name = "RemoteCraigDownsamplingStrategy"
 
-    def _build_downsampling_params(self) -> dict:
-        config = super()._build_downsampling_params()
+    @cached_property
+    def downsampling_params(self) -> dict:
+        config = super().downsampling_params
         config["selection_batch"] = self.selection_batch
         config["balance"] = self.balance
         config["greedy"] = self.greedy
