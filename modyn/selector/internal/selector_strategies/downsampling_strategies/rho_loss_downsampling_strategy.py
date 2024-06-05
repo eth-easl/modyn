@@ -29,9 +29,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
         # The choice of the selection strategy does not matter as long as it does not downsample data
         # at the trainer server. (We don't want to further select on holdout set)
-        self.IL_MODEL_DUMMY_SELECTION_STRATEGY = NewDataStrategyConfig(
-            maximum_keys_in_memory=maximum_keys_in_memory,
-            tail_triggers=0
+        self.il_model_dummy_selection_strategy = NewDataStrategyConfig(
+            maximum_keys_in_memory=maximum_keys_in_memory, tail_triggers=0
         )
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
@@ -93,7 +92,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             model_class_name=self.il_training_config.il_model_id,
             model_config=json.dumps(self.il_training_config.il_model_config),
             amp=self.il_training_config.amp,
-            selection_strategy=self.IL_MODEL_DUMMY_SELECTION_STRATEGY.model_dump_json(by_alias=True),
+            selection_strategy=self.il_model_dummy_selection_strategy.model_dump_json(by_alias=True),
             data_config=data_config_str,
             full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
