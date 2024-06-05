@@ -39,6 +39,7 @@ training:
   lr_scheduler:
     name: "StepLR"
     optimizers: ["default"]
+    step_every: batch
     config:
       step_size: 10
       gamma: 0.1

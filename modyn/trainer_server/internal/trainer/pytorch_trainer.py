@@ -172,7 +172,9 @@ class PytorchTrainer:
             self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
             self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
 
+        self._step_lr_every: str | None = None
         self._setup_lr_scheduler(training_info)
+
         self._info("LR scheduler created.")
 
         # setup dataloaders
@@ -200,8 +202,6 @@ class PytorchTrainer:
         self._callbacks: dict[MetricType, Any] = {
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
-
-        self._step_lr_every = training_info.lr_scheduler.get("step_every", "batch")
 
     def _persist_pipeline_log(self) -> None:
         if "PYTEST_CURRENT_TEST" in os.environ:
@@ -271,6 +271,7 @@ class PytorchTrainer:
     def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
         self._lr_scheduler = None
         if training_info.lr_scheduler:
+            self._step_lr_every = training_info.lr_scheduler["step_every"]
 
             config_dict = self._update_lr_config_dict(training_info.lr_scheduler["config"])
 
@@ -397,6 +398,7 @@ class PytorchTrainer:
     def _step_lr_if_necessary(self, is_batch: bool) -> None:
         if self._lr_scheduler is None:
             return
+        assert self._step_lr_every is not None  # for mypy
 
         if is_batch and self._step_lr_every == "batch":
             self._lr_scheduler.step()

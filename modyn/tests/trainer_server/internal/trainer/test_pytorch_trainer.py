@@ -192,6 +192,7 @@ def get_training_info(
         lr_scheduler_config = {
             "name": "StepLR",
             "source": "PyTorch",
+            "step_every": "batch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
             "config": {"step_size": 10},
         }
@@ -199,6 +200,7 @@ def get_training_info(
         lr_scheduler_config = {
             "name": "custom_scheduler",
             "source": "Custom",
+            "step_every": "batch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1", "opt2"],
             "config": {},
         }
@@ -206,6 +208,7 @@ def get_training_info(
         lr_scheduler_config = {
             "name": "CosineAnnealingLR",
             "source": "PyTorch",
+            "step_every": "batch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
             "config": {"T_max": "MODYN_NUM_BATCHES"},
         }
