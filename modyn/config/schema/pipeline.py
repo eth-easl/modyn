@@ -434,8 +434,9 @@ TriggerConfig = Annotated[
 # ---------------------------------------------------- EVALUATION ---------------------------------------------------- #
 
 
-class BaseMetricModel(ModynBaseModel):
+class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
+    config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
     evaluation_transformer_function: str = Field(
         "",
         description="A function used to transform the model output before evaluation.",
@@ -458,27 +459,20 @@ class BaseMetricModel(ModynBaseModel):
             return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
         return None
 
-class F1ScoreModel(BaseMetricModel):
-    name: Literal["F1Score"]
-    num_classes: int = Field(description="The number of classes in the pipeline")
-    average: Literal["macro", "micro", "binary", "weighted"] = Field(default="macro", description="Type of F1-score to be computed.")
-    pos_label: int = Field(default=1, description="Label of the positive class in case of binary F1 score.")
-
     @model_validator(mode="after")
-    def binary_num_classes(self) -> Self:
-        if self.average == "binary" and self.num_classes != 2:
-            raise ValueError("Must only have 2 classes for binary F1-score")
+    def can_instantiate_metric(self) -> Self:
+        # We have to import the MetricFactory here to avoid issues with the multiprocessing context
+        # If we move it up, then we'll have `spawn` everywhere, and then the unit tests on Github
+        # are way too slow.
+        # pylint: disable-next=wrong-import-position,import-outside-toplevel
+        from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
+        try:
+            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
+        except NotImplementedError as exc:
+            raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
 
-class AccuracyModel(BaseMetricModel):
-    name: Literal["Accuracy"]
+        return self
 
-class RocAucModel(BaseMetricModel):
-    name: Literal["RocAuc"]
-
-
-MetricModel = Annotated[
-    Union[AccuracyModel, F1ScoreModel, RocAucModel], Field(discriminator="name")
-]
 
 class MatrixEvalStrategyConfig(ModynBaseModel):
     eval_every: str = Field(
@@ -543,7 +537,7 @@ class EvalDataConfig(DataConfig):
     dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
     )
-    metrics: List[MetricModel] = Field(
+    metrics: List[Metric] = Field(
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )

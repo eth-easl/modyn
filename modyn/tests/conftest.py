@@ -22,7 +22,7 @@ from modyn.config.schema.pipeline import (
     FullModelStrategy,
     MatrixEvalStrategyConfig,
     MatrixEvalStrategyModel,
-    MetricModel,
+    Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
@@ -193,7 +193,7 @@ def pipeline_evaluation_config(eval_strategies_config: MatrixEvalStrategyModel) 
                 bytes_parser_function="def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 dataloader_workers=2,
                 batch_size=64,
-                metrics=[MetricModel(name="Accuracy")],
+                metrics=[Metric(name="Accuracy")],
             )
         ],
     )

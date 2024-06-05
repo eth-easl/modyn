@@ -38,7 +38,7 @@ from .schema.pipeline import (  # noqa: F401
     FullModelStrategy,
     IncrementalModelStrategy,
     LrSchedulerConfig,
-    MetricModel,
+    Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
