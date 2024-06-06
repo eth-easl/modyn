@@ -1,4 +1,4 @@
-# CLOC Data
+# CGLM Dataset
 
 In this directory, you can find the files necessary to run experiments with the CGLM dataset. 
 This dataset contains pictures of landmarks (e.g., the Montblanc) over time.
