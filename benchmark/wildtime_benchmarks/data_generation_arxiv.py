@@ -15,20 +15,6 @@ def main():
     ArXivDownloader(args.dir).store_data(args.all, args.dummyyear)
 
 
-# There are some lines in the train dataset that are corrupted, i.e. the csv file wrapper cannot properly read the data.
-# We remove these lines from the dataset.
-corrupted_idx_dict = {
-    2007: [33213],
-    2008: [22489],
-    2009: [64621, 165454],
-    2015: [42007, 94935],
-    2016: [111398],
-    2019: [41309, 136814],
-    2020: [102074],
-    2021: [32013, 55660]
-}
-
-
 class ArXivDownloader(Dataset):
     time_steps = [i for i in range(2007, 2023)]
     input_dim = 55
@@ -77,7 +63,6 @@ class ArXivDownloader(Dataset):
                 return rows
 
             train_year_rows = get_split_by_id(0)
-            train_year_rows = self.filter_corrupted_lines(year, train_year_rows)
             train_file = os.path.join(train_dir, f"{year}.csv")
             with open(train_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(train_year_rows))
@@ -119,18 +104,6 @@ class ArXivDownloader(Dataset):
                 os.utime(test_dummy_file, (year_timestamp, year_timestamp))
 
         os.remove(os.path.join(self.path, "arxiv.pkl"))
-
-    @staticmethod
-    def filter_corrupted_lines(year, rows):
-        if year in corrupted_idx_dict:
-            corrupted_idx = corrupted_idx_dict[year]
-            goodlines = []
-            for i, l in enumerate(rows):
-                if i not in corrupted_idx:
-                    goodlines.append(l)
-            return goodlines
-        return rows
-
 
 if __name__ == "__main__":
     main()

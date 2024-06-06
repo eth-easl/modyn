@@ -13,7 +13,7 @@ class Pipeline(MetadataBase):
     pipeline_id = Column("pipeline_id", Integer, primary_key=True)
     num_workers = Column("num_workers", Integer, nullable=False)
     selection_strategy = Column("selection_strategy", Text, nullable=False)
-    auxiliary_pipeline_id = Column("auxilary_pipeline_id", Integer, default=None, nullable=True)
+    auxiliary_pipeline_id = Column("auxiliary_pipeline_id", Integer, default=None, nullable=True)
     data_config = Column("data_config", Text, nullable=False)
     model_class_name = Column("model_class_name", String(length=50), nullable=False)
     model_config = Column("model_config", String(length=2000), nullable=False)

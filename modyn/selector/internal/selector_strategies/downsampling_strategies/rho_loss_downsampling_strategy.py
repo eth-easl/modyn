@@ -80,7 +80,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return rho_pipeline_id, DataConfig.model_validate_json(data_config_str)
 
     def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection, data_config_str: str) -> int:
-        # Actually we don't need to store configs in the database as we just need the existence of the rho pipline.
+        # Actually we don't need to store configs in the database as we just need the existence of the rho pipeline.
         # We fetch configs directly from the object fields.
         # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
         rho_pipeline_id = database.register_pipeline(
