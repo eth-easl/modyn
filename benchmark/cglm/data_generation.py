@@ -76,7 +76,7 @@ def main():
     label_type_to_column = {"landmark": 'landmark_id', "supercategory": "supercategory_label", "hierarchical": "hierarchical_label_label"}
     label_column = label_type_to_column[args.labeltype]
 
-    df = pd.read_csv("cglm_labels_timestamps_clean.csv")
+    df = pd.read_csv(args.metadata)
     df = df[df["clean"] == args.clean]
     df = df[df[label_column].notnull()]
     label_counts = df[label_column].value_counts()
