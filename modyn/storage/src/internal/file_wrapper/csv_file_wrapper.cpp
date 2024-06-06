@@ -104,7 +104,10 @@ void CsvFileWrapper::set_file_path(const std::string& path) {
 
   stream_ = filesystem_wrapper_->get_stream(path);
 
-  doc_ = rapidcsv::Document(*stream_, label_params_, rapidcsv::SeparatorParams(separator_));
+  auto sepParams = rapidcsv::SeparatorParams(separator_);
+  sepParams.mQuoteChar = quote_;
+  sepParams.mQuotedLinebreaks = allowQuotedLinebreaks_;
+  doc_ = rapidcsv::Document(*stream_, label_params_, sepParams);
 }
 
 FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }

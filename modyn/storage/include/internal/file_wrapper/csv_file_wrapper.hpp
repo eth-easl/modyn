@@ -24,6 +24,18 @@ class CsvFileWrapper : public FileWrapper {
       separator_ = ',';
     }
 
+    if (file_wrapper_config_["quote_char"]) {
+      quote_ = file_wrapper_config_["quote_char"].as<char>();
+    } else {
+      quote_ = '\0';  // effectively disables quoting
+    }
+
+    if (file_wrapper_config_["quoted_linebreaks"]) {
+      allowQuotedLinebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
+    } else {
+      allowQuotedLinebreaks_ = true;
+    }
+
     bool ignore_first_line = false;
     if (file_wrapper_config_["ignore_first_line"]) {
       ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
@@ -64,7 +76,8 @@ class CsvFileWrapper : public FileWrapper {
   FileWrapperType get_type() override;
 
  private:
-  char separator_;
+  char separator_, quote_;
+  bool allowQuotedLinebreaks_ = true;
   uint64_t label_index_;
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
