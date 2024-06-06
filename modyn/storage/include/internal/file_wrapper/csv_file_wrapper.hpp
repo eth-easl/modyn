@@ -46,12 +46,8 @@ class CsvFileWrapper : public FileWrapper {
     ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
 
     validate_file_extension();
-
     label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
-
-    stream_ = filesystem_wrapper_->get_stream(path);
-
-    doc_ = rapidcsv::Document(*stream_, label_params_, rapidcsv::SeparatorParams(separator_));
+    setup_document(path);
   }
 
   ~CsvFileWrapper() override {
@@ -64,6 +60,7 @@ class CsvFileWrapper : public FileWrapper {
   CsvFileWrapper(CsvFileWrapper&&) = default;
   CsvFileWrapper& operator=(CsvFileWrapper&&) = default;
 
+  void setup_document(const std::string& path);
   uint64_t get_number_of_samples() override;
   int64_t get_label(uint64_t index) override;
   std::vector<int64_t> get_all_labels() override;

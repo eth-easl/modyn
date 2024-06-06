@@ -8,6 +8,14 @@
 
 using namespace modyn::storage;
 
+void CsvFileWrapper::setup_document(const std::string& path) {
+  stream_ = filesystem_wrapper_->get_stream(path);
+  auto sep_params = rapidcsv::SeparatorParams(separator_);
+  sep_params.mQuoteChar = quote_;
+  sep_params.mQuotedLinebreaks = allow_quoted_linebreaks_;
+  doc_ = rapidcsv::Document(*stream_, label_params_, sep_params);
+}
+
 void CsvFileWrapper::validate_file_extension() {
   if (file_path_.substr(file_path_.find_last_of('.') + 1) != "csv") {
     FAIL("The file extension must be .csv");
@@ -102,12 +110,7 @@ void CsvFileWrapper::set_file_path(const std::string& path) {
     stream_->close();
   }
 
-  stream_ = filesystem_wrapper_->get_stream(path);
-
-  auto sep_params = rapidcsv::SeparatorParams(separator_);
-  sep_params.mQuoteChar = quote_;
-  sep_params.mQuotedLinebreaks = allow_quoted_linebreaks_;
-  doc_ = rapidcsv::Document(*stream_, label_params_, sep_params);
+  setup_document(path);
 }
 
 FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }
