@@ -6,6 +6,7 @@ import io
 import itertools
 import json
 import logging
+import math
 import multiprocessing as mp
 import os
 import pathlib
@@ -18,13 +19,14 @@ from typing import Any, Iterable, Literal, Optional, Tuple, Union
 import grpc
 import numpy as np
 import torch
-
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
+    GetNumberOfSamplesRequest,
     GetSelectionStrategyRequest,
+    NumberOfSamplesResponse,
     SelectionStrategyResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -91,9 +93,6 @@ class PytorchTrainer:
         self._setup_optimizers(training_info)
         self._info("Model and optimizer created.")
 
-        self._setup_lr_scheduler(training_info)
-        self._info("LR scheduler created.")
-
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
 
@@ -154,6 +153,15 @@ class PytorchTrainer:
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
+        self._expected_num_batches = -1
+        self._expected_num_epochs = -1
+        self._calc_expected_sizes(downsampling_enabled)
+
+        self._step_lr_every: str | None = None
+        self._setup_lr_scheduler(training_info)
+
+        self._info("LR scheduler created.")
+
         # setup dataloaders
         self._info("Setting up data loaders.")
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
@@ -212,7 +220,7 @@ class PytorchTrainer:
             # assertion since model validation by pydantic should catch this.
             assert self._downsampler.supports_bts, "The downsampler does not support batch then sample"
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
-            post_downsampling_size = max(int(self._downsampler.downsampling_ratio * self._batch_size / 100), 1)
+            post_downsampling_size = max((self._downsampler.downsampling_ratio * self._batch_size) // 100, 1)
             assert post_downsampling_size < self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
@@ -222,6 +230,7 @@ class PytorchTrainer:
                 )
             batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
+        trained_batches = 0
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
@@ -258,12 +267,6 @@ class PytorchTrainer:
 
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
-
-                # TODO(#163): where to perform lr_scheduler.step? make it configurable
-                if self._lr_scheduler is not None:
-                    self._lr_scheduler.step()
-
-                pre_downsampling_size = target.shape[0]
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
@@ -309,6 +312,9 @@ class PytorchTrainer:
 
                 self._scaler.update()
                 stopw.stop("OptimizerStep")
+                trained_batches += 1
+
+                self._step_lr_if_necessary(True)
 
                 if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
                     stopw.start("Checkpoint", resume=True)
@@ -316,7 +322,7 @@ class PytorchTrainer:
                     self.save_state(checkpoint_file_name, batch_number)
                     stopw.stop("Checkpoint")
 
-                self._num_samples += pre_downsampling_size
+                self._num_samples += self._batch_size
 
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
@@ -329,6 +335,8 @@ class PytorchTrainer:
                     break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
+
+            self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
                 self._log["epochs"][epoch]["BatchTimings"] = batch_timings
@@ -374,6 +382,7 @@ class PytorchTrainer:
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
+        self._assert_training_size(epoch, trained_batches)
         self._load_dataset_log()
         self._persist_pipeline_log()
 
@@ -584,6 +593,17 @@ class PytorchTrainer:
 
         return retrieve_weights_from_dataloader, weighted_optimization
 
+    def _step_lr_if_necessary(self, is_batch: bool) -> None:
+        if self._lr_scheduler is None:
+            return
+        assert self._step_lr_every is not None  # for mypy
+
+        if is_batch and self._step_lr_every == "batch":
+            self._lr_scheduler.step()
+
+        if not is_batch and self._step_lr_every == "epoch":
+            self._lr_scheduler.step()
+
     # ------------------------------------------------------ IO ------------------------------------------------------ #
 
     def connect_to_selector(self, selector_address: str) -> SelectorStub:
@@ -645,6 +665,14 @@ class PytorchTrainer:
                 raise ValueError("Unknown message in the status query queue")
         except queue.Empty:
             pass
+
+    def get_num_samples_in_trigger(self) -> int:
+        assert self.selector_stub is not None
+
+        req = GetNumberOfSamplesRequest(pipeline_id=self.pipeline_id, trigger_id=self.trigger_id)
+        res: NumberOfSamplesResponse = self.selector_stub.get_number_of_samples(req)
+
+        return res.num_samples
 
     # ----------------------------------------------- State management ----------------------------------------------- #
 
@@ -751,21 +779,36 @@ class PytorchTrainer:
                 optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
 
+    def _update_lr_config_dict(self, lr_scheduler_config: dict[str, Any]) -> dict[str, Any]:
+        for key, value in lr_scheduler_config.items():
+            if isinstance(value, dict):
+                self._update_lr_config_dict(value)
+            elif value == "MODYN_NUM_BATCHES":
+                lr_scheduler_config[key] = self._expected_num_batches
+            elif value == "MODYN_NUM_EPOCHS":
+                lr_scheduler_config[key] = self._expected_num_epochs
+
+        return lr_scheduler_config
+
     def _setup_lr_scheduler(self, training_info: TrainingInfo) -> None:
         self._lr_scheduler = None
         if training_info.lr_scheduler:
+            self._step_lr_every = training_info.lr_scheduler["step_every"]
+
+            config_dict = self._update_lr_config_dict(training_info.lr_scheduler["config"])
+
             if training_info.lr_scheduler["source"] == "Custom":
                 lr_scheduler_module = dynamic_module_import("modyn.trainer_server.custom_lr_schedulers")
                 custom_lr_scheduler = getattr(lr_scheduler_module, training_info.lr_scheduler["name"])
                 optimizers = [self._optimizers[opt] for opt in training_info.lr_scheduler["optimizers"]]
-                self._lr_scheduler = custom_lr_scheduler(optimizers, training_info.lr_scheduler["config"])
+                self._lr_scheduler = custom_lr_scheduler(optimizers, config_dict)
             elif training_info.lr_scheduler["source"] == "PyTorch":
                 torch_lr_scheduler = getattr(torch.optim.lr_scheduler, training_info.lr_scheduler["name"])
                 if len(training_info.lr_scheduler["optimizers"]) > 1:
                     self._warning("Provided a LR scheduler from PyTorch, but multiple optimizers")
                 self._lr_scheduler = torch_lr_scheduler(
                     self._optimizers[training_info.lr_scheduler["optimizers"][0]],
-                    **training_info.lr_scheduler["config"],
+                    **config_dict,
                 )
             else:
                 raise ValueError(
@@ -778,6 +821,28 @@ class PytorchTrainer:
             raise ValueError("The seed must be an integer in the range [0,100]")
         # seed the trainer server
         seed_everything(seed)
+
+    def _calc_expected_sizes(self, downsampling_enabled: bool) -> None:
+        num_samples_in_trigger = self.get_num_samples_in_trigger()
+        num_samples_per_worker = num_samples_in_trigger // max(self._num_dataloaders, 1)
+        batches_per_worker = num_samples_per_worker // self._batch_size
+
+        batches_per_epoch = batches_per_worker * self._num_dataloaders  # We reuse this later
+        self._expected_num_batches = batches_per_epoch
+
+        num_samples_per_epoch = (
+            self._expected_num_batches * self._batch_size
+        )  # scale up again to multiples of batch size
+
+        if downsampling_enabled:
+            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
+
+        self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
+        self._expected_num_epochs = self.epochs_per_trigger
+        if self.num_samples_to_pass > 0:
+            self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
+            self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
 
     # --------------------------------------------------- Sampling --------------------------------------------------- #
 
@@ -872,6 +937,26 @@ class PytorchTrainer:
         )
         assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
         assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
+
+    def _assert_training_size(self, epoch: int, trained_batches: int) -> None:
+        if self._lr_scheduler is not None:
+            assert self._expected_num_epochs == epoch + 1, (
+                f"Something went wrong! We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+            assert self._expected_num_batches == trained_batches, (
+                f"Something went wrong! We expected to train on {self._expected_num_batches},"
+                + f" but trained for {trained_batches} batches!"
+                + "\nWe fail since we trained using a LR scheduler that might depend on this."
+            )
+        else:
+            if self._expected_num_epochs != epoch + 1 or self._expected_num_batches != trained_batches:
+                self._error(
+                    "Inconsistent expected batches. Not failing since no lr scheduler was used.\n"
+                    + f" We expected {self._expected_num_epochs}, but trained for {epoch + 1} epochs!\n"
+                    + f"We expected to train on {self._expected_num_batches},"
+                    + f" but trained for {trained_batches} batches!"
+                )
 
     # ---------------------------------------------------- Cleanup --------------------------------------------------- #
 

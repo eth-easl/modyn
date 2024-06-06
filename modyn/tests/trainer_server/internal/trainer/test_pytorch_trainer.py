@@ -192,6 +192,7 @@ def get_training_info(
         lr_scheduler_config = {
             "name": "StepLR",
             "source": "PyTorch",
+            "step_every": "batch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
             "config": {"step_size": 10},
         }
@@ -199,8 +200,17 @@ def get_training_info(
         lr_scheduler_config = {
             "name": "custom_scheduler",
             "source": "Custom",
+            "step_every": "batch",
             "optimizers": ["default"] if num_optimizers == 1 else ["opt1", "opt2"],
             "config": {},
+        }
+    elif lr_scheduler == "torch_cosine":
+        lr_scheduler_config = {
+            "name": "CosineAnnealingLR",
+            "source": "PyTorch",
+            "step_every": "batch",
+            "optimizers": ["default"] if num_optimizers == 1 else ["opt1"],
+            "config": {"T_max": "MODYN_NUM_BATCHES"},
         }
     else:
         lr_scheduler_config = {}
@@ -256,6 +266,7 @@ def get_training_info(
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.dynamic_module_import")
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
+@patch.object(PytorchTrainer, "get_num_samples_in_trigger")
 @patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def get_mock_trainer(
     query_queue: mp.Queue,
@@ -267,6 +278,7 @@ def get_mock_trainer(
     lr_scheduler: str,
     transform_label: bool,
     mock_weights: MagicMock,
+    mock_get_num_samples: MagicMock,
     mock_selection_strategy: MagicMock,
     mock_selector_connection: MagicMock,
     lr_scheduler_dynamic_module_patch: MagicMock,
@@ -280,6 +292,7 @@ def get_mock_trainer(
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
+    mock_get_num_samples.return_value = batch_size * 100
 
     if downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
         mock_selection_strategy.return_value = (
@@ -783,7 +796,9 @@ def test_train(
 @patch.object(PytorchTrainer, "connect_to_selector", return_value=None)
 @patch.object(PytorchTrainer, "get_selection_strategy", return_value=(False, "", {}))
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+@patch.object(PytorchTrainer, "get_num_samples_in_trigger", return_value=42)
 def test_create_trainer_with_exception(
+    test_get_num_samples_in_trigger,
     test_weighs_handling,
     test_selector_connection,
     test_election_strategy,
@@ -938,3 +953,28 @@ def test_train_batch_then_sample_accumulation(
 
         assert expected_data.shape[0] == data.shape[0]
         assert torch.allclose(data, expected_data)
+
+
+@patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
+@patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+def test_lr_scheduler_init(
+    test_weights_handling,
+    test_cleaning,
+    test_step,
+    test_cleanup,
+    test_send_metadata,
+):
+    query_status_queue = mp.Queue()
+    status_queue = mp.Queue()
+    # torch_cosine initializes a CosineAnnealingLR scheduler where T_max should be equal to the number of batches
+    # Due to mock_get_num_samples.return_value = batch_size * 100 in get_mock_trainer, this is 100.
+
+    trainer = get_mock_trainer(
+        query_status_queue, status_queue, False, False, None, 2, "torch_cosine", False, batch_size=8
+    )
+
+    assert trainer._lr_scheduler.T_max == 100
