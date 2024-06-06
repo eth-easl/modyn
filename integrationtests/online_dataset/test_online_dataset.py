@@ -294,6 +294,7 @@ def test_dataset_impl(
         shuffle,
         None,
         None,
+        drop_last=False,  # To allow for consistent checks
     )
 
     expected_min_batches = math.floor(len(items) / batch_size)
