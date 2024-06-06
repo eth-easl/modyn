@@ -31,9 +31,9 @@ class CsvFileWrapper : public FileWrapper {
     }
 
     if (file_wrapper_config_["quoted_linebreaks"]) {
-      allowQuotedLinebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
+      allow_quoted_linebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
     } else {
-      allowQuotedLinebreaks_ = true;
+      allow_quoted_linebreaks_ = true;
     }
 
     bool ignore_first_line = false;
@@ -77,7 +77,7 @@ class CsvFileWrapper : public FileWrapper {
 
  private:
   char separator_, quote_;
-  bool allowQuotedLinebreaks_ = true;
+  bool allow_quoted_linebreaks_ = true;
   uint64_t label_index_;
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;

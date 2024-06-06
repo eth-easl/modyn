@@ -106,7 +106,7 @@ void CsvFileWrapper::set_file_path(const std::string& path) {
 
   auto sepParams = rapidcsv::SeparatorParams(separator_);
   sepParams.mQuoteChar = quote_;
-  sepParams.mQuotedLinebreaks = allowQuotedLinebreaks_;
+  sepParams.mQuotedLinebreaks = allow_quoted_linebreaks_;
   doc_ = rapidcsv::Document(*stream_, label_params_, sepParams);
 }
 
