@@ -1,8 +1,10 @@
 # pylint: disable=unused-argument
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import sys
+import threading
 import traceback
 import types
 from datetime import datetime, timedelta
@@ -51,6 +53,7 @@ from typing_extensions import Concatenate, ParamSpec
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
+logging_lock = threading.Lock()
 
 EVAL_RESULT_WRITER_CLASSES: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
     "json": JsonResultWriter,
@@ -115,28 +118,29 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 """For generators we should only report logs and tracking info once the generator is finalized.
                 I.e. fully iterated or garbage collected. In the non-generator case we can report immediately.
                 """
-                # if stage reported additional logs, we make the log available to the pipeline in a dataframe
-                if track and stage_log.info:
-                    # ensure df exists
-                    old_df = state.tracking.get(stage_log.id, None)
-                    if (new_rows := stage_log.df(extended=True)) is not None:
-                        state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
+                with logging_lock:
+                    # if stage reported additional logs, we make the log available to the pipeline in a dataframe
+                    if track and stage_log.info:
+                        # ensure df exists
+                        old_df = state.tracking.get(stage_log.id, None)
+                        if (new_rows := stage_log.df(extended=True)) is not None:
+                            state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
 
-                # record logs
+                    # record logs
+                    if log:
+                        logs.supervisor_logs.stage_runs.append(stage_log)
+                        logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
+            with logging_lock:
+                state.stage = stage
+                if stage not in state.seen_pipeline_stages:
+                    _pipeline_stage_parents[stage.name] = (
+                        len(state.seen_pipeline_stages),
+                        _pipeline_stage_parents[stage.name][1],
+                    )
+                    state.seen_pipeline_stages.add(stage)
+
                 if log:
-                    logs.supervisor_logs.stage_runs.append(stage_log)
-                    logger.info(f"[pipeline {state.pipeline_id}] Finished <{stage.name}>.")
-
-            state.stage = stage
-            if stage not in state.seen_pipeline_stages:
-                _pipeline_stage_parents[stage.name] = (
-                    len(state.seen_pipeline_stages),
-                    _pipeline_stage_parents[stage.name][1],
-                )
-                state.seen_pipeline_stages.add(stage)
-
-            if log:
-                logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
+                    logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
 
             # execute stage
             epoch_nanos_start = current_time_micros()
@@ -698,6 +702,24 @@ class PipelineExecutor:
 
     # Evaluation
 
+    def process_eval_interval(self, s, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end):
+        results = self._single_evaluation(
+            s, self.logs, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end
+        )
+        if results:
+            self._store_evaluation_results(
+                s,
+                self.logs,
+                trigger_id,
+                model_id,
+                eval_dataset_config.dataset_id,
+                results,
+                interval_start,
+                interval_end,
+            )
+
+
+
     @pipeline_stage(PipelineStage.EVALUATE, parent=PipelineStage.HANDLE_SINGLE_TRIGGER, track=True)
     def _evaluate_and_store_results(
         self,
@@ -722,22 +744,25 @@ class PipelineExecutor:
             eval_strategy_config.config.model_dump(by_alias=True)
         )
 
-        for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
-            for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
-                results = self._single_evaluation(
-                    s, self.logs, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end
-                )
-                if results:
-                    self._store_evaluation_results(
+        with ThreadPoolExecutor(max_workers=15) as pool:
+            futures = []
+            for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
+                for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
+                    future = pool.submit(
+                        self.process_eval_interval,
                         s,
-                        self.logs,
                         trigger_id,
+                        training_id,
                         model_id,
-                        eval_dataset_config.dataset_id,
-                        results,
+                        eval_dataset_config,
                         interval_start,
-                        interval_end,
+                        interval_end
                     )
+                    futures.append(future)
+
+            # Wait for all futures to complete
+            for future in futures:
+                future.result()
 
     @pipeline_stage(PipelineStage.EVALUATE_SINGLE, parent=PipelineStage.EVALUATE, track=True)
     def _single_evaluation(
