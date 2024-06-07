@@ -6,7 +6,7 @@ import pathlib
 import random
 import shutil
 import time
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Tuple
 
 import grpc
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
