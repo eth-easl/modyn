@@ -35,7 +35,7 @@ def gen_yearbook_config(
         training=TrainingConfig(
             gpus=1,
             device="cuda:0",
-            dataloader_workers=2,
+            dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
             batch_size=64,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
@@ -71,23 +71,23 @@ def gen_yearbook_config(
         evaluation=EvaluationConfig(
             eval_strategy=MatrixEvalStrategyModel(
                 name="MatrixEvalStrategy",
-                config=MatrixEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=8000000),
+                config=MatrixEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=7258000),
             ),
             device="cuda:0",
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(
-                    dataset_id="yearbook_test",
+                    dataset_id="yearbook-test",
                     bytes_parser_function=(
+                        "import warnings\n"
                         "import torch\n"
-                        "import numpy as np\n"
                         "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
                         "    with warnings.catch_warnings():\n"
                         "       warnings.simplefilter('ignore', category=UserWarning)\n"
                         "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
                     ),
                     batch_size=64,
-                    dataloader_workers=2,
+                    dataloader_workers=1,
                     metrics=[
                         Metric(
                             name="Accuracy",
@@ -126,7 +126,58 @@ def gen_yearbook_config(
                             config={"num_classes": 2, "average": "micro"},
                         ),
                     ],
-                )
+                ),
+                EvalDataConfig(
+                    dataset_id="yearbook",
+                    bytes_parser_function=(
+                        "import warnings\n"
+                        "import torch\n"
+                        "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
+                        "    with warnings.catch_warnings():\n"
+                        "       warnings.simplefilter('ignore', category=UserWarning)\n"
+                        "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
+                    ),
+                    batch_size=64,
+                    dataloader_workers=1,
+                    metrics=[
+                        Metric(
+                            name="Accuracy",
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "    return torch.argmax(model_output, dim=-1)"
+                            ),
+                            config={"num_classes": 2},
+                        ),
+                        Metric(
+                            name="F1Score",
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            config={"num_classes": 2, "average": "weighted"},
+                        ),
+                        Metric(
+                            name="F1Score",
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            config={"num_classes": 2, "average": "macro"},
+                        ),
+                        Metric(
+                            name="F1Score",
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            config={"num_classes": 2, "average": "micro"},
+                        ),
+                    ],
+                ),
             ],
         ),
     )
