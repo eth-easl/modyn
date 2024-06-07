@@ -1,5 +1,6 @@
 """Evaluator GRPC servicer."""
 
+import gc
 import json
 import logging
 import multiprocessing as mp
@@ -347,4 +348,5 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
 
+        gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))
