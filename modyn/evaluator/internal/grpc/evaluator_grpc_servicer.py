@@ -16,6 +16,8 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
+    EvaluationCleanupRequest,
+    EvaluationCleanupResponse,
     EvaluationData,
     EvaluationResultRequest,
     EvaluationResultResponse,
@@ -317,3 +319,32 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         for name, result in metric_results:
             evaluation_data.append(EvaluationData(metric=name, result=result))
         return EvaluationResultResponse(valid=True, evaluation_data=evaluation_data)
+
+    def cleanup_evaluations(
+        self, request: EvaluationCleanupRequest, context: grpc.ServicerContext
+    ) -> EvaluationCleanupResponse:
+        evaluation_ids = request.evaluation_ids
+        logger.info(f"Received cleanup request for evaluations {evaluation_ids}.")
+
+        already_cleaned = [
+            evaluation_id for evaluation_id in evaluation_ids if evaluation_id not in self._evaluation_process_dict
+        ]
+        not_yet_cleaned = [
+            evaluation_id for evaluation_id in evaluation_ids if evaluation_id in self._evaluation_process_dict
+        ]
+
+        for evaluation_id in not_yet_cleaned:
+            process_handler = self._evaluation_process_dict[evaluation_id].process_handler
+            if process_handler.is_alive():
+                logger.info(f"Clean evaluation {evaluation_id}, which was still running. Cancelling the evaluation.")
+                process_handler.terminate()
+                process_handler.join(timeout=30)
+                if process_handler.is_alive():
+                    process_handler.kill()
+
+            self._evaluation_process_dict.pop(evaluation_id)
+
+        for e_id in evaluation_ids:
+            self._evaluation_dict.pop(e_id)
+
+        return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))

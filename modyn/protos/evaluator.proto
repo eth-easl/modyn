@@ -6,6 +6,7 @@ service Evaluator {
   rpc evaluate_model(EvaluateModelRequest) returns (EvaluateModelResponse) {}
   rpc get_evaluation_status(EvaluationStatusRequest) returns (EvaluationStatusResponse) {}
   rpc get_evaluation_result(EvaluationResultRequest) returns (EvaluationResultResponse) {}
+  rpc cleanup_evaluations(EvaluationCleanupRequest) returns (EvaluationCleanupResponse) {}
 }
 
 message DatasetInfo {
@@ -73,7 +74,11 @@ message EvaluationData {
 
 message EvaluationResultRequest { int32 evaluation_id = 1; }
 
+message EvaluationCleanupRequest { repeated int32 evaluation_ids = 1; }
+
 message EvaluationResultResponse {
   bool valid = 1;
   repeated EvaluationData evaluation_data = 2;
 }
+
+message EvaluationCleanupResponse { repeated int32 succeeded = 1; }
