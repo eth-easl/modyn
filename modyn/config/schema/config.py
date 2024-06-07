@@ -64,6 +64,9 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     """
 
     separator: str = Field(",", description="The separator used in CSV files.")
+    quote: str = Field("\\0", description="The quote character used in CSV files.")
+    quoted_linebreaks: bool = Field(True, description="Whether linebreaks are quoted in CSV files.")
+
     label_index: int = Field(
         description=(
             "Column index of the label. For columns 'width, 'height, 'age', 'label' you should set label_index to 3."
