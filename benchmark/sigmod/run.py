@@ -188,7 +188,7 @@ def run_experiment() -> None:
     if not host:
         host = input("Enter the supervisors host address: ") or "localhost"
     if not port:
-        port = int(input("Enter the supervisors port: ") or "50063")
+        port = int(input("Enter the supervisors port: ") or "3000")
 
     run_multiple_pipelines(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),

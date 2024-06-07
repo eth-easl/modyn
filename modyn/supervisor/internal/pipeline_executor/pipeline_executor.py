@@ -744,7 +744,7 @@ class PipelineExecutor:
             eval_strategy_config.config.model_dump(by_alias=True)
         )
 
-        with ThreadPoolExecutor(max_workers=15) as pool:
+        with ThreadPoolExecutor(max_workers=30) as pool:
             futures = []
             for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
                 for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
