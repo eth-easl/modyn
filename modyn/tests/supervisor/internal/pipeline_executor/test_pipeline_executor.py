@@ -698,9 +698,11 @@ def test_run_training_set_num_samples_to_pass(
 
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "cleanup_evaluations")
 @patch.object(GRPCHandler, "store_evaluation_results")
 def test__start_evaluations(
     test_store_evaluation_results: MagicMock,
+    test_cleanup_evaluations: MagicMock,
     test_wait_for_evaluation_completion: MagicMock,
     test_failure: bool,
     dummy_pipeline_args: PipelineExecutionParams,
@@ -749,6 +751,7 @@ def test__start_evaluations(
         if test_failure:
             assert evaluator_stub_mock.evaluate_model.call_count == 3
             assert test_store_evaluation_results.call_count == 2
+            assert test_cleanup_evaluations.call_count == 2
             assert test_wait_for_evaluation_completion.call_count == 2
 
             stage_info = [

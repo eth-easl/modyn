@@ -13,6 +13,8 @@ from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
+    EvaluationCleanupRequest,
+    EvaluationCleanupResponse,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
@@ -366,3 +368,13 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
 
         for result_writer in evaluation_result_writers:
             result_writer.store_results()
+
+    def cleanup_evaluations(self, evaluation_ids: list[int]) -> None:
+        assert self.evaluator is not None
+
+        req = EvaluationCleanupRequest(evaluation_ids=set(evaluation_ids))
+        res: EvaluationCleanupResponse = self.evaluator.cleanup_evaluations(req)
+
+        failed = set(evaluation_ids) - {int(i) for i in res.succeeded}
+        if failed:
+            logger.warning(f"Failed to cleanup evaluations {failed}")

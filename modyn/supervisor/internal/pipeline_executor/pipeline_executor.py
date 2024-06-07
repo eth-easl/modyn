@@ -833,6 +833,7 @@ class PipelineExecutor:
     ) -> None:
         eval_result_writer = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
         self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+        self.grpc.cleanup_evaluations([int(i) for i in evaluation.keys()])
         assert isinstance(eval_result_writer, JsonResultWriter)
 
         log.info = StoreEvaluationInfo(
