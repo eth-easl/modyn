@@ -1,4 +1,4 @@
-from modyn.config import CoresetStrategyConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig
 from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.utils import instantiate_class

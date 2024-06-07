@@ -1,19 +1,8 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
-from modyn.config.schema.config import (
-    DatabaseConfig,
-    DatasetBinaryFileWrapperConfig,
-    DatasetsConfig,
-    EvaluatorConfig,
-    MetadataDatabaseConfig,
-    ModelStorageConfig,
-    ModynConfig,
-    SelectorConfig,
-    StorageConfig,
-    TrainingServerConfig,
-)
 from modyn.config.schema.pipeline import (
+    CheckpointingConfig,
     DataAmountTriggerConfig,
     DataConfig,
     EvalDataConfig,
@@ -27,13 +16,20 @@ from modyn.config.schema.pipeline import (
     NewDataStrategyConfig,
     Pipeline,
     PipelineModelStorageConfig,
-)
-from modyn.config.schema.training.training_config import (
-    CheckpointingConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
     TrainingConfig,
+)
+from modyn.config.schema.pipeline.training.config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
+from modyn.config.schema.system.config import (
+    DatabaseConfig,
+    DatasetBinaryFileWrapperConfig,
+    DatasetsConfig,
+    EvaluatorConfig,
+    MetadataDatabaseConfig,
+    ModelStorageConfig,
+    ModynConfig,
+    SelectorConfig,
+    StorageConfig,
+    TrainingServerConfig,
 )
 
 # --------------------------------------------------- Modyn config --------------------------------------------------- #

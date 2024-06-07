@@ -1,6 +1,6 @@
 from typing import Optional
 
-from modyn.config import PresamplingConfig
+from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractBalancedPresamplingStrategy
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend

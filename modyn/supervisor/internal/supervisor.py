@@ -7,8 +7,8 @@ import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
-from modyn.config.schema.config import ModynConfig
 from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig
+from modyn.config.schema.system.config import ModynConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 

@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 import sqlalchemy
-from modyn.config import PresamplingConfig
+from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
