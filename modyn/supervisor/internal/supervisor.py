@@ -206,7 +206,8 @@ class Supervisor:
             start_timestamp = self.grpc.get_time_at_storage()
             pipeline_id = self.register_pipeline(pipeline_config_model)
             logger.info(f"Pipeline {pipeline_id} registered, start executing.")
-        except Exception:  # pylint: disable=broad-except
+        except Exception as ex:  # pylint: disable=broad-except
+            logger.error(f"Failed to register pipeline: {ex}")
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
