@@ -3,7 +3,7 @@ from typing import Any
 import torch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import Tensor, nn
-from torchvision.models.resnet import BasicBlock, ResNet
+from torchvision.models.resnet import BasicBlock, ResNet, ResNet18_Weights
 
 
 class ResNet18:
@@ -19,7 +19,22 @@ class ResNet18:
 
 class ResNet18Modyn(ResNet, CoresetSupportingModule):
     def __init__(self, model_configuration: dict[str, Any]) -> None:
+        _num_classes = model_configuration.get("num_classes", None)
+        weights = None
+        if model_configuration.get("use_pretrained", False):
+            weights = ResNet18_Weights.verify("ResNet18_Weights.DEFAULT")
+            # We need to initialize the model with the number of classees
+            # in the pretrained weights
+            model_configuration["num_classes"] = len(weights.meta["categories"])
+            del model_configuration["use_pretrained"]  # don't want to forward this to torchvision
+
         super().__init__(BasicBlock, [2, 2, 2, 2], **model_configuration)  # type: ignore
+
+        if weights is not None:
+            self.load_state_dict(weights.get_state_dict(progress=True))
+            if _num_classes is not None:
+                # we loaded pretrained weights - need to update linear layer
+                self.fc = nn.Linear(self.fc.in_features, _num_classes)
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         x = self.conv1(x)
