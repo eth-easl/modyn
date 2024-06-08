@@ -97,7 +97,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
             self.is_warmup = False
 
         presampling_strategy = self.warmup_presampler if self.is_warmup else self.presampling_strategy
-
+        assert presampling_strategy is not None  # satisfy mypy
         trigger_dataset_size = None
         if presampling_strategy.requires_trigger_dataset_size:
             trigger_dataset_size = self._get_trigger_dataset_size()
