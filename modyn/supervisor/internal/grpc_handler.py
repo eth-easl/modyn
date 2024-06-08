@@ -8,7 +8,6 @@ from time import sleep
 from typing import Any, Iterable, Optional, Sequence
 
 import grpc
-
 from modyn.common.benchmark import Stopwatch
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -20,9 +19,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    MetricConfiguration,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (

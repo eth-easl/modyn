@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field, NonNegativeInt, field_validator, model_validator
-from typing_extensions import Self
-
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils import validate_timestr
+from pydantic import Field, NonNegativeInt, field_validator, model_validator
+from typing_extensions import Self
 
 
 class MatrixEvalStrategyConfig(ModynBaseModel):

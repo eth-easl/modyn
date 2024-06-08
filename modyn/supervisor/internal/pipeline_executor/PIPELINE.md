@@ -41,13 +41,8 @@ stateDiagram-v2
                 }
                 state evaluation {
                     [*] --> EVALUATE
-                    EVALUATE --> single_evaluation
-                    state single_evaluation {
-                        [*] --> EVALUATE_SINGLE
-                        EVALUATE_SINGLE --> STORE_EVALUATION_RESULTS
-                        STORE_EVALUATION_RESULTS -->[*]
-                    }
-                    single_evaluation -->  [*]
+                    EVALUATE --> EVALUATE_SINGLE
+                    EVALUATE_SINGLE -->  [*]
                 }
                 train_and_store_model --> evaluation
             }

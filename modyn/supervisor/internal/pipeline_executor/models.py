@@ -280,11 +280,8 @@ class _ModelEvalInfo(StageInfo):
 
 
 class SingleEvaluationInfo(_ModelEvalInfo):
+    results: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str | None = None
-
-
-class StoreEvaluationInfo(_ModelEvalInfo):
-    results: dict[str, Any]
 
     def results_df(self) -> pd.DataFrame:
         """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
@@ -301,7 +298,7 @@ class StoreEvaluationInfo(_ModelEvalInfo):
                     metric["name"],
                     metric["result"],
                 )
-                for metric in self.results["metrics"]
+                for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",
@@ -431,7 +428,7 @@ class SupervisorLogs(BaseModel):
         self.stage_runs.clear()
 
     def merge(self, logs: list[StageLog]) -> SupervisorLogs:
-        self.stage_runs = self.stage_runs + [run for _l in logs for run in _l.stage_runs]
+        self.stage_runs = self.stage_runs + logs
         return self
 
     @property

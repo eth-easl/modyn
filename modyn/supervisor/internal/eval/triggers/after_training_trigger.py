@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import pandas as pd
-from typing_extensions import override
-
 from modyn.supervisor.internal.eval.triggers.eval_trigger import EvalRequest, EvalTrigger
+from typing_extensions import override
 
 
 class AfterTrainingTrigger(EvalTrigger):

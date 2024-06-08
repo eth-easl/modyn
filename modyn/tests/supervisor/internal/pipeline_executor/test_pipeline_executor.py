@@ -11,7 +11,6 @@ from unittest import mock
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
-
 from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
 from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorConfig
 

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import Field, field_validator
-
 from modyn.config.schema.base_model import ModynBaseModel
+from pydantic import Field, field_validator
 
 from ..data import DataConfig
 from .handler import EvalHandlerConfig

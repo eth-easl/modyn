@@ -9,7 +9,6 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig, SupervisorConfig
 from modyn.metadata_database.utils import ModelStorageStrategyConfig

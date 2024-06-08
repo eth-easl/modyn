@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import grpc
 import pytest
-
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationData,
     EvaluationResultRequest,
