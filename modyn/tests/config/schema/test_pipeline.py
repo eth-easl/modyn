@@ -1,23 +1,14 @@
 import pytest
-from modyn.config.schema.pipeline import (
-    EvalStrategyModel,
-    EvaluationConfig,
-    MatrixEvalStrategyConfig,
-    OffsetEvalStrategyConfig,
-)
+from modyn.config.schema.pipeline import EvaluationConfig, OffsetEvalStrategyConfig, SlicingEvalStrategyConfig
 from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from pydantic import TypeAdapter, ValidationError
 
 
-def test_eval_strategy_model():
-    with pytest.raises(ValidationError):
-        TypeAdapter(EvalStrategyModel).validate_python({"name": "unknown"})
-
-
 def test_matrix_eval_strategy_config():
     with pytest.raises(ValidationError):
-        TypeAdapter(MatrixEvalStrategyConfig).validate_python(
+        TypeAdapter(SlicingEvalStrategyConfig).validate_python(
             {
+                "type": "SlicingEvalStrategy",
                 "eval_every": "100s",
                 "eval_start_from": -100,
                 "eval_end_at": 300,
@@ -25,8 +16,9 @@ def test_matrix_eval_strategy_config():
         )
 
     with pytest.raises(ValidationError):
-        TypeAdapter(MatrixEvalStrategyConfig).validate_python(
+        TypeAdapter(SlicingEvalStrategyConfig).validate_python(
             {
+                "type": "SlicingEvalStrategy",
                 "eval_every": "100s",
                 "eval_start_from": 100,
                 "eval_end_at": -300,
@@ -34,8 +26,9 @@ def test_matrix_eval_strategy_config():
         )
 
     with pytest.raises(ValidationError):
-        TypeAdapter(MatrixEvalStrategyConfig).validate_python(
+        TypeAdapter(SlicingEvalStrategyConfig).validate_python(
             {
+                "type": "SlicingEvalStrategy",
                 "eval_every": "100s",
                 "eval_start_from": 300,
                 "eval_end_at": 100,
@@ -43,8 +36,9 @@ def test_matrix_eval_strategy_config():
         )
 
     with pytest.raises(ValidationError):
-        TypeAdapter(MatrixEvalStrategyConfig).validate_python(
+        TypeAdapter(SlicingEvalStrategyConfig).validate_python(
             {
+                "type": "SlicingEvalStrategy",
                 "eval_every": "100s",
                 "eval_start_from": 300,
                 "eval_end_at": 300,
@@ -52,8 +46,9 @@ def test_matrix_eval_strategy_config():
         )
 
     with pytest.raises(ValidationError):
-        TypeAdapter(MatrixEvalStrategyConfig).validate_python(
+        TypeAdapter(SlicingEvalStrategyConfig).validate_python(
             {
+                "type": "SlicingEvalStrategy",
                 "eval_every": "100s10d",
                 "eval_start_from": 100,
                 "eval_end_at": 300,
@@ -97,16 +92,21 @@ def test_offset_eval_strategy_config():
     )
 
 
-def test_evaluation_config_duplicate_dataset_ids():
+def test_evaluation_config_duplicate_dataset_ids() -> None:
     minimal_evaluation_config = {
-        "eval_strategy": {
-            "name": "MatrixEvalStrategy",
-            "config": {
-                "eval_every": "100s",
-                "eval_start_from": 0,
-                "eval_end_at": 300,
-            },
-        },
+        "handlers": [
+            {
+                "execution_time": "after_training",
+                "strategy": {
+                    "type": "SlicingEvalStrategy",
+                    "eval_every": "100s",
+                    "eval_start_from": 0,
+                    "eval_end_at": 300,
+                },
+                "models": "matrix",
+                "datasets": ["MNIST_eval"],
+            }
+        ],
         "device": "cpu",
         "datasets": [
             {

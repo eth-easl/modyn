@@ -68,12 +68,15 @@ selection_strategy:
   storage_backend: database
   processor_type: basic_processor_strategy
 evaluation:
-  eval_strategy:
-    name: "MatrixEvalStrategy"
-    config:
-      eval_every: 1d
-      eval_start_from: 0
-      eval_end_at: 1715094374
+  handlers:
+    - execution_time: after_training
+      strategy:
+        type: SlicingEvalStrategy
+        eval_every: 1d
+        eval_start_from: 0
+        eval_end_at: 1715094374
+      models: matrix
+      datasets: ["mnist"]
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   datasets:

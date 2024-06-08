@@ -8,7 +8,8 @@ from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
 
 
-class MatrixEvalStrategyConfig(ModynBaseModel):
+class SlicingEvalStrategyConfig(ModynBaseModel):
+    type: Literal["SlicingEvalStrategy"] = Field("SlicingEvalStrategy")
     eval_every: str = Field(
         description="The interval length for the evaluation "
         "specified by an integer followed by a time unit (e.g. '100s')."
@@ -32,8 +33,3 @@ class MatrixEvalStrategyConfig(ModynBaseModel):
         if self.eval_start_from >= self.eval_end_at:
             raise ValueError("eval_end_at must be larger than eval_start_from")
         return self
-
-
-class MatrixEvalStrategyModel(ModynBaseModel):
-    name: Literal["MatrixEvalStrategy"]
-    config: MatrixEvalStrategyConfig

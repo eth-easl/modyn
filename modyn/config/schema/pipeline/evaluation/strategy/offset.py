@@ -9,6 +9,7 @@ from pydantic import Field, field_validator
 
 
 class OffsetEvalStrategyConfig(ModynBaseModel):
+    type: Literal["OffsetEvalStrategy"] = Field("OffsetEvalStrategy")
     offsets: List[str] = Field(
         description=(
             "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
@@ -25,8 +26,3 @@ class OffsetEvalStrategyConfig(ModynBaseModel):
                 if not validate_timestr(offset):
                     raise ValueError(f"offset {offset} must be a valid time string")
         return value
-
-
-class OffsetEvalStrategyModel(ModynBaseModel):
-    name: Literal["OffsetEvalStrategy"]
-    config: OffsetEvalStrategyConfig
