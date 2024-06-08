@@ -26,7 +26,7 @@ from modyn.config.schema.training.training_config import LrSchedulerConfig
 
 
 def gen_yearbook_config(
-    config_id: str, num_epochs: int, selection_strategy: SelectionStrategy, lr_scheduler: LrSchedulerConfig | None
+    config_id: str, num_epochs: int, gpu_device: str, selection_strategy: SelectionStrategy, lr_scheduler: LrSchedulerConfig | None
 ) -> ModynPipelineConfig:
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"yearbook_{config_id}", description="Yearbook data selection config", version="0.0.1"),
@@ -34,7 +34,7 @@ def gen_yearbook_config(
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
-            device="cuda:0",
+            device=gpu_device,
             dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
@@ -73,7 +73,7 @@ def gen_yearbook_config(
                 name="MatrixEvalStrategy",
                 config=MatrixEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=7258000),
             ),
-            device="cuda:0",
+            device=gpu_device,
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(

@@ -31,9 +31,12 @@ class AbstractEvaluationMetric(ABC):
         """
         Deserialize the evaluation transform function.
         """
-        self.evaluation_transformer_function = deserialize_function(
-            self.evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
-        )
+        if self.evaluation_transformer != "":
+            self.evaluation_transformer_function = deserialize_function(
+                self.evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
+            )
+        else:
+            self.warning("No evaluation transformer function supplied, cannot deserialize.")
 
     @abstractmethod
     def get_evaluation_result(self) -> float:

@@ -4,6 +4,7 @@ import os
 
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.yearbook_config import gen_yearbook_config
+from benchmark.sigmod.arxiv_config import gen_arxiv_config
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.training.training_config import LrSchedulerConfig
 
@@ -145,7 +146,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
     return strategies
 
 
-def gen_lr_scheduler_configs() -> list[tuple[str, None | LrSchedulerConfig]]:
+def gen_lr_scheduler_configs(min_lr: float) -> list[tuple[str, None | LrSchedulerConfig]]:
     configs = []
 
     # No LR scheduling
@@ -160,7 +161,7 @@ def gen_lr_scheduler_configs() -> list[tuple[str, None | LrSchedulerConfig]]:
                 source="PyTorch",
                 step_every="batch",
                 optimizers=["default"],
-                config={"T_max": "MODYN_NUM_BATCHES", "eta_min": 1e-4},
+                config={"T_max": "MODYN_NUM_BATCHES", "eta_min": min_lr},
             ),
         )
     )
@@ -173,14 +174,24 @@ def gen_lr_scheduler_configs() -> list[tuple[str, None | LrSchedulerConfig]]:
 def run_experiment() -> None:
     pipeline_configs: list[ModynPipelineConfig] = []
 
+    pipeline_gen_func = gen_yearbook_config #gen_arxiv_config
+    pipeline_gen_func = gen_arxiv_config
+    train_gpu = "cuda:0"
+
+    num_epochs = 1
+
+    ## don't edit
+    if pipeline_gen_func == gen_yearbook_config:
+        min_lr = 1e-4
+    elif pipeline_gen_func == gen_arxiv_config:
+        min_lr = 0
+
     for selection_strategy_id, selection_strategy in gen_selection_strategies():
-        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs():
-            for num_epochs in [1, 2, 5]:
-                for pipeline_gen_func in [gen_yearbook_config]:
-                    config_id = f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}"
-                    pipeline_configs.append(
-                        pipeline_gen_func(config_id, num_epochs, selection_strategy, lr_scheduler_config)
-                    )
+        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr):
+            config_id = f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}"
+            pipeline_configs.append(
+                pipeline_gen_func(config_id, num_epochs, train_gpu, selection_strategy, lr_scheduler_config)
+            )
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")

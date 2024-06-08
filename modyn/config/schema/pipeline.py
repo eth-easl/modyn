@@ -274,7 +274,7 @@ TriggerConfig = Annotated[
 class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
-    evaluation_transformer_function: str = Field(
+    evaluation_transformer_function: str | None = Field(
         "",
         description="A function used to transform the model output before evaluation.",
     )
