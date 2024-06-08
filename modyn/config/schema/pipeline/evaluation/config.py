@@ -6,6 +6,7 @@ from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field, field_validator
 
 from ..data import DataConfig
+from .handler import EvalHandlerConfig
 from .metric import Metric
 from .strategy import MatrixEvalStrategyModel, OffsetEvalStrategyModel
 
@@ -34,9 +35,16 @@ ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
 - json_dedicated: dumps the results into dedicated json files for each evaluation.
 - tensorboard: output the evaluation to dedicated tensorboard files."""
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                                   Evaluation Config                                                  #
+# -------------------------------------------------------------------------------------------------------------------- #
+
 
 class EvaluationConfig(ModynBaseModel):
-    eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
+    handlers: list[EvalHandlerConfig] = Field(
+        description="An array of all evaluation handlers that should be used to evaluate the model.",
+        min_length=1,
+    )
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[ResultWriterType] = Field(
         ["json"],
@@ -46,15 +54,22 @@ class EvaluationConfig(ModynBaseModel):
         ),
         min_length=1,
     )
-    datasets: List[EvalDataConfig] = Field(
-        description="An array of all datasets on which the model is evaluated.",
+    datasets: dict[str, EvalDataConfig] = Field(
+        description="An array of all datasets on which the model is evaluated keyed by an arbitrary reference tag.",
         min_length=1,
+    )
+    skip_during_pipeline_execution: bool = Field(
+        False,
+        description=(
+            "Weather to skip evaluation when executing the pipeline via a client. "
+            "Helps to manually kick off evaluation after pipeline finished."
+        ),
     )
 
     @field_validator("datasets")
     @classmethod
-    def validate_datasets(cls, value: List[EvalDataConfig]) -> List[EvalDataConfig]:
-        dataset_ids = [dataset.dataset_id for dataset in value]
+    def validate_datasets(cls, value: dict[str, EvalDataConfig]) -> dict[str, EvalDataConfig]:
+        dataset_ids = [dataset.dataset_id for dataset in value.values()]
         if len(dataset_ids) != len(set(dataset_ids)):
             raise ValueError("Dataset IDs must be unique.")
         return value

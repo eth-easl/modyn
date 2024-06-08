@@ -9,6 +9,7 @@ from pydantic import Field, field_validator
 
 
 class OffsetEvalStrategyConfig(ModynBaseModel):
+    type: Literal["OffsetEvalStrategy"] = Field("OffsetEvalStrategy")
     offsets: List[str] = Field(
         description=(
             "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "

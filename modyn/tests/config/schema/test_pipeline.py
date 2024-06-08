@@ -99,30 +99,34 @@ def test_offset_eval_strategy_config():
 
 def test_evaluation_config_duplicate_dataset_ids():
     minimal_evaluation_config = {
-        "eval_strategy": {
-            "name": "MatrixEvalStrategy",
-            "config": {
-                "eval_every": "100s",
-                "eval_start_from": 0,
-                "eval_end_at": 300,
-            },
-        },
-        "device": "cpu",
-        "datasets": [
+        "handlers": [
             {
+                "strategy": {
+                    "type": "MatrixEvalStrategy",
+                    "eval_every": "100s",
+                    "eval_start_from": 0,
+                    "eval_end_at": 300,
+                },
+                "trigger": {"mode": "after_training"},
+                "datasets": ["mnist"],
+            },
+        ],
+        "device": "cpu",
+        "datasets": {
+            "MNIST_eval": {
                 "dataset_id": "MNIST_eval",
                 "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 "dataloader_workers": 2,
                 "batch_size": 64,
                 "metrics": [{"name": "Accuracy"}],
             }
-        ],
+        },
     }
     # verify that the correct config can pass
     TypeAdapter(EvaluationConfig).validate_python(minimal_evaluation_config)
 
-    eval_dataset_config = minimal_evaluation_config["datasets"][0]
+    eval_dataset_config = minimal_evaluation_config["datasets"]["MNIST_eval"]
     # duplicate dataset_id
-    minimal_evaluation_config["datasets"].append(eval_dataset_config)
+    minimal_evaluation_config["datasets"]["MNIST_eval_duplicate"] = eval_dataset_config
     with pytest.raises(ValidationError):
         TypeAdapter(EvaluationConfig).validate_python(minimal_evaluation_config)

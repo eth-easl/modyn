@@ -9,6 +9,7 @@ from typing_extensions import Self
 
 
 class MatrixEvalStrategyConfig(ModynBaseModel):
+    type: Literal["MatrixEvalStrategy"] = Field("MatrixEvalStrategy")
     eval_every: str = Field(
         description="The interval length for the evaluation "
         "specified by an integer followed by a time unit (e.g. '100s')."

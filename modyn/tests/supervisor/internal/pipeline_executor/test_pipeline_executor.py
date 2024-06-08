@@ -708,7 +708,7 @@ def test__start_evaluations(
     dummy_pipeline_args: PipelineExecutionParams,
     pipeline_evaluation_config: EvaluationConfig,
 ) -> None:
-    eval_dataset_config = pipeline_evaluation_config.datasets[0]
+    eval_dataset_config = pipeline_evaluation_config.datasets["MNIST_eval"]
     dummy_pipeline_args.pipeline_config.evaluation = pipeline_evaluation_config
 
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])

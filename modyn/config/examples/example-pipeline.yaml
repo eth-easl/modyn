@@ -68,16 +68,20 @@ selection_strategy:
   storage_backend: database
   processor_type: basic_processor_strategy
 evaluation:
-  eval_strategy:
-    name: "MatrixEvalStrategy"
-    config:
-      eval_every: 1d
-      eval_start_from: 0
-      eval_end_at: 1715094374
+  handlers:
+    - trigger:
+        mode: after_training
+      strategy:
+        type: "MatrixEvalStrategy"
+        eval_every: 1d
+        eval_start_from: 0
+        eval_end_at: 1715094374
+      datasets: [mnist]
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   datasets:
-    - dataset_id: mnist
+    mnist:
+      dataset_id: mnist
       transformations: ["transforms.ToTensor()",
                         "transforms.Normalize((0.1307,), (0.3081,))"]
       bytes_parser_function: |

@@ -710,19 +710,21 @@ class PipelineExecutor:
         last_timestamp: int,
     ) -> None:
         """Evaluate the trained model and store the results."""
+        # pylint: disable=too-many-locals
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.state.pipeline_config.evaluation is not None, "Evaluation config not set."
         s.pipeline_status_queue.put(
             pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
 
-        eval_strategy_config = self.state.pipeline_config.evaluation.eval_strategy
+        eval_strategy_config = self.state.pipeline_config.evaluation.handlers[0].strategy
         eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
-        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.name)(
-            eval_strategy_config.config.model_dump(by_alias=True)
+        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.type)(
+            eval_strategy_config.model_dump(by_alias=True)
         )
 
-        for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
+        for dataset_id in self.state.pipeline_config.evaluation.datasets:
+            eval_dataset_config = self.state.pipeline_config.evaluation.datasets[dataset_id]
             for interval_start, interval_end in eval_strategy.get_eval_intervals(first_timestamp, last_timestamp):
                 results = self._single_evaluation(
                     s, self.logs, trigger_id, training_id, model_id, eval_dataset_config, interval_start, interval_end
@@ -733,7 +735,7 @@ class PipelineExecutor:
                         self.logs,
                         trigger_id,
                         model_id,
-                        eval_dataset_config.dataset_id,
+                        dataset_id,
                         results,
                         interval_start,
                         interval_end,

@@ -2,24 +2,27 @@
 
 import pytest
 from modyn.config.schema.pipeline import (
+    AfterTrainingEvalTriggerConfig,
     CheckpointingConfig,
     DataAmountTriggerConfig,
     DataConfig,
     EvalDataConfig,
+    EvalHandlerConfig,
     EvaluationConfig,
     FullModelStrategy,
     MatrixEvalStrategyConfig,
-    MatrixEvalStrategyModel,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
     Pipeline,
     PipelineModelStorageConfig,
     TrainingConfig,
 )
-from modyn.config.schema.pipeline.training.config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
-from modyn.config.schema.system.config import (
+from modyn.config.schema.system import (
     DatabaseConfig,
     DatasetBinaryFileWrapperConfig,
     DatasetsConfig,
@@ -173,27 +176,28 @@ def pipeline_training_config() -> TrainingConfig:
 
 
 @pytest.fixture
-def eval_strategies_config() -> MatrixEvalStrategyModel:
-    return MatrixEvalStrategyModel(
-        name="MatrixEvalStrategy",
-        config=MatrixEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300),
-    )
+def eval_strategies_config() -> MatrixEvalStrategyConfig:
+    return MatrixEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300)
 
 
 @pytest.fixture
-def pipeline_evaluation_config(eval_strategies_config: MatrixEvalStrategyModel) -> EvaluationConfig:
+def pipeline_evaluation_config(eval_strategies_config: MatrixEvalStrategyConfig) -> EvaluationConfig:
     return EvaluationConfig(
-        eval_strategy=eval_strategies_config,
+        handlers=[
+            EvalHandlerConfig(
+                strategy=eval_strategies_config, trigger=AfterTrainingEvalTriggerConfig(), datasets=["MNIST_eval"]
+            )
+        ],
         device="cpu",
-        datasets=[
-            EvalDataConfig(
+        datasets={
+            "MNIST_eval": EvalDataConfig(
                 dataset_id="MNIST_eval",
                 bytes_parser_function="def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 dataloader_workers=2,
                 batch_size=64,
                 metrics=[Metric(name="Accuracy")],
             )
-        ],
+        },
     )
 
 
