@@ -2,8 +2,7 @@ import json
 from typing import Any, Iterable, Optional, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
-from modyn.config.schema.pipeline import DataConfig
-from modyn.config.schema.sampling.downsampling_config import RHOLossDownsamplingConfig
+from modyn.config.schema.pipeline import DataConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig

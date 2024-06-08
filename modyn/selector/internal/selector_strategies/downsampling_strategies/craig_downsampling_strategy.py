@@ -1,6 +1,6 @@
 from functools import cached_property
 
-from modyn.config.schema.sampling.downsampling_config import CraigDownsamplingConfig
+from modyn.config.schema.pipeline.sampling.downsampling_config import CraigDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.utils import DownsamplingMode
 

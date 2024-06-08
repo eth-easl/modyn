@@ -2,7 +2,7 @@ import os
 import pathlib
 import tempfile
 
-from modyn.config.schema.sampling.downsampling_config import RS2DownsamplingConfig
+from modyn.config.schema.pipeline.sampling.downsampling_config import RS2DownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import RS2DownsamplingStrategy
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"

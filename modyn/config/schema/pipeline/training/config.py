@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from modyn.config.schema.modyn_base_model import ModynBaseModel
+from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field, field_validator, model_validator
 from typing_extensions import Self
 

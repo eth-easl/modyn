@@ -1,96 +1,9 @@
 from pathlib import Path
 
 import yaml
-from modyn.config.schema.sampling.downsampling_config import (  # noqa: F401
-    MultiDownsamplingConfig,
-    SingleDownsamplingConfig,
-)
 
-from .schema.config import (
-    BinaryFileByteOrder,
-    DatabaseConfig,
-    DatabaseMixin,
-    DatasetBinaryFileWrapperConfig,
-    DatasetCsvFileWrapperConfig,
-    DatasetFileWrapperConfig,
-    DatasetPngFileWrapperConfig,
-    DatasetsConfig,
-    EvaluatorConfig,
-    HostnamePortMixin,
-    MetadataDatabaseConfig,
-    MetadataProcessorConfig,
-    ModelStorageConfig,
-    ModynConfig,
-    ProjectConfig,
-    SelectorConfig,
-    StorageConfig,
-    SupervisorConfig,
-    TensorboardConfig,
-    TrainingServerConfig,
-)
-from .schema.pipeline import (  # noqa: F401
-    CoresetStrategyConfig,
-    EvalDataConfig,
-    EvaluationConfig,
-    FreshnessSamplingStrategyConfig,
-    FullModelStrategy,
-    IncrementalModelStrategy,
-    Metric,
-    ModelConfig,
-    ModynPipelineConfig,
-    NewDataStrategyConfig,
-    Pipeline,
-    PipelineModelStorageConfig,
-    PresamplingConfig,
-    ResultWriter,
-    SelectionStrategy,
-    StorageBackend,
-    TriggerConfig,
-)
-
-__all__ = [
-    # Modyn config models
-    "HostnamePortMixin",
-    "DatabaseMixin",
-    "ProjectConfig",
-    "BinaryFileByteOrder",
-    "DatasetCsvFileWrapperConfig",
-    "DatasetBinaryFileWrapperConfig",
-    "DatasetPngFileWrapperConfig",
-    "DatasetFileWrapperConfig",
-    "DatasetsConfig",
-    "DatabaseConfig",
-    "StorageConfig",
-    "ModelStorageConfig",
-    "EvaluatorConfig",
-    "MetadataDatabaseConfig",
-    "SelectorConfig",
-    "TrainingServerConfig",
-    "MetadataProcessorConfig",
-    "TensorboardConfig",
-    "SupervisorConfig",
-    "ModynConfig",
-    # Pipeline config models
-    "Pipeline",
-    "ModelConfig",
-    "FullModelStrategy",
-    "IncrementalModelStrategy",
-    "PipelineModelStorageConfig",
-    "PresamplingConfig",
-    "SingleDownsamplingConfig",
-    "FreshnessSamplingStrategyConfig",
-    "SelectionStrategy",
-    "TriggerConfig",
-    "Metric",
-    "EvalDataConfig",
-    "ResultWriter",
-    "EvaluationConfig",
-    "ModynPipelineConfig",
-    "StorageBackend",
-    # file readers
-    "read_modyn_config",
-    "read_pipeline",
-]
+from .schema import *  # noqa
+from .schema import ModynConfig, ModynPipelineConfig
 
 
 def read_modyn_config(path: Path) -> ModynConfig:

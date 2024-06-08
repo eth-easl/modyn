@@ -1,4 +1,4 @@
-from modyn.config.schema.sampling.downsampling_config import RS2DownsamplingConfig
+from modyn.config.schema.pipeline import RS2DownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 
 
