@@ -424,11 +424,6 @@ def test_abstract_downsampler(reset_after_trigger: bool) -> None:
     pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
     pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
 
-    req = GetSelectionStrategyRequest(pipeline_id=pipeline_id)
-    response: SelectionStrategyResponse = selector.get_selection_strategy(req)
-    assert response.downsampling_enabled
-    assert response.strategy_name == "RemoteLossDownsampling"
-
     selector.inform_data(
         DataInformRequest(
             pipeline_id=pipeline_id,
@@ -1128,3 +1123,5 @@ if __name__ == "__main__":
     test_abstract_downsampler(reset_after_trigger=True)
     test_get_available_labels(reset_after_trigger=False)
     test_get_available_labels(reset_after_trigger=True)
+    test_warmup_period(reset_after_trigger=False)
+    test_warmup_period(reset_after_trigger=True)

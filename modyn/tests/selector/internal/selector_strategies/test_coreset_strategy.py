@@ -558,7 +558,7 @@ def test_warmup_downsampling():
 
     with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
 
-        # As threshold is 3 and we have 2 warmup triggers, trigger 0,1 should not use downsampling, 
+        # As threshold is 3 and we have 2 warmup triggers, trigger 0,1 should not use downsampling,
         # 2,3,4 should use Loss downsampling
         # and trigger 5,6 should use GradNorm downsampling
         for i in range(2):
