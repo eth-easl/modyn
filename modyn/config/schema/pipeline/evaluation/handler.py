@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import List, Literal
 
-from pydantic import Field
-
 from modyn.config.schema.base_model import ModynBaseModel
+from pydantic import Field
 
 from .strategy import EvalStrategyConfig
 
