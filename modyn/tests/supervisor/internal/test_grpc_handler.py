@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import grpc
 import pytest
+
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationData,
     EvaluationResultRequest,
@@ -31,7 +32,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.evaluation_result_writer import DedicatedJsonResultWriter
+from modyn.supervisor.internal.eval.result_writer import DedicatedJsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub

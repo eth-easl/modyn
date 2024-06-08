@@ -11,12 +11,13 @@ from unittest import mock
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
+
 from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
 from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorConfig
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
+from modyn.supervisor.internal.eval.strategies.matrix_eval_strategy import MatrixEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
@@ -690,8 +691,12 @@ def test_run_training_set_num_samples_to_pass(
     # trigger is added to trigger list _execute_triggers, as we are not calling it here, we fake the id
     pe.state.triggers.append(21)
 
+    # do this artificially as this is taken over by the caller of _train_and_store_model
+    pe.state.current_trigger_idx += 1
+
     # the next time _run_training is called, the num_samples_to_pass should be set to 0
     # because the next trigger is out of the range of `num_samples_to_pass`
+
     pe._train_and_store_model(pe.state, pe.logs, trigger_id=22)
     test_start_training.assert_called_once_with(42, 22, ANY, ANY, 101, None)
 

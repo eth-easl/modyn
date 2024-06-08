@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
+
+from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, field_validator
 
 from ..data import DataConfig
 from .handler import EvalHandlerConfig
 from .metric import Metric
-from .strategy import MatrixEvalStrategyModel, OffsetEvalStrategyModel
-
-EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
 class EvalDataConfig(DataConfig):

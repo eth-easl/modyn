@@ -93,13 +93,13 @@ class Client:
             elif msg_type == MsgType.COUNTER:
                 if submsg["action"] == CounterAction.CREATE:
                     self.pbar = self.progress_mgr.counter(
-                        total=submsg["create_params"]["new_data_len"],
-                        desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
+                        total=submsg["create_params"].get("new_data_len"),
+                        desc=f"[Pipeline {self.pipeline_id}] {submsg["create_params"]['title']}",
                         unit="samples",
                     )
                 elif submsg["action"] == CounterAction.UPDATE:
                     assert self.pbar is not None
-                    self.pbar.update(submsg["update_params"]["batch_size"])
+                    self.pbar.update(submsg["update_params"]["increment"])
                 elif submsg["action"] == CounterAction.CLOSE:
                     assert self.pbar is not None
                     self.pbar.clear(flush=True)

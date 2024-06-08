@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Iterable, Optional
 
+from modyn.config.schema.pipeline.evaluation import EvalStrategyConfig
+
 
 class AbstractEvalStrategy(ABC):
     """
@@ -13,8 +15,8 @@ class AbstractEvalStrategy(ABC):
     evaluation dataset.
     """
 
-    def __init__(self, eval_strategy_config: dict):
-        self.eval_strategy_config = eval_strategy_config
+    def __init__(self, config: EvalStrategyConfig):
+        self.config = config
 
     @abstractmethod
     def get_eval_intervals(

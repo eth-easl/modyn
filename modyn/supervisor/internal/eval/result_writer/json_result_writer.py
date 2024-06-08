@@ -4,7 +4,7 @@ from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
+from modyn.supervisor.internal.eval.result_writer import AbstractEvaluationResultWriter
 
 
 class _JsonResultWriter(AbstractEvaluationResultWriter):
