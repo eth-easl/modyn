@@ -86,14 +86,13 @@ def main():
 
     label_to_new_label = {old_label: label for label, old_label in enumerate(df[label_column].unique())}
     df['label'] = df[label_column].map(label_to_new_label)
-
+    df["year"] = df["upload_date"].apply(lambda x: datetime.fromtimestamp(x).year)
     print(f"We got {df.shape[0]} samples with {len(label_to_new_label)} classes for this configuration. Generating subset.")
 
     if args.eval_split:
         if args.eval_split == "uniform":
             train_df, eval_df = train_test_split(df, test_size=0.1, random_state=42)
         elif args.eval_split == "yearly":
-            df["year"] = df["upload_date"].apply(lambda x: datetime.fromtimestamp(x).year)
             train_dfs, eval_dfs = [], []
             for _year, group in df.groupby("year"):
                 train_group, eval_group = train_test_split(group, test_size=0.1, random_state=42)
@@ -108,7 +107,7 @@ def main():
     
     overall_stats = {}
     for split, split_df, output_dir in loop_iterator:
-        split_stats = {"total_samples": 0, "per_year": {}, "per_class": {}, "per_year_and_class": {}}
+        split_stats = {"total_samples": 0, "total_classes": len(label_to_new_label), "per_year": {}, "per_class": {}, "per_year_and_class": {}}
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -161,7 +160,7 @@ def main():
 
         overall_stats[split] = split_stats
 
-    with open(os.path.join(args.output, "dataset_stats.json"), "w") as f:
+    with open(args.output / identifier / "dataset_stats.json", "w") as f:
         json.dump(overall_stats, f, indent=4)
 
 

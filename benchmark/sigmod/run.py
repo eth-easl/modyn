@@ -5,6 +5,7 @@ import os
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.yearbook_config import gen_yearbook_config
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
+from benchmark.sigmod.cglm_config import gen_cglm_config
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config import LrSchedulerConfig
 
@@ -184,22 +185,37 @@ def run_experiment() -> None:
 
     pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
     # pipeline_gen_func = gen_arxiv_config
+    pipeline_gen_func = gen_cglm_config
+
+    dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
+    num_classes = 6404  # necessary for CGLM, ignored for others
+    model = "resnet18"  # necessary for yearbook, ignored for others
     train_gpu = "cuda:0"
-    model = "resnet18"
-    num_epochs = 1
-    warmup_triggers = 2
+    num_epochs = 5
+    warmup_triggers = 4  # 2 for yearbook, 4 for cglm, ? for arxiv
 
     ## don't edit
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0
+    elif pipeline_gen_func == gen_cglm_config:
+        min_lr = 0.0025
 
     for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr):
-            config_id = f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
+            config_id = f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
             pipeline_configs.append(
-                pipeline_gen_func(config_id, num_epochs, train_gpu, selection_strategy, lr_scheduler_config, model)
+                pipeline_gen_func(
+                    config_id,
+                    num_epochs,
+                    train_gpu,
+                    selection_strategy,
+                    lr_scheduler_config,
+                    model,
+                    dataset,
+                    num_classes,
+                )
             )
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
