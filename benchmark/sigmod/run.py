@@ -22,7 +22,7 @@ from modyn.config import (
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
-def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
+def gen_selection_strategies(warmup_triggers: int) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
     # Full data training
@@ -42,6 +42,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 presampling_config=PresamplingConfig(strategy="Random", ratio=50),
             ),
         )
@@ -56,6 +57,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=50),
             ),
         )
@@ -70,6 +72,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=True),
             ),
         )
@@ -83,6 +86,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=False),
             ),
         )
@@ -96,6 +100,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
             ),
         )
@@ -110,6 +115,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=False),
             ),
         )
@@ -124,6 +130,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
             ),
         )
@@ -138,6 +145,7 @@ def gen_selection_strategies() -> list[tuple[str, SelectionStrategy]]:
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
+                warmup_triggers=warmup_triggers,
                 downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=False),
             ),
         )
@@ -177,8 +185,9 @@ def run_experiment() -> None:
     pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
     # pipeline_gen_func = gen_arxiv_config
     train_gpu = "cuda:0"
-
+    model = "resnet18"
     num_epochs = 1
+    warmup_triggers = 2
 
     ## don't edit
     if pipeline_gen_func == gen_yearbook_config:
@@ -186,14 +195,12 @@ def run_experiment() -> None:
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0
 
-    for selection_strategy_id, selection_strategy in gen_selection_strategies():
+    for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr):
-            config_id = f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}"
+            config_id = f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
             pipeline_configs.append(
-                pipeline_gen_func(config_id, num_epochs, train_gpu, selection_strategy, lr_scheduler_config)
+                pipeline_gen_func(config_id, num_epochs, train_gpu, selection_strategy, lr_scheduler_config, model)
             )
-
-    return
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")

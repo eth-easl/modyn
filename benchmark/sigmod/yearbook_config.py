@@ -25,16 +25,48 @@ from modyn.config import (
 from modyn.config import LrSchedulerConfig
 
 
+def _yearbook_model(model: str) -> tuple[ModelConfig, str, list]:
+    if model.lower() == "yearbooknet":
+        model_config = ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": 2})
+        parser_func = (
+            "import warnings\n"
+            "import torch\n"
+            "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
+            "    with warnings.catch_warnings():\n"
+            "       warnings.simplefilter('ignore', category=UserWarning)\n"
+            "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
+        )
+
+        return model_config, parser_func, []
+
+    if model.lower() == "resnet18":
+        model_config = ModelConfig(id="ResNet18", config={"use_pretrained": True, "num_classes": 2})
+        parser_func = (
+            "from PIL import Image\n"
+            "import io\n"
+            "def bytes_parser_function(data: memoryview) -> Image:\n"
+            "   return Image.open(io.BytesIO(data)).convert('RGB')"
+        )
+        transformations = ["transforms.ToTensor()", "transforms.Normalize((0.1307,), (0.3081,))"]
+
+        return model_config, parser_func, transformations
+
+    raise ValueError(f"Unknown model: {model}")
+
+
 def gen_yearbook_config(
     config_id: str,
     num_epochs: int,
     gpu_device: str,
     selection_strategy: SelectionStrategy,
     lr_scheduler: LrSchedulerConfig | None,
+    model: str,
 ) -> ModynPipelineConfig:
+    model_config, bytes_parser_func, transformations = _yearbook_model(model)
+
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"yearbook_{config_id}", description="Yearbook data selection config", version="0.0.1"),
-        model=ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": 2}),
+        model=model_config,
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
@@ -60,16 +92,7 @@ def gen_yearbook_config(
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(
-            dataset_id="yearbook",
-            transformations=[],
-            bytes_parser_function=(
-                "import warnings\n"
-                "import torch\n"
-                "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
-                "    with warnings.catch_warnings():\n"
-                "       warnings.simplefilter('ignore', category=UserWarning)\n"
-                "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
-            ),
+            dataset_id="yearbook", transformations=transformations, bytes_parser_function=bytes_parser_func
         ),
         trigger=TimeTriggerConfig(every="1d"),
         evaluation=EvaluationConfig(
@@ -82,14 +105,8 @@ def gen_yearbook_config(
             datasets=[
                 EvalDataConfig(
                     dataset_id="yearbook-test",
-                    bytes_parser_function=(
-                        "import warnings\n"
-                        "import torch\n"
-                        "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
-                        "    with warnings.catch_warnings():\n"
-                        "       warnings.simplefilter('ignore', category=UserWarning)\n"
-                        "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
-                    ),
+                    bytes_parser_function=bytes_parser_func,
+                    transformations=transformations,
                     batch_size=64,
                     dataloader_workers=1,
                     metrics=[
@@ -133,14 +150,8 @@ def gen_yearbook_config(
                 ),
                 EvalDataConfig(
                     dataset_id="yearbook",
-                    bytes_parser_function=(
-                        "import warnings\n"
-                        "import torch\n"
-                        "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
-                        "    with warnings.catch_warnings():\n"
-                        "       warnings.simplefilter('ignore', category=UserWarning)\n"
-                        "       return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
-                    ),
+                    bytes_parser_function=bytes_parser_func,
+                    transformations=transformations,
                     batch_size=64,
                     dataloader_workers=1,
                     metrics=[

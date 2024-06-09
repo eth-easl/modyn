@@ -31,7 +31,9 @@ def gen_arxiv_config(
     gpu_device: str,
     selection_strategy: SelectionStrategy,
     lr_scheduler: LrSchedulerConfig | None,
+    model: str,
 ) -> ModynPipelineConfig:
+    del model  # ignored for now
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"arxiv_{config_id}", description="Arxiv data selection config", version="0.0.1"),
         model=ModelConfig(id="ArticleNet", config={"num_classes": 172}),
