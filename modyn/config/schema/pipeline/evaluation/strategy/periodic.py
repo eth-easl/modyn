@@ -9,10 +9,7 @@ from ._interval_strategy import _IntervalEvalStrategyConfig
 
 
 class PeriodicEvalStrategyConfig(_IntervalEvalStrategyConfig):
-    """Comparable to TimeTriggerConfig and DataAmountTriggerConfig, but for scheduling evaluation runs.
-
-    Note: This strategy will run evaluations after the core pipeline.
-    """
+    """Comparable to TimeTriggerConfig and DataAmountTriggerConfig, but for scheduling evaluation runs."""
 
     type: Literal["PeriodicEvalStrategy"] = Field("PeriodicEvalStrategy")
     every: str = Field(
