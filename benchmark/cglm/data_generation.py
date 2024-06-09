@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import json
 import pathlib
 import shutil
 from datetime import datetime
@@ -105,7 +106,10 @@ def main():
     else:
         loop_iterator = [("train", df, args.output / identifier / "train")]
     
+    overall_stats = {}
     for split, split_df, output_dir in loop_iterator:
+        split_stats = {"total_samples": 0, "per_year": {}, "per_class": {}, "per_year_and_class": {}}
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Generating {split} split with {len(split_df)} samples...")
@@ -115,6 +119,29 @@ def main():
             timestamp = row["upload_date"]
             file_path = args.sourcedir / f"{id[0]}/{id[1]}/{id[2]}/{id}.jpg"
 
+            # Generate stats
+            year = row["year"]
+            split_stats["total_samples"] += 1
+            if year not in split_stats["per_year"]:
+                split_stats["per_year"][year] = 1
+            else:
+                split_stats["per_year"][year] += 1
+
+            if label not in split_stats["per_class"]:
+                split_stats["per_class"][label] = 1
+            else:
+                split_stats["per_class"][label] += 1
+
+            if year not in split_stats["per_year_and_class"]:
+                split_stats["per_year_and_class"][year] = {}
+                split_stats["per_year_and_class"][year][label] = 1
+            else:
+                if label not in split_stats["per_year_and_class"][year]:
+                    split_stats["per_year_and_class"][year][label] = 1
+                else:
+                    split_stats["per_year_and_class"][year][label] += 1
+
+            # Create files
             if not file_path.exists():
                 logger.error(f"File {file_path} is supposed to exist, but it does not. Skipping...")
                 continue
@@ -131,6 +158,12 @@ def main():
             with open(output_dir / f"{id}.label", "w", encoding="utf-8") as file:
                 file.write(str(int(label)))
             os.utime(output_dir / f"{id}.label", (timestamp, timestamp))
+
+        overall_stats[split] = split_stats
+
+    with open(os.path.join(args.output, "dataset_stats.json"), "w") as f:
+        json.dump(overall_stats, f, indent=4)
+
 
     if args.dummy:
         dummy_path =  args.output / identifier / "train" / "dummy.jpg"
