@@ -4,12 +4,16 @@ from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.config.schema.pipeline import CoresetStrategyConfig
+from modyn.config.schema.pipeline.sampling.config import PresamplingConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
     instantiate_scheduler,
 )
-from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
+from modyn.selector.internal.selector_strategies.presampling_strategies import (
+    AbstractPresamplingStrategy,
+    NoPresamplingStrategy,
+)
 from modyn.selector.internal.selector_strategies.presampling_strategies.utils import instantiate_presampler
 from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -23,11 +27,22 @@ class CoresetStrategy(AbstractSelectionStrategy):
         super().__init__(config, modyn_config, pipeline_id)
         # a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
+        self.warmup_triggers = config.warmup_triggers
+
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, modyn_config, pipeline_id)
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, self._storage_backend
         )
+
+        self.warmup_presampler = (
+            NoPresamplingStrategy(
+                PresamplingConfig(strategy="No", ratio=100), modyn_config, pipeline_id, self._storage_backend
+            )
+            if self.warmup_triggers > 0
+            else None
+        )
+        self.is_warmup = self.warmup_triggers > 0
 
     def _init_storage_backend(self) -> AbstractStorageBackend:
         if self._config.storage_backend == "local":
@@ -52,6 +67,8 @@ class CoresetStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
+        if (self._next_trigger_id + 1) > self.warmup_triggers:
+            self.is_warmup = False
         # Upon entering this method, self._next_trigger_id is the trigger id for the current trigger
         # whose training set is to be computed. After calling super().trigger() self._next_trigger_id is incremented.
 
@@ -59,6 +76,7 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # We should only update the downsampler to the current trigger not to the future one referred by
         # self._next_trigger_id after the call to super().trigger() because later the remote downsampler on trainer
         # server needs to fetch configuration for the current trigger
+
         self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
         trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
         return trigger_id, total_keys_in_trigger, num_partitions, log
@@ -73,12 +91,20 @@ class CoresetStrategy(AbstractSelectionStrategy):
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
         ), "CoresetStrategy currently only supports DatabaseBackend"
+        # We set is_warmup here as well to support unit tests more easily.
+        # In end-to-end workflows, it should have been set by trigger() already.
+        if (self._next_trigger_id + 1) > self.warmup_triggers:
+            self.is_warmup = False
 
+        presampling_strategy = self.warmup_presampler if self.is_warmup else self.presampling_strategy
+        assert presampling_strategy is not None  # satisfy mypy
         trigger_dataset_size = None
-        if self.presampling_strategy.requires_trigger_dataset_size:
+        if presampling_strategy.requires_trigger_dataset_size:
             trigger_dataset_size = self._get_trigger_dataset_size()
 
-        stmt = self.presampling_strategy.get_presampling_query(
+        logger.error(trigger_dataset_size)
+
+        stmt = presampling_strategy.get_presampling_query(
             next_trigger_id=self._next_trigger_id,
             tail_triggers=self.tail_triggers,
             limit=self.training_set_size_limit if self.has_limit else None,
@@ -101,15 +127,15 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
     @property
     def downsampling_strategy(self) -> str:
-        return self.downsampling_scheduler.downsampling_strategy
+        return self.downsampling_scheduler.downsampling_strategy if not self.is_warmup else ""
 
     @property
     def downsampling_params(self) -> dict:
-        return self.downsampling_scheduler.downsampling_params
+        return self.downsampling_scheduler.downsampling_params if not self.is_warmup else {}
 
     @property
     def requires_remote_computation(self) -> bool:
-        return self.downsampling_scheduler.requires_remote_computation
+        return self.downsampling_scheduler.requires_remote_computation if not self.is_warmup else False
 
     @property
     def training_status_bar_scale(self) -> int:

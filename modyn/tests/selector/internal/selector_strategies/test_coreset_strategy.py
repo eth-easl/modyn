@@ -471,3 +471,107 @@ def test_trigger():
             trigger_id, *_ = strat.trigger()
             assert trigger_id == i
             assert strat.downsampling_strategy == "RemoteGradNormDownsampling"
+
+
+def test_warmup_presampling():
+    conf = get_config_tail()
+    conf.maximum_keys_in_memory = 1
+    conf.warmup_triggers = 2
+    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0)
+
+    data1 = list(range(10))
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+    strat.inform_data(data1, timestamps1, labels)
+    current_data = list(strat._get_data())
+    assert len(current_data) == 10  # trigger 0 data = warmup, so no presampling
+    current_data = flatten(current_data)
+    assert set(current_data) <= set(data1)
+
+    # Now trigger id 1 starts
+    strat.trigger()
+
+    data2 = list(range(10, 20))
+    timestamps2 = list(range(10, 20))
+    strat.inform_data(data2, timestamps2, labels)
+    current_data = list(strat._get_data())
+    assert len(current_data) == 20  # presampling with tail 1 and still in warmup
+    current_data = flatten(current_data)
+    assert set(current_data) <= set(data1 + data2)
+
+    # Now trigger id 2 starts
+    strat.trigger()
+
+    data3 = list(range(20, 30))
+    timestamps3 = list(range(20, 30))
+    strat.inform_data(data3, timestamps3, labels)
+    current_data = list(strat._get_data())
+
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data2 + data3)
+    assert set(current_data).intersection(set(data1)) == set()
+
+    # Now trigger ID 3 starts
+    strat.trigger()
+
+    data4 = list(range(30, 40))
+    timestamps4 = list(range(30, 40))
+    strat.inform_data(data4, timestamps4, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first and second trigger
+    current_data = list(strat._get_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data3 + data4)
+    assert set(current_data).intersection(set(data1)) == set()
+    assert set(current_data).intersection(set(data2)) == set()
+
+
+def test_warmup_downsampling():
+    def fake_super_trigger(self):
+        trigger = self._next_trigger_id
+        self._next_trigger_id += 1
+        return trigger, 50, 1, {}
+
+    strat = CoresetStrategy(
+        CoresetStrategyConfig(
+            limit=-1,
+            tail_triggers=None,
+            downsampling_config=MultiDownsamplingConfig(
+                downsampling_list=[
+                    LossDownsamplingConfig(sample_then_batch=True, ratio=50),
+                    GradNormDownsamplingConfig(sample_then_batch=False, ratio=25),
+                ],
+                downsampling_thresholds=[3],
+            ),
+            maximum_keys_in_memory=1000,
+            warmup_triggers=2,
+        ),
+        get_minimal_modyn_config(),
+        pipeline_id=42,
+    )
+
+    assert strat._next_trigger_id == 0
+
+    with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
+
+        # As threshold is 3 and we have 2 warmup triggers, trigger 0,1 should not use downsampling,
+        # 2,3,4 should use Loss downsampling
+        # and trigger 5,6 should use GradNorm downsampling
+        for i in range(2):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == ""
+
+        for i in range(2, 5):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteLossDownsampling"
+
+        for i in range(5, 7):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteGradNormDownsampling"
