@@ -16,17 +16,21 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
     SelectionStrategy,
 )
-from modyn.config.schema.training.training_config import (
+from modyn.config import (
     CheckpointingConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
 )
-from modyn.config.schema.training.training_config import LrSchedulerConfig
+from modyn.config import LrSchedulerConfig
 
 
 def gen_yearbook_config(
-    config_id: str, num_epochs: int, gpu_device: str, selection_strategy: SelectionStrategy, lr_scheduler: LrSchedulerConfig | None
+    config_id: str,
+    num_epochs: int,
+    gpu_device: str,
+    selection_strategy: SelectionStrategy,
+    lr_scheduler: LrSchedulerConfig | None,
 ) -> ModynPipelineConfig:
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"yearbook_{config_id}", description="Yearbook data selection config", version="0.0.1"),

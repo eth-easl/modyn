@@ -6,7 +6,7 @@ from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.yearbook_config import gen_yearbook_config
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
 from modyn.config.schema.pipeline import ModynPipelineConfig
-from modyn.config.schema.training.training_config import LrSchedulerConfig
+from modyn.config import LrSchedulerConfig
 
 from modyn.config.schema.pipeline import (
     SelectionStrategy,
@@ -14,7 +14,7 @@ from modyn.config.schema.pipeline import (
     CoresetStrategyConfig,
     PresamplingConfig,
 )
-from modyn.config.schema.sampling.downsampling_config import (
+from modyn.config import (
     RS2DownsamplingConfig,
     LossDownsamplingConfig,
     GradNormDownsamplingConfig,
@@ -174,8 +174,8 @@ def gen_lr_scheduler_configs(min_lr: float) -> list[tuple[str, None | LrSchedule
 def run_experiment() -> None:
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    pipeline_gen_func = gen_yearbook_config #gen_arxiv_config
-    pipeline_gen_func = gen_arxiv_config
+    pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
+    # pipeline_gen_func = gen_arxiv_config
     train_gpu = "cuda:0"
 
     num_epochs = 1
@@ -192,6 +192,8 @@ def run_experiment() -> None:
             pipeline_configs.append(
                 pipeline_gen_func(config_id, num_epochs, train_gpu, selection_strategy, lr_scheduler_config)
             )
+
+    return
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")

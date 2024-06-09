@@ -16,17 +16,21 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
     SelectionStrategy,
 )
-from modyn.config.schema.training.training_config import (
+from modyn.config import (
     CheckpointingConfig,
     OptimizationCriterion,
     OptimizerConfig,
     OptimizerParamGroup,
 )
-from modyn.config.schema.training.training_config import LrSchedulerConfig
+from modyn.config import LrSchedulerConfig
 
 
 def gen_arxiv_config(
-    config_id: str, num_epochs: int, gpu_device: str, selection_strategy: SelectionStrategy, lr_scheduler: LrSchedulerConfig | None
+    config_id: str,
+    num_epochs: int,
+    gpu_device: str,
+    selection_strategy: SelectionStrategy,
+    lr_scheduler: LrSchedulerConfig | None,
 ) -> ModynPipelineConfig:
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"arxiv_{config_id}", description="Arxiv data selection config", version="0.0.1"),
@@ -44,7 +48,11 @@ def gen_arxiv_config(
                     name="default",
                     algorithm="SGD",
                     source="PyTorch",
-                    param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.00002, "momentum": 0.9, "weight_decay": 0.01})],
+                    param_groups=[
+                        OptimizerParamGroup(
+                            module="model", config={"lr": 0.00002, "momentum": 0.9, "weight_decay": 0.01}
+                        )
+                    ],
                 )
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
@@ -63,7 +71,7 @@ def gen_arxiv_config(
                 "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
                 "    return str(data, 'utf8')"
             ),
-            tokenizer="DistilBertTokenizerTransform"
+            tokenizer="DistilBertTokenizerTransform",
         ),
         trigger=TimeTriggerConfig(every="1d"),
         evaluation=EvaluationConfig(
