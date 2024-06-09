@@ -49,12 +49,15 @@ selection_strategy:
   limit: -1
   tail_triggers: 0
 evaluation:
-  eval_strategy:
-    name: MatrixEvalStrategy
-    config: 
-      eval_every: 100s
-      eval_start_from: 0
-      eval_end_at: 300
+  handlers:
+    - execution_time: after_training
+      strategy:
+        type: SlicingEvalStrategy
+        eval_every: 100s
+        eval_start_from: 0
+        eval_end_at: 300
+      models: matrix
+      datasets: ["mnist"]
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   datasets:
