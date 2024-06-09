@@ -5,7 +5,7 @@ from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import Field
 
-from ._interval_strategy import _IntervalEvalStrategyConfig
+from ._interval import _IntervalEvalStrategyConfig
 
 
 class PeriodicEvalStrategyConfig(_IntervalEvalStrategyConfig):

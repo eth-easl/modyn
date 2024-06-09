@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
-from modyn.supervisor.internal.evaluation_result_writer import TensorboardResultWriter
+from modyn.supervisor.internal.eval.result_writer import TensorboardResultWriter
 
 
 def test_tensorboard_writer():

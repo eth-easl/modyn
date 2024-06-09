@@ -12,7 +12,7 @@ import pytest
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig, SupervisorConfig
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.eval.result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
