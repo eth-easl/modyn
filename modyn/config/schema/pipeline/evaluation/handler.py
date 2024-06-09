@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import List, Literal
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field
+from pydantic import Field, model_validator
 
-from .strategy import EvalStrategyConfig
+from .strategy import EvalStrategyConfig, OffsetEvalStrategyConfig
 
 EvalHandlerExecutionTime = Literal["after_training"]
 """
@@ -62,3 +62,9 @@ class EvalHandlerConfig(ModynBaseModel):
             "For `BetweenTwoTriggersEvalStrategy` we can e.g. run the handler on the training and test datasets."
         )
     )
+
+    @model_validator(mode="after")
+    def validate_datasets(self) -> EvalHandlerConfig:
+        if isinstance(self.strategy, OffsetEvalStrategyConfig):
+            assert self.execution_time == "after_training", "OffsetEvalStrategy can only be used after training."
+        return self
