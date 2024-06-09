@@ -14,13 +14,13 @@ from modyn.config.schema.pipeline import EvalDataConfig, ResultWriterType
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
+from modyn.supervisor.internal.eval.result_writer import JsonResultWriter
+from modyn.supervisor.internal.eval.result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
 )
-from modyn.supervisor.internal.evaluation_result_writer.json_result_writer import DedicatedJsonResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.tensorboard_result_writer import TensorboardResultWriter
+from modyn.supervisor.internal.eval.result_writer.json_result_writer import DedicatedJsonResultWriter
+from modyn.supervisor.internal.eval.result_writer.tensorboard_result_writer import TensorboardResultWriter
+from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -710,16 +710,18 @@ class PipelineExecutor:
         last_timestamp: int,
     ) -> None:
         """Evaluate the trained model and store the results."""
+        # pylint: disable=too-many-locals
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.state.pipeline_config.evaluation is not None, "Evaluation config not set."
         s.pipeline_status_queue.put(
             pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
         )
 
-        eval_strategy_config = self.state.pipeline_config.evaluation.eval_strategy
-        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
-        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.name)(
-            eval_strategy_config.config.model_dump(by_alias=True)
+        # let's add the business logic for the new eval handler setup in a follow-up PR
+        eval_strategy_config = self.state.pipeline_config.evaluation.handlers[0].strategy
+        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
+        eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.type)(
+            eval_strategy_config.model_dump(by_alias=True)
         )
 
         for eval_dataset_config in self.state.pipeline_config.evaluation.datasets:
@@ -808,6 +810,7 @@ class PipelineExecutor:
     ) -> None:
         eval_result_writer = self._init_evaluation_writer(s.pipeline_id, "json", trigger_id)
         self.grpc.store_evaluation_results([eval_result_writer], evaluation)
+        self.grpc.cleanup_evaluations([int(i) for i in evaluation.keys()])
         assert isinstance(eval_result_writer, JsonResultWriter)
 
         log.info = StoreEvaluationInfo(

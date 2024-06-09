@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
 from modyn.selector.internal.storage_backend import AbstractStorageBackend

@@ -3,7 +3,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import CoresetStrategyConfig
+from modyn.config.schema.pipeline import CoresetStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,

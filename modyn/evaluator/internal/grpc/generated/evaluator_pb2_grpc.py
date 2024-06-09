@@ -54,6 +54,11 @@ class EvaluatorStub(object):
                 request_serializer=evaluator__pb2.EvaluationResultRequest.SerializeToString,
                 response_deserializer=evaluator__pb2.EvaluationResultResponse.FromString,
                 _registered_method=True)
+        self.cleanup_evaluations = channel.unary_unary(
+                '/modyn.evaluator.Evaluator/cleanup_evaluations',
+                request_serializer=evaluator__pb2.EvaluationCleanupRequest.SerializeToString,
+                response_deserializer=evaluator__pb2.EvaluationCleanupResponse.FromString,
+                _registered_method=True)
 
 
 class EvaluatorServicer(object):
@@ -77,6 +82,12 @@ class EvaluatorServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def cleanup_evaluations(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_EvaluatorServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -94,6 +105,11 @@ def add_EvaluatorServicer_to_server(servicer, server):
                     servicer.get_evaluation_result,
                     request_deserializer=evaluator__pb2.EvaluationResultRequest.FromString,
                     response_serializer=evaluator__pb2.EvaluationResultResponse.SerializeToString,
+            ),
+            'cleanup_evaluations': grpc.unary_unary_rpc_method_handler(
+                    servicer.cleanup_evaluations,
+                    request_deserializer=evaluator__pb2.EvaluationCleanupRequest.FromString,
+                    response_serializer=evaluator__pb2.EvaluationCleanupResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -176,6 +192,33 @@ class Evaluator(object):
             '/modyn.evaluator.Evaluator/get_evaluation_result',
             evaluator__pb2.EvaluationResultRequest.SerializeToString,
             evaluator__pb2.EvaluationResultResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def cleanup_evaluations(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/modyn.evaluator.Evaluator/cleanup_evaluations',
+            evaluator__pb2.EvaluationCleanupRequest.SerializeToString,
+            evaluator__pb2.EvaluationCleanupResponse.FromString,
             options,
             channel_credentials,
             insecure,

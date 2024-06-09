@@ -1,4 +1,4 @@
-from modyn.config.schema.sampling.downsampling_config import GradNormDownsamplingConfig
+from modyn.config.schema.pipeline.sampling.downsampling_config import GradNormDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import GradNormDownsamplingStrategy
 
 

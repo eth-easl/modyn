@@ -6,7 +6,7 @@ from modyn.config import (
     OptimizerParamGroup,
     TrainingConfig,
 )
-from modyn.config.schema.pipeline import (
+from modyn.config.schema.pipeline.config import (
     EvalDataConfig,
     EvalStrategyModel,
     EvaluationConfig,

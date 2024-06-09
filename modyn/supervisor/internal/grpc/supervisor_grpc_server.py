@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 from modyn.common.grpc import GenericGRPCServer
-from modyn.config.schema.config import ModynConfig
+from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import (  # noqa: E402, E501
     add_SupervisorServicer_to_server,
 )

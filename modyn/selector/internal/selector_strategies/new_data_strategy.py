@@ -5,7 +5,7 @@ import random
 from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.config import NewDataStrategyConfig
+from modyn.config.schema.pipeline import NewDataStrategyConfig
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend

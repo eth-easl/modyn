@@ -9,9 +9,14 @@ from unittest.mock import ANY, MagicMock, patch
 import pytest
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config import SelectionStrategy as SelectionStrategyModel
-from modyn.config.schema.pipeline import DataConfig
-from modyn.config.schema.sampling.downsampling_config import ILTrainingConfig, RHOLossDownsamplingConfig
-from modyn.config.schema.training.training_config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
+from modyn.config.schema.pipeline import (
+    DataConfig,
+    ILTrainingConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
+    RHOLossDownsamplingConfig,
+)
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
