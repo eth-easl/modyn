@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, PresamplingConfig
-from modyn.config.schema.sampling.downsampling_config import (
+from modyn.config.schema.pipeline.sampling.downsampling_config import (
     GradNormDownsamplingConfig,
     LossDownsamplingConfig,
     NoDownsamplingConfig,

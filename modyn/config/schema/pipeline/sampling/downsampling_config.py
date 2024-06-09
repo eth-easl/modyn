@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated, List, Literal, Union
 
-from modyn.config.schema.modyn_base_model import ModynBaseModel
-from modyn.config.schema.training.training_config import CheckpointingConfig, TrainingConfig
+from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field, model_validator
 from typing_extensions import Self
+
+from ..training import CheckpointingConfig, TrainingConfig
 
 
 class BaseDownsamplingConfig(ModynBaseModel):

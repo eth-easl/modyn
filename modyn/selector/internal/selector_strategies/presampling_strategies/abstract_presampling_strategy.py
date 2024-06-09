@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from modyn.config import PresamplingConfig
+from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from sqlalchemy import Select
 

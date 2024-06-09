@@ -1,6 +1,6 @@
 from abc import ABC
 
-from modyn.config import SingleDownsamplingConfig
+from modyn.config.schema.pipeline import SingleDownsamplingConfig
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
