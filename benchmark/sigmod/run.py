@@ -232,6 +232,7 @@ def run_experiment() -> None:
         start_replay_at=0,
         stop_replay_at=None,
         maximum_triggers=None,
+        show_eval_progress=False
     )
 
 
