@@ -2,17 +2,16 @@ from functools import cached_property
 from typing import Annotated, Any, Literal, Union
 
 from modyn.config.schema.base_model import ModynBaseModel
+from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import Field
-
-_REGEX_TIME_UNIT = r"(s|m|h|d|w|y)"
 
 
 class TimeTriggerConfig(ModynBaseModel):
     id: Literal["TimeTrigger"] = Field("TimeTrigger")
     every: str = Field(
         description="Interval length for the trigger as an integer followed by a time unit: s, m, h, d, w, y",
-        pattern=rf"^\d+{_REGEX_TIME_UNIT}$",
+        pattern=rf"^\d+{REGEX_TIME_UNIT}$",
     )
 
     @cached_property
