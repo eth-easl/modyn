@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from typing import List, Literal
 
-from pydantic import Field
-
 from modyn.config.schema.base_model import ModynBaseModel
+from pydantic import Field
 
 from .strategy import EvalStrategyConfig
 
@@ -12,9 +11,9 @@ EvalHandlerExecutionTime = Literal["after_training"]
 """
 after_training: will evaluate the models on the datasets after the training has finished
 after_pipeline (prospective feature): will evaluate the models on the datasets after the pipeline has finished
-manual (prospective feature): will skip the evaluations in the pipeline run; useful if someone wants to start them with a different
-    entry point later on in isolation (useful for debugging and when evaluation is not part of the performance critical
-    part of the pipeline, can be executed while the system is busy with other things e.g.)
+manual (prospective feature): will skip the evaluations in the pipeline run; useful if someone wants to start them with
+    a different entry point later on in isolation (useful for debugging and when evaluation is not part of the
+    performance critical part of the pipeline, can e.g. be executed while the system is busy with other things)
 async_during_pipeline (prospective feature): useful when the pipeline should perform evaluations asynchronously during
     the pipeline (e.g. for continuously generating data for training trigger decisions)
 """
