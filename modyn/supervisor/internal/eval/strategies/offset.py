@@ -1,7 +1,9 @@
 from typing import Iterable, Optional
 
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
+from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
 from modyn.utils import convert_timestr_to_seconds
+
+from .abstract import AbstractEvalStrategy
 
 
 class OffsetEvalStrategy(AbstractEvalStrategy):
@@ -21,9 +23,9 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         If the represented offset is zero, the evaluation interval is exactly the interval of the trigger.
     """
 
-    def __init__(self, eval_strategy_config: dict):
-        super().__init__(eval_strategy_config)
-        self.offsets = eval_strategy_config["offsets"]
+    def __init__(self, config: OffsetEvalStrategyConfig):
+        super().__init__(config)
+        self.offsets = config.offsets
 
     def get_eval_intervals(
         self, first_timestamp: int, last_timestamp: int
