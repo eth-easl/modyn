@@ -82,11 +82,10 @@ class TrainerServerGRPCServicer:
         request: TrainerAvailableRequest,  # pylint: disable=unused-argument
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainerAvailableResponse:
-        # if there is already another training job running, the node is considered unavailable
-        for _, training in self._training_process_dict.items():
-            if training.process_handler.is_alive():
-                return TrainerAvailableResponse(available=False)
-
+        # Right now, we are always available.
+        # In the future, we might want to implement some resource management to not overload the GPU(s).
+        # Currently, the client specifys the device, in the future this should all be managed by the
+        # trainer server.
         return TrainerAvailableResponse(available=True)
 
     # pylint: disable=too-many-locals
