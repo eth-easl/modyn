@@ -16,7 +16,7 @@ from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorCo
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.matrix_eval_strategy import MatrixEvalStrategy
+from modyn.supervisor.internal.eval_strategies.slicing_eval_strategy import SlicingEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
@@ -742,7 +742,7 @@ def test__start_evaluations(
         ) -> Generator[tuple[int | None, int | None], None, None]:
             yield from intervals
 
-    with patch.object(MatrixEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
+    with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
         model_id = 1
         pe._evaluate_and_store_results(
             pe.state, pe.logs, trigger_id=0, training_id=0, model_id=model_id, first_timestamp=20, last_timestamp=70

@@ -8,8 +8,6 @@ from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    MatrixEvalStrategyConfig,
-    MatrixEvalStrategyModel,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
@@ -18,6 +16,8 @@ from modyn.config.schema.pipeline import (
     PipelineModelStorageConfig,
     TrainingConfig,
 )
+from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.training.config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.system.config import (
     DatabaseConfig,
@@ -173,17 +173,21 @@ def pipeline_training_config() -> TrainingConfig:
 
 
 @pytest.fixture
-def eval_strategies_config() -> MatrixEvalStrategyModel:
-    return MatrixEvalStrategyModel(
-        name="MatrixEvalStrategy",
-        config=MatrixEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300),
-    )
+def eval_strategies_config() -> SlicingEvalStrategyConfig:
+    return SlicingEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300)
 
 
 @pytest.fixture
-def pipeline_evaluation_config(eval_strategies_config: MatrixEvalStrategyModel) -> EvaluationConfig:
+def pipeline_evaluation_config(eval_strategies_config: SlicingEvalStrategyConfig) -> EvaluationConfig:
     return EvaluationConfig(
-        eval_strategy=eval_strategies_config,
+        handlers=[
+            EvalHandlerConfig(
+                execution_time="after_training",
+                strategy=eval_strategies_config,
+                models="matrix",
+                datasets=["MNIST_eval"],
+            )
+        ],
         device="cpu",
         datasets=[
             EvalDataConfig(

@@ -4,9 +4,9 @@ from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import Abs
 from modyn.utils import convert_timestr_to_seconds
 
 
-class MatrixEvalStrategy(AbstractEvalStrategy):
+class SlicingEvalStrategy(AbstractEvalStrategy):
     """
-    The MatrixEvalStrategy class represents an evaluation strategy that divides the evaluation dataset
+    The SlicingEvalStrategy class represents an evaluation strategy that divides the evaluation dataset
     ranged from `eval_start_from` to `eval_end_at` into fixed-sized intervals. The size of each interval is determined
     by the `eval_every` parameter.
 

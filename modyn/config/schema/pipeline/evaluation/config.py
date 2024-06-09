@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
 from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field, field_validator
 
 from ..data import DataConfig
+from .handler import EvalHandlerConfig
 from .metric import Metric
-from .strategy import MatrixEvalStrategyModel, OffsetEvalStrategyModel
-
-EvalStrategyModel = Annotated[Union[MatrixEvalStrategyModel, OffsetEvalStrategyModel], Field(discriminator="name")]
 
 
 class EvalDataConfig(DataConfig):
@@ -36,7 +34,10 @@ ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
 
 
 class EvaluationConfig(ModynBaseModel):
-    eval_strategy: EvalStrategyModel = Field(description="The evaluation strategy that should be used.")
+    handlers: list[EvalHandlerConfig] = Field(
+        description="An array of all evaluation handlers that should be used to evaluate the model.",
+        min_length=1,
+    )
     device: str = Field(description="The device the model should be put on.")
     result_writers: List[ResultWriterType] = Field(
         ["json"],
@@ -46,7 +47,7 @@ class EvaluationConfig(ModynBaseModel):
         ),
         min_length=1,
     )
-    datasets: List[EvalDataConfig] = Field(
+    datasets: list[EvalDataConfig] = Field(
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,
     )
