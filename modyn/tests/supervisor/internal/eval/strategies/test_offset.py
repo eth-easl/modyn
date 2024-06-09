@@ -1,8 +1,9 @@
-from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
+from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
+from modyn.supervisor.internal.eval.strategies import OffsetEvalStrategy
 
 
 def test_get_eval_intervals():
-    config = {"offsets": ["-inf", "inf", "0s", "100s", "-100s"]}
+    config = OffsetEvalStrategyConfig(offsets=["-inf", "inf", "0s", "100s", "-100s"])
     eval_strategy = OffsetEvalStrategy(config)
     assert list(eval_strategy.get_eval_intervals(0, 0)) == [
         (0, 0),

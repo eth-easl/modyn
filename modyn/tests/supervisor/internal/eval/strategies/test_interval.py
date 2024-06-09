@@ -1,5 +1,5 @@
-from modyn.config.schema.pipeline.evaluation.strategy._interval_strategy import _IntervalEvalStrategyConfig
-from modyn.supervisor.internal.eval.strategies._interval_eval_strategy import _IntervalEvalStrategy
+from modyn.config.schema.pipeline.evaluation.strategy._interval import _IntervalEvalStrategyConfig
+from modyn.supervisor.internal.eval.strategies._interval import _IntervalEvalStrategy
 
 
 def test_get_eval_intervals() -> None:

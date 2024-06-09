@@ -4,6 +4,7 @@ from typing import Literal
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils import validate_timestr
+from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import Field, NonNegativeInt, field_validator, model_validator
 from typing_extensions import Self
 
@@ -33,3 +34,9 @@ class SlicingEvalStrategyConfig(ModynBaseModel):
         if self.eval_start_from >= self.eval_end_at:
             raise ValueError("eval_end_at must be larger than eval_start_from")
         return self
+
+    @property
+    def eval_every_sec(self) -> int:
+        unit = str(self.eval_every)[-1:]
+        num = int(str(self.eval_every)[:-1])
+        return num * SECONDS_PER_UNIT[unit]

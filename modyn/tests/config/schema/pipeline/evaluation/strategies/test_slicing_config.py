@@ -1,7 +1,6 @@
 import pytest
-from pydantic import TypeAdapter, ValidationError
-
 from modyn.config.schema.pipeline import SlicingEvalStrategyConfig
+from pydantic import TypeAdapter, ValidationError
 
 
 def test_slicing_eval_strategy_config():

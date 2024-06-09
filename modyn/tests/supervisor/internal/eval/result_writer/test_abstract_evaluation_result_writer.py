@@ -1,6 +1,6 @@
 import pathlib
 
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
+from modyn.supervisor.internal.eval.result_writer import JsonResultWriter
 
 
 def test_init():

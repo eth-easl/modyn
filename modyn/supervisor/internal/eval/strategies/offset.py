@@ -7,8 +7,6 @@ from .abstract import AbstractEvalStrategy
 
 
 class OffsetEvalStrategy(AbstractEvalStrategy):
-    INFINITY = "inf"
-    NEGATIVE_INFINITY = "-inf"
     """
     This evaluation strategy will evaluate the model on the intervals defined by the user provided offsets.
     The offsets are defined as a list of strings, where each string represents an offset.
@@ -31,21 +29,21 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         self, first_timestamp: int, last_timestamp: int
     ) -> Iterable[tuple[Optional[int], Optional[int]]]:
         for offset in self.offsets:
-            if offset == OffsetEvalStrategy.NEGATIVE_INFINITY:
+            if offset == "-inf":
                 yield 0, first_timestamp
-            elif offset == OffsetEvalStrategy.INFINITY:
+            elif offset == "inf":
                 # +1 because the samples with timestamp `last_timestamp` are included in the current trigger,
                 # and here we want to return an interval on the data with timestamp greater than `last_timestamp`.
                 yield last_timestamp + 1, None
             else:
-                offset = convert_timestr_to_seconds(offset)
-                if offset < 0:
-                    yield max(first_timestamp + offset, 0), first_timestamp
-                elif offset > 0:
+                offset_int = convert_timestr_to_seconds(offset)
+                if offset_int < 0:
+                    yield max(first_timestamp + offset_int, 0), first_timestamp
+                elif offset_int > 0:
                     # +1 for the same reason as above
-                    yield last_timestamp + 1, last_timestamp + offset + 1
+                    yield last_timestamp + 1, last_timestamp + offset_int + 1
                 else:
-                    # now offset == 0. We want to return the same interval as the trigger's interval.
+                    # now offset_int == 0. We want to return the same interval as the trigger's interval.
                     # +1 because the right bound of the returned interval should be exclusive.
                     # we want to include samples with timestamp `last_timestamp` from evaluation dataset.
                     yield first_timestamp, last_timestamp + 1

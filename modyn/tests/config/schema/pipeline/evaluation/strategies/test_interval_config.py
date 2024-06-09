@@ -1,9 +1,7 @@
-
 import pytest
-from pydantic import TypeAdapter, ValidationError
-
 from modyn.config.schema.pipeline import EvaluationConfig
-from modyn.config.schema.pipeline.evaluation.strategy._interval_strategy import _IntervalEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy._interval import _IntervalEvalStrategyConfig
+from pydantic import TypeAdapter, ValidationError
 
 VALID_INTERVALS = [
     ("[-inf;+inf]", "-inf", "d", True, "+inf", "d", True),
@@ -65,33 +63,32 @@ def test_interval_eval_strategy_config_invalid_intervals(interval: str) -> None:
     minimal_evaluation_config = {
         "handlers": [
             {
+                "execution_time": "after_training",
                 "strategy": {
-                    "type": "MatrixEvalStrategy",
+                    "type": "SlicingEvalStrategy",
                     "eval_every": "100s",
                     "eval_start_from": 0,
                     "eval_end_at": 300,
                 },
-                "trigger": {"mode": "after_training"},
                 "datasets": ["mnist_eval"],
             }
         ],
         "device": "cpu",
-        "datasets": {
-            "mnist_eval": {
+        "datasets": [
+            {
                 "dataset_id": "MNIST_eval",
                 "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 "dataloader_workers": 2,
                 "batch_size": 64,
                 "metrics": [{"name": "Accuracy"}],
             }
-        },
+        ],
     }
     # verify that the correct config can pass
     TypeAdapter(EvaluationConfig).validate_python(minimal_evaluation_config)
 
-    eval_dataset_config = minimal_evaluation_config["datasets"]["mnist_eval"]  # type: ignore
+    eval_dataset_config = minimal_evaluation_config["datasets"][0]  # type: ignore
     # duplicate dataset_id
-    minimal_evaluation_config["datasets"]["mnist_eval_2"] = eval_dataset_config  # type: ignore
+    minimal_evaluation_config["datasets"].append(eval_dataset_config)  # type: ignore
     with pytest.raises(ValidationError):
         TypeAdapter(EvaluationConfig).validate_python(minimal_evaluation_config)
-

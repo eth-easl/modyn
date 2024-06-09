@@ -5,11 +5,18 @@ from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
 from pydantic import Field
 
-from ._interval_strategy import _IntervalEvalStrategyConfig
+from ._interval import _IntervalEvalStrategyConfig
 
 
 class PeriodicEvalStrategyConfig(_IntervalEvalStrategyConfig):
-    """Comparable to TimeTriggerConfig and DataAmountTriggerConfig, but for scheduling evaluation runs."""
+    """The PeriodicEvalStrategy allows to generate evaluation intervals that are centered around certain points in time.
+
+    These evaluation trigger points follow a fixed scheduled defined by the `every` parameter.
+
+    From those points of evaluation we generate intervals via the _IntervalEvalStrategyConfig baseclass which takes
+    the points and adds intervals around them. For that it uses one offset in each direction.
+    See `_IntervalEvalStrategyConfig` for more information.
+    """
 
     type: Literal["PeriodicEvalStrategy"] = Field("PeriodicEvalStrategy")
     every: str = Field(

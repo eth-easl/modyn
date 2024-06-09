@@ -14,6 +14,9 @@ _EVAL_INTERVAL_PATTERN = (
 
 class _IntervalEvalStrategyConfig(ModynBaseModel):
     """Allows to evaluate a model on an interval that is centered around the time of the evaluation trigger.
+    Bounds of the evaluation interval can be have an offset relative to the training interval bounds.
+
+    Checkout `docs/EVALUATION.md` for a graphical representation of the options.
 
     Note: when specifying the left and right offsets you can choose between several
         time units: 's', 'm', 'h', 'd', 'w', 'y'
@@ -29,8 +32,6 @@ class _IntervalEvalStrategyConfig(ModynBaseModel):
         - "-0" = start of the training_interval (start_training_interval)
         - "+0" = end of the training_interval (end_training_interval)
         - '0': start_training_interval if used as left offset, end_training_interval if used as right offset
-
-    Checkout `docs/EVALUATION.md` for a graphical representation of the options.
     """
 
     interval: str = Field(

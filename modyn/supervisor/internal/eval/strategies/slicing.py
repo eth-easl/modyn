@@ -23,7 +23,7 @@ class SlicingEvalStrategy(AbstractEvalStrategy):
     ) -> Iterable[tuple[Optional[int], Optional[int]]]:
         previous_split = self.config.eval_start_from
         while True:
-            current_split = min(previous_split + self.config.eval_every, self.eval_end_at)
+            current_split = min(previous_split + self.config.eval_every_sec, self.config.eval_end_at)
             yield previous_split, current_split
             if current_split >= self.config.eval_end_at:
                 break

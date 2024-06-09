@@ -14,13 +14,13 @@ from modyn.config.schema.pipeline import EvalDataConfig, ResultWriterType
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
+from modyn.supervisor.internal.eval.result_writer import JsonResultWriter
+from modyn.supervisor.internal.eval.result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
 )
-from modyn.supervisor.internal.evaluation_result_writer.json_result_writer import DedicatedJsonResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.tensorboard_result_writer import TensorboardResultWriter
+from modyn.supervisor.internal.eval.result_writer.json_result_writer import DedicatedJsonResultWriter
+from modyn.supervisor.internal.eval.result_writer.tensorboard_result_writer import TensorboardResultWriter
+from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -719,7 +719,7 @@ class PipelineExecutor:
 
         # let's add the business logic for the new eval handler setup in a follow-up PR
         eval_strategy_config = self.state.pipeline_config.evaluation.handlers[0].strategy
-        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval_strategies")
+        eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.type)(
             eval_strategy_config.model_dump(by_alias=True)
         )

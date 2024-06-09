@@ -11,4 +11,5 @@ class EvalHandler:
 
     We will add more functionality to this class in the future.
     """
+
     config: EvalHandlerConfig

@@ -1,5 +1,3 @@
-
-
 from typing import Iterable, Optional
 
 from modyn.config.schema.pipeline import PeriodicEvalStrategyConfig

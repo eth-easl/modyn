@@ -1,19 +1,13 @@
-from modyn.supervisor.internal.eval_strategies import SlicingEvalStrategy
+from modyn.config.schema.pipeline import SlicingEvalStrategyConfig
+from modyn.supervisor.internal.eval.strategies import SlicingEvalStrategy
 
 
-def get_minimal_eval_strategies_config() -> dict:
-    return {
-        "eval_every": "100s",
-        "eval_start_from": 0,
-        "eval_end_at": 300,
-    }
-
-
-def test_initialization() -> None:
-    eval_strategy = SlicingEvalStrategy(get_minimal_eval_strategies_config())
-    assert eval_strategy.eval_every == 100
-    assert eval_strategy.eval_start_from == 0
-    assert eval_strategy.eval_end_at == 300
+def get_minimal_eval_strategies_config() -> SlicingEvalStrategyConfig:
+    return SlicingEvalStrategyConfig(
+        eval_every="100s",
+        eval_start_from=0,
+        eval_end_at=300,
+    )
 
 
 def test_get_eval_intervals() -> None:
@@ -25,8 +19,8 @@ def test_get_eval_intervals() -> None:
         (200, 300),
     ]
 
-    config["eval_start_from"] = 50
-    config["eval_every"] = "60s"
+    config.eval_start_from = 50
+    config.eval_every = "60s"
     eval_strategy = SlicingEvalStrategy(config)
     assert list(eval_strategy.get_eval_intervals(0, 0)) == [
         (50, 110),

@@ -1,7 +1,6 @@
 import pytest
-from pydantic import TypeAdapter, ValidationError
-
 from modyn.config.schema.pipeline import EvalStrategyConfig, EvaluationConfig
+from pydantic import TypeAdapter, ValidationError
 
 
 def test_eval_strategy_model() -> None:

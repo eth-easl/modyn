@@ -1,8 +1,6 @@
 import pytest
-from pydantic import TypeAdapter, ValidationError
-
 from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
-from modyn.supervisor.internal.eval.strategies import OffsetEvalStrategy
+from pydantic import TypeAdapter, ValidationError
 
 
 def test_offset_eval_strategy_config():
@@ -36,7 +34,6 @@ def test_offset_eval_strategy_config():
 
     TypeAdapter(OffsetEvalStrategyConfig).validate_python(
         {
-            "offsets": [OffsetEvalStrategy.INFINITY, OffsetEvalStrategy.NEGATIVE_INFINITY, "10s", "10d", "-10s", "0s"],
+            "offsets": ["inf", "-inf", "10s", "10d", "-10s", "0s"],
         }
     )
-

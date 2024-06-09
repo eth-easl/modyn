@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from modyn.config.schema.pipeline.evaluation.strategy._interval_strategy import _IntervalEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy._interval import _IntervalEvalStrategyConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 
 from .abstract import AbstractEvalStrategy
