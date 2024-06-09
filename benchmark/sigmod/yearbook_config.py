@@ -45,7 +45,7 @@ def _yearbook_model(model: str) -> tuple[ModelConfig, str, list]:
             "from PIL import Image\n"
             "import io\n"
             "def bytes_parser_function(data: memoryview) -> Image:\n"
-            "   return Image.open(io.BytesIO(data)).convert('RGB')"
+            "   return Image.frombuffer('RGB', (32, 32), data).convert('RGB')"
         )
         transformations = ["transforms.ToTensor()", "transforms.Normalize((0.1307,), (0.3081,))"]
 
