@@ -33,12 +33,19 @@ def get_tensors_subset(
 
 class AbstractRemoteDownsamplingStrategy(ABC):
     def __init__(
-        self, pipeline_id: int, trigger_id: int, batch_size: int, params_from_selector: dict, device: str
+            self,
+            pipeline_id: int,
+            trigger_id: int,
+            batch_size: int,
+            params_from_selector: dict,
+            modyn_config: dict,
+            device: str
     ) -> None:
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size
         self.trigger_id = trigger_id
         self.device = device
+        self.modyn_config = modyn_config
 
         assert "downsampling_ratio" in params_from_selector
         self.downsampling_ratio = params_from_selector["downsampling_ratio"]
@@ -80,6 +87,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     def inform_samples(
         self,
         sample_ids: list[int],
+        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
         forward_output: torch.Tensor,
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,

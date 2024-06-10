@@ -52,6 +52,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
         assert self.il_model_id is not None
+        config["rho_pipeline_id"] = self.rho_pipeline_id
         config["il_model_id"] = self.il_model_id
         return config
 

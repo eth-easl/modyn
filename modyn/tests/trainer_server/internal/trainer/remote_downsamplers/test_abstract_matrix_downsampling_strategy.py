@@ -42,15 +42,15 @@ def test_collect_embeddings():
 
         first_embedding = torch.randn((4, 5))
         second_embedding = torch.randn((3, 5))
-        amds.inform_samples([1, 2, 3, 4], None, None, first_embedding)
-        amds.inform_samples([21, 31, 41], None, None, second_embedding)
+        amds.inform_samples([1, 2, 3, 4], None,None, None, first_embedding)
+        amds.inform_samples([21, 31, 41], None, None, None, second_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (7, 5)
         assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [first_embedding, second_embedding]))
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
         third_embedding = torch.randn((23, 5))
-        amds.inform_samples(list(range(1000, 1023)), None, None, third_embedding)
+        amds.inform_samples(list(range(1000, 1023)), None,None, None, third_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (30, 5)
         assert all(
@@ -74,8 +74,8 @@ def test_collect_embedding_balance(test_amds):
 
         first_embedding = torch.randn((4, 5))
         second_embedding = torch.randn((3, 5))
-        amds.inform_samples([1, 2, 3, 4], None, None, first_embedding)
-        amds.inform_samples([21, 31, 41], None, None, second_embedding)
+        amds.inform_samples([1, 2, 3, 4], None,None, None, first_embedding)
+        amds.inform_samples([21, 31, 41], None,None, None, second_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (7, 5)
         assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [first_embedding, second_embedding]))
@@ -85,7 +85,7 @@ def test_collect_embedding_balance(test_amds):
 
         third_embedding = torch.randn((23, 5))
         assert len(amds.matrix_elements) == 0
-        amds.inform_samples(list(range(1000, 1023)), None, None, third_embedding)
+        amds.inform_samples(list(range(1000, 1023)), None,None, None, third_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (23, 5)
         assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [third_embedding]))

@@ -29,12 +29,13 @@ def test_inform_samples():
 
         # Test data
         sample_ids = [1, 2, 3]
+        forward_input = torch.randn(3, 5)  # 3 samples, 5 input features
         forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
         forward_output.requires_grad = True
         target = torch.tensor([1, 1, 1])  # 3 target labels
         embedding = torch.randn(3, 10)  # 3 samples, embedding dimension 10
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         expected_shape = (1, 3, forward_output.shape[1] * (1 + embedding.shape[1]))
         assert len(sampler.current_class_gradients) == 1
@@ -90,12 +91,13 @@ def test_inform_end_of_current_label_and_select():
     sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3]
+        forward_input = torch.randn(3, 5)  # 3 samples, 5 input features
         forward_output = torch.randn(3, 5)  # 3 samples, 5 output classes
         forward_output.requires_grad = True
         target = torch.tensor([1, 1, 1])
         embedding = torch.randn(3, 10)  # 3 samples, embedding dimension 10
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -103,12 +105,13 @@ def test_inform_end_of_current_label_and_select():
         assert len(sampler.current_class_gradients) == 0
 
         sample_ids = [10, 11, 12, 13]
+        forward_input = torch.randn(4, 5)  # 4 samples, 5 input features
         forward_output = torch.randn(4, 5)  # 4 samples, 5 output classes
         forward_output.requires_grad = True
         target = torch.tensor([0, 0, 0, 0])  # 4 target labels
         embedding = torch.randn(4, 10)  # 4 samples, embedding dimension 10
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (3, 3)
         sampler.inform_end_of_current_label()
@@ -128,12 +131,13 @@ def test_inform_end_of_current_label_and_select_balanced():
     sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(True))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3, 4]
+        forward_input = torch.randn(4, 5)
         forward_output = torch.randn(4, 5)
         forward_output.requires_grad = True
         target = torch.tensor([1, 1, 1, 1])
         embedding = torch.randn(4, 10)
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -143,12 +147,13 @@ def test_inform_end_of_current_label_and_select_balanced():
         assert len(sampler.current_class_gradients) == 0
 
         sample_ids = [10, 11, 12, 13, 14, 15]
+        forward_output = torch.randn(6, 5)
         forward_output = torch.randn(6, 5)  # 4 samples, 5 output classes
         forward_output.requires_grad = True
         target = torch.tensor([0, 0, 0, 0, 0, 0])  # 4 target labels
         embedding = torch.randn(6, 10)  # 4 samples, embedding dimension 10
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -171,13 +176,14 @@ def test_bts():
     sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3, 10, 11, 12, 13]
+        forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
         forward_output = torch.randn(7, 5)  # 7 samples, 5 output classes
         forward_output.requires_grad = True
         target = torch.tensor([1, 1, 1, 0, 0, 0, 1])
         embedding = torch.randn(7, 10)  # 7 samples, embedding dimension 10
 
         assert sampler.distance_matrix.shape == (0, 0)
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
         sampler.inform_end_of_current_label()
         assert sampler.distance_matrix.shape == (7, 7)
         assert len(sampler.current_class_gradients) == 0
@@ -195,6 +201,7 @@ def test_bts():
 def test_bts_equals_stb():
     # data
     sample_ids = [1, 2, 3, 10, 11, 12, 13]
+    forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
     forward_output = torch.randn(7, 5)  # 7 samples, 5 output classes
     forward_output.requires_grad = True
     target = torch.tensor([1, 1, 1, 0, 0, 0, 1])
@@ -203,7 +210,7 @@ def test_bts_equals_stb():
     # BTS, all in one call
     bts_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
     with torch.inference_mode(mode=(not bts_sampler.requires_grad)):
-        bts_sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        bts_sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
         bts_selected_points, bts_selected_weights = bts_sampler.select_points()
 
@@ -213,6 +220,7 @@ def test_bts_equals_stb():
         stb_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config())
         stb_sampler.inform_samples(
             [sample_ids[i] for i, keep in enumerate(class0) if keep],
+            forward_input[class0],
             forward_output[class0],
             target[class0],
             embedding[class0],
@@ -220,6 +228,7 @@ def test_bts_equals_stb():
         stb_sampler.inform_end_of_current_label()
         stb_sampler.inform_samples(
             [sample_ids[i] for i, keep in enumerate(class1) if keep],
+            forward_input[class1],
             forward_output[class1],
             target[class1],
             embedding[class1],
@@ -348,7 +357,7 @@ def test_matching_results_with_deepcore():
         target = torch.tensor(targets[0:3]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[0:3], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -360,7 +369,7 @@ def test_matching_results_with_deepcore():
         target = torch.tensor(targets[3:]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[3:], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (3, 3)
         sampler.inform_end_of_current_label()
@@ -403,7 +412,7 @@ def test_matching_results_with_deepcore_permutation():
         target = torch.tensor(targets[targets == 0]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[targets == 0], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -415,7 +424,7 @@ def test_matching_results_with_deepcore_permutation():
         target = torch.tensor(targets[targets == 1]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[targets == 1], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (3, 3)
         sampler.inform_end_of_current_label()
@@ -460,7 +469,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
         target = torch.tensor(targets[targets == 0]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[targets == 0], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (0, 0)
         sampler.inform_end_of_current_label()
@@ -472,7 +481,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids():
         target = torch.tensor(targets[targets == 1]).unsqueeze(dim=1).float()
         embedding = dummy_model.embedding
 
-        sampler.inform_samples(sample_ids, forward_output, target, embedding)
+        sampler.inform_samples(sample_ids, samples[targets == 1], forward_output, target, embedding)
 
         assert sampler.distance_matrix.shape == (3, 3)
         sampler.inform_end_of_current_label()

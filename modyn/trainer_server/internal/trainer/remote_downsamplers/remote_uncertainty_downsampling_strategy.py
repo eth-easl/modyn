@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -54,6 +54,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     def inform_samples(
         self,
         sample_ids: list[int],
+        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
         forward_output: torch.Tensor,
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
