@@ -33,6 +33,16 @@ class EvalHandlerConfig(ModynBaseModel):
     execution_time: EvalHandlerExecutionTime = Field(
         description="When evaluations should be performed in terms of where in the code / when during a pipeline run."
     )
+    """Caution: execution_time=`after_training` yields slightly different behavior for the `models` option.
+
+    Point of difference: decision, if a model is the most recent one for a certain eval request.
+    While `execution_time=after_pipeline` allows to consider all models for a certain eval request interval,
+    and thereby allows to select the most recent one, `execution_time=after_training` doesn't allow this.
+    This is because the models are generated during the pipeline run and the recently trained model might not be the
+    most recent model for the evaluation request that starts after the training interval. (as there might be another
+    training/model that lies between the current training and the next evaluation interval).
+    So for `execution_time=after_training` there might be multiple models that are considered `most_recent` for an
+    interval."""
 
     models: Literal["matrix", "most_recent"] = Field(
         "most_recent",
@@ -67,4 +77,5 @@ class EvalHandlerConfig(ModynBaseModel):
     def validate_datasets(self) -> EvalHandlerConfig:
         if isinstance(self.strategy, OffsetEvalStrategyConfig):
             assert self.execution_time == "after_training", "OffsetEvalStrategy can only be used after training."
+            assert self.models == "most_recent", "OffsetEvalStrategy can only be used with most_recent model currently."
         return self

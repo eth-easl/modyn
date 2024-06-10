@@ -61,6 +61,8 @@ stateDiagram-v2
     }
     FETCH_NEW_DATA --> process_new_data
     process_new_data --> FETCH_NEW_DATA
-    DONE --> EXIT
+    DONE --> POST_EVALUATION_CHECKPOINT
+    POST_EVALUATION_CHECKPOINT --> POST_EVALUATION
+    POST_EVALUATION --> EXIT
     EXIT --> [*]
 ```

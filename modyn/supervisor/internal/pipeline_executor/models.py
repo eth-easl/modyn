@@ -13,6 +13,7 @@ from typing import Any, Callable, Literal, Optional, Union, cast
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
+from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from pydantic import BaseModel, Field, model_serializer, model_validator
@@ -97,6 +98,7 @@ class ExecutionState(PipelineExecutionParams):
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
+    # for logging
     seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
     current_batch_index: int = 0
     current_sample_index: int = 0
@@ -248,27 +250,13 @@ class StoreModelInfo(_TrainInfoMixin):
         )
 
 
-class _ModelEvalInfo(StageInfo):
-    trigger_id: int
-    id_model: int
-    dataset_id: str
-    interval_start: int | None
-    interval_end: int | None
-
-    @override
-    @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_id, self.id_model, self.dataset_id, self.interval_start, self.interval_end)],
-            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end"],
-        )
-
-
-class SingleEvaluationInfo(_ModelEvalInfo):
+class SingleEvaluationInfo(StageInfo):
+    eval_request: EvalRequest
     failure_reason: str | None = None
 
 
-class StoreEvaluationInfo(_ModelEvalInfo):
+class StoreEvaluationInfo(StageInfo):
+    eval_request: EvalRequest
     results: dict[str, Any]
 
     def results_df(self) -> pd.DataFrame:

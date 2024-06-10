@@ -1,25 +1,16 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
-
 from modyn.config.schema.pipeline.evaluation.strategy._interval import _IntervalEvalStrategyConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 
-from .abstract import AbstractEvalStrategy
 
-
-class _IntervalEvalStrategy(AbstractEvalStrategy):
+class _IntervalEvalStrategyMixin:
     """See `_IntervalEvalStrategyConfig` for more information."""
 
-    INFINITY = "inf"
-    NEGATIVE_INFINITY = "-inf"
-
     def __init__(self, config: _IntervalEvalStrategyConfig):
-        super().__init__(config)
+        self.config = config
 
-    def get_eval_intervals(
-        self, first_timestamp: int, last_timestamp: int
-    ) -> Iterable[tuple[Optional[int], Optional[int]]]:
+    def _generate_interval(self, first_timestamp: int, last_timestamp: int) -> tuple[int | None, int | None]:
         left = 0
         right: int | None = 0
 
@@ -66,4 +57,4 @@ class _IntervalEvalStrategy(AbstractEvalStrategy):
                 + int(self.config.right) * SECONDS_PER_UNIT[self.config.right_unit]
                 - int(not self.config.right_bound_inclusive)
             )
-        yield max(0, left), max(left, right) if right else right
+        return max(0, left), max(left, right) if right else right
