@@ -1,3 +1,5 @@
+import json
+
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
 from modyn.config.schema.pipeline import (
@@ -11,7 +13,9 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetAvailableLabelsRequest,
     GetNumberOfPartitionsRequest,
     GetSamplesRequest,
+    GetSelectionStrategyRequest,
     SamplesResponse,
+    SelectionStrategyResponse,
 )
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.utils import grpc_connection_established
@@ -491,6 +495,178 @@ def test_abstract_downsampler(reset_after_trigger: bool) -> None:
 
     assert next_trigger_id > trigger_id
 
+    req = GetSelectionStrategyRequest(pipeline_id=pipeline_id)
+    response: SelectionStrategyResponse = selector.get_selection_strategy(req)
+    assert response.downsampling_enabled
+    assert response.strategy_name == "RemoteLossDownsampling"
+
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id)
+    ).num_partitions
+
+    assert number_of_partitions == 1, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+
+    for partition in range(number_of_partitions):
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=0, partition_id=partition
+                )
+            )
+        )
+
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(
+                    pipeline_id=pipeline_id, trigger_id=next_trigger_id, worker_id=1, partition_id=partition
+                )
+            )
+        )
+
+        worker1_response = worker1_responses[0]
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+
+        if not reset_after_trigger:
+            # we should have 0.2*15000 = 3000 points . So 1500 per worker
+            assert len(worker_1_samples) == 1500, f"Received {len(worker_1_samples)}," f"instead of 1500."
+            assert len(worker_2_samples) == 1500, f"Received {len(worker_2_samples)} instead of 1500."
+        else:
+            # we should have 0.2*5000 = 1000 points, so 500 per worker
+            assert len(worker_1_samples) == 500, f"Received {len(worker_1_samples)}" f"instead of 500."
+            assert len(worker_2_samples) == 500, f"Received {len(worker_2_samples)} instead of 500."
+
+        worker_1_weights = list(worker1_response.training_samples_weights)
+        worker_2_weights = list(worker2_response.training_samples_weights)
+        assert len(worker_1_samples) == len(worker_1_weights)
+        assert len(worker_2_samples) == len(worker_2_weights)
+
+        total_samples.extend(worker_1_samples + worker_2_samples)
+
+        if not reset_after_trigger:
+            # ids must belong to [0,15000)
+            assert set(total_samples) <= set(range(15000)), (
+                f"Got {total_samples} but some samples do not belong to [0,15000). "
+                f"Extra samples: {set(total_samples) - set(range(15000))}"
+            )
+            assert len(total_samples) == 3000, f"Expected 3000 samples, got {len(total_samples)}"
+
+        else:
+            # ids belong only to the last trigger [10000, 15000)
+            assert set(total_samples) <= set(range(10000, 15000)), (
+                f"Got {total_samples} but some samples do not belong to [10000,15000). "
+                f"Extra samples: {set(total_samples) - set(range(10000, 15000))}"
+            )
+            assert len(total_samples) == 1000, f"Expected 1000 samples, got {len(total_samples)}"
+
+
+def test_warmup_period(reset_after_trigger: bool) -> None:
+    selector_channel = connect_to_selector_servicer()
+    selector = SelectorStub(selector_channel)
+
+    # sampling every datapoint
+    strategy_config = get_coreset_strategy_config()
+    strategy_config.maximum_keys_in_memory = 50000
+    strategy_config.tail_triggers = 0 if reset_after_trigger else None
+    strategy_config.presampling_config.ratio = 20
+    strategy_config.presampling_config.strategy = "Random"
+    strategy_config.downsampling_config = LossDownsamplingConfig(ratio=10, sample_then_batch=False)
+    strategy_config.warmup_triggers = 1
+
+    pipeline_config = get_minimal_pipeline_config(2, strategy_config.model_dump(by_alias=True))
+    pipeline_id = register_pipeline(pipeline_config, get_modyn_config())
+
+    # Before the first trigger - downsampling should be disabled
+    req = GetSelectionStrategyRequest(pipeline_id=pipeline_id)
+    response: SelectionStrategyResponse = selector.get_selection_strategy(req)
+    assert not response.downsampling_enabled
+
+    selector.inform_data(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=list(range(0, 5000)),
+            timestamps=list(range(100000, 105000)),
+            labels=[1, 0] * 2500,
+        )
+    )
+
+    trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=list(range(5000, 10000)),
+            timestamps=list(range(200000, 205000)),
+            labels=[0, 1] * 2500,
+        )
+    ).trigger_id
+
+    number_of_partitions = selector.get_number_of_partitions(
+        GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=trigger_id)
+    ).num_partitions
+
+    assert number_of_partitions == 1, f"Invalid number of partitions: {number_of_partitions}"
+    total_samples = []
+
+    for partition in range(number_of_partitions):
+        worker1_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=0, partition_id=partition)
+            )
+        )
+
+        worker2_responses: list[SamplesResponse] = list(
+            selector.get_sample_keys_and_weights(
+                GetSamplesRequest(pipeline_id=pipeline_id, trigger_id=trigger_id, worker_id=1, partition_id=partition)
+            )
+        )
+
+        worker1_response = worker1_responses[0]
+        worker2_response = worker2_responses[0]
+
+        worker_1_samples = list(worker1_response.training_samples_subset)
+        worker_2_samples = list(worker2_response.training_samples_subset)
+
+        # WARMUP - we need to receive full samples!
+        assert len(worker_1_samples) == 5000, f"Received {len(worker_1_samples)} samples instead of 5000."
+        assert len(worker_2_samples) == 5000, f"Received {len(worker_2_samples)} samples instead of 5000."
+
+        worker_1_weights = list(worker1_response.training_samples_weights)
+        worker_2_weights = list(worker2_response.training_samples_weights)
+        assert len(worker_1_samples) == len(worker_1_weights)
+        assert len(worker_2_samples) == len(worker_2_weights)
+
+        total_samples.extend(worker_1_samples + worker_2_samples)
+
+    assert len(total_samples) == len(set(total_samples)), "Received duplicated samples"
+    assert set(total_samples) == set(
+        range(10000)
+    ), f"Got samples with out of range keys: {set(total_samples) - set(range(10000))}"
+    assert len(total_samples) == 10000, f"expected 10000 samples due to warmup, got {len(total_samples)}"
+
+    # Now we would train - downsampling is disabled still cause first trigger
+    req = GetSelectionStrategyRequest(pipeline_id=pipeline_id)
+    response: SelectionStrategyResponse = selector.get_selection_strategy(req)
+    assert not response.downsampling_enabled
+
+    next_trigger_id = selector.inform_data_and_trigger(
+        DataInformRequest(
+            pipeline_id=pipeline_id,
+            keys=list(range(10000, 15000)),
+            timestamps=list(range(20000, 25000)),
+            labels=list(range(20000, 25000)),
+        )
+    ).trigger_id
+
+    assert next_trigger_id > trigger_id
+
+    # Now we would train - downsampling is enabled now!
+    req = GetSelectionStrategyRequest(pipeline_id=pipeline_id)
+    response: SelectionStrategyResponse = selector.get_selection_strategy(req)
+    assert response.downsampling_enabled
+    assert response.strategy_name == "RemoteLossDownsampling"
+
     number_of_partitions = selector.get_number_of_partitions(
         GetNumberOfPartitionsRequest(pipeline_id=pipeline_id, trigger_id=next_trigger_id)
     ).num_partitions
@@ -947,3 +1123,5 @@ if __name__ == "__main__":
     test_abstract_downsampler(reset_after_trigger=True)
     test_get_available_labels(reset_after_trigger=False)
     test_get_available_labels(reset_after_trigger=True)
+    test_warmup_period(reset_after_trigger=False)
+    test_warmup_period(reset_after_trigger=True)

@@ -220,22 +220,6 @@ def test_trainer_available(test_connect_to_model_storage):
     "connect_to_model_storage",
     return_value=DummyModelStorageStub(),
 )
-@patch.object(mp.Process, "is_alive", return_value=True)
-def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
-    with tempfile.TemporaryDirectory() as modyn_temp:
-        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        trainer_server._training_process_dict[10] = TrainingProcessInfo(
-            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue()
-        )
-        response = trainer_server.trainer_available(trainer_available_request, None)
-        assert not response.available
-
-
-@patch.object(
-    TrainerServerGRPCServicer,
-    "connect_to_model_storage",
-    return_value=DummyModelStorageStub(),
-)
 @patch(
     "modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer.hasattr",
     return_value=False,

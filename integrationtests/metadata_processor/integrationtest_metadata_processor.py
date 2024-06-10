@@ -23,7 +23,7 @@ class MetadataProcessorClient:
         self._stub = MetadataProcessorStub(metadata_processor_channel)
 
     def send_metadata(self, req: TrainingMetadataRequest) -> TrainingMetadataResponse:
-        resp = self._stub.ProcessTrainingMetadata(req)
+        resp = self._stub.process_training_metadata(req)
         return resp
 
 

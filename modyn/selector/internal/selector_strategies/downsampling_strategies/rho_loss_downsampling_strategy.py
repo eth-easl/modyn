@@ -2,7 +2,7 @@ import json
 from typing import Any, Iterable, Optional, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
-from modyn.config.schema.pipeline import DataConfig, RHOLossDownsamplingConfig
+from modyn.config.schema.pipeline import DataConfig, NewDataStrategyConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -17,7 +17,6 @@ from sqlalchemy import Select, func, select
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
     IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig(name="PyTorchFullModel")
-    IL_MODEL_DUMMY_SELECTION_STRATEGY = "{}"
 
     def __init__(
         self,
@@ -27,6 +26,11 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         maximum_keys_in_memory: int,
     ):
         super().__init__(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+        # The choice of the selection strategy does not matter as long as it does not downsample data
+        # at the trainer server. (We don't want to further select on holdout set)
+        self.il_model_dummy_selection_strategy = NewDataStrategyConfig(
+            maximum_keys_in_memory=maximum_keys_in_memory, tail_triggers=0
+        )
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
         self.il_training_config = downsampling_config.il_training_config
         self.grpc = TrainerServerGRPCHandlerMixin(modyn_config)
@@ -87,7 +91,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             model_class_name=self.il_training_config.il_model_id,
             model_config=json.dumps(self.il_training_config.il_model_config),
             amp=self.il_training_config.amp,
-            selection_strategy=self.IL_MODEL_DUMMY_SELECTION_STRATEGY,
+            selection_strategy=self.il_model_dummy_selection_strategy.model_dump_json(by_alias=True),
             data_config=data_config_str,
             full_model_strategy=self.IL_MODEL_STORAGE_STRATEGY,
         )
