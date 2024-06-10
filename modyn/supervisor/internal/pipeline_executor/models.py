@@ -256,7 +256,7 @@ class StoreModelInfo(_TrainInfoMixin):
 
 class SingleEvaluationInfo(StageInfo):
     eval_request: EvalRequest
-    results: dict[str, Any]
+    results: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str | None = None
 
     def results_df(self) -> pd.DataFrame:
@@ -275,7 +275,7 @@ class SingleEvaluationInfo(StageInfo):
                     metric["name"],
                     metric["result"],
                 )
-                for metric in self.results["metrics"]
+                for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",

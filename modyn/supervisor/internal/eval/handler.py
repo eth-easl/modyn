@@ -77,10 +77,10 @@ class EvalHandler:
         eval_intervals = self.eval_strategy.get_eval_intervals(training_intervals)
         df_eval_intervals = pd.DataFrame(
             [
-                (eval_interval.start, eval_interval.end, eval_interval.training_interval_end)
+                (eval_interval.start, eval_interval.end, eval_interval.most_recent_model_interval_end_before)
                 for eval_interval in eval_intervals
             ],
-            columns=["start", "end", "training_interval_end"],
+            columns=["start", "end", "most_recent_model_interval_end_before"],
         )
 
         # now build & potentially reduce the Trainings x EvalIntervals space
@@ -88,23 +88,19 @@ class EvalHandler:
 
         # to check if a combination is the most recent, we first compute if model was trained before the usage starts
         # last_timestamp (df_trainings) defines the end of the training data;
-        # training_interval_end (df_eval_intervals): defines center of an eval intervals (either center or training end)
-        # if the training was completed before this "center", the model is valid for this eval interval
-
-        # @MaxiBoether: I acklowledge that at least the naming of this is confusing and weird, let
-        #   me know if you have any ideas here
-        df_cross["chronology_ok"] = df_cross["last_timestamp"] <= df_cross["training_interval_end"]
+        # most_recent_model_interval_end_before (df_eval_intervals): defines center of an eval intervals.
+        df_cross["chronology_ok"] = df_cross["last_timestamp"] <= df_cross["most_recent_model_interval_end_before"]
 
         # find the maximum model for every EvalCandidate that doesn't violate that constraint
         max_model_id = (
             df_cross[df_cross["chronology_ok"]]
-            .groupby("training_interval_end")["id_model"]
+            .groupby("most_recent_model_interval_end_before")["id_model"]
             .aggregate(max_model_id="max")
         )
 
         # combine: a model in the cross product is most recent for a certain interval iff
-        #  it has maximum model id for its training_interval_end
-        final = df_cross.merge(max_model_id, on="training_interval_end")
+        #  it has maximum model id for its most_recent_model_interval_end_before
+        final = df_cross.merge(max_model_id, on="most_recent_model_interval_end_before")
         final["most_recent_model"] = final["id_model"] == final["max_model_id"]
 
         # convert to list

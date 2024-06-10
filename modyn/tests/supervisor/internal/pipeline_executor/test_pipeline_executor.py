@@ -63,7 +63,7 @@ def get_dummy_pipeline_args(
         pipeline_id=PIPELINE_ID,
         modyn_config=system_config,
         pipeline_config=pipeline_config,
-        eval_directory=str(EVALUATION_DIRECTORY),
+        eval_directory=EVALUATION_DIRECTORY,
         exception_queue=EXCEPTION_QUEUE,
         pipeline_status_queue=PIPELINE_STATUS_QUEUE,
         training_status_queue=TRAINING_STATUS_QUEUE,

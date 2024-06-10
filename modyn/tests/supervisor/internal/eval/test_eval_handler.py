@@ -19,11 +19,11 @@ def test_get_eval_requests_after_pipeline() -> None:
     )
 
     intervals = [
-        EvalInterval(start=8, end=12, training_interval_start=10, training_interval_end=10),
-        EvalInterval(start=18, end=22, training_interval_start=20, training_interval_end=20),
-        EvalInterval(start=23, end=27, training_interval_start=25, training_interval_end=25),
-        EvalInterval(start=24, end=28, training_interval_start=26, training_interval_end=26),
-        EvalInterval(start=25, end=29, training_interval_start=27, training_interval_end=27),
+        EvalInterval(start=8, end=12, most_recent_model_interval_end_before=10),
+        EvalInterval(start=18, end=22, most_recent_model_interval_end_before=20),
+        EvalInterval(start=23, end=27, most_recent_model_interval_end_before=25),
+        EvalInterval(start=24, end=28, most_recent_model_interval_end_before=26),
+        EvalInterval(start=25, end=29, most_recent_model_interval_end_before=27),
     ]
 
     class DummyEvalStrategy(AbstractEvalStrategy):
