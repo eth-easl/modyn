@@ -549,7 +549,7 @@ class PytorchTrainer:
         with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
             big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
-            self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+            self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
 
         self.end_embedding_recorder_if_needed()
 
