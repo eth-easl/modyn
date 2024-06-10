@@ -23,6 +23,7 @@ def run_multiple_pipelines(
         )
         logger.info(f"Starting pipeline: {pipeline_config.pipeline.name}")
         started = client.start_pipeline()
+        result = False
         if started:
             result = client.poll_pipeline_status(show_eval_progress=show_eval_progress)
         logger.info(f"Finished pipeline: {pipeline_config.pipeline.name}")
