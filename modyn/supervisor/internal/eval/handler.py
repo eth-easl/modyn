@@ -61,7 +61,7 @@ class EvalHandler:
 
     def get_eval_requests_after_pipeline(self, df_trainings: pd.DataFrame) -> list[EvalRequest]:
         """Args:
-            df_store_model: The pipeline stage execution tracking information including training and model infos.
+            df_trainings: The pipeline stage execution tracking information including training and model infos.
                 Can be acquired by joining TriggerExecutionInfo and StoreModelInfo dataframes.
 
         Returns:
@@ -71,4 +71,59 @@ class EvalHandler:
             set(df_trainings.columns)
         ) == set()
 
-        return []  # followup-PR
+        training_intervals: list[tuple[int, int]] = [
+            (row["first_timestamp"], row["last_timestamp"]) for _, row in df_trainings.iterrows()
+        ]
+        eval_intervals = self.eval_strategy.get_eval_intervals(training_intervals)
+        df_eval_intervals = pd.DataFrame(
+            [
+                (eval_interval.start, eval_interval.end, eval_interval.training_interval_end)
+                for eval_interval in eval_intervals
+            ],
+            columns=["start", "end", "training_interval_end"],
+        )
+
+        # now build & potentially reduce the Trainings x EvalIntervals space
+        df_cross = df_eval_intervals.merge(df_trainings, how="cross")
+
+        # to check if a combination is the most recent, we first compute if model was trained before the usage starts
+        # last_timestamp (df_trainings) defines the end of the training data;
+        # training_interval_end (df_eval_intervals): defines center of an eval intervals (either center or training end)
+        # if the training was completed before this "center", the model is valid for this eval interval
+
+        # @MaxiBoether: I acklowledge that at least the naming of this is confusing and weird, let
+        #   me know if you have any ideas here
+        df_cross["chronology_ok"] = df_cross["last_timestamp"] <= df_cross["training_interval_end"]
+
+        # find the maximum model for every EvalCandidate that doesn't violate that constraint
+        max_model_id = (
+            df_cross[df_cross["chronology_ok"]]
+            .groupby("training_interval_end")["id_model"]
+            .aggregate(max_model_id="max")
+        )
+
+        # combine: a model in the cross product is most recent for a certain interval iff
+        #  it has maximum model id for its training_interval_end
+        final = df_cross.merge(max_model_id, on="training_interval_end")
+        final["most_recent_model"] = final["id_model"] == final["max_model_id"]
+
+        # convert to list
+        eval_requests: list[EvalRequest] = []
+        for _, eval_candidate in final.iterrows():
+            if self.config.models != "matrix" and not eval_candidate["most_recent_model"]:
+                continue
+            for dataset_id in self.config.datasets:
+                eval_requests.append(
+                    EvalRequest(
+                        trigger_id=eval_candidate["trigger_id"],
+                        training_id=eval_candidate["training_id"],
+                        model_id=eval_candidate["id_model"],
+                        most_recent_model=eval_candidate["most_recent_model"],
+                        eval_handler=self.config.name,
+                        dataset_id=dataset_id,
+                        interval_start=eval_candidate["start"],
+                        interval_end=eval_candidate["end"],
+                    )
+                )
+
+        return eval_requests

@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 
 from .strategy import EvalStrategyConfig, OffsetEvalStrategyConfig
 
-EvalHandlerExecutionTime = Literal["after_training"]
+EvalHandlerExecutionTime = Literal["after_training", "after_pipeline"]
 """
 after_training: will evaluate the models on the datasets after the training has finished
 after_pipeline (prospective feature): will evaluate the models on the datasets after the pipeline has finished
