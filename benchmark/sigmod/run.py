@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import os
+import logging
+import sys
 
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.yearbook_config import gen_yearbook_config
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
+from modyn.utils.utils import current_time_millis
+
 from benchmark.sigmod.cglm_config import gen_cglm_config
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config import LrSchedulerConfig
@@ -21,6 +25,17 @@ from modyn.config import (
     GradNormDownsamplingConfig,
 )
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
+
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(f"client_{current_time_millis()}.log", mode="w"),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 
 def gen_selection_strategies(warmup_triggers: int) -> list[tuple[str, SelectionStrategy]]:
@@ -181,6 +196,7 @@ def gen_lr_scheduler_configs(min_lr: float) -> list[tuple[str, None | LrSchedule
 
 
 def run_experiment() -> None:
+    logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
 
     pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
@@ -204,7 +220,9 @@ def run_experiment() -> None:
 
     for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr):
-            config_id = f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
+            config_id = (
+                f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
+            )
             pipeline_configs.append(
                 pipeline_gen_func(
                     config_id,
@@ -217,6 +235,7 @@ def run_experiment() -> None:
                     num_classes,
                 )
             )
+    return
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
@@ -232,7 +251,7 @@ def run_experiment() -> None:
         start_replay_at=0,
         stop_replay_at=None,
         maximum_triggers=None,
-        show_eval_progress=False
+        show_eval_progress=False,
     )
 
 

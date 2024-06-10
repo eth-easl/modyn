@@ -5,8 +5,6 @@ from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    MatrixEvalStrategyConfig,
-    MatrixEvalStrategyModel,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
@@ -23,6 +21,11 @@ from modyn.config import (
     OptimizerParamGroup,
 )
 from modyn.config import LrSchedulerConfig
+import logging
+from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
+
+logger = logging.getLogger(__name__)
 
 
 def gen_cglm_config(
@@ -37,6 +40,7 @@ def gen_cglm_config(
 ) -> ModynPipelineConfig:
     del model  # hardcore resnet50
     model_config = ModelConfig(id="ResNet50", config={"use_pretrained": True, "num_classes": num_classes})
+    logger.debug("This is a test.")
 
     bytes_parser_func = (
         "from PIL import Image\n"
@@ -82,10 +86,17 @@ def gen_cglm_config(
         data=DataConfig(dataset_id=dataset, transformations=transformations, bytes_parser_function=bytes_parser_func),
         trigger=TimeTriggerConfig(every="1y"),
         evaluation=EvaluationConfig(
-            eval_strategy=MatrixEvalStrategyModel(
-                name="MatrixEvalStrategy",
-                config=MatrixEvalStrategyConfig(eval_every="1y", eval_start_from=1041379200, eval_end_at=1717200000),
-            ),
+            handlers=[
+                EvalHandlerConfig(
+                    name="MatrixEval",
+                    execution_time="after_training",
+                    models="matrix",
+                    datasets=[dataset, f"{dataset}-test"],
+                    strategy=SlicingEvalStrategyConfig(
+                        eval_every="1y", eval_start_from=1041379200, eval_end_at=1717200000
+                    ),
+                )
+            ],
             device=gpu_device,
             result_writers=["json"],
             datasets=[

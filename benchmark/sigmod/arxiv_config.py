@@ -5,8 +5,6 @@ from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    MatrixEvalStrategyConfig,
-    MatrixEvalStrategyModel,
     Metric,
     ModelConfig,
     ModynPipelineConfig,
@@ -23,6 +21,8 @@ from modyn.config import (
     OptimizerParamGroup,
 )
 from modyn.config import LrSchedulerConfig
+from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 
 
 def gen_arxiv_config(
@@ -81,10 +81,15 @@ def gen_arxiv_config(
         ),
         trigger=TimeTriggerConfig(every="1d"),
         evaluation=EvaluationConfig(
-            eval_strategy=MatrixEvalStrategyModel(
-                name="MatrixEvalStrategy",
-                config=MatrixEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
-            ),
+            handlers=[
+                EvalHandlerConfig(
+                    name="MatrixEval",
+                    execution_time="after_training",
+                    models="matrix",
+                    datasets=["arxiv", "arxiv-test"],
+                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
+                )
+            ],
             device=gpu_device,
             result_writers=["json"],
             datasets=[
