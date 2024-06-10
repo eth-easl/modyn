@@ -14,12 +14,14 @@ class DownsamplingScheduler:
         downsampling_configs: list[SingleDownsamplingConfig],
         downsampling_thresholds: list[int],
         maximum_keys_in_memory: int,
+        warmup_triggers: int = 0,
     ):
         self.modyn_config = modyn_config
         self.pipeline_id = pipeline_id
         self.dowsampling_configs = downsampling_configs
         self.dowsampling_thresholds: list[int] = downsampling_thresholds
         self.downsampler_index = 0
+        self._warmup_triggers = warmup_triggers
         # transition from downsampler[i] to downsampler[i+1] happens before the thresholds[i]-th trigger
 
         self._validate_threshold()
@@ -71,7 +73,7 @@ class DownsamplingScheduler:
         return self.current_downsampler.status_bar_scale
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
-        if self.next_threshold is not None and next_trigger_id >= self.next_threshold:
+        if self.next_threshold is not None and next_trigger_id - self._warmup_triggers >= self.next_threshold:
             self.downsampler_index += 1
             self.current_downsampler, self.next_threshold = self._get_next_downsampler_and_threshold()
 
@@ -89,5 +91,10 @@ def instantiate_scheduler(config: CoresetStrategyConfig, modyn_config: dict, pip
         list_of_thresholds = []
 
     return DownsamplingScheduler(
-        modyn_config, pipeline_id, list_of_downsamplers, list_of_thresholds, config.maximum_keys_in_memory
+        modyn_config,
+        pipeline_id,
+        list_of_downsamplers,
+        list_of_thresholds,
+        config.maximum_keys_in_memory,
+        warmup_triggers=config.warmup_triggers,
     )
