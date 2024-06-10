@@ -1,5 +1,3 @@
-import json
-
 import grpc
 from integrationtests.utils import get_minimal_pipeline_config, get_modyn_config, init_metadata_db, register_pipeline
 from modyn.config.schema.pipeline import (

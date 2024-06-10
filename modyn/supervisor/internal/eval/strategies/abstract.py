@@ -7,17 +7,15 @@ from modyn.config.schema.pipeline import EvalStrategyConfig
 
 @dataclass
 class EvalInterval:
-    start: int | None
+    start: int
     """The start timestamp of the evaluation interval handed over to the evaluation server."""
 
     end: int | None
     """The end timestamp of the evaluation interval handed over to the evaluation server."""
 
-    training_interval_start: int
-    """The first timestamp in the training request."""
-
-    training_interval_end: int
-    """The last timestamp in the training request."""
+    most_recent_model_interval_end_before: int
+    """When determining the most recent model for this EvalInterval, we choose the newest model (highest model_id)
+        that satisfies the constraint model_training_interval_end <= most_recent_model_interval_end_before."""
 
 
 class AbstractEvalStrategy(ABC):

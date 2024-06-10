@@ -10,7 +10,7 @@ class _IntervalEvalStrategyMixin:
     def __init__(self, config: _IntervalEvalStrategyConfig):
         self.config = config
 
-    def _generate_interval(self, first_timestamp: int, last_timestamp: int) -> tuple[int | None, int | None]:
+    def _generate_interval(self, first_timestamp: int, last_timestamp: int) -> tuple[int, int | None]:
         left = 0
         right: int | None = 0
 

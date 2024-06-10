@@ -15,8 +15,7 @@ class BetweenTwoTriggersEvalStrategy(AbstractEvalStrategy):
                 start=interval_start,
                 end=interval_end,
                 # This is independent of the training interval, we use the interval centers as training intervals
-                training_interval_start=(interval_end + interval_start) // 2,
-                training_interval_end=(interval_end + interval_start) // 2,
+                most_recent_model_interval_end_before=interval_end,
             )
             for interval_start, interval_end in training_intervals
         ]

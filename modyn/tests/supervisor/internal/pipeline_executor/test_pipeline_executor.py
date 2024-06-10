@@ -732,9 +732,9 @@ def test__start_evaluations(
 
         def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
             yield from [
-                EvalInterval(start=0, end=100, training_interval_start=50, training_interval_end=50),
-                EvalInterval(start=100, end=200, training_interval_start=150, training_interval_end=150),
-                EvalInterval(start=200, end=300, training_interval_start=250, training_interval_end=250),
+                EvalInterval(start=0, end=100, most_recent_model_interval_end_before=50),
+                EvalInterval(start=100, end=200, most_recent_model_interval_end_before=150),
+                EvalInterval(start=200, end=300, most_recent_model_interval_end_before=250),
             ]
 
     else:
@@ -742,8 +742,7 @@ def test__start_evaluations(
 
         def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
             yield from [
-                EvalInterval(start=start, end=end, training_interval_start=0, training_interval_end=0)
-                for start, end in intervals
+                EvalInterval(start=start, end=end, most_recent_model_interval_end_before=0) for start, end in intervals
             ]
 
     with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
