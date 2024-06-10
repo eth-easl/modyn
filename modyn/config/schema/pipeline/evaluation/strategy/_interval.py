@@ -1,5 +1,5 @@
 from functools import cached_property
-from typing import cast, get_args
+from typing import Literal, cast, get_args
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
@@ -10,6 +10,8 @@ _EVAL_INTERVAL_BOUND_PATTERN = rf"[+-]?\s*((\d+\s*({REGEX_TIME_UNIT}))|(inf))"
 _EVAL_INTERVAL_PATTERN = (
     rf"^(\[|\()\s*({_EVAL_INTERVAL_BOUND_PATTERN})\s*(,|;)\s*({_EVAL_INTERVAL_BOUND_PATTERN})\s*(\)|\])$"
 )
+
+IntervalEvalStrategyBounds = Literal["inf", "-inf"]
 
 
 class _IntervalEvalStrategyConfig(ModynBaseModel):

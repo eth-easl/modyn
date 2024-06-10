@@ -1,7 +1,21 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from dataclasses import dataclass
+from typing import Iterable
 
 from modyn.config.schema.pipeline import EvalStrategyConfig
+
+
+@dataclass
+class EvalInterval:
+    start: int
+    """The start timestamp of the evaluation interval handed over to the evaluation server."""
+
+    end: int | None
+    """The end timestamp of the evaluation interval handed over to the evaluation server."""
+
+    most_recent_model_interval_end_before: int
+    """When determining the most recent model for this EvalInterval, we choose the newest model (highest model_id)
+        that satisfies the constraint model_training_interval_end <= most_recent_model_interval_end_before."""
 
 
 class AbstractEvalStrategy(ABC):
@@ -19,9 +33,7 @@ class AbstractEvalStrategy(ABC):
         self.config = config
 
     @abstractmethod
-    def get_eval_intervals(
-        self, first_timestamp: int, last_timestamp: int
-    ) -> Iterable[tuple[Optional[int], Optional[int]]]:
+    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
         """
         This method should return an iterable of tuples, where each tuple represents a left inclusive, right exclusive
         evaluation interval. When any side is None, it means that that side is unbounded.
