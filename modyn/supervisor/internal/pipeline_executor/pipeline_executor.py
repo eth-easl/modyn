@@ -734,8 +734,6 @@ class PipelineExecutor:
         self.logs.pipeline_stages = _pipeline_stage_parents  # now includes chronology info
         self.logs.materialize(s.log_directory, mode="final")
 
-    # post core pipeline evaluation
-
     @pipeline_stage(PipelineStage.POST_EVALUATION_CHECKPOINT, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation_checkpoint(self, s: ExecutionState, log: StageLog) -> None:
         """Stores evaluation relevant information so that the evaluator can be started on this pipeline run again."""

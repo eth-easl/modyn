@@ -25,8 +25,7 @@ class SlicingEvalStrategy(AbstractEvalStrategy):
             yield EvalInterval(
                 start=previous_split,
                 end=current_split,
-                training_interval_start=(current_split + previous_split) // 2,
-                training_interval_end=(current_split + previous_split) // 2,
+                most_recent_model_interval_end_before=current_split,
             )
             if current_split >= self.config.eval_end_at:
                 break

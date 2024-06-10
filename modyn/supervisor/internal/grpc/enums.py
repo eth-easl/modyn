@@ -66,7 +66,7 @@ class PipelineStage(StrEnum):
     EVALUATE_SINGLE = "Run single evaluation"
     WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion"
     POST_EVALUATION_CHECKPOINT = "Save evaluation state as checkpoint"
-    POST_EVALUATION = "Post core pipeline evaluation"
+    POST_EVALUATION = "Post pipeline evaluation"
 
     # Teardown
     DONE = "Pipeline done"

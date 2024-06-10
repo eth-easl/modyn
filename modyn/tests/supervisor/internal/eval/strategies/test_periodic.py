@@ -1,18 +1,20 @@
-from modyn.config.schema.pipeline import StaticEvalStrategyConfig
+from modyn.config.schema.pipeline import PeriodicEvalStrategyConfig
 from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
-from modyn.supervisor.internal.eval.strategies.static import StaticEvalStrategy
+from modyn.supervisor.internal.eval.strategies.periodic import PeriodicEvalStrategy
 
 
-def test_static_eval_trigger() -> None:
+def test_periodic_eval_trigger() -> None:
     # test epoch based trigger
-    config = StaticEvalStrategyConfig(intervals=[(1, 2), (2, 2), (0, 8)])
-    strategy = StaticEvalStrategy(config)
+    config = PeriodicEvalStrategyConfig(every="5s", start_timestamp=0, end_timestamp=20, interval="[-2s, +2s]")
+    strategy = PeriodicEvalStrategy(config)
 
     intervals = strategy.get_eval_intervals(
         training_intervals=[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
     )
     assert intervals == [
-        EvalInterval(start=1, end=2, training_interval_start=1, training_interval_end=1),
-        EvalInterval(start=2, end=2, training_interval_start=2, training_interval_end=2),
-        EvalInterval(start=0, end=8, training_interval_start=4, training_interval_end=4),
+        EvalInterval(start=0, end=2, most_recent_model_interval_end_before=0),
+        EvalInterval(start=3, end=7, most_recent_model_interval_end_before=5),
+        EvalInterval(start=8, end=12, most_recent_model_interval_end_before=10),
+        EvalInterval(start=13, end=17, most_recent_model_interval_end_before=15),
+        EvalInterval(start=18, end=22, most_recent_model_interval_end_before=20),
     ]

@@ -32,8 +32,7 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
                     yield EvalInterval(
                         start=0,
                         end=train_interval_start,
-                        training_interval_start=train_interval_start,
-                        training_interval_end=train_interval_end,
+                        most_recent_model_interval_end_before=train_interval_end,
                     )
                 elif offset == "inf":
                     # +1 because the samples with timestamp `train_interval_end` are included in the current trigger,
@@ -42,8 +41,7 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
                     yield EvalInterval(
                         start=train_interval_end + 1,
                         end=None,
-                        training_interval_start=train_interval_start,
-                        training_interval_end=train_interval_end,
+                        most_recent_model_interval_end_before=train_interval_end,
                     )
                 else:
                     offset_int = convert_timestr_to_seconds(offset)
@@ -51,16 +49,14 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
                         yield EvalInterval(
                             start=max(train_interval_start + offset_int, 0),
                             end=train_interval_start,
-                            training_interval_start=train_interval_start,
-                            training_interval_end=train_interval_end,
+                            most_recent_model_interval_end_before=train_interval_end,
                         )
                     elif offset_int > 0:
                         # +1 for the same reason as above
                         yield EvalInterval(
                             start=train_interval_end + 1,
                             end=train_interval_end + offset_int + 1,
-                            training_interval_start=train_interval_start,
-                            training_interval_end=train_interval_end,
+                            most_recent_model_interval_end_before=train_interval_end,
                         )
                     else:
                         # now offset_int == 0. We want to return the same interval as the trigger's interval.
@@ -69,6 +65,5 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
                         yield EvalInterval(
                             start=train_interval_start,
                             end=train_interval_end + 1,
-                            training_interval_start=train_interval_start,
-                            training_interval_end=train_interval_end,
+                            most_recent_model_interval_end_before=train_interval_end,
                         )
