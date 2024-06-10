@@ -287,6 +287,7 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
         "maximum_keys_in_memory": maximum_keys_in_memory,
         "sample_then_batch": False,
         "il_model_id": 42,
+        "rho_pipeline_id": strategy.rho_pipeline_id,
     }
     assert strategy.downsampling_params == expected
 

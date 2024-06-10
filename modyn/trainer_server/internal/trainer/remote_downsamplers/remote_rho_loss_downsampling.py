@@ -1,28 +1,32 @@
+import io
 import json
 import logging
 import pathlib
 import tempfile
-from typing import Optional, Union, Any
+from typing import Any, Optional, Union
 
 import grpc
 import torch
-import io
-
 from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import \
-    AbstractRemoteDownsamplingStrategy
-from modyn.utils import grpc_connection_established, dynamic_module_import
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    AbstractRemoteDownsamplingStrategy,
+)
+from modyn.utils import dynamic_module_import, grpc_connection_established
 
 logger = logging.getLogger(__name__)
 
 
 class IrreducibleLossProducer:
     def __init__(
-            self, per_sample_loss: torch.nn.modules.loss, modyn_config: dict,
-            rho_pipeline_id, il_model_id, device: str
+        self,
+        per_sample_loss: torch.nn.modules.loss,
+        modyn_config: dict,
+        rho_pipeline_id: int,
+        il_model_id: int,
+        device: str,
     ) -> None:
         self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id, device)
         self.model.model.eval()
@@ -46,12 +50,11 @@ class IrreducibleLossProducer:
             forward_output = self.model.model(forward_input)
             irreducible_loss = self.per_sample_loss_fct(forward_output, target).detach()
             cached_loss = irreducible_loss.cpu()
-            self.model.model.to('cpu')
+            self.model.model.to("cpu")
         for sample_id, loss in zip(sample_ids, cached_loss):
             self.loss_cache[sample_id] = loss
 
         return irreducible_loss
-
 
     @staticmethod
     def _load_il_model_architecture(modyn_config: dict, rho_pipeline_id: int) -> Any:
@@ -61,11 +64,11 @@ class IrreducibleLossProducer:
         model_module = dynamic_module_import("modyn.models")
         model_handler = getattr(model_module, model_class_name)
         # il model is only moved to gpu when we use it to compute il loss
-        model = model_handler(model_config_dict, 'cpu', amp)
+        model = model_handler(model_config_dict, "cpu", amp)
         return model
 
     @staticmethod
-    def _load_il_model(modyn_config: dict, rho_pipeline_id, il_model_id, device: str) -> Any:
+    def _load_il_model(modyn_config: dict, rho_pipeline_id: int, il_model_id: int, device: str) -> Any:
         # load the model architecture
         model = IrreducibleLossProducer._load_il_model_architecture(modyn_config, rho_pipeline_id)
         # load the weights
@@ -78,7 +81,7 @@ class IrreducibleLossProducer:
         with tempfile.TemporaryDirectory() as temp_dir:
             il_model_path = download_trained_model(
                 logger=logger,
-                model_storage_config=modyn_config['model_storage'],
+                model_storage_config=modyn_config["model_storage"],
                 remote_path=pathlib.Path(fetch_resp.model_path),
                 checksum=fetch_resp.checksum,
                 identifier=il_model_id,
@@ -111,7 +114,7 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         params_from_selector: dict,
         modyn_config: dict,
         per_sample_loss: torch.nn.modules.loss,
-        device: str
+        device: str,
     ) -> None:
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
         self.replacement = False
@@ -119,8 +122,8 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.irreducible_loss_producer = IrreducibleLossProducer(
             per_sample_loss,
             modyn_config,
-            params_from_selector['rho_pipeline_id'],
-            params_from_selector['il_model_id'],
+            params_from_selector["rho_pipeline_id"],
+            params_from_selector["il_model_id"],
             device,
         )
 

@@ -33,8 +33,14 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         device: str,
     ):
         super().__init__(
-            pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config,
-            per_sample_loss, device, MatrixContent.EMBEDDINGS
+            pipeline_id,
+            trigger_id,
+            batch_size,
+            params_from_selector,
+            modyn_config,
+            per_sample_loss,
+            device,
+            MatrixContent.EMBEDDINGS,
         )
 
         self.metric = euclidean_dist

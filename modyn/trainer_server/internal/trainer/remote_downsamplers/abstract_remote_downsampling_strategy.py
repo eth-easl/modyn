@@ -33,13 +33,13 @@ def get_tensors_subset(
 
 class AbstractRemoteDownsamplingStrategy(ABC):
     def __init__(
-            self,
-            pipeline_id: int,
-            trigger_id: int,
-            batch_size: int,
-            params_from_selector: dict,
-            modyn_config: dict,
-            device: str
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        batch_size: int,
+        params_from_selector: dict,
+        modyn_config: dict,
+        device: str,
     ) -> None:
         self.pipeline_id = pipeline_id
         self.batch_size = batch_size

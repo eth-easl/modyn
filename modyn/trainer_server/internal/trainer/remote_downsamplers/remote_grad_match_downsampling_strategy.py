@@ -44,7 +44,7 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
             modyn_config,
             per_sample_loss,
             device,
-            MatrixContent.GRADIENTS
+            MatrixContent.GRADIENTS,
         )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:

@@ -51,7 +51,7 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
             modyn_config,
             per_sample_loss,
             device,
-            MatrixContent.GRADIENTS
+            MatrixContent.GRADIENTS,
         )
 
         self.selection_batch = params_from_selector["selection_batch"]

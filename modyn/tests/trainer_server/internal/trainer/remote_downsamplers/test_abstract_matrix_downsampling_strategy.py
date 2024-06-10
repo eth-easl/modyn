@@ -3,13 +3,14 @@ from unittest.mock import patch
 
 import numpy as np
 import torch
+from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,
 )
 
 
-def get_sampler_config(balance=False):
+def get_sampler_config(dummy_system_config: ModynConfig, balance=False):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -19,12 +20,21 @@ def get_sampler_config(balance=False):
         "args": {},
         "balance": balance,
     }
-    return 0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu", MatrixContent.GRADIENTS
+    return (
+        0,
+        0,
+        0,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss_fct,
+        "cpu",
+        MatrixContent.GRADIENTS,
+    )
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
-def test_init():
-    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
+def test_init(dummy_system_config: ModynConfig):
+    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config))
 
     assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements
@@ -32,8 +42,8 @@ def test_init():
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
-def test_collect_embeddings():
-    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
+def test_collect_embeddings(dummy_system_config: ModynConfig):
+    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config))
     amds.matrix_content = MatrixContent.EMBEDDINGS
     with torch.inference_mode(mode=(not amds.requires_grad)):
 
@@ -42,7 +52,7 @@ def test_collect_embeddings():
 
         first_embedding = torch.randn((4, 5))
         second_embedding = torch.randn((3, 5))
-        amds.inform_samples([1, 2, 3, 4], None,None, None, first_embedding)
+        amds.inform_samples([1, 2, 3, 4], None, None, None, first_embedding)
         amds.inform_samples([21, 31, 41], None, None, None, second_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (7, 5)
@@ -50,7 +60,7 @@ def test_collect_embeddings():
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
 
         third_embedding = torch.randn((23, 5))
-        amds.inform_samples(list(range(1000, 1023)), None,None, None, third_embedding)
+        amds.inform_samples(list(range(1000, 1023)), None, None, None, third_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (30, 5)
         assert all(
@@ -64,8 +74,8 @@ def test_collect_embeddings():
 @patch.object(
     AbstractMatrixDownsamplingStrategy, "_select_indexes_from_matrix", return_value=([0, 2], torch.Tensor([1.0, 3.0]))
 )
-def test_collect_embedding_balance(test_amds):
-    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(True))
+def test_collect_embedding_balance(test_amds, dummy_system_config: ModynConfig):
+    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config, True))
     amds.matrix_content = MatrixContent.EMBEDDINGS
     with torch.inference_mode(mode=(not amds.requires_grad)):
         assert amds.requires_coreset_supporting_module
@@ -74,8 +84,8 @@ def test_collect_embedding_balance(test_amds):
 
         first_embedding = torch.randn((4, 5))
         second_embedding = torch.randn((3, 5))
-        amds.inform_samples([1, 2, 3, 4], None,None, None, first_embedding)
-        amds.inform_samples([21, 31, 41], None,None, None, second_embedding)
+        amds.inform_samples([1, 2, 3, 4], None, None, None, first_embedding)
+        amds.inform_samples([21, 31, 41], None, None, None, second_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (7, 5)
         assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [first_embedding, second_embedding]))
@@ -85,7 +95,7 @@ def test_collect_embedding_balance(test_amds):
 
         third_embedding = torch.randn((23, 5))
         assert len(amds.matrix_elements) == 0
-        amds.inform_samples(list(range(1000, 1023)), None,None, None, third_embedding)
+        amds.inform_samples(list(range(1000, 1023)), None, None, None, third_embedding)
 
         assert np.concatenate(amds.matrix_elements).shape == (23, 5)
         assert all(torch.equal(el1, el2) for el1, el2 in zip(amds.matrix_elements, [third_embedding]))
@@ -96,20 +106,21 @@ def test_collect_embedding_balance(test_amds):
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
-def test_collect_gradients():
-    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config())
+def test_collect_gradients(dummy_system_config: ModynConfig):
+    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config))
     with torch.inference_mode(mode=(not amds.requires_grad)):
+        forward_input = torch.randn((4, 5))
         first_output = torch.randn((4, 2))
         first_output.requires_grad = True
         first_target = torch.tensor([1, 1, 1, 0])
         first_embedding = torch.randn((4, 5))
-        amds.inform_samples([1, 2, 3, 4], first_output, first_target, first_embedding)
+        amds.inform_samples([1, 2, 3, 4], forward_input, first_output, first_target, first_embedding)
 
         second_output = torch.randn((3, 2))
         second_output.requires_grad = True
         second_target = torch.tensor([0, 1, 0])
         second_embedding = torch.randn((3, 5))
-        amds.inform_samples([21, 31, 41], second_output, second_target, second_embedding)
+        amds.inform_samples([21, 31, 41], forward_input, second_output, second_target, second_embedding)
 
         assert len(amds.matrix_elements) == 2
 

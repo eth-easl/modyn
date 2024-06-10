@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, patch
 import grpc
 import pytest
 import torch
+from modyn.config import ModynConfig
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
@@ -269,6 +270,7 @@ def get_training_info(
 @patch.object(PytorchTrainer, "get_num_samples_in_trigger")
 @patch.object(SelectorKeySource, "uses_weights", return_value=False)
 def get_mock_trainer(
+    modyn_config: ModynConfig,
     query_queue: mp.Queue,
     response_queue: mp.Queue,
     use_pretrained: bool,
@@ -317,13 +319,20 @@ def get_mock_trainer(
         "/tmp/offline_dataset",
     )
     trainer = PytorchTrainer(
-        training_info, "cpu", query_queue, response_queue, mp.Queue(), mp.Queue(), logging.getLogger(__name__)
+        modyn_config.model_dump(by_alias=True),
+        training_info,
+        "cpu",
+        query_queue,
+        response_queue,
+        mp.Queue(),
+        mp.Queue(),
+        logging.getLogger(__name__),
     )
     return trainer
 
 
-def test_trainer_init():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
+def test_trainer_init(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
@@ -336,8 +345,8 @@ def test_trainer_init():
     assert trainer._label_transformer_function is None
 
 
-def test_trainer_init_multi_optimizers():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, b"state", 2, "", False)
+def test_trainer_init_multi_optimizers(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, b"state", 2, "", False)
     assert isinstance(trainer._model, MockSuperModelWrapper)
     assert len(trainer._optimizers) == 2
     assert isinstance(trainer._optimizers["opt1"], torch.optim.SGD)
@@ -351,8 +360,8 @@ def test_trainer_init_multi_optimizers():
     assert trainer._label_transformer_function is None
 
 
-def test_trainer_init_torch_lr_scheduler():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "torch", False)
+def test_trainer_init_torch_lr_scheduler(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 1, "torch", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
@@ -365,8 +374,8 @@ def test_trainer_init_torch_lr_scheduler():
     assert trainer._label_transformer_function is None
 
 
-def test_trainer_init_custom_lr_scheduler():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "custom", False)
+def test_trainer_init_custom_lr_scheduler(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 1, "custom", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
@@ -380,8 +389,8 @@ def test_trainer_init_custom_lr_scheduler():
 
 
 @patch.object(PytorchTrainer, "load_state_if_given")
-def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, "/path/to/model", 1, "", False)
+def test_trainer_init_from_pretrained_model(load_state_if_given_mock, dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), True, False, "/path/to/model", 1, "", False)
     assert isinstance(trainer._model, MockModelWrapper)
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
@@ -393,8 +402,8 @@ def test_trainer_init_from_pretrained_model(load_state_if_given_mock):
     assert trainer._label_transformer_function is None
 
 
-def test_trainer_init_with_label_transformer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", True)
+def test_trainer_init_with_label_transformer(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 1, "", True)
     assert isinstance(trainer._model, MockModelWrapper)
     assert len(trainer._optimizers) == 1
     assert isinstance(trainer._optimizers["default"], torch.optim.SGD)
@@ -410,8 +419,8 @@ def test_trainer_init_with_label_transformer():
     assert trainer._label_transformer_function(test_tensor).dtype == torch.float32
 
 
-def test_save_state_to_file():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+def test_save_state_to_file(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
     with tempfile.NamedTemporaryFile() as temp:
         trainer.save_state(pathlib.Path(temp.name), 10)
         assert os.path.exists(temp.name)
@@ -476,8 +485,8 @@ def test_save_state_to_file():
     }
 
 
-def test_save_state_to_buffer():
-    trainer = get_mock_trainer(mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
+def test_save_state_to_buffer(dummy_system_config: ModynConfig):
+    trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 1, "", False)
     buffer = io.BytesIO()
     trainer.save_state(buffer)
     buffer.seek(0)
@@ -503,7 +512,7 @@ def test_save_state_to_buffer():
     }
 
 
-def test_load_state_if_given():
+def test_load_state_if_given(dummy_system_config: ModynConfig):
     dict_to_save = {
         "model": OrderedDict(
             [
@@ -568,7 +577,7 @@ def test_load_state_if_given():
         with open(state_path, "wb") as file:
             file.write(initial_state_buffer.read())
 
-        trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, True, state_path, 2, "", False)
+        trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), True, True, state_path, 2, "", False)
         assert trainer._model.model.state_dict() == dict_to_save["model"]
         assert trainer._optimizers["opt1"].state_dict() == dict_to_save["optimizer-opt1"]
         assert trainer._optimizers["opt2"].state_dict() == dict_to_save["optimizer-opt2"]
@@ -577,14 +586,16 @@ def test_load_state_if_given():
         with open(state_path, "wb") as file:
             file.write(initial_state_buffer.read())
 
-        new_trainer = get_mock_trainer(mp.Queue(), mp.Queue(), True, False, state_path, 2, "", False)
+        new_trainer = get_mock_trainer(
+            dummy_system_config, mp.Queue(), mp.Queue(), True, False, state_path, 2, "", False
+        )
         assert new_trainer._model.model.state_dict() == dict_to_save["model"]
 
 
-def test_send_model_state_to_server():
+def test_send_model_state_to_server(dummy_system_config: ModynConfig):
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
+    trainer = get_mock_trainer(dummy_system_config, query_queue, response_queue, False, False, None, 1, "", False)
     trainer.send_model_state_to_server()
     response = response_queue.get()
     file_like = BytesIO(response)
@@ -609,10 +620,10 @@ def test_send_model_state_to_server():
     }
 
 
-def test_send_status_to_server():
+def test_send_status_to_server(dummy_system_config: ModynConfig):
     response_queue = mp.Queue()
     query_queue = mp.Queue()
-    trainer = get_mock_trainer(query_queue, response_queue, False, False, None, 1, "", False)
+    trainer = get_mock_trainer(dummy_system_config, query_queue, response_queue, False, False, None, 1, "", False)
     trainer.send_status_to_server_training(20)
     response = response_queue.get()
     assert response["num_batches"] == 20
@@ -621,10 +632,10 @@ def test_send_status_to_server():
 
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
-def test_train_invalid_query_message(test_weight_handling):
+def test_train_invalid_query_message(test_weight_handling, dummy_system_config: ModynConfig):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 1, "", False)
+    trainer = get_mock_trainer(dummy_system_config, query_status_queue, status_queue, False, False, None, 1, "", False)
     query_status_queue.put("INVALID MESSAGE")
     timeout = 5
     elapsed = 0
@@ -672,10 +683,13 @@ def test_train(
     test_on_batch_begin,
     test_on_train_end,
     test_on_train_begin,
+    dummy_system_config: ModynConfig,
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(query_status_queue, status_queue, False, False, None, 2, "custom", False, batch_size=8)
+    trainer = get_mock_trainer(
+        dummy_system_config, query_status_queue, status_queue, False, False, None, 2, "custom", False, batch_size=8
+    )
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
     timeout = 2
@@ -805,6 +819,7 @@ def test_create_trainer_with_exception(
     test_dynamic_module_import,
     test_insecure_channel,
     test_grpc_connection_established,
+    dummy_system_config: ModynConfig,
 ):
     test_dynamic_module_import.return_value = MockModule(1)
     query_status_queue = mp.Queue()
@@ -823,6 +838,7 @@ def test_create_trainer_with_exception(
 
     with tempfile.NamedTemporaryFile() as temp:
         train(
+            dummy_system_config.model_dump(by_alias=True),
             training_info,
             "cpu",
             pathlib.Path(temp.name),
@@ -886,6 +902,7 @@ def test_train_batch_then_sample_accumulation(
     test_on_batch_begin,
     test_on_train_end,
     test_on_train_begin,
+    dummy_system_config: ModynConfig,
 ):
     num_batches = 100  # hardcoded into mock dataloader
     batch_size = 32
@@ -894,6 +911,7 @@ def test_train_batch_then_sample_accumulation(
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
     trainer = get_mock_trainer(
+        dummy_system_config,
         query_status_queue,
         status_queue,
         False,
@@ -967,6 +985,7 @@ def test_lr_scheduler_init(
     test_step,
     test_cleanup,
     test_send_metadata,
+    dummy_system_config: ModynConfig,
 ):
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
@@ -974,7 +993,16 @@ def test_lr_scheduler_init(
     # Due to mock_get_num_samples.return_value = batch_size * 100 in get_mock_trainer, this is 100.
 
     trainer = get_mock_trainer(
-        query_status_queue, status_queue, False, False, None, 2, "torch_cosine", False, batch_size=8
+        dummy_system_config,
+        query_status_queue,
+        status_queue,
+        False,
+        False,
+        None,
+        2,
+        "torch_cosine",
+        False,
+        batch_size=8,
     )
 
     assert trainer._lr_scheduler.T_max == 100
