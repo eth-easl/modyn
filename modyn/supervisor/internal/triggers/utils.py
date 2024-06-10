@@ -4,46 +4,11 @@ from typing import Optional, Union
 
 import pandas as pd
 import torch
-from evidently.metrics import EmbeddingsDriftMetric
-from evidently.metrics.data_drift import embedding_drift_methods
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
 from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
-
-
-def get_evidently_metrics(
-    column_mapping_name: str, trigger_config: Optional[dict] = None
-) -> list[EmbeddingsDriftMetric]:
-    """This function instantiates an Evidently metric given metric configuration.
-    If we want to support multiple metrics in the future, we can change the code to looping through the configurations.
-
-    Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
-    model, distance, mmd, ratio
-    If metric_name not given, we use the default 'model' metric.
-    Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
-    """
-    if trigger_config is None:
-        trigger_config = {}
-
-    metric_name: str = "model"
-    metric_config: dict = {}
-
-    if "metric_name" in trigger_config.keys():
-        metric_name = trigger_config["metric_name"]
-        if "metric_config" in trigger_config.keys():
-            metric_config = trigger_config["metric_config"]
-
-    metric = getattr(embedding_drift_methods, metric_name)(**metric_config)
-
-    metrics = [
-        EmbeddingsDriftMetric(
-            column_mapping_name,
-            drift_method=metric,
-        )
-    ]
-    return metrics
 
 
 def prepare_trigger_dataloader_by_trigger(
@@ -67,6 +32,7 @@ def prepare_trigger_dataloader_by_trigger(
         dataloader_info.training_id,
         dataloader_info.num_prefetched_partitions,
         dataloader_info.parallel_prefetch_requests,
+        dataloader_info.shuffle,
         dataloader_info.tokenizer,
         sample_prob,
     )

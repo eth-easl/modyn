@@ -23,7 +23,7 @@ class MetadataProcessorClient:
         self._stub = MetadataProcessorStub(metadata_processor_channel)
 
     def send_metadata(self, req: TrainingMetadataRequest) -> TrainingMetadataResponse:
-        resp = self._stub.ProcessTrainingMetadata(req)
+        resp = self._stub.process_training_metadata(req)
         return resp
 
 
@@ -47,7 +47,7 @@ def get_grpc_channel(config: dict, component: str) -> grpc.Channel:
 def send_metadata_and_check_database(processor_client: MetadataProcessorClient, config: dict) -> int:
     with MetadataDatabaseConnection(config) as database:
         pipeline_id = database.register_pipeline(
-            2, "ResNet18", "{}", False, ModelStorageStrategyConfig("PyTorchFullModel")
+            2, "ResNet18", "{}", False, "{}", "{}", ModelStorageStrategyConfig("PyTorchFullModel")
         )
 
     req = TrainingMetadataRequest(
@@ -58,7 +58,7 @@ def send_metadata_and_check_database(processor_client: MetadataProcessorClient, 
     )
 
     resp = processor_client.send_metadata(req)
-    assert resp, "Coult not send training metadata to the Metadata Processor Server"
+    assert resp, "Could not send training metadata to the Metadata Processor Server"
 
     with MetadataDatabaseConnection(config) as database:
         trigger_metadata = (

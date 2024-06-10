@@ -4,11 +4,15 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.selector import Selector
 
 
 class MockStrategy(AbstractSelectionStrategy):
     def __init__(self):  # pylint: disable=super-init-not-called
+        pass
+
+    def _init_storage_backend(self) -> AbstractStorageBackend:
         pass
 
     def _on_trigger(self) -> list[tuple[str, float]]:

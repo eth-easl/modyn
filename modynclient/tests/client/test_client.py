@@ -1,6 +1,3 @@
-import os
-import pathlib
-import shutil
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
@@ -37,14 +34,21 @@ def get_minimal_pipeline_config() -> dict:
 
 def get_minimal_evaluation_config() -> dict:
     return {
-        "eval_strategy": {
-            "name": "MatrixEvalStrategy",
-            "config": {
-                "eval_every": "100s",
-                "eval_start_from": 0,
-                "eval_end_at": 300,
-            },
-        },
+        "handlers": [
+            {
+                "execution_time": "after_training",
+                "strategy": {
+                    "name": "SlicingEvalStrategy",
+                    "config": {
+                        "eval_every": "100s",
+                        "eval_start_from": 0,
+                        "eval_end_at": 300,
+                    },
+                },
+                "models": "matrix",
+                "datasets": ["MNIST_eval"],
+            }
+        ],
         "device": "cpu",
         "datasets": [
             {

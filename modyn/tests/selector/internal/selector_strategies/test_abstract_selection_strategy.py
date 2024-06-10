@@ -9,9 +9,12 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from modyn.common.trigger_sample import TriggerSampleStorage
+from modyn.config.schema.pipeline.sampling.config import _BaseSelectionStrategy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.tests.selector.internal.storage_backend.utils import MockStorageBackend
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()
@@ -31,6 +34,10 @@ def get_minimal_modyn_config():
     }
 
 
+def mock__init_storage_backend(self) -> AbstractStorageBackend:
+    return MockStorageBackend(self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory)
+
+
 @pytest.fixture(scope="function", autouse=True)
 def setup_and_teardown():
     Path(TMP_DIR).mkdir(parents=True, exist_ok=True)
@@ -44,87 +51,48 @@ def setup_and_teardown():
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 def test_init():
     # Test init works
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=None,
+        maximum_keys_in_memory=1000,
+    )
     strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     assert not strat.has_limit
     assert not strat.reset_after_trigger
     assert strat._pipeline_id == 42
     assert strat._next_trigger_id == 0
+    assert strat.maximum_keys_in_memory == 1000
 
-    # Test required config check works
-    with pytest.raises(ValueError):
-        AbstractSelectionStrategy({"limit": -1}, get_minimal_modyn_config(), 42, 1000)
-
-    with pytest.raises(ValueError):
-        AbstractSelectionStrategy(
-            {"limit": -1, "reset_after_trigger": False},
-            get_minimal_modyn_config(),
-            42,
-            1000,
-            ["doesntexist"],
-        )
-
-    #  Test reinit works
+    # Test reinit works
     strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     strat._next_trigger_id = 1
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test__on_trigger():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-    with pytest.raises(NotImplementedError):
-        strat._on_trigger()
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test__reset_state():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-    with pytest.raises(NotImplementedError):
-        strat._reset_state()
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
-def test_inform_data():
-    strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
-        get_minimal_modyn_config(),
-        42,
-        1000,
-    )
-    with pytest.raises(NotImplementedError):
-        strat.inform_data([], [], [])
-
-
-@patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=None,
+        maximum_keys_in_memory=1000,
+    )
     strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
@@ -148,14 +116,19 @@ def test_trigger_without_reset(test_reset_state: MagicMock, test__on_trigger: Ma
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, test__on_trigger: MagicMock):
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=None,
+        maximum_keys_in_memory=1000,
+    )
     strat = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
@@ -189,10 +162,20 @@ def test_trigger_without_reset_multiple_partitions(test_reset_state: MagicMock, 
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42, 1000)
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=0,
+        maximum_keys_in_memory=1000,
+    )
+    strat = AbstractSelectionStrategy(
+        config,
+        get_minimal_modyn_config(),
+        42,
+    )
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
@@ -215,10 +198,16 @@ def test_trigger_with_reset(test_reset_state: MagicMock, test__on_trigger: Magic
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 @patch.object(AbstractSelectionStrategy, "_reset_state")
 def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
-    strat = AbstractSelectionStrategy({"limit": -1, "reset_after_trigger": True}, get_minimal_modyn_config(), 42, 1000)
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=0,
+        maximum_keys_in_memory=1000,
+    )
+    strat = AbstractSelectionStrategy(config, get_minimal_modyn_config(), 42)
     assert strat.reset_after_trigger
     assert strat._next_trigger_id == 0
 
@@ -260,15 +249,19 @@ def test_trigger_trigger_stored(_: MagicMock, test__on_trigger: MagicMock):
 
 
 @patch.multiple(AbstractSelectionStrategy, __abstractmethods__=set())
+@patch.object(AbstractSelectionStrategy, "_init_storage_backend", mock__init_storage_backend)
 @patch.object(AbstractSelectionStrategy, "_on_trigger")
 def test_two_strategies_increase_next_trigger_separately(test__on_trigger: MagicMock):
     test__on_trigger.return_value = []
-
+    config = _BaseSelectionStrategy(
+        limit=-1,
+        tail_triggers=None,
+        maximum_keys_in_memory=1000,
+    )
     strat1 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     assert strat1._pipeline_id == 42
     assert strat1._next_trigger_id == 0
@@ -279,10 +272,9 @@ def test_two_strategies_increase_next_trigger_separately(test__on_trigger: Magic
     assert strat1._next_trigger_id == 2
 
     strat2 = AbstractSelectionStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        config,
         get_minimal_modyn_config(),
         21,
-        1000,
     )
     assert strat2._pipeline_id == 21
     assert strat2._next_trigger_id == 0

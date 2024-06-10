@@ -72,7 +72,7 @@ def test_validate_yaml():
     read_pipeline(pipeline_path)
 
 
-@patch("time.time", lambda: 0.4)
+@patch("time.monotonic_ns", lambda: 400_000_000)
 def test_current_time_millis():
     assert current_time_millis() == 400
 

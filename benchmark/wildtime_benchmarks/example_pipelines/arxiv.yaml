@@ -16,6 +16,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 128
+  shuffle: True
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -30,13 +31,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 10000
-    config:
-      storage_backend: "database"
-      limit: -1
-      reset_after_trigger: True
 data:
   dataset_id: arxiv
   bytes_parser_function: |
@@ -46,5 +40,10 @@ data:
 
 trigger:
   id: TimeTrigger
-  trigger_config:
-    trigger_every: "1d"
+  every: 1d
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 10000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0

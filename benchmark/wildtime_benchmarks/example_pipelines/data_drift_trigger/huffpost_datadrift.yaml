@@ -16,6 +16,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 64
+  shuffle: True
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -30,13 +31,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
-    config:
-      storage_backend: "database"
-      limit: -1
-      reset_after_trigger: True
   seed: 42
   epochs_per_trigger: 1
 data:
@@ -48,13 +42,26 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  trigger_config:
-    data_points_for_detection: 5000
-    metric_name: mmd
-    metric_config:
-      bootstrap: False
-  
+  detection_interval_data_points: 5000
+  metric: mmd
+  metric_config:
+    bootstrap: False
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
 evaluation:
+  handlers:
+    - execution_time: after_training
+      strategy:
+        type: SlicingEvalStrategy
+        eval_every: 100s
+        eval_start_from: 0
+        eval_end_at: 300
+      models: matrix
+      datasets: ["huffpost_test"]
   device: "cuda:0"
   result_writers: ["json"]
   datasets:

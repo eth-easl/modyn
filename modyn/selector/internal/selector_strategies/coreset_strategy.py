@@ -1,54 +1,58 @@
 import logging
 import random
-from typing import Any, Iterable
+from typing import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.metadata_database.models import SelectorStateMetadata
+from modyn.config.schema.pipeline import CoresetStrategyConfig
+from modyn.config.schema.pipeline.sampling.config import PresamplingConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import (
     DownsamplingScheduler,
     instantiate_scheduler,
 )
-from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
+from modyn.selector.internal.selector_strategies.presampling_strategies import (
+    AbstractPresamplingStrategy,
+    NoPresamplingStrategy,
+)
 from modyn.selector.internal.selector_strategies.presampling_strategies.utils import instantiate_presampler
+from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
 
 class CoresetStrategy(AbstractSelectionStrategy):
-    def __init__(self, config: dict, modyn_config: dict, pipeline_id: int, maximum_keys_in_memory: int):
-        super().__init__(config, modyn_config, pipeline_id, maximum_keys_in_memory)
-
-        # and a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
+    def __init__(self, config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int):
+        super().__init__(config, modyn_config, pipeline_id)
+        # a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
-        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, maximum_keys_in_memory)
-        self._storage_backend: AbstractStorageBackend
-        if "storage_backend" in config:
-            if config["storage_backend"] == "local":
-                # TODO(#324): Support local backend on CoresetStrategy
-                raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
+        self.warmup_triggers = config.warmup_triggers
 
-            if config["storage_backend"] == "database":
-                self._storage_backend = DatabaseStorageBackend(
-                    self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-                )
-            else:
-                raise NotImplementedError(
-                    f"Unknown storage backend \"{config['storage_backend']}\". Supported: database"
-                )
-        else:
-            logger.info("CoresetStrategy defaulting to database backend.")
-            self._storage_backend = DatabaseStorageBackend(
-                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
-            )
-
+        self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, modyn_config, pipeline_id)
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(
             config, modyn_config, pipeline_id, self._storage_backend
         )
+
+        self.warmup_presampler = NoPresamplingStrategy(
+            PresamplingConfig(strategy="No", ratio=100), modyn_config, pipeline_id, self._storage_backend
+        )
+
+        self.is_warmup = self.warmup_triggers > 0
+
+    def _init_storage_backend(self) -> AbstractStorageBackend:
+        if self._config.storage_backend == "local":
+            # TODO(#324): Support local backend on CoresetStrategy
+            raise NotImplementedError("The CoresetStrategy currently does not support the local backend.")
+
+        if self._config.storage_backend == "database":
+            storage_backend = DatabaseStorageBackend(
+                self._pipeline_id, self._modyn_config, self._maximum_keys_in_memory
+            )
+        else:
+            raise NotImplementedError(f'Unknown storage backend "{self._config.storage_backend}". Supported: database')
+        return storage_backend
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, object]:
         assert len(keys) == len(timestamps)
@@ -60,8 +64,18 @@ class CoresetStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
+        if (self._next_trigger_id + 1) > self.warmup_triggers:
+            self.is_warmup = False
+        # Upon entering this method, self._next_trigger_id is the trigger id for the current trigger
+        # whose training set is to be computed. After calling super().trigger() self._next_trigger_id is incremented.
+
+        # Therefore we need to update the downsampler before calling super().trigger().
+        # We should only update the downsampler to the current trigger not to the future one referred by
+        # self._next_trigger_id after the call to super().trigger() because later the remote downsampler on trainer
+        # server needs to fetch configuration for the current trigger
+
+        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
         trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
-        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id)
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
@@ -74,12 +88,17 @@ class CoresetStrategy(AbstractSelectionStrategy):
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
         ), "CoresetStrategy currently only supports DatabaseBackend"
+        # We set is_warmup here as well to support unit tests more easily.
+        # In end-to-end workflows, it should have been set by trigger() already.
+        if (self._next_trigger_id + 1) > self.warmup_triggers:
+            self.is_warmup = False
 
+        presampling_strategy = self.warmup_presampler if self.is_warmup else self.presampling_strategy
         trigger_dataset_size = None
-        if self.presampling_strategy.requires_trigger_dataset_size:
+        if presampling_strategy.requires_trigger_dataset_size:
             trigger_dataset_size = self._get_trigger_dataset_size()
 
-        stmt = self.presampling_strategy.get_presampling_query(
+        stmt = presampling_strategy.get_presampling_query(
             next_trigger_id=self._next_trigger_id,
             tail_triggers=self.tail_triggers,
             limit=self.training_set_size_limit if self.has_limit else None,
@@ -93,42 +112,24 @@ class CoresetStrategy(AbstractSelectionStrategy):
         pass  # As we currently hold everything in database (#116), this currently is a noop.
 
     def _get_trigger_dataset_size(self) -> int:
-        # Count the number of samples that might be sampled during the next trigger. Typically used to compute the
-        # target size for presampling_strategies (target_size = trigger_dataset_size * ratio)
-        assert isinstance(
-            self._storage_backend, DatabaseStorageBackend
-        ), "FreshnessStrategy currently only supports DatabaseBackend"
-
-        def _session_callback(session: Session) -> Any:
-            return (
-                session.query(SelectorStateMetadata.sample_key)
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id,
-                    (
-                        SelectorStateMetadata.seen_in_trigger_id >= self._next_trigger_id - self.tail_triggers
-                        if self.tail_triggers is not None
-                        else True
-                    ),
-                )
-                .count()
-            )
-
-        return self._storage_backend._execute_on_session(_session_callback)
+        return get_trigger_dataset_size(
+            self._storage_backend, self._pipeline_id, self._next_trigger_id, self.tail_triggers
+        )
 
     def get_available_labels(self) -> list[int]:
         return self._storage_backend.get_available_labels(self._next_trigger_id, tail_triggers=self.tail_triggers)
 
     @property
     def downsampling_strategy(self) -> str:
-        return self.downsampling_scheduler.downsampling_strategy
+        return self.downsampling_scheduler.downsampling_strategy if not self.is_warmup else ""
 
     @property
     def downsampling_params(self) -> dict:
-        return self.downsampling_scheduler.downsampling_params
+        return self.downsampling_scheduler.downsampling_params if not self.is_warmup else {}
 
     @property
     def requires_remote_computation(self) -> bool:
-        return self.downsampling_scheduler.requires_remote_computation
+        return self.downsampling_scheduler.requires_remote_computation if not self.is_warmup else False
 
     @property
     def training_status_bar_scale(self) -> int:

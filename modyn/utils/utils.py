@@ -25,7 +25,7 @@ import torch
 
 logger = logging.getLogger(__name__)
 UNAVAILABLE_PKGS = []
-SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}
+SECONDS_PER_UNIT = {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800, "y": 365 * 86400}
 MAX_MESSAGE_SIZE = 1024 * 1024 * 128  # 128 MB
 EMIT_MESSAGE_PERCENTAGES = [0.25, 0.5, 0.75]
 
@@ -65,8 +65,17 @@ def trigger_available(trigger_type: str) -> bool:
 
 
 def current_time_millis() -> int:
-    timestamp = time.time() * 1000
+    timestamp = time.monotonic_ns() / 1_000_000
     return int(round(timestamp))
+
+
+def current_time_micros() -> int:
+    timestamp = time.monotonic_ns() / 1_000
+    return int(round(timestamp))
+
+
+def current_time_nanos() -> int:
+    return time.monotonic_ns()
 
 
 def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:

@@ -56,8 +56,11 @@ class TrainingInfo:
         self.pretrained_model_path = pretrained_model_path
         self.log_file_path = log_file_path
 
-        if self.use_pretrained_model:
-            assert self.pretrained_model_path, "Inconsistent pretrained model configuration"
+        self.shuffle = request.shuffle
+
+        assert (
+            self.pretrained_model_path or not self.use_pretrained_model
+        ), "Inconsistent pretrained model configuration"
 
         self.batch_size = request.batch_size
         self.torch_criterion = request.torch_criterion
@@ -73,16 +76,7 @@ class TrainingInfo:
 
         self.final_checkpoint_path = final_checkpoint_path
 
-        self.seed: Optional[int]
-        if request.HasField("seed"):
-            self.seed = request.seed
-        else:
-            self.seed = None
-
-        self.tokenizer: Optional[str]
-        if request.HasField("tokenizer"):
-            self.tokenizer = request.tokenizer.value
-        else:
-            self.tokenizer = None
+        self.seed: int | None = request.seed if request.HasField("seed") else None
+        self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
 
         self.offline_dataset_path = offline_dataset_path

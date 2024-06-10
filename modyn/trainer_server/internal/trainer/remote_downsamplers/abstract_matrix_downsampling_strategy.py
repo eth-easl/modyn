@@ -26,6 +26,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         params_from_selector: dict,
         per_sample_loss: Any,
         device: str,
+        matrix_content: MatrixContent,
     ):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
 
@@ -37,7 +38,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
         # actual classes must specify which content should be stored. Can be either Gradients or Embeddings. Use the
         # enum defined above to specify what should be stored
-        self.matrix_content: Optional[MatrixContent] = None
+        self.matrix_content = matrix_content
 
         # if true, the downsampling is balanced across classes ex class sizes = [10, 50, 30] and 50% downsampling
         # yields the following downsampled class sizes [5, 25, 15] while without balance something like [0, 45, 0] can
@@ -118,5 +119,10 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
     @abstractmethod
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
-        # Here is where tha actual selection happens
+        # Here is where the actual selection happens
         raise NotImplementedError()
+
+    @property
+    def requires_grad(self) -> bool:
+        # Default to true if None
+        return self.matrix_content == MatrixContent.GRADIENTS

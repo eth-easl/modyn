@@ -5,6 +5,12 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, PresamplingConfig
+from modyn.config.schema.pipeline.sampling.downsampling_config import (
+    GradNormDownsamplingConfig,
+    LossDownsamplingConfig,
+    NoDownsamplingConfig,
+)
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy, CoresetStrategy
@@ -46,28 +52,26 @@ def setup_and_teardown():
 
 
 def get_config():
-    return {
-        "reset_after_trigger": False,
-        "limit": -1,
-        "presampling_config": {"ratio": 50, "strategy": "Random"},
-        "downsampling_config": {"strategy": "No"},
-    }
+    return CoresetStrategyConfig(
+        tail_triggers=None,
+        limit=-1,
+        maximum_keys_in_memory=1000,
+        presampling_config=PresamplingConfig(ratio=50, strategy="Random"),
+        downsampling_config=NoDownsamplingConfig(),
+    )
 
 
 def get_config_all():
-    return {
-        "reset_after_trigger": False,
-        "limit": -1,
-        "downsampling_config": {
-            "strategy": "Loss",
-            "sample_then_batch": True,
-            "ratio": 10,
-        },
-    }
+    return CoresetStrategyConfig(
+        tail_triggers=None,
+        limit=-1,
+        maximum_keys_in_memory=1000,
+        downsampling_config=LossDownsamplingConfig(sample_then_batch=True, ratio=10),
+    )
 
 
 def test_init():
-    coreset_strategy = CoresetStrategy(get_config(), get_minimal_modyn_config(), 12, 20)
+    coreset_strategy = CoresetStrategy(get_config(), get_minimal_modyn_config(), 12)
 
     assert isinstance(coreset_strategy, AbstractSelectionStrategy)
     assert isinstance(coreset_strategy.presampling_strategy, RandomPresamplingStrategy)
@@ -78,7 +82,7 @@ def test_init():
 
 
 def test_inform_data():
-    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -104,7 +108,7 @@ def test_inform_data():
 
 
 def test_dataset_size():
-    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     assert strat._get_trigger_dataset_size() == 3
@@ -123,7 +127,7 @@ def test_dataset_size():
 
 
 def test_on_trigger():
-    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config(), get_minimal_modyn_config(), 0)
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
         [0, 1, 2, 3, 4, 5],
@@ -146,8 +150,8 @@ def test_on_trigger():
 
 def test_on_trigger_multi_chunks():
     config = get_config()
-    config["presampling_config"]["ratio"] = 40
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.presampling_config.ratio = 40
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -164,7 +168,7 @@ def test_on_trigger_multi_chunks():
 
 def test_on_trigger_multi_chunks_unbalanced():
     config = get_config()
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -182,8 +186,8 @@ def test_on_trigger_multi_chunks_unbalanced():
 
 def test_on_trigger_multi_chunks_bis():
     config = get_config()
-    config["presampling_config"]["ratio"] = 70
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.presampling_config.ratio = 70
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -200,13 +204,8 @@ def test_on_trigger_multi_chunks_bis():
 
 
 def test_no_presampling():
-    config = get_config()
-    config["presampling_config"]["strategy"] = "No"
-    config["presampling_config"]["ratio"] = 100
-    config["downsampling_config"]["strategy"] = "Loss"
-    config["downsampling_config"]["ratio"] = 10
-    config["downsampling_config"]["sample_then_batch"] = True
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config = get_config_all()
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -226,8 +225,8 @@ def test_no_presampling():
 
 def test_chunking():
     config = get_config()
-    config["presampling_config"]["ratio"] = 90
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.presampling_config.ratio = 90
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -247,9 +246,9 @@ def test_chunking():
 
 def test_chunking_with_stricter_limit():
     config = get_config()
-    config["presampling_config"]["ratio"] = 90  # presampling should produce 5 points
-    config["limit"] = 3  # but the limit is stricter so we get only 3
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.presampling_config.ratio = 90  # presampling should produce 5 points
+    config.limit = 3  # but the limit is stricter so we get only 3
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -267,9 +266,9 @@ def test_chunking_with_stricter_limit():
 
 def test_chunking_with_stricter_presampling():
     config = get_config()
-    config["presampling_config"]["ratio"] = 50
-    config["limit"] = 4
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.presampling_config.ratio = 50
+    config.limit = 4
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -285,17 +284,19 @@ def test_chunking_with_stricter_presampling():
 
 
 def get_config_tail():
-    return {
-        "reset_after_trigger": False,
-        "presampling_config": {"ratio": 50, "strategy": "Random"},
-        "limit": -1,
-        "tail_triggers": 1,
-    }
+    return CoresetStrategyConfig(
+        tail_triggers=1,
+        limit=-1,
+        maximum_keys_in_memory=1000,
+        presampling_config=PresamplingConfig(ratio=50, strategy="Random"),
+        downsampling_config=NoDownsamplingConfig(),
+    )
 
 
 def test_get_tail_triggers_data():
     conf = get_config_tail()
-    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    conf.maximum_keys_in_memory = 1
+    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0)
 
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -353,8 +354,8 @@ def test_get_tail_triggers_data():
 
 def test_no_presampling_with_limit():
     config = get_config_all()
-    config["limit"] = 3
-    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0, 1000)
+    config.limit = 3
+    strat = CoresetStrategy(config, get_minimal_modyn_config(), 0)
 
     strat.inform_data(
         [10, 11, 12, 13, 14, 15],
@@ -370,7 +371,7 @@ def test_no_presampling_with_limit():
 
 
 def test_get_all_data():
-    strat = CoresetStrategy(get_config_all(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config_all(), get_minimal_modyn_config(), 0)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     generator = strat._get_data()
@@ -385,7 +386,7 @@ def test_get_all_data():
 
 
 def test_dataset_size_tail():
-    strat = CoresetStrategy(get_config_tail(), get_minimal_modyn_config(), 0, 1000)
+    strat = CoresetStrategy(get_config_tail(), get_minimal_modyn_config(), 0)
     strat.inform_data([10, 11, 12], [0, 1, 2], ["dog", "dog", "cat"])
 
     assert strat._get_trigger_dataset_size() == 3
@@ -410,10 +411,13 @@ def test_dataset_size_tail():
 @patch.object(DownsamplingScheduler, "inform_next_trigger")
 def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: MagicMock):
     strat = CoresetStrategy(
-        {"limit": -1, "reset_after_trigger": False},
+        CoresetStrategyConfig(
+            limit=-1,
+            tail_triggers=None,
+            maximum_keys_in_memory=1000,
+        ),
         get_minimal_modyn_config(),
         42,
-        1000,
     )
     assert not strat.reset_after_trigger
     assert strat._next_trigger_id == 0
@@ -426,5 +430,148 @@ def test_trigger_inform_new_samples(test_inform: MagicMock, test__on_trigger: Ma
     assert strat._next_trigger_id == 1
     assert trigger_num_keys == 0
 
-    test_inform.assert_called_once_with(1)
+    test_inform.assert_called_once_with(0, strat._storage_backend)
     test__on_trigger.assert_called_once()
+
+
+def test_trigger():
+    def fake_super_trigger(self):
+        trigger = self._next_trigger_id
+        self._next_trigger_id += 1
+        return trigger, 50, 1, {}
+
+    strat = CoresetStrategy(
+        CoresetStrategyConfig(
+            limit=-1,
+            tail_triggers=None,
+            downsampling_config=MultiDownsamplingConfig(
+                downsampling_list=[
+                    LossDownsamplingConfig(sample_then_batch=True, ratio=50),
+                    GradNormDownsamplingConfig(sample_then_batch=False, ratio=25),
+                ],
+                downsampling_thresholds=[3],
+            ),
+            maximum_keys_in_memory=1000,
+        ),
+        get_minimal_modyn_config(),
+        pipeline_id=42,
+    )
+
+    assert strat._next_trigger_id == 0
+
+    with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
+        # As threshold is 3, trigger 0, 1, 2 should use Loss downsampling
+        # and trigger 3, 4 should use GradNorm downsampling
+        for i in range(3):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteLossDownsampling"
+
+        for i in range(3, 5):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteGradNormDownsampling"
+
+
+def test_warmup_presampling():
+    conf = get_config_tail()
+    conf.maximum_keys_in_memory = 1
+    conf.warmup_triggers = 2
+    strat = CoresetStrategy(conf, get_minimal_modyn_config(), 0)
+
+    data1 = list(range(10))
+    timestamps1 = list(range(10))
+    labels = [0] * 10
+    strat.inform_data(data1, timestamps1, labels)
+    current_data = list(strat._get_data())
+    assert len(current_data) == 10  # trigger 0 data = warmup, so no presampling
+    current_data = flatten(current_data)
+    assert set(current_data) == set(data1)
+
+    # Now trigger id 1 starts
+    strat.trigger()
+
+    data2 = list(range(10, 20))
+    timestamps2 = list(range(10, 20))
+    strat.inform_data(data2, timestamps2, labels)
+    current_data = list(strat._get_data())
+    assert len(current_data) == 20  # presampling with tail 1 and still in warmup
+    current_data = flatten(current_data)
+    assert set(current_data) == set(data1 + data2)
+
+    # Now trigger id 2 starts
+    strat.trigger()
+
+    data3 = list(range(20, 30))
+    timestamps3 = list(range(20, 30))
+    strat.inform_data(data3, timestamps3, labels)
+    current_data = list(strat._get_data())
+
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data2 + data3)
+    assert set(current_data).intersection(set(data1)) == set()
+
+    # Now trigger ID 3 starts
+    strat.trigger()
+
+    data4 = list(range(30, 40))
+    timestamps4 = list(range(30, 40))
+    strat.inform_data(data4, timestamps4, labels)
+
+    # since tail_trigger = 1 we should not get any point belonging to the first and second trigger
+    current_data = list(strat._get_data())
+    assert len(current_data) == 10
+    current_data = flatten(current_data)
+
+    assert set(current_data) <= set(data3 + data4)
+    assert set(current_data).intersection(set(data1)) == set()
+    assert set(current_data).intersection(set(data2)) == set()
+
+
+def test_warmup_downsampling():
+    def fake_super_trigger(self):
+        trigger = self._next_trigger_id
+        self._next_trigger_id += 1
+        return trigger, 50, 1, {}
+
+    strat = CoresetStrategy(
+        CoresetStrategyConfig(
+            limit=-1,
+            tail_triggers=None,
+            downsampling_config=MultiDownsamplingConfig(
+                downsampling_list=[
+                    LossDownsamplingConfig(sample_then_batch=True, ratio=50),
+                    GradNormDownsamplingConfig(sample_then_batch=False, ratio=25),
+                ],
+                downsampling_thresholds=[3],
+            ),
+            maximum_keys_in_memory=1000,
+            warmup_triggers=2,
+        ),
+        get_minimal_modyn_config(),
+        pipeline_id=42,
+    )
+
+    assert strat._next_trigger_id == 0
+
+    with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
+
+        # As threshold is 3 and we have 2 warmup triggers, trigger 0,1 should not use downsampling,
+        # 2,3,4 should use Loss downsampling
+        # and trigger 5,6 should use GradNorm downsampling
+        for i in range(2):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == ""
+
+        for i in range(2, 5):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteLossDownsampling"
+
+        for i in range(5, 7):
+            trigger_id, *_ = strat.trigger()
+            assert trigger_id == i
+            assert strat.downsampling_strategy == "RemoteGradNormDownsampling"

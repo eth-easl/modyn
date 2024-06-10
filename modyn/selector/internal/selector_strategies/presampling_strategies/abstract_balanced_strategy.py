@@ -1,6 +1,7 @@
 from typing import Any, Optional
 
 import sqlalchemy
+from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
     AbstractPresamplingStrategy,
@@ -34,7 +35,7 @@ def get_fair_share_predicted_total(fair_share: int, requests: list[int]) -> int:
 class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
         self,
-        presampling_config: dict,
+        presampling_config: PresamplingConfig,
         modyn_config: dict,
         pipeline_id: int,
         storage_backend: AbstractStorageBackend,
@@ -42,8 +43,8 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
     ):
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
 
-        self.force_required_target_size = presampling_config.get("force_required_target_size", False)
-        self.force_column_balancing = presampling_config.get("force_column_balancing", False)
+        self.force_required_target_size = presampling_config.force_required_target_size
+        self.force_column_balancing = presampling_config.force_column_balancing
         self.balanced_column = balanced_column
 
         # TODO(#324): Support local backend on AbstractBalancedStrategy

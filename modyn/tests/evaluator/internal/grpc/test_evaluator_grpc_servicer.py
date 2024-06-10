@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
 import json
 import multiprocessing as mp
 import os
@@ -16,6 +18,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
+    EvaluationCleanupRequest,
     EvaluationResultRequest,
     EvaluationStatusRequest,
     JsonString,
@@ -23,6 +26,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     PythonString,
 )
 from modyn.evaluator.internal.metrics import Accuracy, F1Score
+from modyn.evaluator.internal.metrics.f1_score import F1ScoreTypes
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -60,6 +64,7 @@ def setup_and_teardown():
             "ResNet18",
             json.dumps({}),
             True,
+            "{}",
             "{}",
             ModelStorageStrategyConfig(name="PyTorchFullModel"),
             incremental_model_strategy=None,
@@ -153,7 +158,7 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
         amp=False,
         model_config="{}",
         storage_address=storage_address,
-        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2})],
+        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2, "average": "macro"})],
         model_path=model_path,
     )
 
@@ -323,17 +328,46 @@ def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage):
         assert len(metrics) == 1
         assert isinstance(metrics[0], Accuracy)
 
-        unkown_metric_config = MetricConfiguration(
+        unknown_metric_config = MetricConfiguration(
             name="UnknownMetric",
             config=JsonString(value=json.dumps({})),
             evaluation_transformer=PythonString(value=""),
         )
         with pytest.raises(NotImplementedError):
-            evaluator._setup_metrics([unkown_metric_config])
+            evaluator._setup_metrics([unknown_metric_config])
 
         metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
         assert len(metrics) == 1
         assert isinstance(metrics[0], Accuracy)
+
+
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_setup_metrics_multiple_f1(test_connect_to_model_storage, test_connect_to_storage):
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+
+        macro_f1_config = MetricConfiguration(
+            name="F1Score",
+            config=JsonString(value=json.dumps({"num_classes": 2, "average": "macro"})),
+            evaluation_transformer=PythonString(value=""),
+        )
+
+        micro_f1_config = MetricConfiguration(
+            name="F1Score",
+            config=JsonString(value=json.dumps({"num_classes": 2, "average": "micro"})),
+            evaluation_transformer=PythonString(value=""),
+        )
+        # not double macro, but macro and micro work
+        metrics = evaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
+
+        assert len(metrics) == 2
+        assert isinstance(metrics[0], F1Score)
+        assert isinstance(metrics[1], F1Score)
+        assert metrics[0].average == F1ScoreTypes.MACRO
+        assert metrics[1].average == F1ScoreTypes.MICRO
+        assert metrics[0].get_name() == "F1-macro"
+        assert metrics[1].get_name() == "F1-micro"
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -575,9 +609,48 @@ def test_get_evaluation_result(
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_data) == 2
-        assert response.evaluation_data[0].metric == Accuracy.get_name()
+        assert response.evaluation_data[0].metric == Accuracy("", {}).get_name()
         assert response.evaluation_data[0].result == 0.5
         test_acc.assert_called_once()
-        assert response.evaluation_data[1].metric == F1Score.get_name()
+        assert response.evaluation_data[1].metric == F1Score("", {"num_classes": 2, "average": "macro"}).get_name()
         assert response.evaluation_data[1].result == 0.75
         test_f1.assert_called_once()
+
+
+@patch.object(mp.Process, "is_alive", side_effect=[False, True, False, True, True])
+@patch.object(mp.Process, "terminate")
+@patch.object(mp.Process, "join")
+@patch.object(mp.Process, "kill")
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+def test_cleanup_evaluations(
+    test_connect_to_model_storage: MagicMock,
+    test_connect_to_storage: MagicMock,
+    test_kill: MagicMock,
+    test_join: MagicMock,
+    test_terminate: MagicMock,
+    test_is_alive: MagicMock,
+) -> None:
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        evaluation_process_info = get_evaluation_process_info()
+        evaluator._evaluation_process_dict[2] = evaluation_process_info
+        evaluator._evaluation_process_dict[3] = evaluation_process_info
+        evaluator._evaluation_process_dict[5] = evaluation_process_info
+        evaluator._evaluation_dict[1] = None
+        evaluator._evaluation_dict[2] = None
+        evaluator._evaluation_dict[3] = None
+        evaluator._evaluation_dict[5] = None
+        response = evaluator.cleanup_evaluations(EvaluationCleanupRequest(evaluation_ids=[1, 2, 3, 5]), None)
+        assert response.succeeded == [
+            1,  # already clean
+            2,  # not clean, process is dead
+            3,  # not clean, but process is still alive, terminate worked
+            5,  # not clean, process is still alive, terminate failed
+        ]
+
+    assert len(evaluator._evaluation_dict.keys()) == 0
+    test_kill.assert_called_once()
+    assert test_join.call_count == 2
+    assert test_terminate.call_count == 2
+    assert test_is_alive.call_count == 5

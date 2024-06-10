@@ -1,5 +1,7 @@
 from abc import ABC
 
+from modyn.config.schema.pipeline import SingleDownsamplingConfig
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.utils import DownsamplingMode
 
 
@@ -20,36 +22,26 @@ class AbstractDownsamplingStrategy(ABC):
         downsampling_config (dict): The configuration for the selector.
     """
 
-    def __init__(self, downsampling_config: dict, maximum_keys_in_memory: int) -> None:
-        super().__init__()
-
-        if downsampling_config.get("sample_then_batch") is None:
-            raise ValueError(
-                "Please specify if you want to sample and then batch or vice versa. "
-                "Use the sample_then_batch parameter"
-            )
-        if downsampling_config["sample_then_batch"]:
+    def __init__(
+        self,
+        downsampling_config: SingleDownsamplingConfig,
+        modyn_config: dict,
+        pipeline_id: int,
+        maximum_keys_in_memory: int,
+    ) -> None:
+        self._modyn_config = modyn_config
+        self._pipeline_id = pipeline_id
+        if downsampling_config.sample_then_batch:
             self.downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
         else:
             self.downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
-        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE and downsampling_config.get("period"):
-            raise ValueError("Downsampling period can be used only in sample-then-batch.")
-
-        self.downsampling_period = downsampling_config.get("period", 1)
-
-        if downsampling_config.get("ratio") is None:
-            raise ValueError("Please specify downsampling ratio to use downsampling methods")
-
-        self.downsampling_ratio = downsampling_config["ratio"]
-
-        if not (0 < self.downsampling_ratio <= 100) or not isinstance(self.downsampling_ratio, int):
-            raise ValueError("The downsampling ratio must be an integer in (0,100)")
+        self.downsampling_period = downsampling_config.period
+        self.downsampling_ratio = downsampling_config.ratio
 
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory
         self.downsampling_config = downsampling_config
-        self.downsampling_params = self._build_downsampling_params()
         self.status_bar_scale = self._compute_status_bar_scale()
 
     def _compute_status_bar_scale(self) -> int:
@@ -64,7 +56,8 @@ class AbstractDownsamplingStrategy(ABC):
             return 100
         return self.downsampling_ratio
 
-    def _build_downsampling_params(self) -> dict:
+    @property
+    def downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
             "maximum_keys_in_memory": self.maximum_keys_in_memory,
@@ -75,3 +68,15 @@ class AbstractDownsamplingStrategy(ABC):
             config["downsampling_period"] = self.downsampling_period
 
         return config
+
+    # pylint: disable=unused-argument
+    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+        """
+        This function is used to inform the downsampler that the next trigger is reached.
+
+        This is used for some downsamplers to implement some preparation logic before the actual downsampling
+        on trainer server side happens, with the help of the argument `selector_storage_backend`.
+        """
+
+        # by default, no preparation is needed
+        return

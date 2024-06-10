@@ -9,10 +9,10 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from modyn.config.schema.config import ModynConfig, SupervisorConfig
 from modyn.config.schema.pipeline import ModynPipelineConfig
+from modyn.config.schema.system import ModynConfig, SupervisorConfig
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
+from modyn.supervisor.internal.eval.result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
@@ -45,7 +45,6 @@ def noop_pipeline_executor_constructor_mock(
     modyn_config: dict,
     pipeline_config: dict,
     eval_directory: str,
-    supervisor_supported_eval_result_writers: dict,
     pipeline_status_queue: mp.Queue,
     training_status_queue: mp.Queue,
     eval_status_queue: mp.Queue,
@@ -87,10 +86,12 @@ class MockDatabaseConnection:
         model_config: str,
         amp: bool,
         selection_strategy: str,
+        data_config: str,
         full_model_strategy: ModelStorageStrategyConfig,
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
         full_model_interval: Optional[int] = None,
-    ) -> Optional[int]:
+        auxiliary_pipeline_id: Optional[int] = None,
+    ) -> int:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1
         return pid
@@ -214,7 +215,7 @@ def test_start_pipeline(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -273,7 +274,7 @@ def test_get_pipeline_status_running(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -300,7 +301,7 @@ def test_get_pipeline_status_exit(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
     dummy_pipeline_config: ModynPipelineConfig,
 ) -> None:
@@ -334,7 +335,7 @@ def test_get_pipeline_status_not_found(
     test_register_pipeline,
     test_get_time_at_storage,
     test_trainer_server_available,
-    test_dataset_availabale,
+    test_dataset_available,
     minimal_system_config: ModynConfig,
 ) -> None:
     sup = get_non_connecting_supervisor(minimal_system_config)  # pylint: disable=no-value-for-parameter

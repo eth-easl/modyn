@@ -7,22 +7,19 @@ import pathlib
 from multiprocessing import Manager, Process
 from typing import Any, Optional
 
-from modyn.config.schema.config import ModynConfig
-from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig, ResultWriterType
+from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig
+from modyn.config.schema.system.config import ModynConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
-from modyn.supervisor.internal.evaluation_result_writer import JsonResultWriter, TensorboardResultWriter
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-)
 from modyn.supervisor.internal.grpc.enums import MsgType, PipelineStage, PipelineStatus
 from modyn.supervisor.internal.grpc.template_msg import exit_submsg, pipeline_res_msg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import execute_pipeline
+from modyn.supervisor.internal.pipeline_executor.models import PipelineExecutionParams
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
 from pydantic import ValidationError
@@ -33,11 +30,6 @@ logger = logging.getLogger(__name__)
 class Supervisor:
     # pylint: disable=too-many-instance-attributes
     # This is a core class and we require the attributes.
-
-    supported_evaluation_result_writers: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
-        "json": JsonResultWriter,
-        "tensorboard": TensorboardResultWriter,
-    }
 
     def __init__(self, modyn_config: ModynConfig) -> None:
         # TODO(#317): redesign tensorboard in the future
@@ -169,7 +161,8 @@ class Supervisor:
                     model_class_name=pipeline_config.modyn_model.id,
                     model_config=model_config_str,
                     amp=pipeline_config.training.amp,
-                    selection_strategy=pipeline_config.training.selection_strategy.model_dump_json(),
+                    selection_strategy=pipeline_config.selection_strategy.model_dump_json(by_alias=True),
+                    data_config=pipeline_config.data.model_dump_json(by_alias=True),
                     full_model_strategy=full_model_strategy,
                     incremental_model_strategy=incremental_model_strategy,
                     full_model_interval=full_model_interval,
@@ -193,6 +186,7 @@ class Supervisor:
         stop_replay_at: Optional[int] = None,
         maximum_triggers: Optional[int] = None,
     ) -> dict:
+        # pylint: disable-msg=too-many-locals
         pipeline_config_model = self.validate_pipeline_config(pipeline_config)
         if not pipeline_config_model:
             return pipeline_res_msg(exception="Invalid pipeline configuration")
@@ -216,24 +210,21 @@ class Supervisor:
             return pipeline_res_msg(exception="Failed to register pipeline")
 
         try:
-            process = Process(
-                target=execute_pipeline,
-                args=(
-                    start_timestamp,
-                    pipeline_id,
-                    self.modyn_config.model_dump(by_alias=True),
-                    pipeline_config,
-                    eval_directory,
-                    self.supported_evaluation_result_writers,
-                    exception_queue,
-                    pipeline_status_queue,
-                    training_status_queue,
-                    eval_status_queue,
-                    start_replay_at,
-                    stop_replay_at,
-                    maximum_triggers,
-                ),
+            pipeline_exec_args = PipelineExecutionParams(
+                start_timestamp=start_timestamp,
+                pipeline_id=pipeline_id,
+                modyn_config=self.modyn_config,
+                pipeline_config=pipeline_config_model,
+                eval_directory=pathlib.Path(eval_directory),
+                exception_queue=exception_queue,
+                pipeline_status_queue=pipeline_status_queue,
+                training_status_queue=training_status_queue,
+                eval_status_queue=eval_status_queue,
+                start_replay_at=start_replay_at,
+                stop_replay_at=stop_replay_at,
+                maximum_triggers=maximum_triggers,
             )
+            process = Process(target=execute_pipeline, args=(pipeline_exec_args,))
             process.start()
             self._pipeline_process_dict[pipeline_id] = PipelineInfo(
                 process,

@@ -1,6 +1,7 @@
 """Client module. The client communicates with the modyn supervisor server.
 
 """
+
 import os
 
 from .evaluation_status_tracker import EvaluationStatusTracker  # noqa: F401

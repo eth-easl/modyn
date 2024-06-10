@@ -16,7 +16,7 @@ Some features may have missing values.
 
 The rows are chronologically ordered.
 
-It can be dowloaded from: https://labs.criteo.com/2013/12/download-terabyte-click-logs-2/
+It can be downloaded from: https://labs.criteo.com/2013/12/download-terabyte-click-logs-2/
 
 
 ## <ins>Preprocessing for Modyn:</ins>
@@ -27,7 +27,7 @@ For efficiency, we only want to learn those features with a high frequency (in t
 For example if a category 'c1' had the values 'unique1', 'unique2' and 'unique3' appearing only once, we would like to convert them to the same default value, say '0' such that the total number of unique values in that category reduces.
 In this way, if there were 100 different values in the category, but only 10 of them appeared more than 15 times, we would need only 11 values to represent the data in the column (1 for the default and 10 for the 10 high frequency values) rather than 100.
 Removing out the low frequency values by mapping them all to the same default value can help speedup the model a lot at the cost of a little accuracy.
-Also we want to convert the format into something that takes less space and is more effeciently read.
+Also we want to convert the format into something that takes less space and is more efficiently read.
 The final preprocessing converts all the input files into binary files while re embedding the categorical values to filter out the low frequency values.
 
 

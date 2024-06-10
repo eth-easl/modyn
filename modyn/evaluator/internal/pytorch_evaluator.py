@@ -39,7 +39,7 @@ class PytorchEvaluator:
         self._dataloader = self._prepare_dataloader(evaluation_info)
 
         self._metrics = evaluation_info.metrics
-        self._label_tranformer_function = deserialize_function(
+        self._label_transformer_function = deserialize_function(
             evaluation_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
 
@@ -104,7 +104,7 @@ class PytorchEvaluator:
         y_score = []
 
         self._model.model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             batch_number = -1
             for batch_number, batch in enumerate(self._dataloader):
                 # As empty() is unreliable
@@ -129,10 +129,10 @@ class PytorchEvaluator:
                 else:
                     raise ValueError(f"data type {type(batch[1])} not supported")
 
-                if self._label_tranformer_function is None:
+                if self._label_transformer_function is None:
                     target = batch[2].to(self._device)
                 else:
-                    target = self._label_tranformer_function(batch[2]).to(self._device)
+                    target = self._label_transformer_function(batch[2]).to(self._device)
 
                 batch_size = target.shape[0]
 

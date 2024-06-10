@@ -126,6 +126,7 @@ def register_pipeline(pipeline_config: dict, modyn_config: dict) -> int:
             model_config=model_config,
             amp=pipeline_config["training"]["amp"] if "amp" in pipeline_config["training"] else False,
             selection_strategy=json.dumps(pipeline_config["training"]["selection_strategy"]),
+            data_config=json.dumps(pipeline_config["data"]),
             full_model_strategy=full_model_strategy,
             incremental_model_strategy=incremental_model_strategy,
             full_model_interval=full_model_interval,
@@ -172,6 +173,7 @@ class DatasetHelper:
         filesystem_wrapper_type: str = "LocalFilesystemWrapper",
         file_watcher_interval: int = 5,
         version: str = "0.1.0",
+        wait_for_sec: int = NEW_DATASET_TIMEOUT,
     ) -> None:
         self.dataset_id = dataset_id
         self.dataset_size = dataset_size
@@ -182,6 +184,7 @@ class DatasetHelper:
         self.filesystem_wrapper_type = filesystem_wrapper_type
         self.file_watcher_interval = file_watcher_interval
         self.version = version
+        self.wait_for_sec = wait_for_sec
 
         self.storage_channel = connect_to_server("storage")
         self.storage = StorageStub(self.storage_channel)
@@ -209,11 +212,11 @@ class DatasetHelper:
         assert response.available, "Dataset is not available."
 
     def wait_for_dataset(self, expected_size: int) -> None:
-        time.sleep(NEW_DATASET_TIMEOUT)
+        time.sleep(self.wait_for_sec)
         request = GetDatasetSizeRequest(dataset_id=self.dataset_id)
         response: GetDatasetSizeResponse = self.storage.GetDatasetSize(request)
 
-        assert response.success, f"Dataset is not available after {NEW_DATASET_TIMEOUT} sec."
+        assert response.success, f"Dataset is not available after {self.wait_for_sec} sec."
         assert response.num_keys >= expected_size
 
     def register_new_dataset(self) -> None:
@@ -296,7 +299,12 @@ class TinyDatasetHelper(DatasetHelper):
         desc: str = "Tiny dataset for integration tests.",
     ) -> None:
         super().__init__(
-            dataset_id, dataset_size, dataset_dir, desc, {"file_extension": ".csv", "label_file_extension": ".txt"}
+            dataset_id,
+            dataset_size,
+            dataset_dir,
+            desc,
+            {"file_extension": ".csv", "label_file_extension": ".txt"},
+            wait_for_sec=20,
         )
 
     def create_dataset(self) -> None:

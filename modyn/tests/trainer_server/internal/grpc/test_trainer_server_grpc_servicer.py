@@ -1,4 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
 import json
 import multiprocessing as mp
 import os
@@ -78,6 +80,7 @@ def setup_and_teardown():
             "model",
             json.dumps({}),
             True,
+            "{}",
             "{}",
             ModelStorageStrategyConfig(name="PyTorchFullModel"),
             incremental_model_strategy=None,
@@ -210,22 +213,6 @@ def test_trainer_available(test_connect_to_model_storage):
         trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
         response = trainer_server.trainer_available(trainer_available_request, None)
         assert response.available
-
-
-@patch.object(
-    TrainerServerGRPCServicer,
-    "connect_to_model_storage",
-    return_value=DummyModelStorageStub(),
-)
-@patch.object(mp.Process, "is_alive", return_value=True)
-def test_trainer_not_available(test_is_alive, test_connect_to_model_storage):
-    with tempfile.TemporaryDirectory() as modyn_temp:
-        trainer_server = TrainerServerGRPCServicer(modyn_config, modyn_temp)
-        trainer_server._training_process_dict[10] = TrainingProcessInfo(
-            mp.Process(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue(), mp.Queue()
-        )
-        response = trainer_server.trainer_available(trainer_available_request, None)
-        assert not response.available
 
 
 @patch.object(

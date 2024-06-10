@@ -287,6 +287,22 @@ class EvaluationResultRequest(google.protobuf.message.Message):
 global___EvaluationResultRequest = EvaluationResultRequest
 
 @typing.final
+class EvaluationCleanupRequest(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    EVALUATION_IDS_FIELD_NUMBER: builtins.int
+    @property
+    def evaluation_ids(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        evaluation_ids: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["evaluation_ids", b"evaluation_ids"]) -> None: ...
+
+global___EvaluationCleanupRequest = EvaluationCleanupRequest
+
+@typing.final
 class EvaluationResultResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -304,3 +320,19 @@ class EvaluationResultResponse(google.protobuf.message.Message):
     def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data", "valid", b"valid"]) -> None: ...
 
 global___EvaluationResultResponse = EvaluationResultResponse
+
+@typing.final
+class EvaluationCleanupResponse(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    SUCCEEDED_FIELD_NUMBER: builtins.int
+    @property
+    def succeeded(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def __init__(
+        self,
+        *,
+        succeeded: collections.abc.Iterable[builtins.int] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["succeeded", b"succeeded"]) -> None: ...
+
+global___EvaluationCleanupResponse = EvaluationCleanupResponse

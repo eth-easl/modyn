@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.config import NewDataStrategyConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.new_data_strategy import NewDataStrategy
@@ -36,17 +37,12 @@ def get_minimal_modyn_config():
 
 def get_config():
     # TODO(MaxiBoether): also test local
-    return {"reset_after_trigger": False, "limit": -1, "storage_backend": "database"}
+    return NewDataStrategyConfig(tail_triggers=None, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
 
 
 def get_config_tail():
     # TODO(MaxiBoether): also test local
-    return {
-        "reset_after_trigger": False,
-        "limit": -1,
-        "tail_triggers": 1,
-        "storage_backend": "database",
-    }
+    return NewDataStrategyConfig(tail_triggers=1, limit=-1, storage_backend="database", maximum_keys_in_memory=1000)
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -61,28 +57,6 @@ def setup_and_teardown():
     shutil.rmtree(TMP_DIR)
 
 
-def test_constructor():
-    NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
-
-
-def test_constructor_throws_on_invalid_config():
-    conf = get_config()
-    conf["limit"] = 500
-
-    with pytest.raises(ValueError):
-        NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
-
-    conf = get_config()
-    conf["limit"] = 500
-    conf["limit_reset"] = "unknown"
-
-    with pytest.raises(ValueError):
-        NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
-
-    conf["limit_reset"] = "lastX"
-    NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)  # should work
-
-
 def test_e2e_noreset_nolimit():
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -92,11 +66,9 @@ def test_e2e_noreset_nolimit():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    # NO RESET // NO LIMIT #
     conf = get_config()
-    conf["limit"] = -1
-    conf["reset_after_trigger"] = False
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    conf.maximum_keys_in_memory = 100
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     training_samples = strat.get_trigger_partition_keys(trigger_id, 0)
@@ -122,11 +94,9 @@ def test_e2e_noreset_nolimit_memory_limits():
     timestamps2 = list(range(10, 20))
     labels2 = [0] * 10
 
-    # NO RESET // NO LIMIT #
     conf = get_config()
-    conf["limit"] = -1
-    conf["reset_after_trigger"] = False
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 5)
+    conf.maximum_keys_in_memory = 5
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
@@ -165,10 +135,9 @@ def test_e2e_reset_nolimit():
 
     # RESET // NO LIMIT #
     conf = get_config()
-    conf["limit"] = -1
-    conf["reset_after_trigger"] = True
-
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    conf.tail_triggers = 0
+    conf.maximum_keys_in_memory = 100
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
@@ -198,10 +167,11 @@ def test_e2e_reset_limit():
 
     # RESET // LIMIT #
     conf = get_config()
-    conf["limit"] = 5
-    conf["reset_after_trigger"] = True
+    conf.limit = 5
+    conf.tail_triggers = 0
+    conf.maximum_keys_in_memory = 100
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
@@ -230,11 +200,11 @@ def test_e2e_reset_limit_uar():
     labels2 = [0] * 10
     # NO RESET // LIMIT (UAR) #
     conf = get_config()
-    conf["limit"] = 5
-    conf["reset_after_trigger"] = False
-    conf["limit_reset"] = "sampleUAR"
+    conf.limit = 5
+    conf.limit_reset = "sampleUAR"
+    conf.maximum_keys_in_memory = 100
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
@@ -263,11 +233,10 @@ def test_e2e_reset_limit_lastx():
 
     # NO RESET // LIMIT (lastX) #
     conf = get_config()
-    conf["limit"] = 5
-    conf["reset_after_trigger"] = False
-    conf["limit_reset"] = "lastX"
-
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    conf.limit = 5
+    conf.limit_reset = "lastX"
+    conf.maximum_keys_in_memory = 100
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 5
@@ -296,11 +265,11 @@ def test_e2e_reset_limit_lastx_large():
 
     # NO RESET // LIMIT (lastX w/ large limit) #
     conf = get_config()
-    conf["limit"] = 15
-    conf["reset_after_trigger"] = False
-    conf["limit_reset"] = "lastX"
+    conf.limit = 15
+    conf.limit_reset = "lastX"
+    conf.maximum_keys_in_memory = 100
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 100)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     strat.inform_data(data1, timestamps1, labels1)
     trigger_id, trigger_num_keys, trigger_num_partitions, _ = strat.trigger()
     assert trigger_num_keys == 10
@@ -330,7 +299,7 @@ def test_inform_data():
 
         assert len(data) == 0
 
-    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
     strat.inform_data([10, 11, 12], [0, 1, 2], [0, 0, 1])
 
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
@@ -365,8 +334,8 @@ def test_inform_data():
 @patch.object(NewDataStrategy, "_get_data_no_reset")
 def test__on_trigger_reset(test__get_data_no_reset: MagicMock, test__get_data_reset: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = True
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    conf.tail_triggers = 0
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     assert strat.reset_after_trigger
 
     test__get_data_reset.return_value = [([10, 11, 12, 13], {})]
@@ -389,8 +358,7 @@ def test__on_trigger_reset(test__get_data_no_reset: MagicMock, test__get_data_re
 @patch.object(NewDataStrategy, "_get_data_no_reset")
 def test__on_trigger_no_reset(test__get_data_no_reset: MagicMock, test__get_data_reset: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = False
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     assert not strat.reset_after_trigger
 
     test__get_data_reset.return_value = []
@@ -413,10 +381,10 @@ def test__on_trigger_no_reset(test__get_data_no_reset: MagicMock, test__get_data
 @patch.object(NewDataStrategy, "_get_all_data")
 def test__get_data_reset_nolimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = True
+    conf.tail_triggers = 0
 
     test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert list(strat._get_data_reset()) == [([10, 11, 12], {})]
     test__get_all_data.assert_not_called()
@@ -427,13 +395,13 @@ def test__get_data_reset_nolimit(test__get_all_data: MagicMock, test__get_curren
 @patch.object(NewDataStrategy, "_get_all_data")
 def test__get_data_reset_nolimit_partitions(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = True
+    conf.tail_triggers = 0
 
     test__get_current_trigger_data.return_value = [
         ([10, 11, 12], {}),
         ([13, 14, 15], {}),
     ]
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert list(strat._get_data_reset()) == [([10, 11, 12], {}), ([13, 14, 15], {})]
     test__get_all_data.assert_not_called()
@@ -444,11 +412,11 @@ def test__get_data_reset_nolimit_partitions(test__get_all_data: MagicMock, test_
 @patch.object(NewDataStrategy, "_get_all_data")
 def test__get_data_reset_smalllimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = True
-    conf["limit"] = 2
+    conf.limit = 2
+    conf.tail_triggers = 0
     test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     keys = list(strat._get_data_reset())[0][0]
     assert len(keys) == 2
     assert set(keys) < set([10, 11, 12])
@@ -460,11 +428,11 @@ def test__get_data_reset_smalllimit(test__get_all_data: MagicMock, test__get_cur
 @patch.object(NewDataStrategy, "_get_all_data")
 def test__get_data_reset_largelimit(test__get_all_data: MagicMock, test__get_current_trigger_data: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = True
-    conf["limit"] = 42
+    conf.limit = 42
+    conf.tail_triggers = 0
     test__get_current_trigger_data.return_value = [([10, 11, 12], {})]
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     keys = list(strat._get_data_reset())[0][0]
     assert len(keys) == 3
     assert set(keys) == set([10, 11, 12])
@@ -481,10 +449,9 @@ def test__get_data_no_reset_nolimit(
     test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
-    conf["reset_after_trigger"] = False
 
     test__get_all_data.return_value = [([10, 11, 12], {})]
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert list(strat._get_data_no_reset())[0][0] == [10, 11, 12]
     test__get_all_data.assert_called_once()
@@ -501,13 +468,12 @@ def test__get_data_no_reset_limit(
     test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
-    conf["reset_after_trigger"] = False
-    conf["limit"] = 2
-    conf["limit_reset"] = "sampleUAR"
+    conf.limit = 2
+    conf.limit_reset = "sampleUAR"
 
     test__handle_limit_no_reset.return_value = [10, 11]
     test__get_all_data.return_value = [([10, 11, 12], {})]
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert list(strat._get_data_no_reset())[0][0] == [10, 11]
     test__get_all_data.assert_called_once()
@@ -524,13 +490,12 @@ def test__get_data_no_reset_limit_partitions(
     test__get_current_trigger_data: MagicMock,
 ):
     conf = get_config()
-    conf["reset_after_trigger"] = False
-    conf["limit"] = 2
-    conf["limit_reset"] = "sampleUAR"
+    conf.limit = 2
+    conf.limit_reset = "sampleUAR"
 
     test__handle_limit_no_reset.side_effect = lambda x: [x[0], x[1]]
     test__get_all_data.return_value = [([10, 11, 12], {}), ([13, 14, 15], {})]
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert [data for data, _ in strat._get_data_no_reset()] == [[10, 11], [13, 14]]
     test__get_all_data.assert_called_once()
@@ -542,13 +507,12 @@ def test__get_data_no_reset_limit_partitions(
 @patch.object(NewDataStrategy, "_sample_uar")
 def test__handle_limit_no_reset_lastx(test__sample_uar: MagicMock, test__last_x_limit: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = False
-    conf["limit"] = 42
-    conf["limit_reset"] = "lastX"
+    conf.limit = 42
+    conf.limit_reset = "lastX"
     test__last_x_limit.return_value = [10, 11]
     test__sample_uar.return_value = [12, 13]
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert strat._handle_limit_no_reset(["x"]) == [10, 11]
     test__last_x_limit.assert_called_once_with(["x"])
@@ -559,13 +523,12 @@ def test__handle_limit_no_reset_lastx(test__sample_uar: MagicMock, test__last_x_
 @patch.object(NewDataStrategy, "_sample_uar")
 def test__handle_limit_no_reset_sampleuar(test__sample_uar: MagicMock, test__last_x_limit: MagicMock):
     conf = get_config()
-    conf["reset_after_trigger"] = False
-    conf["limit"] = 42
-    conf["limit_reset"] = "sampleUAR"
+    conf.limit = 42
+    conf.limit_reset = "sampleUAR"
     test__last_x_limit.return_value = [10, 11]
     test__sample_uar.return_value = [12, 13]
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     assert strat._handle_limit_no_reset(["x"]) == [12, 13]
     test__last_x_limit.assert_not_called()
@@ -574,19 +537,19 @@ def test__handle_limit_no_reset_sampleuar(test__sample_uar: MagicMock, test__las
 
 def test__last_x_limit():
     conf = get_config()
-    conf["limit"] = 5
-    conf["limit_reset"] = "lastX"
+    conf.limit = 5
+    conf.limit_reset = "lastX"
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     assert strat._last_x_limit(list(range(1, 10))) == list(range(5, 10))
 
 
 def test__sample_uar():
     conf = get_config()
-    conf["limit"] = 5
-    conf["limit_reset"] = "sampleUAR"
+    conf.limit = 5
+    conf.limit_reset = "sampleUAR"
 
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     samples = strat._sample_uar(list(range(1, 10)))
 
     assert len(samples) == 5
@@ -594,7 +557,7 @@ def test__sample_uar():
 
 
 def test__get_current_trigger_data_no_partitions():
-    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
     data1 = list(range(10))
     timestamps1 = list(range(10))
     labels = [0] * 10
@@ -617,7 +580,8 @@ def test__get_current_trigger_data_no_partitions():
 
 def test__get_current_trigger_data_partitions():
     conf = get_config()
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    conf.maximum_keys_in_memory = 1
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
     data1 = list(range(10))
     timestamps1 = list(range(10))
     labels = [0] * 10
@@ -644,7 +608,8 @@ def test__get_current_trigger_data_partitions():
 
 def test__get_tail_triggers_data():
     conf = get_config_tail()
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    conf.maximum_keys_in_memory = 1
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -698,7 +663,7 @@ def test__get_tail_triggers_data():
 
 
 def test__get_all_data_no_partitions():
-    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
+    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0)
     data1 = list(range(10))
     timestamps1 = list(range(10))
     labels = [0] * 10
@@ -719,7 +684,8 @@ def test__get_all_data_no_partitions():
 
 def test__get_all_data_partitions():
     conf = get_config()
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    conf.maximum_keys_in_memory = 1
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     data1 = list(range(10))
     timestamps1 = list(range(10))
@@ -741,14 +707,10 @@ def test__get_all_data_partitions():
     assert flatten(all_data) == data1 + data2
 
 
-def test__reset_state():
-    strat = NewDataStrategy(get_config(), get_minimal_modyn_config(), 0, 1000)
-    strat._reset_state()
-
-
 def test__get_all_data_partitions_with_same_timestamp():
     conf = get_config()
-    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0, 1)
+    conf.maximum_keys_in_memory = 1
+    strat = NewDataStrategy(conf, get_minimal_modyn_config(), 0)
 
     data1 = list(range(10))
     timestamps1 = [42 for _ in range(10)]

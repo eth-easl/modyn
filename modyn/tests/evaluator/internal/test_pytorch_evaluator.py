@@ -155,7 +155,7 @@ def test_evaluator_init(load_state_mock: MagicMock):
             torch.ones(5),
         )
     )
-    assert torch.all(torch.eq(evaluator._label_tranformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
+    assert torch.all(torch.eq(evaluator._label_transformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
     assert evaluator._device == "cpu"
     assert evaluator._device_type == "cpu"
     assert not evaluator._amp
@@ -172,7 +172,7 @@ def test_no_transform_evaluator_init(load_state_mock: MagicMock):
     assert len(evaluator._metrics) == 1
     assert isinstance(evaluator._metrics[0], Accuracy)
     assert evaluator._dataloader is not None
-    assert not evaluator._label_tranformer_function
+    assert not evaluator._label_transformer_function
     assert evaluator._device == "cpu"
     assert evaluator._device_type == "cpu"
     assert not evaluator._amp
@@ -291,5 +291,5 @@ def test_evaluate(load_state_mock: MagicMock):
 
     # accuracy
     metric_name, metric_result = metric_result_queue.get()
-    assert metric_name == Accuracy.get_name()
+    assert metric_name == Accuracy("", {}).get_name()
     assert metric_result == pytest.approx(1)

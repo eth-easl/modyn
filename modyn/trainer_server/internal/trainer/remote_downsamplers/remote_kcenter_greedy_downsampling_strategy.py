@@ -31,9 +31,10 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         per_sample_loss: Any,
         device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
+        super().__init__(
+            pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device, MatrixContent.EMBEDDINGS
+        )
 
-        self.matrix_content = MatrixContent.EMBEDDINGS
         self.metric = euclidean_dist
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:

@@ -13,7 +13,7 @@ class ProcessorStrategyType(Enum):
     BasicProcessorStrategy = "basic_processor_strategy"  # pylint: disable=invalid-name
 
 
-class InvalidProcessorStrategyTypeException(Exception):
+class InvalidProcessorStrategyTypeError(Exception):
     """Exception for invalid processor strategy type."""
 
     def __init__(self, message: str):

@@ -1,4 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module, too-many-locals
+
 import platform
 from unittest.mock import patch
 
@@ -40,7 +41,7 @@ class MockStorageStub:
     def __init__(self, channel) -> None:
         pass
 
-    def Get(self, request):  # pylint: disable=invalid-name
+    def Get(self, request):  # pylint: disable=invalid-name  # noqa: N802
         for i in range(0, 10, 2):
             yield GetResponse(
                 samples=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],
@@ -67,6 +68,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer=None,
             log_path=None,
+            shuffle=False,
             num_prefetched_partitions=1,
             parallel_prefetch_requests=1,
         )._init_transforms()
@@ -83,6 +85,7 @@ def test_invalid_bytes_parser(test_weights, test_grpc_connection_established):
             training_id=42,
             tokenizer="",
             log_path=None,
+            shuffle=False,
             num_prefetched_partitions=1,
             parallel_prefetch_requests=1,
         )._init_transforms()
@@ -108,6 +111,7 @@ def test_init(test_insecure_channel, test_grpc_connection_established, test_grpc
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
     )
@@ -142,6 +146,7 @@ def test_get_keys_and_weights_from_selector(
             "training_id": 42,
             "tokenizer": None,
             "log_path": None,
+            "shuffle": False,
             "num_prefetched_partitions": 1,
             "parallel_prefetch_requests": 1,
         }
@@ -178,6 +183,7 @@ def test_get_data_from_storage(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=0,
         parallel_prefetch_requests=1,
     )
@@ -257,6 +263,7 @@ def test_deserialize_torchvision_transforms(
         training_id=42,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
     )
@@ -308,6 +315,7 @@ def test_dataset_iter(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -356,6 +364,7 @@ def test_dataset_iter_with_parsing(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataset_iter = iter(online_dataset)
     all_data = list(dataset_iter)
@@ -404,6 +413,7 @@ def test_dataloader_dataset(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -453,6 +463,7 @@ def test_dataloader_dataset_weighted(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for i, batch in enumerate(dataloader):
@@ -510,6 +521,7 @@ def test_dataloader_dataset_multi_worker(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=num_workers)
     for batch in dataloader:
@@ -541,6 +553,7 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established, test
         parallel_prefetch_requests=1,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
 
     assert online_dataset._storagestub is None
@@ -578,6 +591,7 @@ def test_init_transforms(
         parallel_prefetch_requests=1,
         tokenizer=None,
         log_path=None,
+        shuffle=False,
     )
 
     assert online_dataset._bytes_parser_function is None
@@ -597,6 +611,7 @@ def iter_multi_partition_data_side_effect(keys, worker_id=None):
     yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), 0)
 
 
+@pytest.mark.parametrize("shuffle", [False, True])
 @pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
@@ -628,6 +643,7 @@ def test_iter_multi_partition(
     test_grpc_connection_established_selector,
     prefetched_partitions,
     parallel_prefetch_requests,
+    shuffle,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -642,6 +658,7 @@ def test_iter_multi_partition(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=shuffle,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     idx = 0
@@ -659,6 +676,7 @@ def test_iter_multi_partition(
     assert idx == 15
 
 
+@pytest.mark.parametrize("shuffle", [False, True])
 @pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", WeightedMockSelectorStub)
@@ -690,6 +708,7 @@ def test_iter_multi_partition_weighted(
     test_grpc_connection_established_selector,
     prefetched_partitions,
     parallel_prefetch_requests,
+    shuffle,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -704,6 +723,7 @@ def test_iter_multi_partition_weighted(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=shuffle,
     )
 
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
@@ -769,6 +789,7 @@ def test_iter_multi_partition_cross(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=False,  # Since we test ordering here, shuffling does not make sense.
     )
     # Note batch size 6 instead of 4 here
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=6)
@@ -791,6 +812,7 @@ def test_iter_multi_partition_cross(
     assert idx == 10
 
 
+@pytest.mark.parametrize("shuffle", [False, True])
 @pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("num_workers", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
@@ -823,6 +845,7 @@ def test_iter_multi_partition_multi_workers(
     prefetched_partitions,
     num_workers,
     parallel_prefetch_requests,
+    shuffle,
 ):
     if platform.system() == "Darwin":
         # On macOS, spawn is the default, which loses the mocks
@@ -842,14 +865,19 @@ def test_iter_multi_partition_multi_workers(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=shuffle,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4, num_workers=num_workers)
     idx = 0
     for idx, batch in enumerate(dataloader):
         assert len(batch) == 3
-        assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
-        assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
         assert torch.equal(batch[2], torch.ones(4, dtype=int))
+        if shuffle:
+            assert set(batch[0].tolist()) == set([0, 1, 2, 3])
+            assert set(batch[1].tolist()) == set([0, 1, 2, 3])
+        else:
+            assert torch.equal(batch[0], torch.Tensor([0, 1, 2, 3]))
+            assert torch.equal(batch[1], torch.Tensor([0, 1, 2, 3]))
 
     if num_workers % 2 == 0:
         # only test this for even number of workers to avoid fractions
@@ -857,6 +885,7 @@ def test_iter_multi_partition_multi_workers(
         assert idx == ((max(num_workers, 1) * 8) / 4) - 1
 
 
+@pytest.mark.parametrize("shuffle", [False, True])
 @pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
 @pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
@@ -883,6 +912,7 @@ def test_multi_epoch_dataloader_dataset(
     test_grpc_connection_established_selecotr,
     prefetched_partitions,
     parallel_prefetch_requests,
+    shuffle,
 ):
     online_dataset = OnlineDataset(
         pipeline_id=1,
@@ -897,11 +927,26 @@ def test_multi_epoch_dataloader_dataset(
         parallel_prefetch_requests=parallel_prefetch_requests,
         tokenizer=None,
         log_path=None,
+        shuffle=shuffle,
     )
     dataloader = torch.utils.data.DataLoader(online_dataset, batch_size=4)
     for _ in range(5):
+        total_ids = []
+        total_expected_ids = []
+        total_data = []
         for i, batch in enumerate(dataloader):
             assert len(batch) == 3
-            assert batch[0].tolist() == [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
-            assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
-            assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+            total_ids.extend(batch[0].tolist())
+            expected_ids = [4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]
+            total_expected_ids.extend(expected_ids)
+            total_data.extend(batch[1])
+            if not shuffle:
+                assert batch[0].tolist() == expected_ids
+                assert torch.equal(batch[1], torch.Tensor([4 * i, 4 * i + 1, 4 * i + 2, 4 * i + 3]))
+                assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
+
+        if shuffle:
+            assert set(total_ids) == set(total_expected_ids)
+            for id in total_ids:
+                for x in torch.cat(total_data):
+                    assert id == int(x.item())

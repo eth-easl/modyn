@@ -24,8 +24,10 @@ def prepare_dataloaders(
     training_id: int,
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
+    shuffle: bool,
     tokenizer: Optional[str],
     log_path: Optional[pathlib.Path],
+    drop_last: bool = True,
 ) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
     """
     Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
@@ -37,8 +39,9 @@ def prepare_dataloaders(
         num_dataloaders (int): Number of PyTorch data workers for the dataloader
         batch_size (int): Batch size used for training
         bytes_parser (str): Serialized Python code,
-            used for converting bytes to a form useful for futher transformations (such as Tensors).
+            used for converting bytes to a form useful for further transformations (such as Tensors).
         transform (list[str]): List of serialized torchvision transforms for the samples, before loading.
+        shuffle: Whether to shuffle the order of partitions and data within partitions
         tokenizer (optional[str]): Optional tokenizer for NLP tasks
         storage_address (str): Address of the Storage endpoint that the OnlineDataset workers connect to.
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
@@ -58,11 +61,14 @@ def prepare_dataloaders(
         training_id,
         num_prefetched_partitions,
         parallel_prefetch_requests,
+        shuffle,
         tokenizer,
         log_path,
     )
     logger.debug("Creating DataLoader.")
-    train_dataloader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, num_workers=num_dataloaders)
+    train_dataloader = torch.utils.data.DataLoader(
+        train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=drop_last
+    )
 
     # TODO(#50): what to do with the val set in the general case?
     val_dataloader = None
@@ -70,7 +76,11 @@ def prepare_dataloaders(
 
 
 def prepare_per_class_dataloader_from_online_dataset(
-    online_dataset: OnlineDataset, batch_size: int, num_workers: int, initial_filtered_label: int
+    online_dataset: OnlineDataset,
+    batch_size: int,
+    num_workers: int,
+    initial_filtered_label: int,
+    drop_last: bool = True,
 ) -> torch.utils.data.DataLoader:
     # TODO(#289): Replace inefficient per class dataloader
     dataset = PerClassOnlineDataset(
@@ -85,6 +95,7 @@ def prepare_per_class_dataloader_from_online_dataset(
         initial_filtered_label,
         online_dataset._num_prefetched_partitions,
         online_dataset._parallel_prefetch_requests,
+        online_dataset._shuffle,
         online_dataset._tokenizer_name,
     )
-    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)
+    return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last)

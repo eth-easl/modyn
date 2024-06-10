@@ -75,3 +75,52 @@ def test_accuracy_invalid():
 
     with pytest.raises(TypeError):
         accuracy.evaluate_batch(zeroes, y_pred, 5)
+
+
+def test_accuracy_invalid_topn():
+    with pytest.raises(ValueError):
+        Accuracy(evaluation_transform_func="", config={"topn": 0})
+
+
+def test_accuracy_top3():
+    accuracy = Accuracy(evaluation_transform_func="", config={"topn": 3})
+    accuracy.deserialize_evaluation_transformer()
+
+    y_true = torch.from_numpy(np.array([0, 1, 2, 3, 4]))
+    y_pred = torch.from_numpy(
+        np.array(
+            [
+                [0.1, 0.2, 0.3, 0.4, 0.5],  # no
+                [0.2, 0.3, 0.4, 0.5, 0.1],  # yes
+                [0.3, 0.4, 0.5, 0.1, 0.2],  # yes
+                [0.4, 0.5, 0.1, 0.2, 0.3],  # no
+                [0.5, 0.1, 0.2, 0.3, 0.4],
+            ]
+        )
+    )  # yes
+
+    accuracy.evaluate_batch(y_true, y_pred, 5)
+
+    assert accuracy.get_evaluation_result() == pytest.approx(0.6)
+
+
+def test_accuracy_top2():
+    accuracy = Accuracy(evaluation_transform_func="", config={"topn": 2})
+    accuracy.deserialize_evaluation_transformer()
+
+    y_true = torch.from_numpy(np.array([0, 1, 2, 3, 4]))
+    y_pred = torch.from_numpy(
+        np.array(
+            [
+                [0.1, 0.2, 0.3, 0.4, 0.5],  # no
+                [0.2, 0.3, 0.4, 0.5, 0.1],  # no
+                [0.3, 0.4, 0.5, 0.1, 0.2],  # yes
+                [0.4, 0.5, 0.1, 0.2, 0.3],  # no
+                [0.5, 0.1, 0.2, 0.3, 0.4],
+            ]
+        )
+    )  # yes
+
+    accuracy.evaluate_batch(y_true, y_pred, 5)
+
+    assert accuracy.get_evaluation_result() == pytest.approx(0.4)

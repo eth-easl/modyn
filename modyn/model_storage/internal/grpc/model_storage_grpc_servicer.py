@@ -1,5 +1,7 @@
 """Model storage GRPC servicer."""
 
+# ruff: noqa: N802  # grpc functions are not snake case
+
 import logging
 import os
 import pathlib

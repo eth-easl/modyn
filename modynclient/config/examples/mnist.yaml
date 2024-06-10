@@ -16,6 +16,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 64
+  shuffle: False
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -29,12 +30,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
-    storage_backend: "database"
-    limit: -1
-    reset_after_trigger: True
 data:
   dataset_id: mnist
   transformations: ["transforms.ToTensor()",
@@ -46,9 +41,23 @@ data:
       return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
-  trigger_config:
-    data_points_for_trigger: 2000
+  num_samples: 2000
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
 evaluation:
+  handlers:
+    - execution_time: after_training
+      strategy:
+        type: SlicingEvalStrategy
+        eval_every: 100s
+        eval_start_from: 0
+        eval_end_at: 300
+      models: matrix
+      datasets: ["mnist"]
   device: "cpu"
   result_writers: ["json", "tensorboard"]
   datasets:
@@ -68,7 +77,7 @@ evaluation:
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.argmax(model_output, dim=-1)
-        - name: "F1-score"
+        - name: "F1Score"
           config:
             num_classes: 10
             average: "macro"

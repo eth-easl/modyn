@@ -16,6 +16,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 2
+  shuffle: False
   optimizers:
     - name: "default1"
       algorithm: "SGD"
@@ -29,12 +30,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 10
-    storage_backend: "database"
-    limit: -1
-    reset_after_trigger: True
 data:
   dataset_id: tiny_dataset
   bytes_parser_function: |
@@ -47,5 +42,10 @@ data:
       return arr.astype(np.float32)
 trigger:
   id: DataAmountTrigger
-  trigger_config:
-    data_points_for_trigger: 2
+  num_samples: 2
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 10
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
