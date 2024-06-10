@@ -235,7 +235,6 @@ def run_experiment() -> None:
                     num_classes,
                 )
             )
-    return
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")

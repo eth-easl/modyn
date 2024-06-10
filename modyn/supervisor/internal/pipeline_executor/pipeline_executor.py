@@ -743,7 +743,7 @@ class PipelineExecutor:
         eval_strategy_config = self.state.pipeline_config.evaluation.handlers[0].strategy
         eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
         eval_strategy: AbstractEvalStrategy = getattr(eval_strategy_module, eval_strategy_config.type)(
-            eval_strategy_config.model_dump(by_alias=True)
+            eval_strategy_config
         )
 
         with ThreadPoolExecutor(max_workers=30) as pool:
