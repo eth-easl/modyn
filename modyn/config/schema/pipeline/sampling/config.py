@@ -97,8 +97,10 @@ class CoresetStrategyConfig(_BaseSelectionStrategy):
 
     warmup_triggers: int = Field(
         description=(
-            "Defines for how many epochs no pre- or downsampling is performed. "
+            "Defines for how many triggers no pre- or downsampling is performed. "
             "Can be useful to warm up a model on the full dataset before starting to select data."
+            "Note that the downsampling schedule is not affected by this, i.e., the schedule "
+            "is executed as expected _after_ the warmup period."
         ),
         default=0,
     )

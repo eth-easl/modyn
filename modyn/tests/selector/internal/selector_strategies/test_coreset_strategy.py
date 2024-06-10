@@ -486,7 +486,7 @@ def test_warmup_presampling():
     current_data = list(strat._get_data())
     assert len(current_data) == 10  # trigger 0 data = warmup, so no presampling
     current_data = flatten(current_data)
-    assert set(current_data) <= set(data1)
+    assert set(current_data) == set(data1)
 
     # Now trigger id 1 starts
     strat.trigger()
@@ -497,7 +497,7 @@ def test_warmup_presampling():
     current_data = list(strat._get_data())
     assert len(current_data) == 20  # presampling with tail 1 and still in warmup
     current_data = flatten(current_data)
-    assert set(current_data) <= set(data1 + data2)
+    assert set(current_data) == set(data1 + data2)
 
     # Now trigger id 2 starts
     strat.trigger()
