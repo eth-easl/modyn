@@ -6,7 +6,7 @@ import pathlib
 import shutil
 import time
 from dataclasses import dataclass
-from typing import Generator, overload
+from typing import Generator, Iterable, overload
 from unittest import mock
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
@@ -16,6 +16,7 @@ from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorCo
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
 from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -729,18 +730,20 @@ def test__start_evaluations(
 
     if test_failure:
 
-        def get_eval_intervals(
-            first_timestamp: int, last_timestamp: int
-        ) -> Generator[tuple[int | None, int | None], None, None]:
-            yield from [(0, 100), (100, 200), (200, 300)]
+        def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+            yield from [
+                EvalInterval(start=0, end=100, most_recent_model_interval_end_before=50),
+                EvalInterval(start=100, end=200, most_recent_model_interval_end_before=150),
+                EvalInterval(start=200, end=300, most_recent_model_interval_end_before=250),
+            ]
 
     else:
         intervals = [(0, 100), (100, 200), (None, None), (None, 200), (None, 0), (200, None), (0, None), (0, 0)]
 
-        def get_eval_intervals(
-            first_timestamp: int, last_timestamp: int
-        ) -> Generator[tuple[int | None, int | None], None, None]:
-            yield from intervals
+        def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+            yield from [
+                EvalInterval(start=start, end=end, most_recent_model_interval_end_before=0) for start, end in intervals
+            ]
 
     with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
         model_id = 1
@@ -758,9 +761,9 @@ def test__start_evaluations(
                 run.info for run in pe.logs.supervisor_logs.stage_runs if isinstance(run.info, SingleEvaluationInfo)
             ]
             assert len(stage_info) == 3
-            assert (stage_info[0].interval_start, stage_info[0].interval_end) == (0, 100)
-            assert (stage_info[1].interval_start, stage_info[1].interval_end) == (100, 200)
-            assert (stage_info[2].interval_start, stage_info[2].interval_end) == (200, 300)
+            assert (stage_info[0].eval_request.interval_start, stage_info[0].eval_request.interval_end) == (0, 100)
+            assert (stage_info[1].eval_request.interval_start, stage_info[1].eval_request.interval_end) == (100, 200)
+            assert (stage_info[2].eval_request.interval_start, stage_info[2].eval_request.interval_end) == (200, 300)
             assert stage_info[0].failure_reason is None
             assert stage_info[1].failure_reason == "EMPTY_DATASET"
             assert stage_info[2].failure_reason is None

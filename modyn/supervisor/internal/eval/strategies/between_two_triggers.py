@@ -1,12 +1,12 @@
 from typing import Iterable
 
-from modyn.config.schema.pipeline import StaticEvalStrategyConfig
+from modyn.config.schema.pipeline import BetweenTwoTriggersEvalStrategyConfig
 
 from .abstract import AbstractEvalStrategy, EvalInterval
 
 
-class StaticEvalStrategy(AbstractEvalStrategy):
-    def __init__(self, config: StaticEvalStrategyConfig):
+class BetweenTwoTriggersEvalStrategy(AbstractEvalStrategy):
+    def __init__(self, config: BetweenTwoTriggersEvalStrategyConfig):
         super().__init__(config)
 
     def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
@@ -15,7 +15,7 @@ class StaticEvalStrategy(AbstractEvalStrategy):
                 start=interval_start,
                 end=interval_end,
                 # This is independent of the training interval, we use the interval centers as training intervals
-                most_recent_model_interval_end_before=interval_end or interval_start,
+                most_recent_model_interval_end_before=interval_end,
             )
-            for interval_start, interval_end in self.config.intervals
+            for interval_start, interval_end in training_intervals
         ]
