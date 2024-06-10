@@ -13,6 +13,8 @@ from pathlib import Path
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
+
+# pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.eval.result_writer.json_result_writer import JsonResultWriter

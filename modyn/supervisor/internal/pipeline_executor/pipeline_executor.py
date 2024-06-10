@@ -11,8 +11,6 @@ from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
 from modyn.config.schema.pipeline import ResultWriterType
-
-# pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.eval.result_writer import JsonResultWriter
 from modyn.supervisor.internal.eval.result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
