@@ -45,7 +45,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.evaluation_result_writer import AbstractEvaluationResultWriter
+from modyn.supervisor.internal.eval.result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import grpc_common_config, grpc_connection_established
 

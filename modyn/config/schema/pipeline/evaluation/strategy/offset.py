@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import List, Literal, get_args
 
 from modyn.config.schema.base_model import ModynBaseModel
-from modyn.supervisor.internal.eval_strategies import OffsetEvalStrategy
 from modyn.utils import validate_timestr
 from pydantic import Field, field_validator
+
+OffsetEvalStrategyBounds = Literal["inf", "-inf"]
 
 
 class OffsetEvalStrategyConfig(ModynBaseModel):
@@ -33,7 +34,7 @@ class OffsetEvalStrategyConfig(ModynBaseModel):
     @classmethod
     def validate_offsets(cls, value: List[str]) -> List[str]:
         for offset in value:
-            if offset not in [OffsetEvalStrategy.NEGATIVE_INFINITY, OffsetEvalStrategy.INFINITY]:
+            if offset not in get_args(OffsetEvalStrategyBounds):
                 if not validate_timestr(offset):
                     raise ValueError(f"offset {offset} must be a valid time string")
         return value

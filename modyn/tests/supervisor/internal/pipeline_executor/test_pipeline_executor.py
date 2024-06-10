@@ -16,7 +16,7 @@ from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorCo
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
-from modyn.supervisor.internal.eval_strategies.slicing_eval_strategy import SlicingEvalStrategy
+from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline

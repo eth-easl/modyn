@@ -1,7 +1,8 @@
 from typing import Iterable, Optional
 
-from modyn.supervisor.internal.eval_strategies.abstract_eval_strategy import AbstractEvalStrategy
-from modyn.utils import convert_timestr_to_seconds
+from modyn.config.schema.pipeline import SlicingEvalStrategyConfig
+
+from .abstract import AbstractEvalStrategy
 
 
 class SlicingEvalStrategy(AbstractEvalStrategy):
@@ -14,19 +15,16 @@ class SlicingEvalStrategy(AbstractEvalStrategy):
     be smaller than `eval_every`.
     """
 
-    def __init__(self, eval_strategy_config: dict):
-        super().__init__(eval_strategy_config)
-        self.eval_every = convert_timestr_to_seconds(self.eval_strategy_config["eval_every"])
-        self.eval_start_from = self.eval_strategy_config["eval_start_from"]
-        self.eval_end_at = self.eval_strategy_config["eval_end_at"]
+    def __init__(self, config: SlicingEvalStrategyConfig):
+        super().__init__(config)
 
     def get_eval_intervals(
         self, first_timestamp: int, last_timestamp: int
     ) -> Iterable[tuple[Optional[int], Optional[int]]]:
-        previous_split = self.eval_start_from
+        previous_split = self.config.eval_start_from
         while True:
-            current_split = min(previous_split + self.eval_every, self.eval_end_at)
+            current_split = min(previous_split + self.config.eval_every_sec, self.config.eval_end_at)
             yield previous_split, current_split
-            if current_split >= self.eval_end_at:
+            if current_split >= self.config.eval_end_at:
                 break
             previous_split = current_split

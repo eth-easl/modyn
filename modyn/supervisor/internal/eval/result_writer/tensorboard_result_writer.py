@@ -2,7 +2,7 @@ import pathlib
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
-from modyn.supervisor.internal.evaluation_result_writer.abstract_evaluation_result_writer import (
+from modyn.supervisor.internal.eval.result_writer.abstract_evaluation_result_writer import (
     AbstractEvaluationResultWriter,
 )
 from torch.utils.tensorboard import SummaryWriter
