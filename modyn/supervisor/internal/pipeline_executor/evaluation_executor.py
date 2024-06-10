@@ -109,26 +109,6 @@ class EvaluationExecutor:
         executor.context = context
         return executor
 
-    # eval_requests: list[EvalRequest] = []
-
-    # for eval_handler in self.eval_handlers:
-    #     if eval_handler.config.execution_time != "after_training":
-    #         continue
-
-    #     handler_eval_requests = eval_handler.get_eval_requests_after_training(
-    #         trigger_id=trigger_id,
-    #         training_id=training_id,
-    #         model_id=model_id,
-    #         training_interval=(first_timestamp, last_timestamp),
-    #     )
-    #     eval_requests += handler_eval_requests
-
-    # # will be replaced with threadpool in a follow-up PR
-    # for eval_req in eval_requests:
-    #     results = self._single_evaluation(s, self.logs, eval_req)
-    #     if results:
-    #         self._store_evaluation_results(s, self.logs, eval_req, results)
-
     def run_pipeline_evaluations(
         self,
         log: StageLog,
@@ -154,7 +134,6 @@ class EvaluationExecutor:
         Returns:
             The logs of the evaluations.
         """
-        # pylint: disable=too-many-locals
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.pipeline.evaluation is not None, "Evaluation config not set."
         pipeline_status_queue.put(
@@ -181,9 +160,7 @@ class EvaluationExecutor:
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
-    def run_post_pipeline_evaluations(
-        self, eval_status_queue: Queue
-    ) -> SupervisorLogs:  # pylint: disable=too-many-locals
+    def run_post_pipeline_evaluations(self, eval_status_queue: Queue) -> SupervisorLogs:
         """Evaluate the trained models after the core pipeline and store the results."""
         if not self.pipeline.evaluation:
             return SupervisorLogs(stage_runs=[])
