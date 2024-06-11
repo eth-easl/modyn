@@ -36,7 +36,7 @@ class IrreducibleLossProducer:
     def get_irreducible_loss(
         self, sample_ids: list[int], forward_input: Union[dict[str, torch.Tensor], torch.Tensor], target: torch.Tensor
     ) -> torch.Tensor:
-        # use sample_ids to index into the precomputed loss values. Return the loss values
+        # use sample_ids to index into the precomputed loss values, if they are all in the cache
         # or use forward_input to compute the loss values
         fullly_in_cache = all(sample_id in self.loss_cache for sample_id in sample_ids)
         if fullly_in_cache:

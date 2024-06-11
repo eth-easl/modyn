@@ -8,6 +8,10 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.irreducible_loss_
 
 
 class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
+    """
+    Method adapted from Prioritized Training on Points that are Learnable, Worth Learning, and Not Yet Learnt
+    (Sören Mindermann+, 2022). https://arxiv.org/abs/2206.07137
+    """
     def __init__(
         self,
         pipeline_id: int,
@@ -45,7 +49,7 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
     ) -> None:
         training_loss = self.per_sample_loss_fct(forward_output, target).detach()
         self.index_sampleid_map += sample_ids
-        irreducible_loss = self.irreducible_loss_producer.get_irreducible_loss(sample_ids, forward_output, target)
+        irreducible_loss = self.irreducible_loss_producer.get_irreducible_loss(sample_ids, forward_input, target)
         self.rho_loss = torch.cat([self.rho_loss, training_loss - irreducible_loss]).to(training_loss.dtype)
         self.number_of_points_seen += forward_output.shape[0]
 

@@ -546,7 +546,7 @@ class PytorchTrainer:
         self._downsampler.init_downsampler()
         self.start_embedding_recording_if_needed()
 
-        with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+        with torch.inference_mode(mode=not self._downsampler.requires_grad):
             big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
             self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
@@ -888,7 +888,7 @@ class PytorchTrainer:
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 
-            with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+            with torch.inference_mode(mode=not self._downsampler.requires_grad):
                 with torch.autocast(self._device_type, enabled=self._amp):
                     # compute the scores and accumulate them
                     model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()

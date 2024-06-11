@@ -23,6 +23,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         batch_size: int,
         params_from_selector: dict,
         modyn_config: dict,
+        # pylint: disable-next=unused-argument
         per_sample_loss: Any,
         device: str,
     ) -> None:

@@ -22,7 +22,7 @@ def get_tensors_subset(
     # then we extract the data
     if isinstance(data, torch.Tensor):
         sub_data = data[in_batch_index]
-    elif isinstance(data, dict):
+    else:
         sub_data = {key: tensor[in_batch_index] for key, tensor in data.items()}
 
     # and the targets

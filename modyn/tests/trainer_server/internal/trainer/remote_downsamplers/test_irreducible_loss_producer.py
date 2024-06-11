@@ -8,6 +8,7 @@ import pytest
 import torch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
+
 # pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.models import Dummy
@@ -135,7 +136,7 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
 
     num_classes = 5
 
-    def fake_forward(x: Tensor):
+    def fake_forward(self, x: Tensor):
         return torch.zeros(x.shape[0], num_classes)
 
     with patch.object(DummyModyn, "forward", fake_forward):
