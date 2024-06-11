@@ -80,7 +80,7 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
         assert sampler.rho_loss.shape == torch.Size([batch_size])
         assert sampler.number_of_points_seen == 3
         expected_rho_loss = torch.tensor([0, 1, 2]) - torch.tensor([3, 2, 1])
-        assert torch.allclose(sampler.rho_loss, expected_rho_loss.to(torch.float32))
+        assert torch.allclose(sampler.rho_loss, expected_rho_loss)
 
 
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
