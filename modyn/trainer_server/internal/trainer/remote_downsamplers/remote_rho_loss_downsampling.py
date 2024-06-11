@@ -7,8 +7,6 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.trainer.remote_downsamplers.irreducible_loss_producer import IrreducibleLossProducer
 
 
-
-
 class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
     def __init__(
         self,

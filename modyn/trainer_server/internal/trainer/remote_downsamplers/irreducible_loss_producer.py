@@ -3,17 +3,17 @@ import json
 import logging
 import pathlib
 import tempfile
-from typing import Union, Any
+from typing import Any, Union
 
 import grpc
 import torch
-
 from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+
+# pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 from modyn.utils import dynamic_module_import, grpc_connection_established
-
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class IrreducibleLossProducer:
         il_model_id: int,
         device: str,
     ) -> None:
-        self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id, device)
+        self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id)
         self.model.model.eval()
         self.loss_cache: dict[int, torch.Tensor] = {}
         self.device = device
@@ -67,7 +67,7 @@ class IrreducibleLossProducer:
         return model
 
     @staticmethod
-    def _load_il_model(modyn_config: dict, rho_pipeline_id: int, il_model_id: int, device: str) -> Any:
+    def _load_il_model(modyn_config: dict, rho_pipeline_id: int, il_model_id: int) -> Any:
         # load the model architecture
         model = IrreducibleLossProducer._load_il_model_architecture(modyn_config, rho_pipeline_id)
         # load the weights
@@ -88,7 +88,7 @@ class IrreducibleLossProducer:
             )
             assert il_model_path is not None, f"Failed to download model with id {il_model_id}"
             with open(il_model_path, "rb") as state_file:
-                checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device(device))
+                checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
             assert "model" in checkpoint, f"Model not found in checkpoint for model with id {il_model_id}"
             model.model.load_state_dict(checkpoint["model"])
         return model

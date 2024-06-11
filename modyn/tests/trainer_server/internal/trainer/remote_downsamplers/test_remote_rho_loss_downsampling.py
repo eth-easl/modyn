@@ -2,18 +2,19 @@ from unittest.mock import patch
 
 import pytest
 import torch
-
 from modyn.config import ModynConfig
 from modyn.models import Dummy
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import \
-    AbstractRemoteDownsamplingStrategy
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    AbstractRemoteDownsamplingStrategy,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.irreducible_loss_producer import IrreducibleLossProducer
-from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rho_loss_downsampling import \
-    RemoteRHOLossDownsampling
+from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rho_loss_downsampling import (
+    RemoteRHOLossDownsampling,
+)
 
 
 def dummy_model():
-    return Dummy({}, 'cpu', False)
+    return Dummy({}, "cpu", False)
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def dummy_init_params(dummy_system_config: ModynConfig):
         "params_from_selector": params_from_selector,
         "modyn_config": modyn_config,
         "per_sample_loss": per_sample_loss_fct,
-        "device": device
+        "device": device,
     }
 
 
@@ -52,15 +53,17 @@ def test__init__(mock_abstract_sampler_init__, mock__load_il_model, dummy_init_p
         dummy_init_params["batch_size"],
         dummy_init_params["params_from_selector"],
         dummy_init_params["modyn_config"],
-        dummy_init_params["device"]
+        dummy_init_params["device"],
     )
 
 
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
 def test_inform_samples(mock__load_il_model, dummy_init_params):
     batch_size = 3
+
     def fake_per_sample_loss(forward_output, target):
         return torch.tensor(range(batch_size))
+
     dummy_init_params["per_sample_loss"] = fake_per_sample_loss
     dummy_init_params["batch_size"] = batch_size
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
