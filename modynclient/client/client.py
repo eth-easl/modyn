@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import enlighten
+
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
@@ -92,14 +93,15 @@ class Client:
                 demo += f" (dataset = {submsg['id']})"
             elif msg_type == MsgType.COUNTER:
                 if submsg["action"] == CounterAction.CREATE:
+                    title = submsg["create_params"].get("title", "Processing New Samples")
                     self.pbar = self.progress_mgr.counter(
                         total=submsg["create_params"]["new_data_len"],
-                        desc=f"[Pipeline {self.pipeline_id}] Processing New Samples",
+                        desc=f"[Pipeline {self.pipeline_id}] {title}",
                         unit="samples",
                     )
                 elif submsg["action"] == CounterAction.UPDATE:
                     assert self.pbar is not None
-                    self.pbar.update(submsg["update_params"]["batch_size"])
+                    self.pbar.update(submsg["update_params"]["increment"])
                 elif submsg["action"] == CounterAction.CLOSE:
                     assert self.pbar is not None
                     self.pbar.clear(flush=True)
