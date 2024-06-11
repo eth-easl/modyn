@@ -4,7 +4,6 @@ import time
 from typing import Optional
 
 import enlighten
-
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
