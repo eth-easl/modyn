@@ -49,30 +49,30 @@ def setup_and_teardown(minimal_modyn_config):
 
 
 # patch DummyModyn in dummpy.py
-@patch("modyn.models.dummy.dummy.DummyModyn", wraps=DummyModyn)
-def test__load_il_model_architecture(MockDummyModyn, minimal_modyn_config):
+@patch("modyn.models.Dummy", wraps=Dummy)
+def test__load_il_model_architecture(MockDummy, minimal_modyn_config):
     model_config = {"num_classes": 79}
     with MetadataDatabaseConnection(minimal_modyn_config) as database:
         pipeline_id = database.register_pipeline(
-            2, "Dummy", json.dumps(model_config), False, "{}", "{}", ModelStorageStrategyConfig(name="PyTorchFullModel")
+            2, "Dummy", json.dumps(model_config), True, "{}", "{}", ModelStorageStrategyConfig(name="PyTorchFullModel")
         )
 
     model = IrreducibleLossProducer._load_il_model_architecture(minimal_modyn_config, pipeline_id)
     assert isinstance(model, Dummy)
-    MockDummyModyn.assert_called_once_with(model_config)
+    MockDummy.assert_called_once_with(model_config, "cpu", True)
 
 
 @patch.object(IrreducibleLossProducer, "_load_il_model_architecture", return_value=get_dummy_model())
 def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
     expected_weight = torch.tensor([[-1231.0, 2.0], [3.0, 4.0]])
     expected_bias = torch.tensor([5.0, 667.0])
-    with tempfile.NamedTemporaryFile() as temp_file:
+    with tempfile.NamedTemporaryFile() as model_weights_file:
         dummy_model = get_dummy_model()
         # hard code dummy_model's weight so that we can verify later if correct params are loaded
         dummy_model.model.output.weight = torch.nn.Parameter(expected_weight)
         dummy_model.model.output.bias = torch.nn.Parameter(expected_bias)
         # save weight and bias to temp_file
-        torch.save({"model": dummy_model.model.state_dict()}, temp_file.name)
+        torch.save({"model": dummy_model.model.state_dict()}, model_weights_file.name)
 
         mock_model_storage_stub = Mock(spec=["FetchModel"])
         mock_model_storage_stub.FetchModel.return_value = FetchModelResponse(
@@ -85,7 +85,7 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
             patch(
                 "modyn.trainer_server.internal.trainer."
                 "remote_downsamplers.irreducible_loss_producer.download_trained_model",
-                return_value=temp_file.name,
+                return_value=model_weights_file.name,
             ) as mock_download_trained_model,
         ):
             rho_pipeline_id = 12
@@ -112,7 +112,7 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=get_dummy_model())
 def test_get_irreducible_loss_cached(minimal_modyn_config):
     def fake_per_sample_loss(forward_output, target):
-        return torch.abs(forward_output - target)
+        return 27 * torch.ones(forward_output.shape[0])
 
     mock_per_sample_loss = Mock(wraps=fake_per_sample_loss)
 
@@ -145,7 +145,11 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
         forward_input = torch.randn(3, 2)
         target = torch.randn(3, num_classes)
         il_loss = il_loss_producer.get_irreducible_loss(sample_ids, forward_input, target)
+
         mock_per_sample_loss.assert_called_once()
+        assert torch.allclose(mock_per_sample_loss.call_args[0][0], torch.zeros(3, num_classes))
+        assert torch.allclose(mock_per_sample_loss.call_args[0][1], target)
+
         assert il_loss_producer.loss_cache.keys() == {1, 2, 3}
         assert torch.allclose(il_loss, torch.tensor([27.0, 27.0, 27.0]))
         for loss in il_loss_producer.loss_cache.values():

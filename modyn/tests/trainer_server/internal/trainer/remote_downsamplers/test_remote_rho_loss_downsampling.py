@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, ANY, Mock
 
 import pytest
 import torch
@@ -64,7 +64,8 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
     def fake_per_sample_loss(forward_output, target):
         return torch.tensor(range(batch_size))
 
-    dummy_init_params["per_sample_loss"] = fake_per_sample_loss
+    mock_per_sample_loss = Mock(wraps=fake_per_sample_loss)
+    dummy_init_params["per_sample_loss"] = mock_per_sample_loss
     dummy_init_params["batch_size"] = batch_size
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
     sample_ids = list(range(batch_size))
@@ -73,7 +74,9 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
     target = torch.randint(5, (batch_size,))
     embedding = None
     fake_irreducible_loss = torch.tensor(range(batch_size, 0, -1))
-    with patch.object(IrreducibleLossProducer, "get_irreducible_loss", return_value=fake_irreducible_loss):
+    with patch.object(
+            IrreducibleLossProducer, "get_irreducible_loss", return_value=fake_irreducible_loss
+    ) as mock_get_il:
         sampler.init_downsampler()
         sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
         assert sampler.index_sampleid_map == sample_ids
@@ -82,13 +85,23 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
         expected_rho_loss = torch.tensor([0, 1, 2]) - torch.tensor([3, 2, 1])
         assert torch.allclose(sampler.rho_loss, expected_rho_loss)
 
+        mock_get_il.assert_called_once_with(sample_ids, ANY, ANY)
+        actual_forward_input = mock_get_il.call_args[0][1]
+        actual_target = mock_get_il.call_args[0][2]
+        assert torch.allclose(actual_forward_input, forward_input)
+        assert torch.allclose(actual_target, target)
+
+        mock_per_sample_loss.assert_called_once()
+        assert torch.allclose(mock_per_sample_loss.call_args[0][0], forward_output)
+        assert torch.allclose(mock_per_sample_loss.call_args[0][1], target)
+
 
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
 def test_select_points(mock__load_il_model, dummy_init_params):
     dummy_init_params["batch_size"] = 5
     dummy_init_params["params_from_selector"]["downsampling_ratio"] = 60
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
-    sampler.rho_loss = torch.tensor([32, 12, 5, 8, 3])
+    sampler.rho_loss = torch.tensor([32, 7, 5, 8, 3])
     sampler.number_of_points_seen = 5
     sampler.index_sampleid_map = [2, 4, 1, 3, 5]
     selected_ids, weights = sampler.select_points()

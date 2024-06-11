@@ -893,7 +893,7 @@ class PytorchTrainer:
                     # compute the scores and accumulate them
                     model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
                     embeddings = self.get_embeddings_if_recorded()
-                    self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
+                    self._downsampler.inform_samples(sample_ids, data, model_output, target, embeddings)
 
         return batch_number, number_of_samples
 
