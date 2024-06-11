@@ -13,7 +13,7 @@ class EvalInterval:
     end: int | None
     """The end timestamp of the evaluation interval handed over to the evaluation server."""
 
-    most_recent_model_interval_end_before: int
+    most_recent_model_interval_end_before: int | None
     """When determining the most recent model for this EvalInterval, we choose the newest model (highest model_id)
         that satisfies the constraint model_training_interval_end <= most_recent_model_interval_end_before."""
 

@@ -15,7 +15,7 @@ class StaticEvalStrategy(AbstractEvalStrategy):
                 start=interval_start,
                 end=interval_end,
                 # This is independent of the training interval, we use the interval centers as training intervals
-                most_recent_model_interval_end_before=interval_end or interval_start,
+                most_recent_model_interval_end_before=interval_end,
             )
             for interval_start, interval_end in self.config.intervals
         ]
