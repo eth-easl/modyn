@@ -12,6 +12,7 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
     Method adapted from Prioritized Training on Points that are Learnable, Worth Learning, and Not Yet Learnt
     (Sören Mindermann+, 2022). https://arxiv.org/abs/2206.07137
     """
+
     def __init__(
         self,
         pipeline_id: int,
