@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 from modyn.config.schema.pipeline import EvalHandlerConfig
-from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
+from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy, EvalInterval
 from modyn.utils import dynamic_module_import
 from pydantic import BaseModel
 
@@ -36,24 +36,37 @@ class EvalHandler:
         """Returns a list of evaluation requests for the current handler."""
         eval_requests: list[EvalRequest] = []
 
-        intervals = self.eval_strategy.get_eval_intervals([training_interval])
+        intervals = list(self.eval_strategy.get_eval_intervals([training_interval]))
+        if not intervals:
+            return []
 
-        most_recent_found: bool = False
-        for interval in intervals:
-            # first interval that starts after the training interval
-            is_most_recent = not most_recent_found and ((interval.start or 0) >= training_interval[1])
-            most_recent_found = most_recent_found or is_most_recent
+        # first interval after the training interval
+        most_recent_interval: None | EvalInterval = None
+        for i in intervals:
+            if training_interval[1] > (i.most_recent_model_interval_end_before or 0):
+                continue  # constraint not met
+            most_recent_interval = most_recent_interval or i
+            if (i.most_recent_model_interval_end_before or i.end or i.start) <= (
+                most_recent_interval.most_recent_model_interval_end_before
+                or most_recent_interval.end
+                or most_recent_interval.start
+            ):
+                most_recent_interval = i
+
+        for i in intervals:
             for dataset_id in self.config.datasets:
+                if self.config.models != "matrix" and (i != most_recent_interval):
+                    continue
                 eval_requests.append(
                     EvalRequest(
                         trigger_id=trigger_id,
                         training_id=training_id,
                         model_id=model_id,
-                        most_recent_model=is_most_recent,
+                        most_recent_model=(i == most_recent_interval),
                         eval_handler=self.config.name,
                         dataset_id=dataset_id,
-                        interval_start=interval.start,
-                        interval_end=interval.end,
+                        interval_start=i.start,
+                        interval_end=i.end,
                     )
                 )
 

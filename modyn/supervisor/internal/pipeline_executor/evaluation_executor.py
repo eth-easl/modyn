@@ -76,7 +76,7 @@ class EvaluationExecutor:
         self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs)
 
     def create_snapshot(self) -> None:
-        """Create a snapshot of the evaluation state before starting to evaluate."""
+        """Create a snapshot of the pipeline metadata before starting to evaluate."""
         if not self.pipeline.evaluation:
             return
 
@@ -156,9 +156,7 @@ class EvaluationExecutor:
             )
             eval_requests += handler_eval_requests
 
-        num_workers = None
-        if self.config.supervisor:
-            num_workers = self.config.supervisor.after_training_evaluation_workers
+        num_workers = self.config.supervisor.after_training_evaluation_workers if self.config.supervisor else 1
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
@@ -186,12 +184,10 @@ class EvaluationExecutor:
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
             eval_requests += handler_eval_requests
 
-        num_workers = None
-        if self.config.supervisor:
-            num_workers = self.config.supervisor.after_pipeline_evaluation_workers
-
         logs = self._launch_evaluations_async(
             eval_requests,
+            # as we don't execute this during the training pipeline, we don't have a reference how
+            # our current process is in terms of position in the dataset.
             parent_log=StageLog(
                 id=PipelineStage.EVALUATE_SINGLE.name,
                 start=datetime.datetime.now(),
@@ -201,7 +197,7 @@ class EvaluationExecutor:
                 trigger_idx=-1,
             ),
             eval_status_queue=eval_status_queue,
-            num_workers=num_workers,
+            num_workers=(self.config.supervisor.after_pipeline_evaluation_workers if self.config.supervisor else 1),
         )
         return logs
 
@@ -214,7 +210,7 @@ class EvaluationExecutor:
         eval_requests: list[EvalRequest],
         parent_log: StageLog,
         eval_status_queue: Queue,
-        num_workers: int | None = None,
+        num_workers: int = 1,
     ) -> SupervisorLogs:
         """Creates a thread pool to launch evaluations asynchronously.
 
@@ -235,14 +231,14 @@ class EvaluationExecutor:
                 sample_time=parent_log.sample_time,
                 trigger_idx=parent_log.trigger_idx,
             )
-            epoch_nanos_start = current_time_micros()
+            epoch_micros_start = current_time_micros()
             self._single_evaluation(single_log, eval_status_queue, eval_req)
             single_log.end = datetime.datetime.now()
-            single_log.duration = datetime.timedelta(microseconds=current_time_micros() - epoch_nanos_start)
+            single_log.duration = datetime.timedelta(microseconds=current_time_micros() - epoch_micros_start)
             return single_log
 
         # As we are io bound by the evaluator server, GIL locking isn't a concern, so we can use multithreading.
-        with ThreadPoolExecutor(max_workers=num_workers or 1) as pool:
+        with ThreadPoolExecutor(max_workers=num_workers) as pool:
             for eval_req in eval_requests:
                 task = partial(worker_func, eval_req)
                 tasks.append(pool.submit(task))

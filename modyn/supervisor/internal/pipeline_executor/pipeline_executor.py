@@ -134,7 +134,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
 
             # execute stage
-            epoch_nanos_start = current_time_micros()
+            epoch_micros_start = current_time_micros()
             stage_log = StageLog(
                 id=stage.name,
                 start=datetime.now(),
@@ -145,7 +145,7 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
             )
             result = func(self, state, stage_log, *args, **kwargs)  # type: ignore[call-arg]
             stage_log.end = datetime.now()
-            stage_log.duration = timedelta(microseconds=current_time_micros() - epoch_nanos_start)
+            stage_log.duration = timedelta(microseconds=current_time_micros() - epoch_micros_start)
             state.stage = stage  # restore stage as child pipeline might have changed it
 
             if isinstance(result, types.GeneratorType):
@@ -746,7 +746,7 @@ class PipelineExecutor:
     @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation(self, s: ExecutionState, log: StageLog) -> None:
         """Evaluate the trained model and store the results"""
-        if not s.pipeline_config.evaluation or s.pipeline_config.evaluation.skip_during_pipeline_execution:
+        if not s.pipeline_config.evaluation:
             return
 
         eval_logs = self.eval_executor.run_post_pipeline_evaluations(s.eval_status_queue)

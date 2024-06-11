@@ -7,6 +7,62 @@ from modyn.supervisor.internal.eval.handler import EvalHandler
 from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy, EvalInterval
 
 
+class DummyEvalStrategy(AbstractEvalStrategy):
+    def __init__(self, config: StaticEvalStrategyConfig, intervals: Iterable[tuple[int, int]]):
+        super().__init__(config)
+        self.intervals = intervals
+
+    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+        return self.intervals
+
+
+def test_get_eval_requests_after_training() -> None:
+    trigger_id = 3
+    training_id = 13
+    model_id = 23
+    training_interval = (5, 7)
+
+    intervals = [
+        EvalInterval(start=0, end=4, most_recent_model_interval_end_before=5),
+        EvalInterval(start=5, end=6, most_recent_model_interval_end_before=6),
+        EvalInterval(start=8, end=12, most_recent_model_interval_end_before=7),
+        EvalInterval(start=18, end=22, most_recent_model_interval_end_before=20),
+        EvalInterval(start=23, end=27, most_recent_model_interval_end_before=25),
+    ]
+
+    eval_handler = EvalHandler(
+        EvalHandlerConfig(
+            strategy=StaticEvalStrategyConfig(intervals=[]),
+            models="matrix",
+            datasets=["dataset1"],
+            execution_time="after_training",
+        )
+    )
+    eval_handler.eval_strategy = DummyEvalStrategy(eval_handler.config, intervals)
+    eval_requests = eval_handler.get_eval_requests_after_training(trigger_id, training_id, model_id, training_interval)
+
+    # only consider current model 23
+    expected_eval_requests = [
+        (23, False, 0, 4),  # interval 1
+        (23, False, 5, 6),  # interval 2
+        (23, True, 8, 12),  # ...
+        (23, False, 18, 22),
+        (23, False, 23, 27),
+    ]
+
+    assert [
+        (r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests
+    ] == expected_eval_requests
+
+    # models=most_recent
+    eval_handler.config.models = "most_recent"
+    eval_requests = eval_handler.get_eval_requests_after_training(trigger_id, training_id, model_id, training_interval)
+
+    assert [(r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests] == [
+        exp for exp in expected_eval_requests if exp[1]
+    ]
+
+
 def test_get_eval_requests_after_pipeline() -> None:
     trigger_dataframe = pd.DataFrame(
         {
@@ -26,10 +82,6 @@ def test_get_eval_requests_after_pipeline() -> None:
         EvalInterval(start=25, end=29, most_recent_model_interval_end_before=27),
     ]
 
-    class DummyEvalStrategy(AbstractEvalStrategy):
-        def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
-            return intervals
-
     eval_handler = EvalHandler(
         EvalHandlerConfig(
             strategy=StaticEvalStrategyConfig(intervals=[]),
@@ -38,7 +90,7 @@ def test_get_eval_requests_after_pipeline() -> None:
             execution_time="after_pipeline",
         )
     )
-    eval_handler.eval_strategy = DummyEvalStrategy(eval_handler.config)
+    eval_handler.eval_strategy = DummyEvalStrategy(eval_handler.config, intervals)
     eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
 
     # now assert the actual values in the full cross product (matrix mode)
