@@ -8,6 +8,7 @@ import pytest
 import torch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
+# pylint: disable-next=no-name-in-module
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.models import Dummy
 from modyn.models.dummy.dummy import DummyModyn
@@ -126,7 +127,7 @@ def test_get_irreducible_loss_cached(minimal_modyn_config):
 
 
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=get_dummy_model())
-def test_get_irreducible_loss_uncached(minimal_modyn_config):
+def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
     def fake_per_sample_loss(forward_output, target):
         return 27 * torch.ones(forward_output.shape[0])
 
@@ -137,7 +138,7 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config):
     def fake_forward(x: Tensor):
         return torch.zeros(x.shape[0], num_classes)
 
-    with patch.object(DummyModyn, "forward", wraps=fake_forward) as mock_forward:
+    with patch.object(DummyModyn, "forward", fake_forward):
         il_loss_producer = IrreducibleLossProducer(mock_per_sample_loss, minimal_modyn_config, 43, 12, "cpu")
         sample_ids = [2, 1, 3]
         forward_input = torch.randn(3, 2)
