@@ -12,6 +12,8 @@ from integrationtests.utils import (
     get_modyn_config,
     RHO_LOSS_CONFIG_FILE,
 )
+from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
+from modyn.metadata_database.models import Pipeline
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
@@ -140,7 +142,17 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     assert selection_strategy_resp["downsampling_enabled"]
     rho_pipeline_id = selection_strategy_resp["downsampler_config"]["rho_pipeline_id"]
     il_model_id = selection_strategy_resp["downsampler_config"]["il_model_id"]
-    # validate that there are 2 triggers, 2 models in corresponding tables
+
+    with MetadataDatabaseConnection(MODYN_CONFIG) as database:
+        actual_aux_pipeline_id = (
+            database.session.query(Pipeline.auxiliary_pipeline_id)
+            .filter(Pipeline.pipeline_id == pipeline_id)
+            .first()
+        )
+        # validate this rho_pipeline_id is recorded in the pipelines table
+        assert actual_aux_pipeline_id == rho_pipeline_id
+    # validate that there are 2 triggers associated with the rho_pipeline_id
+
     # one of the model is this il_model_id, which should be larger than the other
 
 
