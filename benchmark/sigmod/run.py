@@ -212,6 +212,7 @@ def run_experiment() -> None:
     num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = False # For our baselines, scheduling was mostly meaningless. 
+    seed = 42 # set to None to disable, should be 0-100
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
@@ -243,6 +244,7 @@ def run_experiment() -> None:
                     model,
                     dataset,
                     num_classes,
+                    seed
                 )
             )
 

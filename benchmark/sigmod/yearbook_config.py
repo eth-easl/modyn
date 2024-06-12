@@ -67,6 +67,7 @@ def gen_yearbook_config(
     model: str,
     dataset: str,
     num_classes: int,
+    seed: int
 ) -> ModynPipelineConfig:
     del dataset
     del num_classes
@@ -82,7 +83,7 @@ def gen_yearbook_config(
             dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
-            batch_size=64,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
+            batch_size=64,
             optimizers=[
                 OptimizerConfig(
                     name="default",
@@ -97,6 +98,7 @@ def gen_yearbook_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
+            seed=seed
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(

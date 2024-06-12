@@ -34,6 +34,7 @@ def gen_arxiv_config(
     model: str,
     dataset: str,
     num_classes: int,
+    seed: int
 ) -> ModynPipelineConfig:
     del model  # ignored for now
     del dataset
@@ -67,6 +68,7 @@ def gen_arxiv_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
+            seed=seed
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(

@@ -37,6 +37,7 @@ def gen_cglm_config(
     model: str,
     dataset: str,
     num_classes: int,
+    seed: int
 ) -> ModynPipelineConfig:
     del model  # hardcore resnet50
     model_config = ModelConfig(id="ResNet50", config={"use_pretrained": True, "num_classes": num_classes})
@@ -81,6 +82,7 @@ def gen_cglm_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
+            seed=seed
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(dataset_id=dataset, transformations=transformations, bytes_parser_function=bytes_parser_func),
@@ -104,7 +106,7 @@ def gen_cglm_config(
                     dataset_id=_dataset,
                     bytes_parser_function=bytes_parser_func,
                     transformations=transformations,
-                    batch_size=128,
+                    batch_size=256,
                     dataloader_workers=1,
                     metrics=[
                         Metric(
