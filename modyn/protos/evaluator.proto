@@ -30,18 +30,12 @@ message PythonString { string value = 1; }
 
 message JsonString { string value = 1; }
 
-message MetricConfiguration {
-  string name = 1;
-  JsonString config = 2;
-  PythonString evaluation_transformer = 3;
-}
-
 message EvaluateModelRequest {
   int32 model_id  = 1;
   DatasetInfo dataset_info = 2;
   string device = 3;
   int32 batch_size = 4;
-  repeated MetricConfiguration metrics = 5;
+  repeated JsonString metrics = 5;
   repeated string transform_list = 6;
   PythonString bytes_parser = 7;
   PythonString label_transformer = 8;

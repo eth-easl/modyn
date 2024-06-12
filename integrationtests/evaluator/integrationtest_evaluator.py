@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import torch
 from integrationtests.utils import MODYN_MODELS_PATH, ImageDatasetHelper, connect_to_server, get_modyn_config
 from modyn.common.ftp import delete_file, upload_file
+from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -18,7 +19,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationStatusResponse,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -141,17 +141,14 @@ def evaluate_model(
         device="cpu",
         batch_size=2,
         metrics=[
-            MetricConfiguration(
-                name="Accuracy",
-                config=EvaluatorJsonString(value="{}"),
-                evaluation_transformer=EvaluatorPythonString(value=eval_transform_function),
+            EvaluatorJsonString(
+                value=AccuracyMetricConfig(evaluation_transformer_function=eval_transform_function).model_dump_json()
             )
         ],
         transform_list=["transforms.ToTensor()", "transforms.Normalize((0.1307,), (0.3081,))"],
         bytes_parser=EvaluatorPythonString(value=bytes_parser),
         label_transformer=EvaluatorPythonString(value=""),
     )
-
     return evaluator.evaluate_model(request)
 
 

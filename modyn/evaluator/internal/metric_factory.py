@@ -1,5 +1,4 @@
-from typing import Any
-
+from modyn.config.schema.pipeline import validate_metric_config_json
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, AbstractHolisticMetric, Accuracy, F1Score, RocAuc
 
 all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc}
@@ -7,13 +6,12 @@ all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc}
 
 class MetricFactory:
     @staticmethod
-    def get_evaluation_metric(
-        name: str, evaluation_transform_func: str, config: dict[str, Any]
-    ) -> AbstractEvaluationMetric:
+    def get_evaluation_metric(config_json: str) -> AbstractEvaluationMetric:
+        parsed_metric_config = validate_metric_config_json(str(config_json))
         for metric in all_metrics:
-            if metric.__name__.lower() == name.lower():
-                return metric(evaluation_transform_func, config)
-        raise NotImplementedError(f"Metric {name} is not available!")
+            if metric.__name__.lower() == parsed_metric_config.name.lower():
+                return metric(parsed_metric_config)
+        raise NotImplementedError(f"Metric {parsed_metric_config.name} is not available!")
 
     @staticmethod
     def prepare_metrics(metrics: list[AbstractEvaluationMetric]) -> bool:

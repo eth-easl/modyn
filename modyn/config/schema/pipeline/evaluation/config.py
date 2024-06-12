@@ -7,7 +7,7 @@ from pydantic import Field, field_validator
 
 from ..data import DataConfig
 from .handler import EvalHandlerConfig
-from .metric import Metric
+from .metrics import MetricConfig
 
 
 class EvalDataConfig(DataConfig):
@@ -15,7 +15,7 @@ class EvalDataConfig(DataConfig):
     dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
     )
-    metrics: List[Metric] = Field(
+    metrics: List[MetricConfig] = Field(
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
