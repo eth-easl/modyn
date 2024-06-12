@@ -24,6 +24,9 @@ class MockStrategy(AbstractSelectionStrategy):
     def _reset_state(self) -> None:
         pass
 
+    def _update_next_trigger_id(self) -> None:
+        pass
+
     def get_available_labels(self) -> list[int]:
         return []
 
