@@ -170,11 +170,14 @@ def gen_selection_strategies(warmup_triggers: int) -> list[tuple[str, SelectionS
     return strategies
 
 
-def gen_lr_scheduler_configs(min_lr: float) -> list[tuple[str, None | LrSchedulerConfig]]:
+def gen_lr_scheduler_configs(min_lr: float, disable: bool) -> list[tuple[str, None | LrSchedulerConfig]]:
     configs = []
 
     # No LR scheduling
     configs.append(("nosched", None))
+
+    if disable:
+        return configs
 
     # Cosine scheduling
     configs.append(
@@ -205,21 +208,28 @@ def run_experiment() -> None:
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     num_classes = 6404  # necessary for CGLM, ignored for others
-    model = "resnet18"  # necessary for yearbook, ignored for others
     train_gpu = "cuda:0"
-    num_epochs = 5
-    warmup_triggers = 4  # 2 for yearbook, 4 for cglm, ? for arxiv
+    num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
+    warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
+    disable_scheduling = False # For our baselines, scheduling was mostly meaningless. 
 
-    ## don't edit
+    ## only touch if sure you wanna touch
+    model = "yearbooknet"  # necessary for yearbook, ignored for others
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
+        warmup_triggers = 2
+        num_epochs = 5
     elif pipeline_gen_func == gen_arxiv_config:
-        min_lr = 0
+        min_lr = 0.00001
+        warmup_triggers = 1
+        num_epochs = 15 # OR 5??? OR 15??
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
+        warmup_triggers = 4
+        num_epochs = -1 # TBD
 
     for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
-        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr):
+        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
             config_id = (
                 f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
             )

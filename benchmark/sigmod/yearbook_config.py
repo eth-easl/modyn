@@ -22,6 +22,7 @@ from modyn.config import (
 )
 from modyn.config import LrSchedulerConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
+from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 
 
@@ -105,21 +106,28 @@ def gen_yearbook_config(
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(
-                    name="MatrixEval",
+                    name="exactmatrix",
                     execution_time="after_training",
                     models="matrix",
-                    datasets=["yearbook", "yearbook-test"],
+                    datasets=["yearbook-test"],
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=7258000),
+                ),
+                EvalHandlerConfig(
+                    name="slidingmatrix",
+                    execution_time="after_training",
+                    models="matrix",
+                    datasets=["yearbook-test"],
+                    strategy=PeriodicEvalStrategyConfig(every="1d", interval="[-25h; +25h]", eval_start_from=0, eval_end_at=1400000),
                 )
             ],
             device=gpu_device,
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(
-                    dataset_id="yearbook-test",
+                    dataset_id=dataset,
                     bytes_parser_function=bytes_parser_func,
                     transformations=transformations,
-                    batch_size=64,
+                    batch_size=512,
                     dataloader_workers=1,
                     metrics=[
                         Metric(
@@ -159,52 +167,7 @@ def gen_yearbook_config(
                             config={"num_classes": 2, "average": "micro"},
                         ),
                     ],
-                ),
-                EvalDataConfig(
-                    dataset_id="yearbook",
-                    bytes_parser_function=bytes_parser_func,
-                    transformations=transformations,
-                    batch_size=64,
-                    dataloader_workers=1,
-                    metrics=[
-                        Metric(
-                            name="Accuracy",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 2},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 2, "average": "weighted"},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 2, "average": "macro"},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 2, "average": "micro"},
-                        ),
-                    ],
-                ),
+                ) for dataset in ["yearbook", "yearbook-test"]
             ],
         ),
     )

@@ -83,10 +83,10 @@ def gen_arxiv_config(
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(
-                    name="MatrixEval",
+                    name="exactmatrix",
                     execution_time="after_training",
                     models="matrix",
-                    datasets=["arxiv", "arxiv-test"],
+                    datasets=["arxiv-test"],
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
                 )
             ],
@@ -94,14 +94,14 @@ def gen_arxiv_config(
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(
-                    dataset_id="arxiv-test",
+                    dataset_id=dataset,
                     bytes_parser_function=(
                         "import torch\n"
                         "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
                         "    return str(data, 'utf8')"
                     ),
                     tokenizer="DistilBertTokenizerTransform",
-                    batch_size=128,
+                    batch_size=256,
                     dataloader_workers=1,
                     metrics=[
                         Metric(
@@ -151,66 +151,7 @@ def gen_arxiv_config(
                             config={"num_classes": 172, "average": "micro"},
                         ),
                     ],
-                ),
-                EvalDataConfig(
-                    dataset_id="arxiv",
-                    bytes_parser_function=(
-                        "import torch\n"
-                        "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
-                        "    return str(data, 'utf8')"
-                    ),
-                    tokenizer="DistilBertTokenizerTransform",
-                    batch_size=128,
-                    dataloader_workers=1,
-                    metrics=[
-                        Metric(
-                            name="Accuracy",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 172},
-                        ),
-                        Metric(
-                            name="Accuracy",
-                            evaluation_transformer_function="",
-                            config={"num_classes": 172, "topn": 2},
-                        ),
-                        Metric(
-                            name="Accuracy",
-                            evaluation_transformer_function="",
-                            config={"num_classes": 172, "topn": 5},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 172, "average": "weighted"},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 172, "average": "macro"},
-                        ),
-                        Metric(
-                            name="F1Score",
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            config={"num_classes": 172, "average": "micro"},
-                        ),
-                    ],
-                ),
+                ) for dataset in ["arxiv", "arxiv-test"]
             ],
         ),
     )
