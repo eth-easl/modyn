@@ -12,9 +12,8 @@ PROJECT_ROOT = Path(__file__).parents[3]
 MODYN_PIPELINE_CONFIG_PATHS: list[str] = [
     "benchmark/mnist",
     "benchmark/wildtime_benchmarks",
-    "modynclient/config/examples/dummy.yaml",
-    "modynclient/config/examples/rho_loss.yaml",
-    "modynclient/config/examples/mnist.yaml",
+    "integrationtests/config/dummy.yaml",
+    "integrationtests/config/rho_loss.yaml",
     "modyn/config/examples/example-pipeline.yaml",
 ]
 

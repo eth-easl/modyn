@@ -12,8 +12,10 @@ from integrationtests.utils import (
     get_modyn_config,
     RHO_LOSS_CONFIG_FILE,
 )
+from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest
+from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
@@ -22,9 +24,10 @@ POLL_INTERVAL = 1
 MODYN_CONFIG = get_modyn_config()
 IMAGE_DATASET_ID = "image_test_dataset"
 
-def wait_for_pipeline(pipeline_id: int) -> str:
-    req = GetPipelineStatusRequest(pipeline_id=pipeline_id)
 
+def wait_for_pipeline(pipeline_id: int) -> GetPipelineStatusResponse:
+    req = GetPipelineStatusRequest(pipeline_id=pipeline_id)
+    supervisor = SupervisorStub(connect_to_server("supervisor"))
     res = supervisor.get_pipeline_status(req)
     while res.status == PipelineStatus.RUNNING:
         time.sleep(POLL_INTERVAL)
@@ -51,7 +54,7 @@ def assert_pipeline_exit_without_error(res: dict) -> None:
 
 def test_one_experiment_pipeline() -> None:
     pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
-
+    supervisor = SupervisorStub(connect_to_server("supervisor"))
     res = parse_grpc_res(
         supervisor.start_pipeline(
             StartPipelineRequest(
@@ -73,7 +76,7 @@ def test_one_experiment_pipeline() -> None:
 
 def test_two_experiment_pipelines() -> None:
     pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
-
+    supervisor = SupervisorStub(connect_to_server("supervisor"))
     res1 = parse_grpc_res(
         supervisor.start_pipeline(
             StartPipelineRequest(
@@ -112,6 +115,8 @@ def test_two_experiment_pipelines() -> None:
 
 def test_rho_loss_pipeline_with_two_triggers() -> None:
     pipeline_config = load_config_from_file(RHO_LOSS_CONFIG_FILE)
+    supervisor = SupervisorStub(connect_to_server("supervisor"))
+    selector = SelectorStub(connect_to_server("selector"))
     res = parse_grpc_res(
         supervisor.start_pipeline(
             StartPipelineRequest(
@@ -125,10 +130,23 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
     assert_pipeline_exit_without_error(get_pipeline_status_res)
 
+    # retrieve the current downsampling config
+    selection_strategy_resp = parse_grpc_res(
+        selector.get_selection_strategy(
+            GetSelectionStrategyRequest(pipeline_id=pipeline_id)
+        )
+    )
+    assert selection_strategy_resp["strategy_name"] == "RemoteRHOLossDownsampling"
+    assert selection_strategy_resp["downsampling_enabled"]
+    rho_pipeline_id = selection_strategy_resp["downsampler_config"]["rho_pipeline_id"]
+    il_model_id = selection_strategy_resp["downsampler_config"]["il_model_id"]
+    # validate that there are 2 triggers, 2 models in corresponding tables
+    # one of the model is this il_model_id, which should be larger than the other
+
+
+
 
 if __name__ == "__main__":
-    supervisor_channel = connect_to_server("supervisor")
-    supervisor = SupervisorStub(supervisor_channel)
     tiny_dataset_helper = TinyDatasetHelper()
     try:
         tiny_dataset_helper.setup_dataset()
