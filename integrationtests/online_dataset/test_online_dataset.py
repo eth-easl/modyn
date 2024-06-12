@@ -157,14 +157,17 @@ def create_dataset_dir() -> None:
 
 
 def cleanup_dataset_dir() -> None:
+    print("Cleaning dataset dir.")
     shutil.rmtree(DATASET_PATH)
 
 
 def cleanup_storage_database() -> None:
+    print("Cleaning up storage database.")
     storage_channel = connect_to_storage()
     storage = StorageStub(storage_channel)
     request = DatasetAvailableRequest(dataset_id="test_dataset")
     response = storage.DeleteDataset(request)
+    print("Cleaned up storage database.")
 
     assert response.success, "Could not cleanup storage database."
 
@@ -438,7 +441,11 @@ def test_dataset() -> None:
 def main() -> None:
     try:
         test_dataset()
+    except Exception as e:  
+        print(f"An exception occured: {e}")
+        raise
     finally:
+        print("Test is exiting, running cleanup.")
         cleanup_storage_database()
         cleanup_dataset_dir()
 
