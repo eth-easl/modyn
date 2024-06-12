@@ -278,8 +278,6 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
-        self._update_next_trigger_id()
-
         total_keys_in_trigger, num_partitions, log = self.store_training_set(
             self._pipeline_id,
             self._next_trigger_id,
