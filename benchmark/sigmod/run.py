@@ -216,6 +216,8 @@ def run_experiment() -> None:
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
+    optimizer = None # ignored for non arxiv
+    lr = None # ignored for non arxiv
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
         warmup_triggers = 2
@@ -223,7 +225,9 @@ def run_experiment() -> None:
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
-        num_epochs = 15 # OR 5??? OR 15??
+        num_epochs = 10 # OR 5??? OR 15??
+        optimizer = "SGD" # alternative: AdamW
+        lr = 0.00002 # alternative: 0.00005
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 4
@@ -244,7 +248,9 @@ def run_experiment() -> None:
                     model,
                     dataset,
                     num_classes,
-                    seed
+                    seed,
+                    optimizer,
+                    lr
                 )
             )
 

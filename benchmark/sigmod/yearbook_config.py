@@ -67,10 +67,15 @@ def gen_yearbook_config(
     model: str,
     dataset: str,
     num_classes: int,
-    seed: int
+    seed: int,
+    optimizer: str,
+    lr: float
+
 ) -> ModynPipelineConfig:
     del dataset
     del num_classes
+    del optimizer
+    del lr
     model_config, bytes_parser_func, transformations = _yearbook_model(model)
 
     return ModynPipelineConfig(

@@ -34,11 +34,39 @@ def gen_arxiv_config(
     model: str,
     dataset: str,
     num_classes: int,
-    seed: int
+    seed: int,
+    optimizer: str,
+    lr: float
 ) -> ModynPipelineConfig:
     del model  # ignored for now
     del dataset
     del num_classes
+
+    if optimizer == "SGD":
+        opti_conf = OptimizerConfig(
+                    name="default",
+                    algorithm="SGD",
+                    source="PyTorch",
+                    param_groups=[
+                        OptimizerParamGroup(
+                            module="model", config={"lr": lr, "momentum": 0.9, "weight_decay": 0.01}
+                        )
+                    ],
+                )
+    elif optimizer == "AdamW":
+        opti_conf = OptimizerConfig(
+                    name="default",
+                    algorithm="AdamW",
+                    source="PyTorch",
+                    param_groups=[
+                        OptimizerParamGroup(
+                            module="model", config={"lr": lr, "weight_decay": 0.01}
+                        )
+                    ],
+                )
+    else:
+        raise ValueError(optimizer)
+
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"arxiv_{config_id}", description="Arxiv data selection config", version="0.0.1"),
         model=ModelConfig(id="ArticleNet", config={"num_classes": 172}),
@@ -50,18 +78,7 @@ def gen_arxiv_config(
             use_previous_model=True,
             initial_model="random",
             batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
-            optimizers=[
-                OptimizerConfig(
-                    name="default",
-                    algorithm="SGD",
-                    source="PyTorch",
-                    param_groups=[
-                        OptimizerParamGroup(
-                            module="model", config={"lr": 0.00002, "momentum": 0.9, "weight_decay": 0.01}
-                        )
-                    ],
-                )
-            ],
+            optimizers=[opti_conf],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
             lr_scheduler=lr_scheduler,

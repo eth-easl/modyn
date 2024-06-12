@@ -37,9 +37,13 @@ def gen_cglm_config(
     model: str,
     dataset: str,
     num_classes: int,
-    seed: int
+    seed: int,
+    optimizer: str,
+    lr: float
 ) -> ModynPipelineConfig:
     del model  # hardcore resnet50
+    del lr
+    del optimizer
     model_config = ModelConfig(id="ResNet50", config={"use_pretrained": True, "num_classes": num_classes})
     logger.debug("This is a test.")
 
