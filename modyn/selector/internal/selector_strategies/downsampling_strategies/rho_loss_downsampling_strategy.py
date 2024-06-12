@@ -39,7 +39,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config()
         self.rho_pipeline_id: int = rho_pipeline_id
         self.data_config = data_config
-        self.current_trigger_id = -1
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
@@ -47,7 +46,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
         self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
         self._train_il_model(next_trigger_id)
-        self.current_trigger_id = next_trigger_id
 
     @property
     def downsampling_params(self) -> dict:
