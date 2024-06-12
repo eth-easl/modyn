@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from experiments.arxiv.compare_trigger_policies.run import construct_pipelines as arxiv_construct_pipelines
 from modyn.config import read_modyn_config, read_pipeline
 from modynclient.config import read_client_config
 
@@ -59,3 +60,7 @@ def test_client_config_integrity(config_path: str) -> None:
     file = PROJECT_ROOT / config_path
     assert file.exists(), f"Client config file {config_path} does not exist."
     read_client_config(file)
+
+
+def test_dynamic_pipelines() -> None:
+    arxiv_construct_pipelines()
