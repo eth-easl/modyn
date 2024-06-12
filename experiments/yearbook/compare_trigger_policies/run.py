@@ -11,7 +11,6 @@ from modynclient.config.schema.client_config import ModynClientConfig, Superviso
 
 
 def run_experiment() -> None:
-
     pipeline_configs: ModynPipelineConfig = []
 
     # time based triggers: every: 1y, 5y, 15y, 25y
