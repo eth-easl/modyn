@@ -21,11 +21,11 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
 
     eval_handlers = [
         EvalHandlerConfig(
-            name="scheduled-180d",
+            name=f"scheduled-{interval}",
             execution_time="after_pipeline",
             models="matrix",
             strategy=PeriodicEvalStrategyConfig(
-                every="1d",
+                every="183d",
                 interval=f"[-{interval}; +{interval}]",
                 start_timestamp=first_timestamp,
                 end_timestamp=last_timestamp,

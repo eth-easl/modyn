@@ -66,7 +66,7 @@ def gen_pipeline_config(
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(
-                    dataset_id=yb_dataset_name,
+                    dataset_id=hp_dataset_name,
                     bytes_parser_function=(
                         "def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"
                     ),
@@ -94,7 +94,7 @@ def gen_pipeline_config(
                         ),
                     ],
                 )
-                for yb_dataset_name in ["huffpost_kaggle", "huffpost_kaggle_test"]
+                for hp_dataset_name in ["huffpost_kaggle", "huffpost_kaggle_test"]
             ],
         ),
     )
