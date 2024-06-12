@@ -441,7 +441,7 @@ def test_dataset() -> None:
 def main() -> None:
     try:
         test_dataset()
-    except Exception as e:  
+    except Exception as e:
         print(f"An exception occured: {e}")
         raise
     finally:
