@@ -1,4 +1,4 @@
-from unittest.mock import patch, ANY, Mock
+from unittest.mock import ANY, Mock, patch
 
 import pytest
 import torch
@@ -75,7 +75,7 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
     embedding = None
     fake_irreducible_loss = torch.tensor(range(batch_size, 0, -1))
     with patch.object(
-            IrreducibleLossProducer, "get_irreducible_loss", return_value=fake_irreducible_loss
+        IrreducibleLossProducer, "get_irreducible_loss", return_value=fake_irreducible_loss
     ) as mock_get_il:
         sampler.init_downsampler()
         sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
