@@ -1,3 +1,5 @@
+import logging
+import time
 from typing import Optional
 
 import grpc
@@ -13,6 +15,8 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 from modyn.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
+
+logger = logging.getLogger(__name__)
 
 
 class SelectorKeySource(AbstractKeySource):
@@ -87,18 +91,26 @@ class SelectorKeySource(AbstractKeySource):
         self._uses_weights = self.uses_weights()
 
     def _connect_to_selector(self) -> SelectorStub:
-        selector_channel = grpc.insecure_channel(
-            self._selector_address,
-            options=[
-                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-            ],
-        )
-        if not grpc_connection_established(selector_channel):
-            raise ConnectionError(
-                f"Could not establish gRPC connection to selector at address {self._selector_address}."
+        max_retries = 5
+        retry_delay = 1  # seconds
+
+        for attempt in range(1, max_retries + 1):
+            selector_channel = grpc.insecure_channel(
+                self._selector_address,
+                options=[
+                    ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                    ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+                ],
             )
-        return SelectorStub(selector_channel)
+            if grpc_connection_established(selector_channel):
+                return SelectorStub(selector_channel)
+
+            logger.info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
+
+        logger.error(f"Failed to establish gRPC connection after {max_retries} attempts.")
+        raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
 
     def end_of_trigger_cleaning(self) -> None:
         pass
