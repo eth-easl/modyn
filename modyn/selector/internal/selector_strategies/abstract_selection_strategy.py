@@ -77,8 +77,7 @@ class AbstractSelectionStrategy(ABC):
             if last_trigger_id is None:
                 self._next_trigger_id = 0
                 logger.info(
-                    f"[{pid}][{tid}] Did not find previous trigger id DB for pipeline {self._pipeline_id},"
-                    + " next trigger is 0."
+                    f"[{pid}][{tid}] Didn't find prev. trigger id for pipeline {self._pipeline_id}, next trigger = 0."
                 )
             else:
                 self._next_trigger_id = last_trigger_id + 1
@@ -279,8 +278,6 @@ class AbstractSelectionStrategy(ABC):
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
         """
-        self._update_next_trigger_id()
-
         total_keys_in_trigger, num_partitions, log = self.store_training_set(
             self._pipeline_id,
             self._next_trigger_id,
