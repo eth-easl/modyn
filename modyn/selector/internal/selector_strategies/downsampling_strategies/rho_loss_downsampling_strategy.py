@@ -4,7 +4,7 @@ from typing import Any, Iterable, Optional, Tuple
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig, NewDataStrategyConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
+from modyn.metadata_database.models import Pipeline, SelectorStateMetadata, TrainedModel
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
@@ -39,21 +39,29 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         rho_pipeline_id, data_config = self._get_or_create_rho_pipeline_id_and_get_data_config()
         self.rho_pipeline_id: int = rho_pipeline_id
         self.data_config = data_config
-        self.il_model_id: Optional[int] = None
+        self.current_trigger_id = -1
 
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
         self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
-        self.il_model_id = self._train_il_model(next_trigger_id)
+        self._train_il_model(next_trigger_id)
+        self.current_trigger_id = next_trigger_id
 
     @property
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
-        assert self.il_model_id is not None
         config["rho_pipeline_id"] = self.rho_pipeline_id
-        config["il_model_id"] = self.il_model_id
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            il_model_id = (
+                database.session.query(TrainedModel.model_id)
+                .filter(
+                    TrainedModel.trigger_id == self.current_trigger_id, TrainedModel.pipeline_id == self.rho_pipeline_id
+                )
+                .scalar()
+            )
+        config["il_model_id"] = il_model_id
         return config
 
     def _train_il_model(self, trigger_id: int) -> int:
