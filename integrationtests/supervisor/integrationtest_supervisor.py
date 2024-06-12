@@ -5,10 +5,12 @@ from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 from integrationtests.utils import (
     DUMMY_CONFIG_FILE,
-    MNIST_CONFIG_FILE,
     TinyDatasetHelper,
     connect_to_server,
     load_config_from_file,
+    ImageDatasetHelper,
+    get_modyn_config,
+    RHO_LOSS_CONFIG_FILE,
 )
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest
@@ -17,7 +19,8 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelin
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 
 POLL_INTERVAL = 1
-
+MODYN_CONFIG = get_modyn_config()
+IMAGE_DATASET_ID = "image_test_dataset"
 
 def wait_for_pipeline(pipeline_id: int) -> str:
     req = GetPipelineStatusRequest(pipeline_id=pipeline_id)
@@ -44,29 +47,6 @@ def assert_pipeline_exit_without_error(res: dict) -> None:
 
     assert exit_msg
     assert exit_msg["exit_msg"]["exitcode"] == 0
-
-
-def test_mnist() -> None:
-    pipeline_config = load_config_from_file(MNIST_CONFIG_FILE)
-    print(pipeline_config)
-
-    res = parse_grpc_res(
-        supervisor.start_pipeline(
-            StartPipelineRequest(
-                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-                start_replay_at=0,
-                maximum_triggers=1,
-            )
-        )
-    )
-    pipeline_id = res["pipeline_id"]
-
-    print(f"start pipeline: {res}")
-    assert pipeline_id >= 0
-
-    get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
-    print(get_pipeline_status_res)
-    assert_pipeline_exit_without_error(get_pipeline_status_res)
 
 
 def test_one_experiment_pipeline() -> None:
@@ -130,14 +110,38 @@ def test_two_experiment_pipelines() -> None:
     assert_pipeline_exit_without_error(get_pipeline_status_res2)
 
 
+def test_rho_loss_pipeline_with_two_triggers() -> None:
+    pipeline_config = load_config_from_file(RHO_LOSS_CONFIG_FILE)
+    res = parse_grpc_res(
+        supervisor.start_pipeline(
+            StartPipelineRequest(
+                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
+                start_replay_at=0,
+            )
+        )
+    )
+    pipeline_id = res["pipeline_id"]
+    assert pipeline_id >= 0
+    get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
+    assert_pipeline_exit_without_error(get_pipeline_status_res)
+
+
 if __name__ == "__main__":
-    dataset_helper = TinyDatasetHelper()
+    supervisor_channel = connect_to_server("supervisor")
+    supervisor = SupervisorStub(supervisor_channel)
+    tiny_dataset_helper = TinyDatasetHelper()
     try:
-        dataset_helper.setup_dataset()
-        supervisor_channel = connect_to_server("supervisor")
-        supervisor = SupervisorStub(supervisor_channel)
+        tiny_dataset_helper.setup_dataset()
         test_one_experiment_pipeline()
         test_two_experiment_pipelines()
     finally:
-        dataset_helper.cleanup_dataset_dir()
-        dataset_helper.cleanup_storage_database()
+        tiny_dataset_helper.cleanup_dataset_dir()
+        tiny_dataset_helper.cleanup_storage_database()
+
+    image_dataset_helper = ImageDatasetHelper(dataset_size=20, dataset_id=IMAGE_DATASET_ID)
+    try:
+        image_dataset_helper.setup_dataset()
+        test_rho_loss_pipeline_with_two_triggers()
+    finally:
+        image_dataset_helper.cleanup_dataset_dir()
+        image_dataset_helper.cleanup_storage_database()

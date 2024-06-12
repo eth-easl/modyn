@@ -13,6 +13,7 @@ MODYN_PIPELINE_CONFIG_PATHS: list[str] = [
     "benchmark/mnist",
     "benchmark/wildtime_benchmarks",
     "modynclient/config/examples/dummy.yaml",
+    "modynclient/config/examples/rho_loss.yaml",
     "modynclient/config/examples/mnist.yaml",
     "modyn/config/examples/example-pipeline.yaml",
 ]

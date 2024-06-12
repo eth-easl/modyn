@@ -40,6 +40,7 @@ MODYN_MODELS_PATH = pathlib.Path(os.getenv("MODYN_MODELS_PATH", pathlib.Path("/a
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
 MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
 DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
+RHO_LOSS_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "rho_loss.yaml"
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
 NEW_DATASET_TIMEOUT = 600
 
