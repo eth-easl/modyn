@@ -114,9 +114,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
 
-      - name: Comment coverage
-        uses: coroo/pytest-coverage-commentator@v1.0.2
-
   format:
     timeout-minutes: 20
     runs-on: ubuntu-latest
