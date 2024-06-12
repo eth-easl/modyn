@@ -13,6 +13,7 @@ from typing import Any, Callable, Literal, Optional, Union, cast
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
+from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from pydantic import BaseModel, Field, model_serializer, model_validator
@@ -70,6 +71,10 @@ class PipelineExecutionParams:
             raise ValueError("`stop_replay_at` can only be used in conjunction with `start_replay_at`.")
         return self
 
+    @property
+    def pipeline_logdir(self) -> Path:
+        return self.log_directory / f"pipeline_{self.pipeline_id}"
+
 
 @dataclass
 class PipelineBatchState:
@@ -97,6 +102,7 @@ class ExecutionState(PipelineExecutionParams):
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
+    # for logging
     seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
     current_batch_index: int = 0
     current_sample_index: int = 0
@@ -248,45 +254,41 @@ class StoreModelInfo(_TrainInfoMixin):
         )
 
 
-class _ModelEvalInfo(StageInfo):
-    trigger_id: int
-    id_model: int
-    dataset_id: str
-    interval_start: int | None
-    interval_end: int | None
-
-    @override
-    @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_id, self.id_model, self.dataset_id, self.interval_start, self.interval_end)],
-            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end"],
-        )
-
-
-class SingleEvaluationInfo(_ModelEvalInfo):
+class SingleEvaluationInfo(StageInfo):
+    eval_request: EvalRequest
+    results: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str | None = None
-
-
-class StoreEvaluationInfo(_ModelEvalInfo):
-    results: dict[str, Any]
 
     def results_df(self) -> pd.DataFrame:
         """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
         return pd.DataFrame(
             [
                 (
-                    self.trigger_id,
-                    self.id_model,
-                    self.dataset_id,
-                    self.interval_start,
-                    self.interval_end,
+                    self.eval_request.trigger_id,
+                    self.eval_request.training_id,
+                    self.eval_request.model_id,
+                    self.eval_request.most_recent_model,
+                    self.eval_request.eval_handler,
+                    self.eval_request.dataset_id,
+                    self.eval_request.interval_start,
+                    self.eval_request.interval_end,
                     metric["name"],
                     metric["result"],
                 )
-                for metric in self.results["metrics"]
+                for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
-            columns=["trigger_id", "id_model", "dataset_id", "interval_start", "interval_end", "metric", "value"],
+            columns=[
+                "trigger_id",
+                "training_id",
+                "id_model",
+                "most_recent_model",
+                "eval_handler",
+                "dataset_id",
+                "interval_start",
+                "interval_end",
+                "metric",
+                "value",
+            ],
         )
 
 
@@ -405,7 +407,7 @@ class SupervisorLogs(BaseModel):
         self.stage_runs.clear()
 
     def merge(self, logs: list[StageLog]) -> SupervisorLogs:
-        self.stage_runs = self.stage_runs + [run for _l in logs for run in _l.stage_runs]
+        self.stage_runs = self.stage_runs + logs
         return self
 
     @property
@@ -514,7 +516,9 @@ class PipelineLogs(BaseModel):
         partial_supervisor_logs = [
             SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
         ]
-        self.supervisor_logs = self.supervisor_logs.merge(partial_supervisor_logs)
+        self.supervisor_logs = self.supervisor_logs.merge(
+            [stage_log for sv_logs in partial_supervisor_logs for stage_log in sv_logs.stage_runs]
+        )
 
         with open(pipeline_logdir / "pipeline.log", "w", encoding="utf-8") as logfile:
             logfile.write(self.model_dump_json(by_alias=True, indent=2))

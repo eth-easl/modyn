@@ -35,13 +35,10 @@ class CoresetStrategy(AbstractSelectionStrategy):
             config, modyn_config, pipeline_id, self._storage_backend
         )
 
-        self.warmup_presampler = (
-            NoPresamplingStrategy(
-                PresamplingConfig(strategy="No", ratio=100), modyn_config, pipeline_id, self._storage_backend
-            )
-            if self.warmup_triggers > 0
-            else None
+        self.warmup_presampler = NoPresamplingStrategy(
+            PresamplingConfig(strategy="No", ratio=100), modyn_config, pipeline_id, self._storage_backend
         )
+
         self.is_warmup = self.warmup_triggers > 0
 
     def _init_storage_backend(self) -> AbstractStorageBackend:
@@ -97,12 +94,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
             self.is_warmup = False
 
         presampling_strategy = self.warmup_presampler if self.is_warmup else self.presampling_strategy
-        assert presampling_strategy is not None  # satisfy mypy
         trigger_dataset_size = None
         if presampling_strategy.requires_trigger_dataset_size:
             trigger_dataset_size = self._get_trigger_dataset_size()
-
-        logger.error(trigger_dataset_size)
 
         stmt = presampling_strategy.get_presampling_query(
             next_trigger_id=self._next_trigger_id,

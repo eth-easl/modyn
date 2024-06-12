@@ -7,7 +7,7 @@ from pydantic import Field, model_validator
 
 from .strategy import EvalStrategyConfig, OffsetEvalStrategyConfig
 
-EvalHandlerExecutionTime = Literal["after_training"]
+EvalHandlerExecutionTime = Literal["after_training", "after_pipeline", "manual"]
 """
 after_training: will evaluate the models on the datasets after the training has finished
 after_pipeline (prospective feature): will evaluate the models on the datasets after the pipeline has finished
@@ -33,6 +33,18 @@ class EvalHandlerConfig(ModynBaseModel):
     execution_time: EvalHandlerExecutionTime = Field(
         description="When evaluations should be performed in terms of where in the code / when during a pipeline run."
     )
+    """Caution: Using `execution_time=after_training` might lead to a slightly different behavior with respect to
+    the `models` option compared to the `execution_time=after_pipeline`.
+
+    Point of Difference: Determining the 'most recent' model for a given evaluation request.
+
+    When `execution_time` is set to `after_pipeline`, all models generated within a certain evaluation request interval
+    are considered. This allows the selection of the most recent model within that interval.
+    However, when `execution_time` is set to `after_training`, the selection process is different. Models are generated
+    during the pipeline run, and the most recently trained model may not necessarily be the most recent for the
+    subsequent evaluation request. This is due to the possibility of another model being trained between the current
+    training and the next evaluation interval. As a result, with `execution_time=after_training`, there could be
+    multiple models deemed as 'most recent' for a given interval."""
 
     models: Literal["matrix", "most_recent"] = Field(
         "most_recent",
@@ -67,4 +79,5 @@ class EvalHandlerConfig(ModynBaseModel):
     def validate_datasets(self) -> EvalHandlerConfig:
         if isinstance(self.strategy, OffsetEvalStrategyConfig):
             assert self.execution_time == "after_training", "OffsetEvalStrategy can only be used after training."
+            assert self.models == "most_recent", "OffsetEvalStrategy can only be used with most_recent model currently."
         return self

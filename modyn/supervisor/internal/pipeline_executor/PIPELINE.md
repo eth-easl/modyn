@@ -41,13 +41,8 @@ stateDiagram-v2
                 }
                 state evaluation {
                     [*] --> EVALUATE
-                    EVALUATE --> single_evaluation
-                    state single_evaluation {
-                        [*] --> EVALUATE_SINGLE
-                        EVALUATE_SINGLE --> STORE_EVALUATION_RESULTS
-                        STORE_EVALUATION_RESULTS -->[*]
-                    }
-                    single_evaluation -->  [*]
+                    EVALUATE --> EVALUATE_SINGLE
+                    EVALUATE_SINGLE -->  [*]
                 }
                 train_and_store_model --> evaluation
             }
@@ -61,6 +56,8 @@ stateDiagram-v2
     }
     FETCH_NEW_DATA --> process_new_data
     process_new_data --> FETCH_NEW_DATA
-    DONE --> EXIT
+    DONE --> POST_EVALUATION_CHECKPOINT
+    POST_EVALUATION_CHECKPOINT --> POST_EVALUATION
+    POST_EVALUATION --> EXIT
     EXIT --> [*]
 ```

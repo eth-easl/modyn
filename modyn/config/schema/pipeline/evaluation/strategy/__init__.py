@@ -11,7 +11,7 @@ from .periodic import PeriodicEvalStrategyConfig
 from .slicing import *  # noqa
 from .slicing import SlicingEvalStrategyConfig
 from .static import *  # noqa
-from .static import StaticEvalTriggerConfig
+from .static import StaticEvalStrategyConfig
 
 EvalStrategyConfig = Annotated[
     Union[
@@ -19,7 +19,7 @@ EvalStrategyConfig = Annotated[
         OffsetEvalStrategyConfig,
         BetweenTwoTriggersEvalStrategyConfig,
         PeriodicEvalStrategyConfig,
-        StaticEvalTriggerConfig,
+        StaticEvalStrategyConfig,
     ],
     Field(discriminator="type"),
 ]

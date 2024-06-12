@@ -1,9 +1,9 @@
-from typing import Iterable, Optional
+from typing import Iterable
 
 from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
 from modyn.utils import convert_timestr_to_seconds
 
-from .abstract import AbstractEvalStrategy
+from .abstract import AbstractEvalStrategy, EvalInterval
 
 
 class OffsetEvalStrategy(AbstractEvalStrategy):
@@ -25,25 +25,45 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         super().__init__(config)
         self.offsets = config.offsets
 
-    def get_eval_intervals(
-        self, first_timestamp: int, last_timestamp: int
-    ) -> Iterable[tuple[Optional[int], Optional[int]]]:
-        for offset in self.offsets:
-            if offset == "-inf":
-                yield 0, first_timestamp
-            elif offset == "inf":
-                # +1 because the samples with timestamp `last_timestamp` are included in the current trigger,
-                # and here we want to return an interval on the data with timestamp greater than `last_timestamp`.
-                yield last_timestamp + 1, None
-            else:
-                offset_int = convert_timestr_to_seconds(offset)
-                if offset_int < 0:
-                    yield max(first_timestamp + offset_int, 0), first_timestamp
-                elif offset_int > 0:
-                    # +1 for the same reason as above
-                    yield last_timestamp + 1, last_timestamp + offset_int + 1
+    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+        for train_interval_start, train_interval_end in training_intervals:
+            for offset in self.offsets:
+                if offset == "-inf":
+                    yield EvalInterval(
+                        start=0,
+                        end=train_interval_start,
+                        most_recent_model_interval_end_before=train_interval_end,
+                    )
+                elif offset == "inf":
+                    # +1 because the samples with timestamp `train_interval_end` are included in the current trigger,
+                    # and here we want to return an interval on the data with timestamp greater than
+                    # `train_interval_end`.
+                    yield EvalInterval(
+                        start=train_interval_end + 1,
+                        end=None,
+                        most_recent_model_interval_end_before=train_interval_end,
+                    )
                 else:
-                    # now offset_int == 0. We want to return the same interval as the trigger's interval.
-                    # +1 because the right bound of the returned interval should be exclusive.
-                    # we want to include samples with timestamp `last_timestamp` from evaluation dataset.
-                    yield first_timestamp, last_timestamp + 1
+                    offset_int = convert_timestr_to_seconds(offset)
+                    if offset_int < 0:
+                        yield EvalInterval(
+                            start=max(train_interval_start + offset_int, 0),
+                            end=train_interval_start,
+                            most_recent_model_interval_end_before=train_interval_end,
+                        )
+                    elif offset_int > 0:
+                        # +1 for the same reason as above
+                        yield EvalInterval(
+                            start=train_interval_end + 1,
+                            end=train_interval_end + offset_int + 1,
+                            most_recent_model_interval_end_before=train_interval_end,
+                        )
+                    else:
+                        # now offset_int == 0. We want to return the same interval as the trigger's interval.
+                        # +1 because the right bound of the returned interval should be exclusive.
+                        # we want to include samples with timestamp `train_interval_end` from evaluation dataset.
+                        yield EvalInterval(
+                            start=train_interval_start,
+                            end=train_interval_end + 1,
+                            most_recent_model_interval_end_before=train_interval_end,
+                        )

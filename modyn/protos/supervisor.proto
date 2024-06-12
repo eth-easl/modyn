@@ -33,11 +33,12 @@ message PipelineStageDatasetMsg {
 }
 
 message PipelineStageCounterCreateParams {
-    int32 new_data_len = 1;
+    string title = 1;
+    optional int32 new_data_len = 2;
 }
 
 message PipelineStageCounterUpdateParams {
-    int32 batch_size = 1;
+    int32 increment = 1;
 }
 
 message PipelineStageCounterMsg {

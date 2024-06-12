@@ -131,14 +131,19 @@ global___PipelineStageDatasetMsg = PipelineStageDatasetMsg
 class PipelineStageCounterCreateParams(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    TITLE_FIELD_NUMBER: builtins.int
     NEW_DATA_LEN_FIELD_NUMBER: builtins.int
+    title: builtins.str
     new_data_len: builtins.int
     def __init__(
         self,
         *,
-        new_data_len: builtins.int = ...,
+        title: builtins.str = ...,
+        new_data_len: builtins.int | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["new_data_len", b"new_data_len"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len", "title", b"title"]) -> None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_new_data_len", b"_new_data_len"]) -> typing.Literal["new_data_len"] | None: ...
 
 global___PipelineStageCounterCreateParams = PipelineStageCounterCreateParams
 
@@ -146,14 +151,14 @@ global___PipelineStageCounterCreateParams = PipelineStageCounterCreateParams
 class PipelineStageCounterUpdateParams(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    BATCH_SIZE_FIELD_NUMBER: builtins.int
-    batch_size: builtins.int
+    INCREMENT_FIELD_NUMBER: builtins.int
+    increment: builtins.int
     def __init__(
         self,
         *,
-        batch_size: builtins.int = ...,
+        increment: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["batch_size", b"batch_size"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["increment", b"increment"]) -> None: ...
 
 global___PipelineStageCounterUpdateParams = PipelineStageCounterUpdateParams
 

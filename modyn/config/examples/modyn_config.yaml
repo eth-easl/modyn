@@ -225,3 +225,5 @@ supervisor:
   hostname: "supervisor"
   port: "50063"
   eval_directory: "/tmp/evaluation_results"
+  after_training_evaluation_workers: 5
+  after_pipeline_evaluation_workers: 5

@@ -640,7 +640,7 @@ def test_warmup_period(reset_after_trigger: bool) -> None:
         total_samples.extend(worker_1_samples + worker_2_samples)
 
     assert len(total_samples) == len(set(total_samples)), "Received duplicated samples"
-    assert set(total_samples) <= set(
+    assert set(total_samples) == set(
         range(10000)
     ), f"Got samples with out of range keys: {set(total_samples) - set(range(10000))}"
     assert len(total_samples) == 10000, f"expected 10000 samples due to warmup, got {len(total_samples)}"
