@@ -1,10 +1,10 @@
 import json
-from typing import Any, Iterable, Optional, Tuple
+from typing import Any, Iterable, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig, NewDataStrategyConfig, RHOLossDownsamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import Pipeline, SelectorStateMetadata, TrainedModel
+from modyn.metadata_database.models import Pipeline, SelectorStateMetadata, TrainedModel, Trigger
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
@@ -53,14 +53,24 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
         config["rho_pipeline_id"] = self.rho_pipeline_id
+
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            il_model_id = (
-                database.session.query(TrainedModel.model_id)
-                .filter(
-                    TrainedModel.trigger_id == self.current_trigger_id, TrainedModel.pipeline_id == self.rho_pipeline_id
-                )
+            # find the maximal trigger id. This is the current trigger id.
+            max_trigger_id = (
+                database.session.query(func.max(Trigger.trigger_id))
+                .filter(Trigger.pipeline_id == self.rho_pipeline_id)
                 .scalar()
             )
+            assert max_trigger_id is not None
+
+            # one pipeline id and one trigger id can only correspond to one model
+            il_model_id = (
+                database.session.query(TrainedModel.model_id)
+                .filter(TrainedModel.pipeline_id == self.rho_pipeline_id, TrainedModel.trigger_id == max_trigger_id)
+                .scalar()
+            )
+            assert il_model_id is not None
+
         config["il_model_id"] = il_model_id
         return config
 
