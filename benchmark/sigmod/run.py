@@ -212,6 +212,8 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seed = 42  # set to None to disable, should be 0-100
+    num_gpus = 1 # to parallelize across gpus
+    gpu_id = 0
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
@@ -259,24 +261,28 @@ def run_experiment() -> None:
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
 
+    run_id = 0
     for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
             config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
-            pipeline_configs.append(
-                pipeline_gen_func(
-                    config_id,
-                    num_epochs,
-                    train_gpu,
-                    selection_strategy,
-                    lr_scheduler_config,
-                    model,
-                    dataset,
-                    num_classes,
-                    seed,
-                    optimizer,
-                    lr,
+            if run_id % num_gpus == gpu_id:
+                pipeline_configs.append(
+                    pipeline_gen_func(
+                        config_id,
+                        num_epochs,
+                        train_gpu,
+                        selection_strategy,
+                        lr_scheduler_config,
+                        model,
+                        dataset,
+                        num_classes,
+                        seed,
+                        optimizer,
+                        lr,
+                    )
                 )
-            )
+
+            run_id += 1
 
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
