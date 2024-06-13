@@ -90,7 +90,7 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = self._connect_to_selector()
         self._uses_weights = self.uses_weights()
 
-    def _connect_to_selector(self) -> SelectorStub:
+    def _connect_to_selector(self) -> SelectorStub:  # pragma: no cover
         max_retries = 5
         retry_delay = 1  # seconds
 

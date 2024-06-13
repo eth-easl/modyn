@@ -159,3 +159,25 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
         assert il_loss_producer.loss_cache.keys() == {1, 2, 3}
         for loss in il_loss_producer.loss_cache.values():
             assert torch.allclose(loss, torch.tensor(27.0))
+
+
+@patch(
+    "modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils."
+    "irreducible_loss_producer.grpc_connection_established",
+    return_value=True,
+)
+def test_connect_to_model_storage(mock_grpc_connection_established):
+    model_storage_stub = IrreducibleLossProducer.connect_to_model_storage("localhost:50059")
+    assert model_storage_stub is not None
+    mock_grpc_connection_established.assert_called_once()
+
+
+@patch(
+    "modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils."
+    "irreducible_loss_producer.grpc_connection_established",
+    return_value=False,
+)
+def test_connect_to_model_storage_disconnected(mock_grpc_connection_established):
+    with pytest.raises(ConnectionError):
+        IrreducibleLossProducer.connect_to_model_storage("localhost:50059")
+    mock_grpc_connection_established.assert_called_once()

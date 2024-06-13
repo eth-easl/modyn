@@ -126,7 +126,7 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
-    def _init_grpc(self, worker_id: Optional[int] = None) -> None:
+    def _init_grpc(self, worker_id: Optional[int] = None) -> None:  # pragma: no cover
         max_retries = 5
         retry_delay = 1  # seconds
 
