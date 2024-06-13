@@ -119,11 +119,13 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     pipeline_config = load_config_from_file(RHO_LOSS_CONFIG_FILE)
     supervisor = SupervisorStub(connect_to_server("supervisor"))
     selector = SelectorStub(connect_to_server("selector"))
+    num_triggers = 2
     res = parse_grpc_res(
         supervisor.start_pipeline(
             StartPipelineRequest(
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
+                maximum_triggers=num_triggers,
             )
         )
     )
@@ -149,15 +151,15 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
         )
         # validate this rho_pipeline_id is recorded in the pipelines table
         assert actual_aux_pipeline_id == rho_pipeline_id
-        # validate that there are 2 triggers associated with the rho_pipeline_id
+        # validate that there are {num_triggers} triggers associated with the rho_pipeline_id
         triggers: list[Trigger] = database.session.query(Trigger).filter(Trigger.pipeline_id == rho_pipeline_id).all()
         trigger_ids = [trigger.trigger_id for trigger in triggers]
-        assert len(trigger_ids) == 2
-        # validate there are 2 models associated with the rho_pipeline_id.
+        assert len(trigger_ids) == num_triggers
+        # validate there are {num_triggers} models associated with the rho_pipeline_id.
         models: list[TrainedModel] = (
             database.session.query(TrainedModel).filter(TrainedModel.pipeline_id == rho_pipeline_id).all()
         )
-        assert len(models) == 2
+        assert len(models) == num_triggers
         assert all(model.trigger_id in trigger_ids for model in models)
         model_ids = [model.model_id for model in models]
         assert latest_il_model_id == max(model_ids)
