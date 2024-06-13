@@ -65,14 +65,18 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
-    def _compute_score(self, forward_output: torch.Tensor) -> np.ndarray:
+    def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
         if self.score_metric == "LeastConfidence":
             scores = forward_output.max(dim=1).values.cpu().numpy()
         elif self.score_metric == "Entropy":
-            preds = torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
+            preds = (
+                torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
+                if not disable_softmax
+                else forward_output.cpu().numpy()
+            )
             scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
         elif self.score_metric == "Margin":
-            preds = torch.nn.functional.softmax(forward_output, dim=1)
+            preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
             preds_argmax = torch.argmax(preds, dim=1)  # gets top class
             max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
             preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = (
