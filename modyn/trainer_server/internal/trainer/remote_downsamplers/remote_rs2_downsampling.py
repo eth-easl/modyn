@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
@@ -22,10 +22,12 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         trigger_id: int,
         batch_size: int,
         params_from_selector: dict,
+        modyn_config: dict,
+        # pylint: disable-next=unused-argument
         per_sample_loss: Any,
         device: str,
     ) -> None:
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
         self.forward_required = False
         self.supports_bts = False
         self._all_sample_ids: list[int] = []
@@ -40,6 +42,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
     def inform_samples(
         self,
         sample_ids: list[int],
+        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
         forward_output: torch.Tensor,
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
