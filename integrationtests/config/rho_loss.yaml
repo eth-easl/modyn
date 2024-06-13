@@ -15,7 +15,7 @@ training:
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random
-  batch_size: 64
+  batch_size: 4
   shuffle: True
   optimizers:
     - name: "default"
@@ -41,7 +41,7 @@ data:
       return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
-  num_samples: 2000
+  num_samples: 10
 selection_strategy:
   name: CoresetStrategy
   maximum_keys_in_memory: 1000
@@ -71,4 +71,3 @@ selection_strategy:
                 momentum: 0.001
       optimization_criterion:
         name: "CrossEntropyLoss"
-

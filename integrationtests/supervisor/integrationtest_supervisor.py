@@ -5,15 +5,15 @@ from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
 from integrationtests.utils import (
     DUMMY_CONFIG_FILE,
+    RHO_LOSS_CONFIG_FILE,
+    ImageDatasetHelper,
     TinyDatasetHelper,
     connect_to_server,
-    load_config_from_file,
-    ImageDatasetHelper,
     get_modyn_config,
-    RHO_LOSS_CONFIG_FILE,
+    load_config_from_file,
 )
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import Pipeline
+from modyn.metadata_database.models import Pipeline, TrainedModel, Trigger
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
@@ -134,28 +134,36 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
 
     # retrieve the current downsampling config
     selection_strategy_resp = parse_grpc_res(
-        selector.get_selection_strategy(
-            GetSelectionStrategyRequest(pipeline_id=pipeline_id)
-        )
+        selector.get_selection_strategy(GetSelectionStrategyRequest(pipeline_id=pipeline_id))
     )
     assert selection_strategy_resp["strategy_name"] == "RemoteRHOLossDownsampling"
     assert selection_strategy_resp["downsampling_enabled"]
     rho_pipeline_id = selection_strategy_resp["downsampler_config"]["rho_pipeline_id"]
-    il_model_id = selection_strategy_resp["downsampler_config"]["il_model_id"]
+    latest_il_model_id = selection_strategy_resp["downsampler_config"]["il_model_id"]
 
     with MetadataDatabaseConnection(MODYN_CONFIG) as database:
         actual_aux_pipeline_id = (
-            database.session.query(Pipeline.auxiliary_pipeline_id)
-            .filter(Pipeline.pipeline_id == pipeline_id)
-            .first()
+            database.session.query(Pipeline.auxiliary_pipeline_id).filter(Pipeline.pipeline_id == pipeline_id).first()
         )
         # validate this rho_pipeline_id is recorded in the pipelines table
         assert actual_aux_pipeline_id == rho_pipeline_id
-    # validate that there are 2 triggers associated with the rho_pipeline_id
+        # validate that there are 2 triggers associated with the rho_pipeline_id
+        triggers: list[Trigger] = database.session.query(Trigger).filter(Trigger.pipeline_id == rho_pipeline_id).all()
+        trigger_ids = [trigger.trigger_id for trigger in triggers]
+        assert len(trigger_ids) == 2
+        # validate there are 2 models associated with the rho_pipeline_id.
+        models: list[TrainedModel] = (
+            database.session.query(TrainedModel).filter(TrainedModel.pipeline_id == rho_pipeline_id).all()
+        )
+        assert len(models) == 2
+        assert all(model.trigger_id in trigger_ids for model in models)
+        model_ids = [model.model_id for model in models]
+        assert latest_il_model_id == max(model_ids)
 
-    # one of the model is this il_model_id, which should be larger than the other
-
-
+        # validate the holdout set is in correct proportion
+        # in rho_loss.yaml, each trigger contains 10 images. The holdout set ratio is 30%
+        # so the holdout set should contain 3 images
+        assert all(trigger.num_keys == 3 for trigger in triggers)
 
 
 if __name__ == "__main__":
