@@ -176,7 +176,7 @@ if __name__ == "__main__":
         tiny_dataset_helper.cleanup_dataset_dir()
         tiny_dataset_helper.cleanup_storage_database()
 
-    image_dataset_helper = ImageDatasetHelper(dataset_size=20, dataset_id=IMAGE_DATASET_ID)
+    image_dataset_helper = ImageDatasetHelper(dataset_size=20, dataset_id=IMAGE_DATASET_ID, num_classes=10)
     try:
         image_dataset_helper.setup_dataset()
         test_rho_loss_pipeline_with_two_triggers()
