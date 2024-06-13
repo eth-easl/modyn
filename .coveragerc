@@ -2,4 +2,3 @@
 omit = 
     **/*/__init__.py
     **/generated/*
-    modyn/tests/*
