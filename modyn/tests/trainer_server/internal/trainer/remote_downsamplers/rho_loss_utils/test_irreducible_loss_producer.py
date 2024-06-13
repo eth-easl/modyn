@@ -13,7 +13,9 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.models import Dummy
 from modyn.models.dummy.dummy import DummyModyn
-from modyn.trainer_server.internal.trainer.remote_downsamplers.irreducible_loss_producer import IrreducibleLossProducer
+from modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils.irreducible_loss_producer import (
+    IrreducibleLossProducer,
+)
 from torch import Tensor
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
