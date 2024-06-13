@@ -164,7 +164,7 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
 @patch(
     "modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils."
     "irreducible_loss_producer.grpc_connection_established",
-    return_value=True
+    return_value=True,
 )
 def test_connect_to_model_storage(mock_grpc_connection_established):
     model_storage_stub = IrreducibleLossProducer.connect_to_model_storage("localhost:50059")
