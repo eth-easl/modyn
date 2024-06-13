@@ -124,7 +124,7 @@ def register_pipeline(auxiliary_pipeline_id: Optional[int], data_config: DataCon
 
 
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
-@patch.object(AbstractSelectionStrategy, "store_training_set")
+@patch.object(AbstractSelectionStrategy, "store_training_set", return_value=(42, 42, {}))
 @patch(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy"
     ".get_trigger_dataset_size"

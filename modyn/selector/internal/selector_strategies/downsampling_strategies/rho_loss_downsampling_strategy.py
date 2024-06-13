@@ -142,8 +142,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             training_set_producer,
             selector_storage_backend.insertion_threads,
         )
-        logger.info(f"Stored {total_keys_in_trigger} keys in the holdout set for trigger {next_trigger_id} "
-                    f"in rho pipeline {self.rho_pipeline_id}")
+        logger.info(
+            f"Stored {total_keys_in_trigger} keys in the holdout set for trigger {next_trigger_id} "
+            f"in rho pipeline {self.rho_pipeline_id}"
+        )
 
     @staticmethod
     def _get_holdout_sampling_query(main_pipeline_id: int, trigger_id: int, target_size: int) -> Select:
