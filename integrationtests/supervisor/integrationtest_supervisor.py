@@ -136,6 +136,7 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     selection_strategy_resp = parse_grpc_res(
         selector.get_selection_strategy(GetSelectionStrategyRequest(pipeline_id=pipeline_id))
     )
+    print(selection_strategy_resp)
     assert selection_strategy_resp["strategy_name"] == "RemoteRHOLossDownsampling"
     assert selection_strategy_resp["downsampling_enabled"]
     rho_pipeline_id = selection_strategy_resp["downsampler_config"]["rho_pipeline_id"]

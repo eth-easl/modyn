@@ -3,7 +3,7 @@ pipeline:
   description: Example pipeline
   version: 1.0.0
 model:
-  id: ResNet50
+  id: ResNet18
   config:
     num_classes: 10
 model_storage:
