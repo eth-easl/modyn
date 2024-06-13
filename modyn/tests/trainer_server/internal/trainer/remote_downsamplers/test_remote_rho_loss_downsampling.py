@@ -45,7 +45,11 @@ def dummy_init_params(dummy_system_config: ModynConfig):
 
 @patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
 @patch.object(AbstractRemoteDownsamplingStrategy, "__init__")
-def test__init__(mock_abstract_sampler_init__, mock__load_il_model, dummy_init_params):
+@patch(
+    "modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rho_loss_downsampling.IrreducibleLossProducer",
+    wraps=IrreducibleLossProducer,
+)
+def test__init__(MockIRLossProducer, mock_abstract_sampler_init__, mock__load_il_model, dummy_init_params):
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
     assert sampler.per_sample_loss_fct == dummy_init_params["per_sample_loss"]
     assert not sampler.requires_grad
@@ -55,6 +59,13 @@ def test__init__(mock_abstract_sampler_init__, mock__load_il_model, dummy_init_p
         dummy_init_params["batch_size"],
         dummy_init_params["params_from_selector"],
         dummy_init_params["modyn_config"],
+        dummy_init_params["device"],
+    )
+    MockIRLossProducer.assert_called_once_with(
+        dummy_init_params["per_sample_loss"],
+        ANY,
+        dummy_init_params["params_from_selector"]["rho_pipeline_id"],
+        dummy_init_params["params_from_selector"]["il_model_id"],
         dummy_init_params["device"],
     )
 

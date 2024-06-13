@@ -50,7 +50,6 @@ def setup_and_teardown(minimal_modyn_config):
     yield
 
 
-# patch DummyModyn in dummpy.py
 @patch("modyn.models.Dummy", wraps=Dummy)
 def test__load_il_model_architecture(MockDummy, minimal_modyn_config):
     model_config = {"num_classes": 79}
@@ -70,7 +69,7 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
     expected_bias = torch.tensor([5.0, 667.0])
     with tempfile.NamedTemporaryFile() as model_weights_file:
         dummy_model = get_dummy_model()
-        # hard code dummy_model's weight so that we can verify later if correct params are loaded
+        # hard code dummy_model's weights so that we can verify later if correct params are loaded
         dummy_model.model.output.weight = torch.nn.Parameter(expected_weight)
         dummy_model.model.output.bias = torch.nn.Parameter(expected_bias)
         # save weight and bias to temp_file
@@ -82,6 +81,8 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
             model_path="dummy_model_path",
             checksum=bytes(12345),
         )
+        # patch the connect_to_model_storage and download_trained_model so that we the downloaded model file is this
+        # model_weights_file
         with (
             patch.object(IrreducibleLossProducer, "connect_to_model_storage", return_value=mock_model_storage_stub),
             patch(
@@ -147,12 +148,14 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
         forward_input = torch.randn(3, 2)
         target = torch.randn(3, num_classes)
         il_loss = il_loss_producer.get_irreducible_loss(sample_ids, forward_input, target)
+        assert torch.allclose(il_loss, torch.tensor([27.0, 27.0, 27.0]))
 
         mock_per_sample_loss.assert_called_once()
+        # verify that the per_sample_loss function was called with the correct arguments
         assert torch.allclose(mock_per_sample_loss.call_args[0][0], torch.zeros(3, num_classes))
         assert torch.allclose(mock_per_sample_loss.call_args[0][1], target)
 
+        # verify that the newly computed loss was cached
         assert il_loss_producer.loss_cache.keys() == {1, 2, 3}
-        assert torch.allclose(il_loss, torch.tensor([27.0, 27.0, 27.0]))
         for loss in il_loss_producer.loss_cache.values():
             assert torch.allclose(loss, torch.tensor(27.0))
