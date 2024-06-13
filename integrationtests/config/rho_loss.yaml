@@ -37,7 +37,7 @@ data:
   bytes_parser_function: |
     from PIL import Image
     import io
-    def bytes_parser_function(data: bytes) -> Image:
+    def bytes_parser_function(data: memoryview) -> Image:
       return Image.open(io.BytesIO(data)).convert("RGB")
 trigger:
   id: DataAmountTrigger
@@ -50,7 +50,7 @@ selection_strategy:
   tail_triggers: 0
   downsampling_config:
     strategy: RHOLoss
-    holdout_set_ratio: 10
+    holdout_set_ratio: 30
     ratio: 60
     il_training_config:
       il_model_id: ResNet18
