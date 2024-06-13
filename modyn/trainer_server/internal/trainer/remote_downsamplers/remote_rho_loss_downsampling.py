@@ -4,7 +4,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.irreducible_loss_producer import IrreducibleLossProducer
+from modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils.irreducible_loss_producer import (
+    IrreducibleLossProducer,
+)
 
 
 class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):

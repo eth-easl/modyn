@@ -29,6 +29,9 @@ class IrreducibleLossProducer:
     ) -> None:
         self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id)
         self.model.model.eval()
+        # We probably will train the main model for multiple epochs.
+        # The first time we consume a sample, we compute the irreducible loss from the il model.
+        # If we meet this sample again in following epochs, we fetch the loss from cache.
         self.loss_cache: dict[int, torch.Tensor] = {}
         self.device = device
         self.per_sample_loss_fct = per_sample_loss
@@ -36,22 +39,24 @@ class IrreducibleLossProducer:
     def get_irreducible_loss(
         self, sample_ids: list[int], forward_input: Union[dict[str, torch.Tensor], torch.Tensor], target: torch.Tensor
     ) -> torch.Tensor:
-        # use sample_ids to index into the precomputed loss values, if they are all in the cache
-        # or use forward_input to compute the loss values
+        # The time to compute irreducible loss for cache-missing samples should be the same as compute irreducible loss
+        # for the full batch. Therefore, to simplify logic as long as there is one cache miss we compute IR loss for the
+        # full batch.
         fullly_in_cache = all(sample_id in self.loss_cache for sample_id in sample_ids)
         if fullly_in_cache:
             # torch.stack creates a new tensor
             return torch.stack([self.loss_cache[sample_id] for sample_id in sample_ids]).to(self.device)
 
         with torch.inference_mode():
-            # move model to gpu
+            # move model to the computing device
             self.model.model.to(self.device)
             forward_output = self.model.model(forward_input)
             irreducible_loss = self.per_sample_loss_fct(forward_output, target).detach()
             cached_loss = irreducible_loss.cpu()
             self.model.model.to("cpu")
         for sample_id, loss in zip(sample_ids, cached_loss):
-            self.loss_cache[sample_id] = loss
+            if sample_id not in self.loss_cache:
+                self.loss_cache[sample_id] = loss
 
         return irreducible_loss
 
@@ -62,7 +67,7 @@ class IrreducibleLossProducer:
         model_config_dict = json.loads(model_config)
         model_module = dynamic_module_import("modyn.models")
         model_handler = getattr(model_module, model_class_name)
-        # il model is only moved to gpu when we use it to compute il loss
+        # il model is only moved to the computing device when we use it to compute il loss
         model = model_handler(model_config_dict, "cpu", amp)
         return model
 
