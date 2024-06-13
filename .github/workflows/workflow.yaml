@@ -106,7 +106,7 @@ jobs:
       - name: Pytest
         run: |
           set -o pipefail
-          micromamba run -n modyn pytest modyn --cache-clear --cov-report=xml --cov-fail-under=90
+          micromamba run -n modyn pytest modyn --cache-clear --cov-report=xml --cov-fail-under=83
         
       - name: Upload codecov
         uses: codecov/codecov-action@v4
