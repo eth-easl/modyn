@@ -106,10 +106,13 @@ jobs:
       - name: Pytest
         run: |
           set -o pipefail
-          micromamba run -n modyn pytest modyn --cache-clear --cov-report term --cov-fail-under=90 | tee pytest-coverage.txt
-
-      - name: Comment coverage
-        uses: coroo/pytest-coverage-commentator@v1.0.2
+          micromamba run -n modyn pytest modyn --cache-clear --cov-report=xml --cov-fail-under=90
+        
+      - name: Upload codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.xml
 
   format:
     timeout-minutes: 20
