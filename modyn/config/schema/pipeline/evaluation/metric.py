@@ -11,7 +11,7 @@ from typing_extensions import Self
 class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
-    evaluation_transformer_function: str = Field(
+    evaluation_transformer_function: str | None = Field(
         "",
         description="A function used to transform the model output before evaluation.",
     )
@@ -27,10 +27,15 @@ class Metric(ModynBaseModel):
             raise ValueError("Function 'evaluation_transformer_function' could not be parsed!") from exc
         return value
 
+    @field_validator("evaluation_transformer_function", mode="before")
+    @classmethod
+    def clean_evaluation_transformer_function(cls, value: str | None) -> str:
+        return value or ""
+
     @property
     def evaluation_transformer_function_deserialized(self) -> Callable | None:
         if self.evaluation_transformer_function:
-            return deserialize_function(self.evaluation_transformer_function, "evaluation_transformer_function")
+            return deserialize_function(self.evaluation_transformer_function or "", "evaluation_transformer_function")
         return None
 
     @model_validator(mode="after")
@@ -41,7 +46,7 @@ class Metric(ModynBaseModel):
         # pylint: disable-next=wrong-import-position,import-outside-toplevel
         from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
         try:
-            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
+            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function or "", self.config)
         except NotImplementedError as exc:
             raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
 

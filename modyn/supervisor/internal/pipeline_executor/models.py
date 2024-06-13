@@ -266,7 +266,7 @@ class SingleEvaluationInfo(StageInfo):
                 (
                     self.eval_request.trigger_id,
                     self.eval_request.training_id,
-                    self.eval_request.model_id,
+                    self.eval_request.id_model,
                     self.eval_request.most_recent_model,
                     self.eval_request.eval_handler,
                     self.eval_request.dataset_id,

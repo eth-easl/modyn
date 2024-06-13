@@ -13,3 +13,13 @@ grpcio-tools>=1.63
 grpcio>=1.63 # Linux
 mypy-protobuf
 pystack
+
+# Plotting
+plotly
+matplotlib
+seaborn
+pandas
+dash
+dash-daq
+dash_cytoscape
+
