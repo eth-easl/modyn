@@ -39,7 +39,7 @@ def gen_cglm_config(
     num_classes: int,
     seed: int,
     optimizer: str,
-    lr: float
+    lr: float,
 ) -> ModynPipelineConfig:
     del model  # hardcore resnet50
     del lr
@@ -86,7 +86,7 @@ def gen_cglm_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
-            seed=seed
+            seed=seed,
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(dataset_id=dataset, transformations=transformations, bytes_parser_function=bytes_parser_func),

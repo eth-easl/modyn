@@ -207,37 +207,61 @@ def run_experiment() -> None:
     pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
-    num_classes = 6404  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
     num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
-    disable_scheduling = False # For our baselines, scheduling was mostly meaningless. 
-    seed = 42 # set to None to disable, should be 0-100
+    disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
+    seed = 42  # set to None to disable, should be 0-100
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
-    optimizer = None # ignored for non arxiv
-    lr = None # ignored for non arxiv
+    optimizer = None  # ignored for non arxiv
+    lr = None  # ignored for non arxiv
+    num_classes = 6404  # necessary for CGLM, ignored for others
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
         warmup_triggers = 2
         num_epochs = 5
+        config_str_fn = (
+            lambda model,
+            selection_strategy_id,
+            lr_sched_id,
+            num_epochs,
+            warmup_triggers,
+            dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
+        )
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
-        num_epochs = 10 # OR 5??? OR 15??
-        optimizer = "SGD" # alternative: AdamW
-        lr = 0.00002 # alternative: 0.00005
+        num_epochs = 10  # OR 5??? OR 15??
+        optimizer = "SGD"  # alternative: AdamW
+        lr = 0.00002  # alternative: 0.00005
+        config_str_fn = (
+            lambda model,
+            selection_strategy_id,
+            lr_sched_id,
+            num_epochs,
+            warmup_triggers,
+            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
+        )
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
-        warmup_triggers = 4
-        num_epochs = -1 # TBD
+        warmup_triggers = 5
+        num_epochs = 5
+        config_str_fn = (
+            lambda model,
+            selection_strategy_id,
+            lr_sched_id,
+            num_epochs,
+            warmup_triggers,
+            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
+        )
+        ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
+        num_classes = ds_class_map[dataset]
 
     for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-            config_id = (
-                f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
-            )
+            config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
             pipeline_configs.append(
                 pipeline_gen_func(
                     config_id,
@@ -250,7 +274,7 @@ def run_experiment() -> None:
                     num_classes,
                     seed,
                     optimizer,
-                    lr
+                    lr,
                 )
             )
 

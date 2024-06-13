@@ -36,7 +36,7 @@ def gen_arxiv_config(
     num_classes: int,
     seed: int,
     optimizer: str,
-    lr: float
+    lr: float,
 ) -> ModynPipelineConfig:
     del model  # ignored for now
     del dataset
@@ -44,26 +44,20 @@ def gen_arxiv_config(
 
     if optimizer == "SGD":
         opti_conf = OptimizerConfig(
-                    name="default",
-                    algorithm="SGD",
-                    source="PyTorch",
-                    param_groups=[
-                        OptimizerParamGroup(
-                            module="model", config={"lr": lr, "momentum": 0.9, "weight_decay": 0.01}
-                        )
-                    ],
-                )
+            name="default",
+            algorithm="SGD",
+            source="PyTorch",
+            param_groups=[
+                OptimizerParamGroup(module="model", config={"lr": lr, "momentum": 0.9, "weight_decay": 0.01})
+            ],
+        )
     elif optimizer == "AdamW":
         opti_conf = OptimizerConfig(
-                    name="default",
-                    algorithm="AdamW",
-                    source="PyTorch",
-                    param_groups=[
-                        OptimizerParamGroup(
-                            module="model", config={"lr": lr, "weight_decay": 0.01}
-                        )
-                    ],
-                )
+            name="default",
+            algorithm="AdamW",
+            source="PyTorch",
+            param_groups=[OptimizerParamGroup(module="model", config={"lr": lr, "weight_decay": 0.01})],
+        )
     else:
         raise ValueError(optimizer)
 
@@ -85,7 +79,7 @@ def gen_arxiv_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
-            seed=seed
+            seed=seed,
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(
@@ -170,7 +164,8 @@ def gen_arxiv_config(
                             config={"num_classes": 172, "average": "micro"},
                         ),
                     ],
-                ) for dataset in ["arxiv", "arxiv-test"]
+                )
+                for dataset in ["arxiv", "arxiv-test"]
             ],
         ),
     )

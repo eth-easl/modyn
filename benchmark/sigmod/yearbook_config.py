@@ -69,8 +69,7 @@ def gen_yearbook_config(
     num_classes: int,
     seed: int,
     optimizer: str,
-    lr: float
-
+    lr: float,
 ) -> ModynPipelineConfig:
     del dataset
     del num_classes
@@ -103,7 +102,7 @@ def gen_yearbook_config(
             epochs_per_trigger=num_epochs,
             shuffle=True,
             amp=False,
-            seed=seed
+            seed=seed,
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(
@@ -124,8 +123,10 @@ def gen_yearbook_config(
                     execution_time="after_training",
                     models="matrix",
                     datasets=["yearbook-test"],
-                    strategy=PeriodicEvalStrategyConfig(every="1d", interval="[-25h; +25h]", eval_start_from=0, eval_end_at=1400000),
-                )
+                    strategy=PeriodicEvalStrategyConfig(
+                        every="1d", interval="[-25h; +25h]", eval_start_from=0, eval_end_at=1400000
+                    ),
+                ),
             ],
             device=gpu_device,
             result_writers=["json"],
@@ -174,7 +175,8 @@ def gen_yearbook_config(
                             config={"num_classes": 2, "average": "micro"},
                         ),
                     ],
-                ) for dataset in ["yearbook", "yearbook-test"]
+                )
+                for dataset in ["yearbook", "yearbook-test"]
             ],
         ),
     )
