@@ -86,8 +86,8 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
         with (
             patch.object(IrreducibleLossProducer, "connect_to_model_storage", return_value=mock_model_storage_stub),
             patch(
-                "modyn.trainer_server.internal.trainer."
-                "remote_downsamplers.irreducible_loss_producer.download_trained_model",
+                "modyn.trainer_server.internal.trainer.remote_downsamplers."
+                "rho_loss_utils.irreducible_loss_producer.download_trained_model",
                 return_value=model_weights_file.name,
             ) as mock_download_trained_model,
         ):
