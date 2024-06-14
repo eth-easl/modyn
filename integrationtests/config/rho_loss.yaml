@@ -13,10 +13,10 @@ training:
   gpus: 1
   device: "cpu"
   dataloader_workers: 2
-  use_previous_model: True
+  use_previous_model: False
   initial_model: random
   batch_size: 4
-  shuffle: True
+  shuffle: False
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -59,7 +59,7 @@ selection_strategy:
       device: "cpu"
       dataloader_workers: 2
       batch_size: 2
-      shuffle: True
+      shuffle: False
       optimizers:
         - name: "default"
           algorithm: "SGD"
