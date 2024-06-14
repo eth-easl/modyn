@@ -141,7 +141,7 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     print(selection_strategy_resp)
     assert selection_strategy_resp["strategy_name"] == "RemoteRHOLossDownsampling"
     assert selection_strategy_resp["downsampling_enabled"]
-    downsampling_config = selection_strategy_resp["downsampler_config"]["value"]
+    downsampling_config = json.loads(selection_strategy_resp["downsampler_config"]["value"])
     rho_pipeline_id = downsampling_config["rho_pipeline_id"]
     latest_il_model_id = downsampling_config["il_model_id"]
 
