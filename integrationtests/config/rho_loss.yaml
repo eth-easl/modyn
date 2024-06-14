@@ -50,6 +50,7 @@ selection_strategy:
   tail_triggers: 0
   downsampling_config:
     strategy: RHOLoss
+    sample_then_batch: False
     holdout_set_ratio: 30
     ratio: 60
     il_training_config:
