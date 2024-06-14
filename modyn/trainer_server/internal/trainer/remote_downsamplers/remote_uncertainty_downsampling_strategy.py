@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -17,6 +17,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     This strategy collects a measure of uncertainty (LeastConfidence, Entropy or Margin) for each sample and selects
     the top-k most uncertain samples.
     The user can specify which metric to use with the pipeline parameter score_metric.
+    Fixes issue https://github.com/PatrickZH/DeepCore/issues/11
     """
 
     def __init__(
@@ -25,10 +26,11 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         trigger_id: int,
         batch_size: int,
         params_from_selector: dict,
+        modyn_config: dict,
         per_sample_loss: Any,
         device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
 
         self.criterion = per_sample_loss
         self.scores = np.array([])
@@ -54,6 +56,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     def inform_samples(
         self,
         sample_ids: list[int],
+        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
         forward_output: torch.Tensor,
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
@@ -64,19 +67,26 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
-    def _compute_score(self, forward_output: torch.Tensor) -> np.ndarray:
+    def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
         if self.score_metric == "LeastConfidence":
             scores = forward_output.max(dim=1).values.cpu().numpy()
         elif self.score_metric == "Entropy":
-            preds = torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
+            preds = (
+                torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
+                if not disable_softmax
+                else forward_output.cpu().numpy()
+            )
             scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
         elif self.score_metric == "Margin":
-            preds = torch.nn.functional.softmax(forward_output, dim=1)
-            preds_argmax = torch.argmax(preds, dim=1)
-            max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()
-            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
-            preds_sub_argmax = torch.argmax(preds, dim=1)
-            scores = (max_preds - preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]).cpu().numpy()
+            preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
+            preds_argmax = torch.argmax(preds, dim=1)  # gets top class
+            max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
+            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = (
+                -1.0
+            )  # remove highest class from softmax ouptut
+            preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
+            second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
+            scores = (max_preds - second_max_preds).cpu().numpy()
         else:
             raise AssertionError("The required metric does not exist")
 
@@ -119,7 +129,15 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         self.index_sampleid_map = []
 
     def _select_indexes_from_scores(self, target_size: int) -> tuple[list[int], torch.Tensor]:
-        return np.argsort(self.scores[::-1])[:target_size], torch.ones(target_size).float()
+        # np.argsort sorts in ascending order
+        # this means we select elements with the lowest scores, however that's what we want:
+        # LeastConfidence: the score is the maximum probability of an item, hence we want to
+        # select the items with the lowest max probability (most uncertain/least confidence)
+        # Entropy: (np.log(preds + 1e-6) * preds).sum(axis=1) calculates the negative entropy,
+        # we select those with minimal negative entropy, i.e., maximum entropy
+        # Margin: We look for the smallest margin. The larger the margin, the more certain the
+        # model is.
+        return np.argsort(self.scores)[:target_size], torch.ones(target_size).float()
 
     @property
     def requires_grad(self) -> bool:

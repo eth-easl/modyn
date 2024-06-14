@@ -164,6 +164,7 @@ class TrainerServerGRPCServicer:
         process = mp.Process(
             target=train,
             args=(
+                self._config,
                 self._training_dict[training_id],
                 request.device,
                 self._modyn_base_dir / f"log-{training_id}.txt",
