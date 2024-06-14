@@ -90,7 +90,7 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = self._connect_to_selector()
         self._uses_weights = self.uses_weights()
 
-    def _connect_to_selector(self) -> SelectorStub:
+    def _connect_to_selector(self) -> SelectorStub:  # pragma: no cover
         max_retries = 5
         retry_delay = 1  # seconds
 
@@ -105,16 +105,12 @@ class SelectorKeySource(AbstractKeySource):
             if grpc_connection_established(selector_channel):
                 return SelectorStub(selector_channel)
 
-            # no connection established
-            if attempt < max_retries:
-                logger.info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
-            else:
-                logger.error(f"Failed to establish gRPC connection after {max_retries} attempts.")
-                raise ConnectionError(
-                    f"Could not establish gRPC connection to selector at address {self._selector_address}."
-                )
+            logger.info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
+
+        logger.error(f"Failed to establish gRPC connection after {max_retries} attempts.")
+        raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
 
     def end_of_trigger_cleaning(self) -> None:
         pass

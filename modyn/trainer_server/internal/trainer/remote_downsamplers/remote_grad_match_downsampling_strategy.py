@@ -32,11 +32,19 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         trigger_id: int,
         batch_size: int,
         params_from_selector: dict,
+        modyn_config: dict,
         per_sample_loss: Any,
         device: str,
     ):
         super().__init__(
-            pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device, MatrixContent.GRADIENTS
+            pipeline_id,
+            trigger_id,
+            batch_size,
+            params_from_selector,
+            modyn_config,
+            per_sample_loss,
+            device,
+            MatrixContent.GRADIENTS,
         )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:

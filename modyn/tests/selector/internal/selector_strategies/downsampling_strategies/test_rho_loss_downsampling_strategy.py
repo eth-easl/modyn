@@ -18,7 +18,7 @@ from modyn.config.schema.pipeline import (
     RHOLossDownsamplingConfig,
 )
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
-from modyn.metadata_database.models import Pipeline, SelectorStateMetadata
+from modyn.metadata_database.models import Pipeline, SelectorStateMetadata, TrainedModel, Trigger
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy import (
@@ -280,13 +280,26 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
     maximum_keys_in_memory = 4
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
-    strategy.il_model_id = 42
+
+    with MetadataDatabaseConnection(modyn_config) as database:
+        for trigger_id in range(3):
+            database.session.add(Trigger(pipeline_id=strategy.rho_pipeline_id, trigger_id=trigger_id))
+            database.session.add(
+                TrainedModel(
+                    pipeline_id=strategy.rho_pipeline_id,
+                    trigger_id=trigger_id,
+                    model_path="",
+                    metadata_path="",
+                )
+            )
+        database.session.commit()
 
     expected = {
         "downsampling_ratio": 60,
         "maximum_keys_in_memory": maximum_keys_in_memory,
         "sample_then_batch": False,
-        "il_model_id": 42,
+        "il_model_id": 3,
+        "rho_pipeline_id": strategy.rho_pipeline_id,
     }
     assert strategy.downsampling_params == expected
 
@@ -346,7 +359,6 @@ def test_inform_next_trigger(
     maximum_keys_in_memory = 4
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
-    assert strategy.il_model_id is None
     strategy._prepare_holdout_set = MagicMock()
     strategy._train_il_model = MagicMock(return_value=42)
 
@@ -356,4 +368,3 @@ def test_inform_next_trigger(
 
     strategy._prepare_holdout_set.assert_called_once_with(trigger_id, storage_backend)
     strategy._train_il_model.assert_called_once_with(trigger_id)
-    assert strategy.il_model_id == 42
