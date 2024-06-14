@@ -7,9 +7,11 @@ import sys
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.yearbook_config import gen_yearbook_config
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
+from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig
+from modyn.config.schema.pipeline.training.config import TrainingConfig
 from modyn.utils.utils import current_time_millis
 
-from benchmark.sigmod.cglm_config import gen_cglm_config
+from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config import LrSchedulerConfig
 
@@ -23,6 +25,8 @@ from modyn.config import (
     RS2DownsamplingConfig,
     LossDownsamplingConfig,
     GradNormDownsamplingConfig,
+    RHOLossDownsamplingConfig,
+    UncertaintyDownsamplingConfig,
 )
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -38,7 +42,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def gen_selection_strategies(warmup_triggers: int) -> list[tuple[str, SelectionStrategy]]:
+def gen_selection_strategies(
+    warmup_triggers: int, num_classes: int, training_config: TrainingConfig
+) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
     # Full data training
@@ -167,6 +173,137 @@ def gen_selection_strategies(warmup_triggers: int) -> list[tuple[str, SelectionS
         )
     )
 
+    # RHOLossDownsamplingConfig
+    il_config_options = {
+        "il_model_id": "ResNet18",
+        "il_model_config": {"use_pretrained": True, "num_classes": num_classes},
+        "use_previous_model": False, 
+    }
+
+    training_config_dict = training_config.model_dump()
+    training_config_dict.update(il_config_options)
+    strategies.append(
+        (
+            "rho_loss_bts_10il",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=RHOLossDownsamplingConfig(
+                    ratio=50,
+                    sample_then_batch=False,
+                    period=1,
+                    holdout_set_ratio=10,
+                    il_training_config=ILTrainingConfig(**training_config_dict),
+                ),
+            ),
+        )
+    )
+
+    # Margin StB every epoch
+    strategies.append(
+        (
+            "grad_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=True, period=1, score_metric="Margin"
+                ),
+            ),
+        )
+    )
+
+    # Margin BtS
+    strategies.append(
+        (
+            "grad_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=False, period=1, score_metric="Margin"
+                ),
+            ),
+        )
+    )
+
+    # LeastConf StB every epoch
+    strategies.append(
+        (
+            "lc_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=True, period=1, score_metric="LeastConfidence"
+                ),
+            ),
+        )
+    )
+
+    # LeastConf BtS
+    strategies.append(
+        (
+            "grad_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=False, period=1, score_metric="LeastConfidence"
+                ),
+            ),
+        )
+    )
+
+    # Entropy StB every epoch
+    strategies.append(
+        (
+            "entropy_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=True, period=1, score_metric="Entropy"
+                ),
+            ),
+        )
+    )
+
+    # Entropy BtS
+    strategies.append(
+        (
+            "entropy_stb",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=50, sample_then_batch=False, period=1, score_metric="Entropy"
+                ),
+            ),
+        )
+    )
+
     return strategies
 
 
@@ -212,7 +349,7 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seed = 42  # set to None to disable, should be 0-100
-    num_gpus = 1 # to parallelize across gpus
+    num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
 
     ## only touch if sure you wanna touch
@@ -220,6 +357,7 @@ def run_experiment() -> None:
     optimizer = None  # ignored for non arxiv
     lr = None  # ignored for non arxiv
     num_classes = 6404  # necessary for CGLM, ignored for others
+    train_conf_func = None
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
         warmup_triggers = 2
@@ -232,6 +370,7 @@ def run_experiment() -> None:
             warmup_triggers,
             dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
         )
+        raise NotImplementedError("need to implement train conf func for rho loss for yearbook, similar to CGLM")
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
@@ -246,6 +385,8 @@ def run_experiment() -> None:
             warmup_triggers,
             dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
         )
+        raise NotImplementedError("need to implement train conf func for rho loss for arxiv, similar to CGLM")
+
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 5
@@ -260,10 +401,12 @@ def run_experiment() -> None:
         )
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
+        train_conf_func = gen_cglm_training_conf
 
     run_id = 0
-    for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers):
-        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
+    for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
+        train_conf = train_conf_func(train_gpu, lr_scheduler_config, num_epochs, seed)
+        for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers, num_classes, train_conf):
             config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
             if run_id % num_gpus == gpu_id:
                 pipeline_configs.append(
