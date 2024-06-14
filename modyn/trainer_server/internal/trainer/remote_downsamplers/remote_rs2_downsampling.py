@@ -57,8 +57,13 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         self._current_subset = 0
 
     def _epoch_step_no_r(self, target_size: int) -> None:
-        max_subset = len(self._all_sample_ids) // target_size
+        if (max_subset := len(self._all_sample_ids) // target_size) == 0:
+            self._current_subset = 0
+            self._subsets = [[]]
+            return
+
         self._current_subset += 1
+
         # len(self._subsets) == 0 holds in the very first epoch
         if self._current_subset >= max_subset or len(self._subsets) == 0:
             random.shuffle(self._all_sample_ids)
