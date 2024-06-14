@@ -130,6 +130,7 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
         )
     )
     pipeline_id = res["pipeline_id"]
+    print(pipeline_id)
     assert pipeline_id >= 0
     get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
     assert_pipeline_exit_without_error(get_pipeline_status_res)
