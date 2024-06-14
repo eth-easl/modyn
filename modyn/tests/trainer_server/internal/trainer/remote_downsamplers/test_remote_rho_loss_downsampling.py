@@ -28,6 +28,7 @@ def dummy_init_params(dummy_system_config: ModynConfig):
         "rho_pipeline_id": 1,
         "il_model_id": 2,
         "downsampling_ratio": 50,
+        "sample_then_batch": False,
     }
     modyn_config = dummy_system_config.model_dump(by_alias=True)
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
@@ -120,3 +121,49 @@ def test_select_points(mock__load_il_model, dummy_init_params):
     selected_ids, weights = sampler.select_points()
     assert selected_ids == [2, 4, 3]
     assert torch.allclose(weights, torch.tensor([1.0, 1.0, 1.0]))
+
+
+@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
+def test_sample_then_batch(mock__load_il_model, dummy_init_params):
+    batch_size = 3
+    num_batches = 5
+    data_size = num_batches * batch_size
+    all_sample_ids = list(range(data_size))
+    selection_ratio = 60
+    # will be [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11], [12, 13, 14]]
+    sample_ids_in_each_batch = [all_sample_ids[i : i + batch_size] for i in range(0, len(all_sample_ids), batch_size)]
+
+    mock_per_sample_loss = Mock(side_effect=[torch.tensor(chunk) for chunk in sample_ids_in_each_batch])
+    dummy_init_params["per_sample_loss"] = mock_per_sample_loss
+    dummy_init_params["batch_size"] = batch_size
+    dummy_init_params["params_from_selector"]["sample_then_batch"] = True
+    dummy_init_params["params_from_selector"]["downsampling_ratio"] = selection_ratio
+    sampler = RemoteRHOLossDownsampling(**dummy_init_params)
+
+    dummy_input = torch.randn(batch_size, 5)
+    dummy_output = torch.randn(batch_size, 5)
+    target = torch.randint(5, (batch_size,))
+    embedding = None
+
+    fake_irreducible_loss = [torch.tensor(chunk[::-1]) for chunk in sample_ids_in_each_batch[::-1]]
+
+    with patch.object(
+        IrreducibleLossProducer, "get_irreducible_loss", side_effect=fake_irreducible_loss
+    ) as mock_get_il:
+        sampler.init_downsampler()
+        for batch_id in range(num_batches):
+            sample_ids = sample_ids_in_each_batch[batch_id]
+            sampler.inform_samples(sample_ids, dummy_input, dummy_output, target, embedding)
+        assert sampler.index_sampleid_map == all_sample_ids
+        assert sampler.rho_loss.shape == torch.Size([data_size])
+        assert sampler.number_of_points_seen == data_size
+
+        assert mock_get_il.call_count == num_batches
+        assert mock_per_sample_loss.call_count == num_batches
+        expected_rho_loss = torch.tensor(range(data_size)) - torch.tensor(range(data_size - 1, -1, -1))
+        assert torch.allclose(sampler.rho_loss, expected_rho_loss)
+
+        selected_ids, selected_weights = sampler.select_points()
+        target_size = round(selection_ratio * data_size / 100)
+        assert selected_ids == all_sample_ids[-target_size:]
+        assert torch.allclose(selected_weights, torch.ones(target_size))

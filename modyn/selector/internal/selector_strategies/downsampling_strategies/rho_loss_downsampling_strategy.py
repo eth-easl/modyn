@@ -1,5 +1,5 @@
 import json
-from typing import Any, Iterable, Tuple
+from typing import Any, Iterable, Optional, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig, NewDataStrategyConfig, RHOLossDownsamplingConfig
@@ -51,34 +51,43 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
         config["rho_pipeline_id"] = self.rho_pipeline_id
+        il_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
+        assert il_model_id is not None
+        config["il_model_id"] = il_model_id
+        return config
 
-        with MetadataDatabaseConnection(self._modyn_config) as database:
+    @staticmethod
+    def _get_latest_il_model_id(rho_pipeline_id: int, modyn_config: dict) -> Optional[int]:
+        with MetadataDatabaseConnection(modyn_config) as database:
             # find the maximal trigger id. This is the current trigger id.
             max_trigger_id = (
                 database.session.query(func.max(Trigger.trigger_id))
-                .filter(Trigger.pipeline_id == self.rho_pipeline_id)
+                .filter(Trigger.pipeline_id == rho_pipeline_id)
                 .scalar()
             )
-            assert max_trigger_id is not None
+            if max_trigger_id is None:
+                return None
 
             # one pipeline id and one trigger id can only correspond to one model
             il_model_id = (
                 database.session.query(TrainedModel.model_id)
-                .filter(TrainedModel.pipeline_id == self.rho_pipeline_id, TrainedModel.trigger_id == max_trigger_id)
+                .filter(TrainedModel.pipeline_id == rho_pipeline_id, TrainedModel.trigger_id == max_trigger_id)
                 .scalar()
             )
             assert il_model_id is not None
-
-        config["il_model_id"] = il_model_id
-        return config
+        return il_model_id
 
     def _train_il_model(self, trigger_id: int) -> int:
+        if self.il_training_config.use_previous_model:
+            previous_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
+        else:
+            previous_model_id = None
         training_id = self.grpc.start_training(
             pipeline_id=self.rho_pipeline_id,
             trigger_id=trigger_id,
             training_config=self.il_training_config,
             data_config=self.data_config,
-            previous_model_id=None,
+            previous_model_id=previous_model_id,
         )
         self.grpc.wait_for_training_completion(training_id)
         model_id = self.grpc.store_trained_model(training_id)
