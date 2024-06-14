@@ -76,6 +76,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         self._first_epoch = False
         self._epoch_step()
+        assert self._current_subset < len(self._subsets), f"Inconsistent state: {self._current_subset}\n{self._subsets}\n{self._first_epoch}\n{self._all_sample_ids}"
         return self._subsets[self._current_subset], torch.ones(len(self._subsets[self._current_subset]))
 
     @property
