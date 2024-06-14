@@ -32,3 +32,12 @@ class LocalKeySource(AbstractKeySource):
 
     def end_of_trigger_cleaning(self) -> None:
         self._trigger_sample_storage.clean_trigger_data(self._pipeline_id, self._trigger_id)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['_trigger_sample_storage'] # not pickable
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._trigger_sample_storage = TriggerSampleStorage(self.offline_dataset_path)
