@@ -117,7 +117,6 @@ class ILTrainingConfig(TrainingConfig):
     # hardcode values that are not relevant in the IL training
     gpus: Literal[1] = 1
     num_samples_to_pass: Literal[None] = None
-    use_previous_model: Literal[False] = False
     initial_model: Literal["random"] = "random"
     initial_model_id: Literal[None] = None
     checkpointing: NoCheckpointingConfig = Field(default=NoCheckpointingConfig())
