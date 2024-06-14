@@ -7,8 +7,8 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_uncertaint
 )
 
 
-
-def sampler_config(modyn_config: ModynConfig, request):
+@pytest.fixture(params=["LeastConfidence", "Entropy", "Margin"])
+def sampler_config(dummy_system_config: ModynConfig, request):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -19,14 +19,14 @@ def sampler_config(modyn_config: ModynConfig, request):
         "balance": False,
         "score_metric": request.param,
     }
-    return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    return 0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 
 
 @pytest.fixture(params=[True, False])
-def balance_config(modyn_config: ModynConfig, request, sampler_config):
-    _, _, _, params_from_selector, per_sample_loss_fct, device = sampler_config
+def balance_config(request, sampler_config):
+    _, _, _, params_from_selector, dummy_system_config, per_sample_loss_fct, device = sampler_config
     params_from_selector["balance"] = request.param
-    return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, device
+    return 0, 0, 0, params_from_selector, dummy_system_config, per_sample_loss_fct, device
 
 
 def test_init(sampler_config):
@@ -42,7 +42,7 @@ def test_inform_samples(sampler_config):
     with torch.inference_mode():
         outputs = torch.randn((10, 5))
         sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, outputs, None)
+        amds.inform_samples(sample_ids, None, outputs, None)
         assert len(amds.scores) == 10
         assert amds.index_sampleid_map == sample_ids
 
@@ -77,7 +77,7 @@ def test_select_points(balance_config):
     with torch.inference_mode():
         outputs = torch.randn((10, 5))
         sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, outputs, None)
+        amds.inform_samples(sample_ids, None, outputs, None)
         if amds.balance:
             amds.inform_end_of_current_label()
         selected_ids, weights = amds.select_points()
@@ -110,7 +110,7 @@ def test_select_from_scores_shapes(sampler_config):
     with torch.inference_mode():
         outputs = torch.randn((10, 5))
         sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, outputs, None)
+        amds.inform_samples(sample_ids, None, outputs, None)
         selected_ids, weights = amds._select_from_scores()
         assert len(selected_ids) == 5
         assert weights.size(0) == 5
