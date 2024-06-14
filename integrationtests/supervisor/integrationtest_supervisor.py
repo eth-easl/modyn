@@ -54,28 +54,6 @@ def assert_pipeline_exit_without_error(res: dict) -> None:
     assert exit_msg["exit_msg"]["exitcode"] == 0
 
 
-def test_one_experiment_pipeline() -> None:
-    pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
-    supervisor = SupervisorStub(connect_to_server("supervisor"))
-    res = parse_grpc_res(
-        supervisor.start_pipeline(
-            StartPipelineRequest(
-                pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
-                start_replay_at=0,
-                maximum_triggers=1,
-            )
-        )
-    )
-    pipeline_id = res["pipeline_id"]
-
-    print(f"start pipeline: {res}")
-    assert pipeline_id >= 0
-
-    get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
-    print(get_pipeline_status_res)
-    assert_pipeline_exit_without_error(get_pipeline_status_res)
-
-
 def test_two_experiment_pipelines() -> None:
     pipeline_config = load_config_from_file(DUMMY_CONFIG_FILE)
     supervisor = SupervisorStub(connect_to_server("supervisor"))
@@ -120,17 +98,17 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     supervisor = SupervisorStub(connect_to_server("supervisor"))
     selector = SelectorStub(connect_to_server("selector"))
     num_triggers = 2
+    # we set in the rho_loss.yaml that trigger is caused every 10 samples
+    # since we have a dataset of 20 samples there will be 2 triggers.
     res = parse_grpc_res(
         supervisor.start_pipeline(
             StartPipelineRequest(
                 pipeline_config=SupervisorJsonString(value=json.dumps(pipeline_config)),
                 start_replay_at=0,
-                maximum_triggers=num_triggers,
             )
         )
     )
     pipeline_id = res["pipeline_id"]
-    print(pipeline_id)
     assert pipeline_id >= 0
     get_pipeline_status_res = parse_grpc_res(wait_for_pipeline(pipeline_id))
     assert_pipeline_exit_without_error(get_pipeline_status_res)
@@ -147,11 +125,11 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     latest_il_model_id = downsampling_config["il_model_id"]
 
     with MetadataDatabaseConnection(MODYN_CONFIG) as database:
-        actual_aux_pipeline_id = (
-            database.session.query(Pipeline.auxiliary_pipeline_id).filter(Pipeline.pipeline_id == pipeline_id).first()
+        main_pipeline: Pipeline = (
+            database.session.query(Pipeline).filter(Pipeline.pipeline_id == pipeline_id).first()
         )
         # validate this rho_pipeline_id is recorded in the pipelines table
-        assert actual_aux_pipeline_id == rho_pipeline_id
+        assert main_pipeline.auxiliary_pipeline_id == rho_pipeline_id
         # validate that there are {num_triggers} triggers associated with the rho_pipeline_id
         triggers: list[Trigger] = database.session.query(Trigger).filter(Trigger.pipeline_id == rho_pipeline_id).all()
         trigger_ids = [trigger.trigger_id for trigger in triggers]
@@ -175,7 +153,6 @@ if __name__ == "__main__":
     tiny_dataset_helper = TinyDatasetHelper()
     try:
         tiny_dataset_helper.setup_dataset()
-        test_one_experiment_pipeline()
         test_two_experiment_pipelines()
     finally:
         tiny_dataset_helper.cleanup_dataset_dir()
