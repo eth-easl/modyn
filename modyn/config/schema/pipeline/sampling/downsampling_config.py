@@ -127,7 +127,6 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
-    sample_then_batch: Literal[False] = False
     holdout_set_ratio: int = Field(
         description=("How much of the training set is used as the holdout set."),
         min=0,
