@@ -10,6 +10,7 @@ from analytics.app.data.transform import (
 )
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
+from analytics.app.pages.plots.num_samples import section_num_samples
 from analytics.app.pages.plots.one_dimensional_comparison import section4_1d_boxplots
 from dash import Input, Output, callback, dcc, html
 
@@ -54,7 +55,7 @@ ui_pipeline_selection = html.Div(
 
 
 def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
-    # --------------------------------------------------- DATA --------------------------------------------------- #
+    # ----------------------------------------------------- DATA ----------------------------------------------------- #
 
     pipeline_ref = f"{pipeline_id} - {pipelines[pipeline_id][1]}"
 
@@ -69,9 +70,11 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
     df_parents = pipeline_stage_parents(logs)
     df_logs_add_parents = df_logs_agg.merge(df_parents, left_on="id", right_on="id", how="left")
 
-    df_logs_models, df_logs_eval_single = dfs_models_and_evals(logs, df_logs["sample_time"].max())
+    df_logs_models, df_logs_eval_requests, df_logs_eval_single = dfs_models_and_evals(
+        logs, df_logs["sample_time"].max()
+    )
 
-    # -------------------------------------------------- LAYOUT -------------------------------------------------- #
+    # ---------------------------------------------------- LAYOUT ---------------------------------------------------- #
 
     eval_items = []
     if df_logs_eval_single is None or df_logs_agg is None:
@@ -94,6 +97,14 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                 False,
                 add_pipeline_ref(df_logs_eval_single, pipeline_ref),
                 add_pipeline_ref(df_logs_models, pipeline_ref),
+            )
+        )
+        eval_items.append(
+            section_num_samples(
+                "pipeline",
+                False,
+                add_pipeline_ref(df_logs_models, pipeline_ref),
+                add_pipeline_ref(df_logs_eval_requests, pipeline_ref),
             )
         )
         eval_items.append(

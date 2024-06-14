@@ -39,7 +39,9 @@ def logs_dataframe_agg_by_stage(stage_run_df: pd.DataFrame) -> pd.DataFrame:
     return df_agg
 
 
-def dfs_models_and_evals(logs: PipelineLogs, max_sample_time: Any) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+def dfs_models_and_evals(
+    logs: PipelineLogs, max_sample_time: Any
+) -> tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame | None]:
     """Returns a dataframe with the stored models and the dataframe for evaluations"""
 
     # ---------------------------------------------------- MODELS ---------------------------------------------------- #
@@ -53,11 +55,18 @@ def dfs_models_and_evals(logs: PipelineLogs, max_sample_time: Any) -> tuple[pd.D
     ]
     df_single_triggers = pd.concat([x.df(extended=True) for x in _list_single_triggers])
 
-    joined_models = df_models.merge(df_single_triggers, on="trigger_idx", how="left", suffixes=("", "_trigger"))
+    _list_single_trainings = [x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.TRAIN.name]
+    df_single_trainings = pd.concat([x.df(extended=True) for x in _list_single_trainings])
+
+    joined_models = df_models.merge(df_single_triggers, on="trigger_idx", how="left", suffixes=("", "_trigger")).merge(
+        df_single_trainings, on="trigger_idx", how="left", suffixes=("", "_training")
+    )
     joined_models["train_start"] = joined_models["first_timestamp"]
     joined_models["train_end"] = joined_models["last_timestamp"]
 
-    df_models = joined_models[[col for col in df_models.columns] + ["train_start", "train_end"]]
+    df_models = joined_models[
+        [col for col in df_models.columns] + ["train_start", "train_end", "num_batches", "num_samples"]
+    ]
 
     convert_epoch_to_datetime(df_models, "train_start")
     convert_epoch_to_datetime(df_models, "train_end")
@@ -75,27 +84,36 @@ def dfs_models_and_evals(logs: PipelineLogs, max_sample_time: Any) -> tuple[pd.D
 
     # -------------------------------------------------- EVALUATIONS ------------------------------------------------- #
 
-    dfs = [
+    dfs_requests = [
+        run.df(extended=True)
+        for run in logs.supervisor_logs.stage_runs
+        if run.id == PipelineStage.EVALUATE_SINGLE.name and run.info.failure_reason is None and run.info.eval_request
+    ]
+    dfs_metrics = [
         cast(SingleEvaluationInfo, run.info).results_df()
         for run in logs.supervisor_logs.stage_runs
         if run.id == PipelineStage.EVALUATE_SINGLE.name and run.info.failure_reason is None and run.info.eval_request
     ]
-    if not dfs:
-        return df_models, None
-    evals = pd.concat(dfs)
-    evals["interval_center"] = (evals["interval_start"] + evals["interval_end"]) / 2
-    convert_epoch_to_datetime(evals, "interval_start")
-    convert_epoch_to_datetime(evals, "interval_end")
-    convert_epoch_to_datetime(evals, "interval_center")
-    evals.sort_values(by=["interval_center"], inplace=True)
+    if not dfs_requests and not dfs_metrics:
+        return df_models, None, None
 
-    # linearize ids:
-    evals["training_idx"] = evals["training_id"]
-    evals["model_idx"] = evals["id_model"]
-    linearize_ids(evals, [], "training_idx", trigger_idx_mappings)
-    linearize_ids(evals, [], "model_idx", model_idx_mappings)
+    eval_requests = pd.concat(dfs_requests)
+    evals_metrics = pd.concat(dfs_metrics)
 
-    return df_models, evals
+    for evals_df in [eval_requests, evals_metrics]:
+        evals_df["interval_center"] = (evals_df["interval_start"] + evals_df["interval_end"]) / 2
+        convert_epoch_to_datetime(evals_df, "interval_start")
+        convert_epoch_to_datetime(evals_df, "interval_end")
+        convert_epoch_to_datetime(evals_df, "interval_center")
+        evals_df.sort_values(by=["interval_center"], inplace=True)
+
+        # linearize ids:
+        evals_df["training_idx"] = evals_df["training_id"]
+        evals_df["model_idx"] = evals_df["id_model"]
+        linearize_ids(evals_df, [], "training_idx", trigger_idx_mappings)
+        linearize_ids(evals_df, [], "model_idx", model_idx_mappings)
+
+    return df_models, eval_requests, evals_metrics
 
 
 def logs_dataframe_pipeline_stage_logs(logs: PipelineLogs, stage: PipelineStage) -> pd.DateOffset:

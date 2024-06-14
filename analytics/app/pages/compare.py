@@ -11,6 +11,7 @@ from analytics.app.data.transform import (
 from analytics.app.pages.plots.cost_over_time import section1_stacked_bar
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
+from analytics.app.pages.plots.num_samples import section_num_samples
 from dash import Input, Output, callback, dcc, html
 
 from .plots.cost_vs_eval_metric_agg import section3_scatter_cost_eval_metric
@@ -77,13 +78,20 @@ def render_pipeline_infos(pipeline_ids: list[int]) -> list[html.Div]:
     ]
 
     df_logs_models = pd.concat(
-        [add_pipeline_ref(single_df_models, pipeline_ref) for pipeline_ref, single_df_models, _ in _dfs_models_evals]
+        [add_pipeline_ref(single_df_models, pipeline_ref) for pipeline_ref, single_df_models, _, _ in _dfs_models_evals]
     )
 
+    df_logs_eval_requests = pd.concat(
+        [
+            add_pipeline_ref(_single_eval_req_df, pipeline_ref)
+            for pipeline_ref, _, _single_eval_req_df, _ in _dfs_models_evals
+            if _single_eval_req_df is not None
+        ]
+    )
     df_logs_eval_single = pd.concat(
         [
             add_pipeline_ref(_single_eval_df, pipeline_ref)
-            for pipeline_ref, _, _single_eval_df in _dfs_models_evals
+            for pipeline_ref, _, _, _single_eval_df in _dfs_models_evals
             if _single_eval_df is not None
         ]
     )
@@ -106,6 +114,7 @@ def render_pipeline_infos(pipeline_ids: list[int]) -> list[html.Div]:
             section_metricovertime("compare", True, df_logs_eval_single),
         )
         eval_items.append(section_evalheatmap("compare", True, df_logs_eval_single, df_logs_models))
+        eval_items.append(section_num_samples("compare", True, df_logs_models, df_logs_eval_requests))
         eval_items.append(
             section3_scatter_num_triggers("compare", True, df_logs_agg, df_logs_eval_single),
         )

@@ -242,7 +242,6 @@ def section1_stacked_bar(page: str, df_logs_leaf: pd.DataFrame) -> html.Div:
                     ),
                 ]
             ),
-            dcc.Graph(id=f"{page}-costovertime-plot", figure=gen_figure(page, "batch_idx", True)),
-            # TODO: add dataset plot (how are samples distributed over time)
+            dcc.Graph(id=f"{page}-costovertime-plot", figure=gen_figure(page, "sample_time", True)),
         ]
     )
