@@ -3,7 +3,7 @@ pipeline:
   description: Example pipeline
   version: 1.0.0
 model:
-  id: ResNet18
+  id: Dummy
   config:
     num_classes: 10
 model_storage:
@@ -31,14 +31,15 @@ training:
   checkpointing:
     activated: False
 data:
-  dataset_id: image_test_dataset
-  transformations: ["transforms.ToTensor()",
-                    "transforms.Normalize((0.1307,), (0.3081,))"]
+  dataset_id: tiny_dataset
   bytes_parser_function: |
-    from PIL import Image
-    import io
-    def bytes_parser_function(data: memoryview) -> Image:
-      return Image.open(io.BytesIO(data)).convert("RGB")
+    import pandas as pd
+    import numpy as np
+    from io import BytesIO
+    def bytes_parser_function(data: memoryview) -> np.array:
+      df = pd.read_csv(BytesIO(data))
+      arr = df.to_numpy()[0]
+      return arr.astype(np.float32)
 trigger:
   id: DataAmountTrigger
   num_samples: 10
@@ -54,11 +55,12 @@ selection_strategy:
     holdout_set_ratio: 30
     ratio: 60
     il_training_config:
-      il_model_id: ResNet18
+      il_model_id: Dummy
       il_model_config:
           num_classes: 10
       device: "cpu"
-      dataloader_workers: 2
+      dataloader_workers: 1
+      use_previous_model: False
       batch_size: 2
       shuffle: False
       optimizers:

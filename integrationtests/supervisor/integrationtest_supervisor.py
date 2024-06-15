@@ -6,7 +6,6 @@ from google.protobuf.message import Message
 from integrationtests.utils import (
     DUMMY_CONFIG_FILE,
     RHO_LOSS_CONFIG_FILE,
-    ImageDatasetHelper,
     TinyDatasetHelper,
     connect_to_server,
     get_modyn_config,
@@ -24,7 +23,6 @@ from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import Supervi
 
 POLL_INTERVAL = 1
 MODYN_CONFIG = get_modyn_config()
-IMAGE_DATASET_ID = "image_test_dataset"
 
 
 def wait_for_pipeline(pipeline_id: int) -> GetPipelineStatusResponse:
@@ -125,9 +123,7 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
     latest_il_model_id = downsampling_config["il_model_id"]
 
     with MetadataDatabaseConnection(MODYN_CONFIG) as database:
-        main_pipeline: Pipeline = (
-            database.session.query(Pipeline).filter(Pipeline.pipeline_id == pipeline_id).first()
-        )
+        main_pipeline: Pipeline = database.session.query(Pipeline).filter(Pipeline.pipeline_id == pipeline_id).first()
         # validate this rho_pipeline_id is recorded in the pipelines table
         assert main_pipeline.auxiliary_pipeline_id == rho_pipeline_id
         # validate that there are {num_triggers} triggers associated with the rho_pipeline_id
@@ -150,18 +146,11 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
 
 
 if __name__ == "__main__":
-    tiny_dataset_helper = TinyDatasetHelper()
+    tiny_dataset_helper = TinyDatasetHelper(dataset_size=20)
     try:
         tiny_dataset_helper.setup_dataset()
         test_two_experiment_pipelines()
+        test_rho_loss_pipeline_with_two_triggers()
     finally:
         tiny_dataset_helper.cleanup_dataset_dir()
         tiny_dataset_helper.cleanup_storage_database()
-
-    image_dataset_helper = ImageDatasetHelper(dataset_size=20, dataset_id=IMAGE_DATASET_ID, num_classes=10)
-    try:
-        image_dataset_helper.setup_dataset()
-        test_rho_loss_pipeline_with_two_triggers()
-    finally:
-        image_dataset_helper.cleanup_dataset_dir()
-        image_dataset_helper.cleanup_storage_database()
