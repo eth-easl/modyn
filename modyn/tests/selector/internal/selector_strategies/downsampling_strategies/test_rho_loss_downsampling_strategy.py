@@ -63,6 +63,7 @@ def il_training_config():
         dataloader_workers=1,
         il_model_id="ResNet18",
         il_model_config={"num_classes": 2},
+        use_previous_model=False,
         amp=False,
         device="cpu",
         batch_size=16,
@@ -267,6 +268,20 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
 
 
+def add_trigger_and_model(pipeline_id: int, trigger_id: int):
+    with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
+        database.session.add(Trigger(pipeline_id=pipeline_id, trigger_id=trigger_id))
+        database.session.add(
+            TrainedModel(
+                pipeline_id=pipeline_id,
+                trigger_id=trigger_id,
+                model_path="",
+                metadata_path="",
+            )
+        )
+        database.session.commit()
+
+
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
 def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: DataConfig):
     pipeline_id = register_pipeline(None, data_config)
@@ -281,18 +296,8 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
 
-    with MetadataDatabaseConnection(modyn_config) as database:
-        for trigger_id in range(3):
-            database.session.add(Trigger(pipeline_id=strategy.rho_pipeline_id, trigger_id=trigger_id))
-            database.session.add(
-                TrainedModel(
-                    pipeline_id=strategy.rho_pipeline_id,
-                    trigger_id=trigger_id,
-                    model_path="",
-                    metadata_path="",
-                )
-            )
-        database.session.commit()
+    for trigger_id in range(3):
+        add_trigger_and_model(strategy.rho_pipeline_id, trigger_id)
 
     expected = {
         "downsampling_ratio": 60,
@@ -304,19 +309,26 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
     assert strategy.downsampling_params == expected
 
 
+@pytest.mark.parametrize("use_previous_model", [True, False])
+@pytest.mark.parametrize("previous_model_id", [None, 21])
 @patch.object(TrainerServerGRPCHandlerMixin, "start_training", return_value=42)
 @patch.object(TrainerServerGRPCHandlerMixin, "wait_for_training_completion")
 @patch.object(TrainerServerGRPCHandlerMixin, "store_trained_model", return_value=33)
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+@patch.object(RHOLossDownsamplingStrategy, "_get_latest_il_model_id")
 def test__train_il_model(
+    mock_get_latest_il_model_id: MagicMock,
     mock_store_trained_model: MagicMock,
     mock_wait_for_training_completion: MagicMock,
     mock_start_training: MagicMock,
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
+    previous_model_id: Optional[int],
+    use_previous_model: bool,
 ):
     pipeline_id = register_pipeline(None, data_config)
-
+    il_training_config.use_previous_model = use_previous_model
+    mock_get_latest_il_model_id.return_value = previous_model_id
     modyn_config = get_minimal_modyn_config()
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
@@ -325,6 +337,11 @@ def test__train_il_model(
     )
     maximum_keys_in_memory = 4
 
+    if use_previous_model:
+        expected_previous_model_id = previous_model_id
+    else:
+        # no matter what the previous_model_id is, it should not be used
+        expected_previous_model_id = None
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
     trigger_id = 1
     model_id = strategy._train_il_model(trigger_id)
@@ -333,8 +350,12 @@ def test__train_il_model(
         trigger_id=trigger_id,
         training_config=il_training_config,
         data_config=data_config,
-        previous_model_id=None,
+        previous_model_id=expected_previous_model_id,
     )
+    if use_previous_model:
+        mock_get_latest_il_model_id.assert_called_once_with(strategy.rho_pipeline_id, modyn_config)
+    else:
+        mock_get_latest_il_model_id.assert_not_called()
     mock_wait_for_training_completion.assert_called_once_with(mock_start_training.return_value)
     mock_store_trained_model.assert_called_once_with(mock_start_training.return_value)
     assert model_id == mock_store_trained_model.return_value
@@ -368,3 +389,13 @@ def test_inform_next_trigger(
 
     strategy._prepare_holdout_set.assert_called_once_with(trigger_id, storage_backend)
     strategy._train_il_model.assert_called_once_with(trigger_id)
+
+
+def test__get_latest_il_model_id():
+    modyn_config = get_minimal_modyn_config()
+    rho_pipeline_id = 1
+    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) is None
+    add_trigger_and_model(rho_pipeline_id, 0)
+    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) == 1
+    add_trigger_and_model(rho_pipeline_id, 1)
+    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) == 2
