@@ -103,6 +103,8 @@ def gen_arxiv_config(
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
                 )
             ],
+            after_pipeline_evaluation_workers=3,
+            after_training_evaluation_workers=3,
             device=gpu_device,
             result_writers=["json"],
             datasets=[

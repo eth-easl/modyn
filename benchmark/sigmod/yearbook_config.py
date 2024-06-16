@@ -128,6 +128,8 @@ def gen_yearbook_config(
                     ),
                 ),
             ],
+            after_pipeline_evaluation_workers=12,
+            after_training_evaluation_workers=12,
             device=gpu_device,
             result_writers=["json"],
             datasets=[
