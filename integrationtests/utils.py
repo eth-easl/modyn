@@ -44,7 +44,7 @@ CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.ya
 DUMMY_CONFIG_FILE = MODYN_INTEGRATIONTESTS_CONFIG_PATH / "dummy.yaml"
 RHO_LOSS_CONFIG_FILE = MODYN_INTEGRATIONTESTS_CONFIG_PATH / "rho_loss.yaml"
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
-NEW_DATASET_TIMEOUT = 600
+NEW_DATASET_TIMEOUT = 30
 
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}

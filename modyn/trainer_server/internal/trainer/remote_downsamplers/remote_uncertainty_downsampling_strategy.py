@@ -83,7 +83,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
             max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
             preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = (
                 -1.0
-            )  # remove highest class from softmax ouptut
+            )  # remove highest class from softmax output
             preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
             second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
             scores = (max_preds - second_max_preds).cpu().numpy()
