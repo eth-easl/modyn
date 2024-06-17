@@ -41,7 +41,7 @@ class Metric(ModynBaseModel):
         # pylint: disable-next=wrong-import-position,import-outside-toplevel
         from modyn.evaluator.internal.metric_factory import MetricFactory  # fmt: skip  # noqa  # isort:skip
         try:
-            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function, self.config)
+            MetricFactory.get_evaluation_metric(self.name, self.evaluation_transformer_function or "", self.config)
         except NotImplementedError as exc:
             raise ValueError(f"Cannot instantiate metric {self.name}!") from exc
 
