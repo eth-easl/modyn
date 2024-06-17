@@ -42,7 +42,7 @@ class AccuracyMetricConfig(_BaseMetricConfig):
 
     @property
     def shape_check(self) -> bool:
-        return False
+        return self.topn <= 1
 
 
 F1ScoreTypes = Literal["macro", "micro", "weighted", "binary"]
