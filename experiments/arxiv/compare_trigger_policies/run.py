@@ -11,7 +11,9 @@ from modyn.config.schema.pipeline import (
 )
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
+from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
@@ -45,7 +47,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
     ]
 
     # time based triggers: every: 4y, 3y, 2y, 1y, 183d
-    for years in ["20y"]:  # ["20y", "10y", "5y", "3y", "2y", "1y", "183d", "90d"]:
+    for years in ["20y", "10y", "5y", "3y", "2y", "1y", "183d", "90d"]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{years}",
@@ -55,7 +57,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
         )
 
     # sample count based triggers: every: 1_000_000, 500_000, 100_000, 50_000, 10_000
-    for count in ["1_000_000"]:  # [1_000_000, 500_000, 100_000, 50_000, 10_000]:
+    for count in [1_000_000, 500_000, 100_000, 50_000, 10_000]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"dataamounttrigger_{count}",
@@ -64,7 +66,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
             )
         )
         
-    for interval, threshold in [(1_000_000, 0.7)]:  # [(20_000, 0.5), (100_000, 0.6), (100_000, 0.7), (100_000, 0.8), (100_000, 0.9), (250_000, 0.7), (500_000, 0.7), (1_000_000, 0.7)]:
+    for interval, threshold in [(20_000, 0.5), (100_000, 0.6), (100_000, 0.7), (100_000, 0.8), (100_000, 0.9), (250_000, 0.7), (500_000, 0.7), (1_000_000, 0.7)]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"datadrifttrigger_{interval}_{threshold}",

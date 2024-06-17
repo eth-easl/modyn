@@ -22,9 +22,10 @@ from modyn.config.schema.pipeline import (
 def gen_pipeline_config(
     name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig]
 ) -> ModynPipelineConfig:
+    num_classes = 172
     return ModynPipelineConfig(
         pipeline=Pipeline(name=name, description="Arxiv pipeline for comparing trigger policies", version="0.0.1"),
-        model=ModelConfig(id="ArticleNet", config={"num_classes": 172}),
+        model=ModelConfig(id="ArticleNet", config={"num_classes": num_classes}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
@@ -56,7 +57,8 @@ def gen_pipeline_config(
         data=DataConfig(
             dataset_id="arxiv_kaggle",
             bytes_parser_function=(
-                "def bytes_parser_function(data: memoryview) -> str:\n" "    return str(data, 'utf8')"
+                "def bytes_parser_function(data: bytes) -> str:\n"
+                "    return str(data, 'utf8')"
             ),
             tokenizer="DistilBertTokenizerTransform",
         ),
@@ -69,10 +71,12 @@ def gen_pipeline_config(
                 EvalDataConfig(
                     dataset_id=yb_dataset_name,
                     bytes_parser_function=(
-                        "def bytes_parser_function(data: memoryview) -> str:\n" "    return str(data, 'utf8')"
+                        "def bytes_parser_function(data: bytes) -> str:\n"
+                        "    return str(data, 'utf8')"
                     ),
                     batch_size=96,
                     dataloader_workers=2,
+                    tokenizer="DistilBertTokenizerTransform",
                     metrics=[
                         Metric(
                             name="Accuracy",
@@ -81,16 +85,16 @@ def gen_pipeline_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
+                            config={"num_classes": num_classes, "average": "weighted"},
                         ),
                         Metric(
                             name="F1score",
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
+                                "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
+                            config={"num_classes": num_classes, "average": "macro"},
                         ),
                     ],
                 )
