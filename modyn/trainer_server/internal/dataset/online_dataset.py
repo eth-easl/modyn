@@ -8,6 +8,7 @@ import os
 import pathlib
 import random
 import threading
+import time
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
 import grpc
@@ -125,11 +126,23 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
-    def _init_grpc(self) -> None:
-        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
-        if not grpc_connection_established(self._storage_channel):
-            raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
-        self._storagestub = StorageStub(self._storage_channel)
+    def _init_grpc(self, worker_id: Optional[int] = None) -> None:  # pragma: no cover
+        max_retries = 5
+        retry_delay = 1  # seconds
+
+        for attempt in range(1, max_retries + 1):
+            self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+            if grpc_connection_established(self._storage_channel):
+                self._storagestub = StorageStub(self._storage_channel)
+                return
+            # no connection established
+
+            self._info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...", worker_id)
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
+
+        self._info(f"Failed to establish gRPC connection after {max_retries} attempts.", worker_id)
+        raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
@@ -153,7 +166,7 @@ class OnlineDataset(IterableDataset):
             yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
             if not grpc_connection_established(self._storage_channel):
                 self._info("gRPC connection lost, trying to reconnect!", worker_id)
-                self._init_grpc()
+                self._init_grpc(worker_id=worker_id)
             stopw.start("ResponseTime", overwrite=True)
 
     # pylint: disable=too-many-locals
@@ -482,7 +495,7 @@ class OnlineDataset(IterableDataset):
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
-            self._init_grpc()
+            self._init_grpc(worker_id)
             self._key_source.init_worker()
             self._uses_weights = self._key_source.uses_weights()
             self._silence_pil()

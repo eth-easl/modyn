@@ -1,11 +1,12 @@
 import torch
+from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rs2_downsampling import RemoteRS2Downsampling
 
 
-def test_init():
+def test_init(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
@@ -14,7 +15,13 @@ def test_init():
     device = "cpu"
 
     downsampler = RemoteRS2Downsampling(
-        pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
     )
 
     assert downsampler.pipeline_id == pipeline_id
@@ -30,7 +37,7 @@ def test_init():
     assert downsampler._first_epoch
 
 
-def test_inform_samples():
+def test_inform_samples(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
@@ -39,26 +46,33 @@ def test_inform_samples():
     device = "cpu"
 
     downsampler = RemoteRS2Downsampling(
-        pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
     )
 
     sample_ids = [1, 2, 3, 4, 5]
+    forward_input = torch.randn(5, 10)
     forward_output = torch.randn(5, 10)
     target = torch.randint(0, 10, (5,))
 
-    downsampler.inform_samples(sample_ids, forward_output, target)
+    downsampler.inform_samples(sample_ids, forward_input, forward_output, target)
 
     assert downsampler._all_sample_ids == sample_ids
-    downsampler.inform_samples(sample_ids, forward_output, target)
+    downsampler.inform_samples(sample_ids, forward_input, forward_output, target)
     assert downsampler._all_sample_ids == 2 * sample_ids
     # Now it should not change anymore
     downsampler.select_points()
-    downsampler.inform_samples(sample_ids, forward_output, target)
+    downsampler.inform_samples(sample_ids, forward_input, forward_output, target)
     assert set(downsampler._all_sample_ids) == set(sample_ids)
     assert len(downsampler._all_sample_ids) == 2 * len(sample_ids)
 
 
-def test_multiple_epochs_with_replacement():
+def test_multiple_epochs_with_replacement(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
@@ -67,7 +81,13 @@ def test_multiple_epochs_with_replacement():
     device = "cpu"
 
     downsampler = RemoteRS2Downsampling(
-        pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
     )
     with torch.inference_mode(mode=(not downsampler.requires_grad)):
         sample_ids = list(range(10))
@@ -75,7 +95,7 @@ def test_multiple_epochs_with_replacement():
         target = torch.randint(0, 10, (10,))
 
         for _ in range(3):
-            downsampler.inform_samples(sample_ids, data, target)
+            downsampler.inform_samples(sample_ids, data, data, target)
             selected_ids, weights = downsampler.select_points()
             sampled_data, sampled_target = get_tensors_subset(selected_ids, data, target, sample_ids)
 
@@ -86,7 +106,7 @@ def test_multiple_epochs_with_replacement():
             assert sampled_target.shape == (5,)
 
 
-def test_multiple_epochs_without_replacement():
+def test_multiple_epochs_without_replacement(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
@@ -95,7 +115,13 @@ def test_multiple_epochs_without_replacement():
     device = "cpu"
 
     downsampler = RemoteRS2Downsampling(
-        pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
     )
     with torch.inference_mode(mode=(not downsampler.requires_grad)):
 
@@ -104,7 +130,7 @@ def test_multiple_epochs_without_replacement():
         target = torch.randint(0, 10, (10,))
 
         # Epoch 1
-        downsampler.inform_samples(sample_ids, data, target)
+        downsampler.inform_samples(sample_ids, data, data, target)
         epoch1_ids, weights = downsampler.select_points()
         sampled_data, sampled_target = get_tensors_subset(epoch1_ids, data, target, sample_ids)
 
@@ -115,7 +141,7 @@ def test_multiple_epochs_without_replacement():
         assert sampled_target.shape == (5,)
 
         # Epoch 2
-        downsampler.inform_samples(sample_ids, data, target)
+        downsampler.inform_samples(sample_ids, data, data, target)
         epoch2_ids, weights = downsampler.select_points()
         sampled_data, sampled_target = get_tensors_subset(epoch2_ids, data, target, sample_ids)
 
@@ -127,7 +153,7 @@ def test_multiple_epochs_without_replacement():
         assert sampled_target.shape == (5,)
 
         # Epoch 3
-        downsampler.inform_samples(sample_ids, data, target)
+        downsampler.inform_samples(sample_ids, data, data, target)
         epoch3_ids, weights = downsampler.select_points()
         sampled_data, sampled_target = get_tensors_subset(epoch3_ids, data, target, sample_ids)
 
@@ -141,7 +167,7 @@ def test_multiple_epochs_without_replacement():
         assert sampled_target.shape == (5,)
 
 
-def test_multiple_epochs_without_replacement_leftover_data():
+def test_multiple_epochs_without_replacement_leftover_data(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
@@ -150,7 +176,13 @@ def test_multiple_epochs_without_replacement_leftover_data():
     device = "cpu"
 
     downsampler = RemoteRS2Downsampling(
-        pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
     )
     with torch.inference_mode(mode=(not downsampler.requires_grad)):
         sample_ids = list(range(10))
@@ -158,7 +190,7 @@ def test_multiple_epochs_without_replacement_leftover_data():
         target = torch.randint(0, 10, (10,))
 
         for _ in range(3):
-            downsampler.inform_samples(sample_ids, data, target)
+            downsampler.inform_samples(sample_ids, data, data, target)
 
             selected_ids, weights = downsampler.select_points()
             sampled_data, sampled_target = get_tensors_subset(selected_ids, data, target, sample_ids)

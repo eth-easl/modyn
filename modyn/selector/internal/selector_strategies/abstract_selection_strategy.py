@@ -1,4 +1,6 @@
 import logging
+import os
+import threading
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Optional
 
@@ -46,18 +48,7 @@ class AbstractSelectionStrategy(ABC):
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            last_trigger_id = (
-                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
-                .filter(Trigger.pipeline_id == self._pipeline_id)
-                .scalar()
-            )
-            if last_trigger_id is None:
-                logger.info(f"Did not find previous trigger id DB for pipeline {pipeline_id}, next trigger is 0.")
-                self._next_trigger_id = 0
-            else:
-                logger.info(f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}.")
-                self._next_trigger_id = last_trigger_id + 1
+        self._update_next_trigger_id()
 
         if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
             # TODO(#179) Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
@@ -72,6 +63,27 @@ class AbstractSelectionStrategy(ABC):
 
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
         self._storage_backend = self._init_storage_backend()
+
+    def _update_next_trigger_id(self) -> None:
+        tid = threading.get_native_id()
+        pid = os.getpid()
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            last_trigger_id = (
+                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
+                .filter(Trigger.pipeline_id == self._pipeline_id)
+                .scalar()
+            )
+            if last_trigger_id is None:
+                self._next_trigger_id = 0
+                logger.info(
+                    f"[{pid}][{tid}] Didn't find prev. trigger id for pipeline {self._pipeline_id}, next trigger = 0."
+                )
+            else:
+                self._next_trigger_id = last_trigger_id + 1
+                logger.info(
+                    f"[{pid}][{tid}] Updating next trigger for pipeline {self._pipeline_id} to {self._next_trigger_id}."
+                )
 
     @abstractmethod
     def _init_storage_backend(self) -> AbstractStorageBackend:
