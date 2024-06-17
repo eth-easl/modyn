@@ -75,7 +75,7 @@ def test_accuracy_invalid() -> None:
     zeroes = torch.zeros(5)
     y_pred = torch.zeros(4)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError):
         accuracy.evaluate_batch(zeroes, y_pred, 5)
 
 
