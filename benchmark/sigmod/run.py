@@ -205,7 +205,7 @@ def gen_selection_strategies(
     # Margin StB every epoch
     strategies.append(
         (
-            "grad_stb",
+            "margin_stb",
             CoresetStrategyConfig(
                 maximum_keys_in_memory=100000,
                 storage_backend="database",
@@ -222,7 +222,7 @@ def gen_selection_strategies(
     # Margin BtS
     strategies.append(
         (
-            "grad_stb",
+            "margin_bts",
             CoresetStrategyConfig(
                 maximum_keys_in_memory=100000,
                 storage_backend="database",
@@ -256,7 +256,7 @@ def gen_selection_strategies(
     # LeastConf BtS
     strategies.append(
         (
-            "grad_stb",
+            "lc_bts",
             CoresetStrategyConfig(
                 maximum_keys_in_memory=100000,
                 storage_backend="database",
@@ -290,7 +290,7 @@ def gen_selection_strategies(
     # Entropy BtS
     strategies.append(
         (
-            "entropy_stb",
+            "entropy_bts",
             CoresetStrategyConfig(
                 maximum_keys_in_memory=100000,
                 storage_backend="database",
