@@ -1,7 +1,6 @@
 """Evaluator GRPC servicer."""
 
 import gc
-import json
 import logging
 import multiprocessing as mp
 import pathlib
@@ -24,7 +23,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    MetricConfiguration,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
 from modyn.evaluator.internal.metric_factory import MetricFactory
@@ -172,7 +170,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
             )
 
-        metrics = self._setup_metrics(request.metrics)
+        metrics = self._setup_metrics([metric.value for metric in request.metrics])
         evaluation_info = EvaluationInfo(
             request,
             evaluation_id,
@@ -191,15 +189,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size)
 
     @staticmethod
-    def _setup_metrics(metric_configurations: list[MetricConfiguration]) -> list[AbstractEvaluationMetric]:
+    def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
         metrics = []
         # need to make sure that the metric names are unique as they are used for identification.
         metric_names = set()
-        for configuration in metric_configurations:
-            loaded_config = json.loads(configuration.config.value)
-            metric = MetricFactory.get_evaluation_metric(
-                configuration.name, configuration.evaluation_transformer.value, loaded_config
-            )
+        for configuration_json in metric_configurations:
+            metric = MetricFactory.get_evaluation_metric(configuration_json)
             if metric.get_name() not in metric_names:
                 metrics.append(metric)
                 metric_names.add(metric.get_name())

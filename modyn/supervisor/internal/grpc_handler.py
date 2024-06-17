@@ -21,7 +21,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationStatusResponse,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import MetricConfiguration
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -247,19 +246,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         bytes_parser_function = dataset_config["bytes_parser_function"]
         batch_size = dataset_config["batch_size"]
         dataloader_workers = dataset_config["dataloader_workers"]
-        metrics = []
-        for metric in dataset_config["metrics"]:
-            name = metric["name"]
-            metric_config = json.dumps(metric.get("config") or {})
-            evaluation_transformer = metric.get("evaluation_transformer_function") or ""
-
-            metrics.append(
-                MetricConfiguration(
-                    name=name,
-                    config=EvaluatorJsonString(value=metric_config),
-                    evaluation_transformer=EvaluatorPythonString(value=evaluation_transformer),
-                )
-            )
+        metrics = [EvaluatorJsonString(value=json.dumps(metric)) for metric in dataset_config["metrics"]]
 
         start_evaluation_kwargs = {
             "model_id": model_id,
