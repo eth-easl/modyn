@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any, Iterable, Optional, Tuple
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
@@ -12,6 +13,8 @@ from modyn.selector.internal.selector_strategies.utils import get_trigger_datase
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 from sqlalchemy import Select, func, select
+
+logger = logging.getLogger(__name__)
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
@@ -91,6 +94,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         )
         self.grpc.wait_for_training_completion(training_id)
         model_id = self.grpc.store_trained_model(training_id)
+        logger.info(f"Stored trained model {model_id} for trigger {trigger_id} in rho pipeline {self.rho_pipeline_id}")
         return model_id
 
     def _get_or_create_rho_pipeline_id_and_get_data_config(self) -> Tuple[int, DataConfig]:
@@ -140,12 +144,16 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
                     samples = [res[0] for res in chunk]
                     yield [(sample, 1.0) for sample in samples], {}
 
-        AbstractSelectionStrategy.store_training_set(
+        total_keys_in_trigger, *_ = AbstractSelectionStrategy.store_training_set(
             self.rho_pipeline_id,
             next_trigger_id,
             self._modyn_config,
             training_set_producer,
             selector_storage_backend.insertion_threads,
+        )
+        logger.info(
+            f"Stored {total_keys_in_trigger} keys in the holdout set for trigger {next_trigger_id} "
+            f"in rho pipeline {self.rho_pipeline_id}"
         )
 
     @staticmethod
