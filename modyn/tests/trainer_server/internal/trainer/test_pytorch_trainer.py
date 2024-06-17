@@ -943,7 +943,7 @@ def test_train_batch_then_sample_accumulation(
 
     trainer.train()
 
-    assert trainer._num_samples == expected_bts_size * num_batches
+    assert trainer._num_samples == batch_size * num_batches
     assert test_on_batch_begin.call_count == len(trainer._callbacks) * num_batches
     assert test_on_batch_end.call_count == len(trainer._callbacks) * num_batches
     assert test_downsample_batch.call_count == num_batches
