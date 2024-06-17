@@ -48,12 +48,13 @@ def gen_pipeline_config(
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
+            epochs_per_trigger=1,
         ),
         selection_strategy=NewDataStrategyConfig(
             maximum_keys_in_memory=10000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
-            dataset_id="arxiv",
+            dataset_id="arxiv_kaggle",
             bytes_parser_function=(
                 "def bytes_parser_function(data: memoryview) -> str:\n" "    return str(data, 'utf8')"
             ),
@@ -93,7 +94,7 @@ def gen_pipeline_config(
                         ),
                     ],
                 )
-                for yb_dataset_name in ["arxiv", "arxiv_test"]
+                for yb_dataset_name in ["arxiv_kaggle", "arxiv_kaggle_test"]
             ],
         ),
     )
