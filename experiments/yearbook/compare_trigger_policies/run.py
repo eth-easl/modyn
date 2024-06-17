@@ -1,9 +1,11 @@
+import os
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
+from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -16,7 +18,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
     eval_handlers = [
         EvalHandlerConfig(
             name=f"scheduled-{interval}",
-            execution_time="after_pipeline",
+            execution_time="manual",
             models="matrix",
             strategy=PeriodicEvalStrategyConfig(
                 every="1d",  # every year
@@ -26,11 +28,11 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
             ),
             datasets=["yearbook_test"],
         )
-        for (interval, fake_interval) in [("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")]
+        for (interval, fake_interval) in [("~1y", "300d"), ("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")]
     ] + [
         EvalHandlerConfig(
             name="full",
-            execution_time="after_pipeline",
+            execution_time="manual",
             models="most_recent",
             strategy=BetweenTwoTriggersEvalStrategyConfig(),
             datasets=["yearbook", "yearbook_test"],
@@ -42,7 +44,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{years}y",
-                trigger=TimeTriggerConfig(every=f"{years}y"),  # faked timestamps
+                trigger=TimeTriggerConfig(every=f"{years}d"),  # faked timestamps
                 eval_handlers=eval_handlers,
             )
         )
@@ -57,12 +59,34 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
             )
         )
 
+    for interval, threshold in [(500, 0.7), (1_000, 0.5), (1_000, 0.6), (1_000, 0.7), (1_000, 0.8), (1_000, 0.9), (5_000, 0.7), (10_000, 0.7)]:
+        pipeline_configs.append(
+            gen_pipeline_config(
+                name=f"datadrifttrigger_{interval}_{threshold}",
+                trigger=DataDriftTriggerConfig(
+                    detection_interval_data_points=interval,
+                    sample_size=None,
+                    metric="model",
+                    metric_config={
+                        "threshold": threshold
+                    },
+                ),
+                eval_handlers=eval_handlers,
+            )
+        )
+
     return pipeline_configs
 
 
 def run_experiment() -> None:
-    host = input("Enter the supervisors host address: ") or "localhost"
-    port = int(input("Enter the supervisors port: ")) or 50063
+    host = os.getenv("MODYN_SUPERVISOR_HOST")
+    port = os.getenv("MODYN_SUPERVISOR_PORT")
+
+    if not host:
+        host = input("Enter the supervisors host address: ") or "localhost"
+    if not port:
+        port = int(input("Enter the supervisors port: ")) or 50063
+
     run_multiple_pipelines(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
         pipeline_configs=construct_pipelines(),
