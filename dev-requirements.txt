@@ -18,7 +18,6 @@ pystack
 plotly
 matplotlib
 seaborn
-pandas
 dash
 dash-daq
 dash_cytoscape

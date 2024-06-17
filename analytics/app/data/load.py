@@ -3,7 +3,13 @@ from pathlib import Path
 
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 
-EVAL_DIR = Path(os.environ["MODYN_EVAL_DIR"])
+EVAL_DIR_ENV = os.environ.get("MODYN_EVAL_DIR")
+if EVAL_DIR_ENV:
+    EVAL_DIR = Path(EVAL_DIR_ENV)
+else:
+    EVAL_DIR = Path(input("Please enter the path to the evaluation directory: "))
+
+assert EVAL_DIR.exists(), f"Evaluation directory does not exist: {EVAL_DIR}"
 
 
 def list_pipelines() -> dict[int, tuple[str, Path]]:
@@ -19,7 +25,7 @@ def list_pipelines() -> dict[int, tuple[str, Path]]:
         else:
             pipeline_name = pipeline
 
-        pipelines[pipeline_id] = (pipeline_name, pipeline)
+        pipelines[pipeline_id] = (pipeline_name, Path(pipeline))
 
     return pipelines
 
