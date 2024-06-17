@@ -67,6 +67,7 @@ class PytorchTrainer:
 
     def __init__(
         self,
+        modyn_config: dict,
         training_info: TrainingInfo,
         device: str,
         status_query_queue_training: mp.Queue,
@@ -149,7 +150,7 @@ class PytorchTrainer:
 
         downsampling_enabled, strategy_name, downsampler_config = self.get_selection_strategy()
         if downsampling_enabled:
-            self._setup_downsampling(criterion_func, downsampler_config, strategy_name, training_info)
+            self._setup_downsampling(criterion_func, downsampler_config, modyn_config, strategy_name, training_info)
         else:
             self._downsampling_mode = DownsamplingMode.DISABLED
 
@@ -545,10 +546,10 @@ class PytorchTrainer:
         self._downsampler.init_downsampler()
         self.start_embedding_recording_if_needed()
 
-        with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+        with torch.inference_mode(mode=not self._downsampler.requires_grad):
             big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
-            self._downsampler.inform_samples(sample_ids, big_batch_output, target, embeddings)
+            self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
 
         self.end_embedding_recorder_if_needed()
 
@@ -726,11 +727,14 @@ class PytorchTrainer:
         self,
         criterion_func: torch.nn.modules.loss,
         downsampler_config: dict,
+        modyn_config: dict,
         strategy_name: str,
         training_info: TrainingInfo,
     ) -> None:
         self._criterion_nored = criterion_func(**training_info.criterion_dict, reduction="none")
-        self._downsampler = self._instantiate_downsampler(strategy_name, downsampler_config, self._criterion_nored)
+        self._downsampler = self._instantiate_downsampler(
+            strategy_name, downsampler_config, modyn_config, self._criterion_nored
+        )
         assert "sample_then_batch" in downsampler_config
         if downsampler_config["sample_then_batch"]:
             self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
@@ -741,7 +745,7 @@ class PytorchTrainer:
             self._downsampling_mode = DownsamplingMode.BATCH_THEN_SAMPLE
 
     def _instantiate_downsampler(
-        self, strategy_name: str, downsampler_config: dict, per_sample_loss: torch.nn.modules.loss
+        self, strategy_name: str, downsampler_config: dict, modyn_config: dict, per_sample_loss: torch.nn.modules.loss
     ) -> AbstractRemoteDownsamplingStrategy:
         return instantiate_class(
             "modyn.trainer_server.internal.trainer.remote_downsamplers",
@@ -750,6 +754,7 @@ class PytorchTrainer:
             self.trigger_id,
             self._batch_size,
             downsampler_config,
+            modyn_config,
             per_sample_loss,
             self._device,
         )
@@ -883,12 +888,12 @@ class PytorchTrainer:
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 
-            with torch.inference_mode(mode=(not self._downsampler.requires_grad)):
+            with torch.inference_mode(mode=not self._downsampler.requires_grad):
                 with torch.autocast(self._device_type, enabled=self._amp):
                     # compute the scores and accumulate them
                     model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
                     embeddings = self.get_embeddings_if_recorded()
-                    self._downsampler.inform_samples(sample_ids, model_output, target, embeddings)
+                    self._downsampler.inform_samples(sample_ids, data, model_output, target, embeddings)
 
         return batch_number, number_of_samples
 
@@ -965,6 +970,7 @@ class PytorchTrainer:
 
 
 def train(
+    modyn_config: dict,
     training_info: TrainingInfo,
     device: str,
     log_path: pathlib.Path,
@@ -985,6 +991,7 @@ def train(
 
     try:
         trainer = PytorchTrainer(
+            modyn_config,
             training_info,
             device,
             status_query_queue_training,

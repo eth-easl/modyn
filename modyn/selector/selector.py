@@ -146,6 +146,7 @@ class Selector:
         return self._trigger_partition_cache[trigger_id]
 
     def get_available_labels(self) -> list[int]:
+        self._strategy._update_next_trigger_id()
         return self._strategy.get_available_labels()
 
     def uses_weights(self) -> bool:
@@ -153,6 +154,7 @@ class Selector:
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         if isinstance(self._strategy, CoresetStrategy):
+            self._strategy._update_next_trigger_id()
             return (
                 self._strategy.requires_remote_computation,
                 self._strategy.downsampling_strategy,

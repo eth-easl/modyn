@@ -12,7 +12,7 @@ class Metric(ModynBaseModel):
     name: str = Field(description="The name of the evaluation metric.")
     config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
     evaluation_transformer_function: str | None = Field(
-        "",
+        None,
         description="A function used to transform the model output before evaluation.",
     )
 
@@ -26,11 +26,6 @@ class Metric(ModynBaseModel):
         except AttributeError as exc:
             raise ValueError("Function 'evaluation_transformer_function' could not be parsed!") from exc
         return value
-
-    @field_validator("evaluation_transformer_function", mode="before")
-    @classmethod
-    def clean_evaluation_transformer_function(cls, value: str | None) -> str:
-        return value or ""
 
     @property
     def evaluation_transformer_function_deserialized(self) -> Callable | None:
