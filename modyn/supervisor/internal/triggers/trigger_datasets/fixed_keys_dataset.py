@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # TODO(#275): inherit common abstraction of dataset
 class FixedKeysDataset(IterableDataset):
     """The FixedKeysDataset is created given a list of fixed sample keys. It fetches samples by the given sample keys.
-    It can used when sample keys are known, but the corresponding trigger_id is unknown.
+    It can be used when sample keys are known, but the corresponding trigger_id is unknown.
     It can also be used when user wants a dataset containing samples from multiple triggers if the keys are known.
     In DataDriftTrigger, for example, FixedKeysDataset is used for current untriggered samples
     because they belong to a future trigger whose trigger_id is unknown.
