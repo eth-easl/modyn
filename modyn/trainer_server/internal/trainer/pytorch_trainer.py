@@ -278,6 +278,7 @@ class PytorchTrainer:
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
                             stopw.start("FetchBatch", resume=True)
                             stopw.start("IndivFetchBatch", overwrite=True)
+                            self._num_samples += self._batch_size
                             continue
 
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
@@ -627,9 +628,6 @@ class PytorchTrainer:
         buffer.seek(0)
         bytes_state = buffer.read()
         self._status_response_queue_training.put(bytes_state)
-
-    def send_status_to_server_training(self, batch_number: int) -> None:
-        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
     def get_selection_strategy(self) -> tuple[bool, str, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)

@@ -620,16 +620,6 @@ def test_send_model_state_to_server(dummy_system_config: ModynConfig):
     }
 
 
-def test_send_status_to_server(dummy_system_config: ModynConfig):
-    response_queue = mp.Queue()
-    query_queue = mp.Queue()
-    trainer = get_mock_trainer(dummy_system_config, query_queue, response_queue, False, False, None, 1, "", False)
-    trainer.send_status_to_server_training(20)
-    response = response_queue.get()
-    assert response["num_batches"] == 20
-    assert response["num_samples"] == 0
-
-
 @patch("modyn.trainer_server.internal.trainer.pytorch_trainer.prepare_dataloaders", mock_get_dataloaders)
 @patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
 def test_train_invalid_query_message(test_weight_handling, dummy_system_config: ModynConfig):
