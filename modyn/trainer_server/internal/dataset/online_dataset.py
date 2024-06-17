@@ -156,18 +156,35 @@ class OnlineDataset(IterableDataset):
 
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None
-    ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
-        req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
-        stopw = Stopwatch()
+    ) -> Iterator[Tuple[list[int], list[bytes], list[int], int]]:
+        max_retries = 3
+        retries = 0
+        last_processed_index = -1
 
-        response: GetResponse
-        stopw.start("ResponseTime", overwrite=True)
-        for _, response in enumerate(self._storagestub.Get(req)):
-            yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
-            if not grpc_connection_established(self._storage_channel):
-                self._info("gRPC connection lost, trying to reconnect!", worker_id)
+        while retries < max_retries:
+            try:
+                req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+                stopw = Stopwatch()
+
+                response: GetResponse
+                stopw.start("ResponseTime", overwrite=True)
+                for index, response in enumerate(self._storagestub.Get(req)):
+                    if index <= last_processed_index:
+                        continue  # Skip already processed responses
+                    yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
+                    last_processed_index = index  # Update the last processed index
+                    stopw.start("ResponseTime", overwrite=True)
+
+                # If the loop completes without errors, break out of the retry loop
+                break
+
+            except grpc.RpcError as e:
+                self._info(f"Attempt {retries + 1}: gRPC connection error, trying to reconnect...", worker_id)
                 self._init_grpc(worker_id=worker_id)
-            stopw.start("ResponseTime", overwrite=True)
+                retries += 1
+                if retries >= max_retries:
+                    raise RuntimeError(f"Failed to get data after {max_retries} attempts.") from e
+
 
     # pylint: disable=too-many-locals
     def _get_data(
