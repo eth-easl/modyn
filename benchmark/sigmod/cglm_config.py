@@ -27,30 +27,36 @@ from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEval
 
 logger = logging.getLogger(__name__)
 
-def gen_cglm_training_conf(gpu_device: str, lr_scheduler: LrSchedulerConfig | None,num_epochs: int,seed:int):
+
+def gen_cglm_training_conf(
+    optimizer: str, lr: float, gpu_device: str, lr_scheduler: LrSchedulerConfig | None, num_epochs: int, seed: int
+):
+    assert optimizer == "SGD"
+    del lr  # hardcode
     return TrainingConfig(
-                gpus=1,
-                device=gpu_device,
-                dataloader_workers=1,
-                use_previous_model=True,
-                initial_model="random",
-                batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
-                optimizers=[
-                    OptimizerConfig(
-                        name="default",
-                        algorithm="SGD",
-                        source="PyTorch",
-                        param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.005, "momentum": 0.9})],
-                    )
-                ],
-                optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
-                checkpointing=CheckpointingConfig(activated=False),
-                lr_scheduler=lr_scheduler,
-                epochs_per_trigger=num_epochs,
-                shuffle=True,
-                amp=False,
-                seed=seed,
+        gpus=1,
+        device=gpu_device,
+        dataloader_workers=1,
+        use_previous_model=True,
+        initial_model="random",
+        batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
+        optimizers=[
+            OptimizerConfig(
+                name="default",
+                algorithm="SGD",
+                source="PyTorch",
+                param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.005, "momentum": 0.9})],
             )
+        ],
+        optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
+        checkpointing=CheckpointingConfig(activated=False),
+        lr_scheduler=lr_scheduler,
+        epochs_per_trigger=num_epochs,
+        shuffle=True,
+        amp=False,
+        seed=seed,
+    )
+
 
 def gen_cglm_config(
     config_id: str,
@@ -89,7 +95,7 @@ def gen_cglm_config(
         pipeline=Pipeline(name=f"cglm_{config_id}", description="CGLM data selection config", version="0.0.1"),
         model=model_config,
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
-        training=gen_cglm_training_conf(gpu_device, lr_scheduler, num_epochs, seed),
+        training=gen_cglm_training_conf("SGD", 0.42, gpu_device, lr_scheduler, num_epochs, seed),
         selection_strategy=selection_strategy,
         data=DataConfig(dataset_id=dataset, transformations=transformations, bytes_parser_function=bytes_parser_func),
         trigger=TimeTriggerConfig(every="1y"),

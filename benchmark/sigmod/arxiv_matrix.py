@@ -5,28 +5,15 @@ import logging
 import sys
 
 from experiments.utils.experiment_runner import run_multiple_pipelines
-from benchmark.sigmod.yearbook_config import gen_yearbook_config
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
-from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig
-from modyn.config.schema.pipeline.training.config import TrainingConfig
 from modyn.utils.utils import current_time_millis
 
-from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config import LrSchedulerConfig
 
 from modyn.config.schema.pipeline import (
     SelectionStrategy,
     NewDataStrategyConfig,
-    CoresetStrategyConfig,
-    PresamplingConfig,
-)
-from modyn.config import (
-    RS2DownsamplingConfig,
-    LossDownsamplingConfig,
-    GradNormDownsamplingConfig,
-    RHOLossDownsamplingConfig,
-    UncertaintyDownsamplingConfig,
 )
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -43,7 +30,8 @@ logger = logging.getLogger(__name__)
 
 
 def gen_selection_strategies(
-    warmup_triggers: int, num_classes: int,
+    warmup_triggers: int,
+    num_classes: int,
 ) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
@@ -110,7 +98,7 @@ def run_experiment() -> None:
     warmup_triggers = 1
     num_epochss = [5, 10]
     optimizers = ["AdamW", "SGD"]
-    lrs  = [0.00002, 0.00005]
+    lrs = [0.00002, 0.00005]
     config_str_fn = (
         lambda model,
         selection_strategy_id,
@@ -127,8 +115,19 @@ def run_experiment() -> None:
         for optimizer in optimizers:
             for num_epochs in num_epochss:
                 for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-                    for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers, num_classes):
-                        config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset, optimizer, lr)
+                    for selection_strategy_id, selection_strategy in gen_selection_strategies(
+                        warmup_triggers, num_classes
+                    ):
+                        config_id = config_str_fn(
+                            model,
+                            selection_strategy_id,
+                            lr_sched_id,
+                            num_epochs,
+                            warmup_triggers,
+                            dataset,
+                            optimizer,
+                            lr,
+                        )
                         if run_id % num_gpus == gpu_id:
                             pipeline_configs.append(
                                 pipeline_gen_func(

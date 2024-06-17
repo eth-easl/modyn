@@ -5,8 +5,8 @@ import logging
 import sys
 
 from experiments.utils.experiment_runner import run_multiple_pipelines
-from benchmark.sigmod.yearbook_config import gen_yearbook_config
-from benchmark.sigmod.arxiv_config import gen_arxiv_config
+from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
+from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
 from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig
 from modyn.config.schema.pipeline.training.config import TrainingConfig
 from modyn.utils.utils import current_time_millis
@@ -177,7 +177,7 @@ def gen_selection_strategies(
     il_config_options = {
         "il_model_id": "ResNet18",
         "il_model_config": {"use_pretrained": True, "num_classes": num_classes},
-        "use_previous_model": False, 
+        "use_previous_model": False,
     }
 
     training_config_dict = training_config.model_dump()
@@ -341,7 +341,7 @@ def run_experiment() -> None:
 
     pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
     # pipeline_gen_func = gen_arxiv_config
-    pipeline_gen_func = gen_cglm_config
+    # pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
@@ -362,6 +362,7 @@ def run_experiment() -> None:
         min_lr = 1e-4
         warmup_triggers = 2
         num_epochs = 5
+        optimizer = "SGD"
         config_str_fn = (
             lambda model,
             selection_strategy_id,
@@ -370,7 +371,7 @@ def run_experiment() -> None:
             warmup_triggers,
             dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
         )
-        raise NotImplementedError("need to implement train conf func for rho loss for yearbook, similar to CGLM")
+        train_conf_func = gen_yearbook_training_conf
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
@@ -385,12 +386,13 @@ def run_experiment() -> None:
             warmup_triggers,
             dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
         )
-        raise NotImplementedError("need to implement train conf func for rho loss for arxiv, similar to CGLM")
+        train_conf_func = gen_arxiv_training_conf
 
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 5
         num_epochs = 5
+        optimizer = "CGLM"
         config_str_fn = (
             lambda model,
             selection_strategy_id,
@@ -405,8 +407,10 @@ def run_experiment() -> None:
 
     run_id = 0
     for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-        train_conf = train_conf_func(train_gpu, lr_scheduler_config, num_epochs, seed)
-        for selection_strategy_id, selection_strategy in gen_selection_strategies(warmup_triggers, num_classes, train_conf):
+        train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
+        for selection_strategy_id, selection_strategy in gen_selection_strategies(
+            warmup_triggers, num_classes, train_conf
+        ):
             config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
             if run_id % num_gpus == gpu_id:
                 pipeline_configs.append(

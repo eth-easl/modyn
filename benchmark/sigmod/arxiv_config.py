@@ -25,23 +25,9 @@ from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 
 
-def gen_arxiv_config(
-    config_id: str,
-    num_epochs: int,
-    gpu_device: str,
-    selection_strategy: SelectionStrategy,
-    lr_scheduler: LrSchedulerConfig | None,
-    model: str,
-    dataset: str,
-    num_classes: int,
-    seed: int,
-    optimizer: str,
-    lr: float,
-) -> ModynPipelineConfig:
-    del model  # ignored for now
-    del dataset
-    del num_classes
-
+def gen_arxiv_training_conf(
+    optimizer: str, lr: float, gpu_device: str, lr_scheduler: LrSchedulerConfig | None, num_epochs: int, seed: int
+):
     if optimizer == "SGD":
         opti_conf = OptimizerConfig(
             name="default",
@@ -61,11 +47,8 @@ def gen_arxiv_config(
     else:
         raise ValueError(optimizer)
 
-    return ModynPipelineConfig(
-        pipeline=Pipeline(name=f"arxiv_{config_id}", description="Arxiv data selection config", version="0.0.1"),
-        model=ModelConfig(id="ArticleNet", config={"num_classes": 172}),
-        model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
-        training=TrainingConfig(
+    return (
+        TrainingConfig(
             gpus=1,
             device=gpu_device,
             dataloader_workers=1,
@@ -81,6 +64,31 @@ def gen_arxiv_config(
             amp=False,
             seed=seed,
         ),
+    )
+
+
+def gen_arxiv_config(
+    config_id: str,
+    num_epochs: int,
+    gpu_device: str,
+    selection_strategy: SelectionStrategy,
+    lr_scheduler: LrSchedulerConfig | None,
+    model: str,
+    dataset: str,
+    num_classes: int,
+    seed: int,
+    optimizer: str,
+    lr: float,
+) -> ModynPipelineConfig:
+    del model  # ignored for now
+    del dataset
+    del num_classes
+
+    return ModynPipelineConfig(
+        pipeline=Pipeline(name=f"arxiv_{config_id}", description="Arxiv data selection config", version="0.0.1"),
+        model=ModelConfig(id="ArticleNet", config={"num_classes": 172}),
+        model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
+        training=gen_arxiv_training_conf(optimizer, lr, gpu_device, lr_scheduler, num_epochs, seed),
         selection_strategy=selection_strategy,
         data=DataConfig(
             dataset_id="arxiv",
