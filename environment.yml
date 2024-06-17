@@ -28,7 +28,7 @@ dependencies:
   - sqlalchemy>=2.0
   - pyaml
   - pydantic
-  - numpy
+  - numpy==1.26.*
   - pandas
   - bitstring
   - tensorboard
