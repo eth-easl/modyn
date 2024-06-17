@@ -39,8 +39,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
             PresamplingConfig(strategy="No", ratio=100), modyn_config, pipeline_id, self._storage_backend
         )
 
-        self.is_warmup = self.warmup_triggers > 0
-
     def _init_storage_backend(self) -> AbstractStorageBackend:
         if self._config.storage_backend == "local":
             # TODO(#324): Support local backend on CoresetStrategy
@@ -64,8 +62,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def trigger(self) -> tuple[int, int, int, dict[str, object]]:
-        if (self._next_trigger_id + 1) > self.warmup_triggers:
-            self.is_warmup = False
         # Upon entering this method, self._next_trigger_id is the trigger id for the current trigger
         # whose training set is to be computed. After calling super().trigger() self._next_trigger_id is incremented.
 
@@ -88,12 +84,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
         assert isinstance(
             self._storage_backend, DatabaseStorageBackend
         ), "CoresetStrategy currently only supports DatabaseBackend"
-        # We set is_warmup here as well to support unit tests more easily.
-        # In end-to-end workflows, it should have been set by trigger() already.
-        if (self._next_trigger_id + 1) > self.warmup_triggers:
-            self.is_warmup = False
 
-        presampling_strategy = self.warmup_presampler if self.is_warmup else self.presampling_strategy
+        next_trigger_is_warmup = self._next_trigger_id + 1 <= self.warmup_triggers
+        presampling_strategy = self.warmup_presampler if next_trigger_is_warmup else self.presampling_strategy
         trigger_dataset_size = None
         if presampling_strategy.requires_trigger_dataset_size:
             trigger_dataset_size = self._get_trigger_dataset_size()
@@ -121,15 +114,24 @@ class CoresetStrategy(AbstractSelectionStrategy):
 
     @property
     def downsampling_strategy(self) -> str:
-        return self.downsampling_scheduler.downsampling_strategy if not self.is_warmup else ""
+        # The strategy we want to query is not the _next_trigger_id's strategy, but the current trigger's strategy
+        # whose TSS is already computed. Therefore here we shouldn't + 1 to _next_trigger_id
+        prev_trigger_is_warmup = self._next_trigger_id <= self.warmup_triggers
+        return self.downsampling_scheduler.downsampling_strategy if not prev_trigger_is_warmup else ""
 
     @property
     def downsampling_params(self) -> dict:
-        return self.downsampling_scheduler.downsampling_params if not self.is_warmup else {}
+        # The strategy we want to query is not the _next_trigger_id's strategy, but the current trigger's strategy
+        # whose TSS is already computed. Therefore here we shouldn't + 1 to _next_trigger_id
+        prev_trigger_is_warmup = self._next_trigger_id <= self.warmup_triggers
+        return self.downsampling_scheduler.downsampling_params if not prev_trigger_is_warmup else {}
 
     @property
     def requires_remote_computation(self) -> bool:
-        return self.downsampling_scheduler.requires_remote_computation if not self.is_warmup else False
+        # The strategy we want to query is not the _next_trigger_id's strategy, but the current trigger's strategy
+        # whose TSS is already computed. Therefore here we shouldn't + 1 to _next_trigger_id
+        prev_trigger_is_warmup = self._next_trigger_id <= self.warmup_triggers
+        return self.downsampling_scheduler.requires_remote_computation if not prev_trigger_is_warmup else False
 
     @property
     def training_status_bar_scale(self) -> int:
