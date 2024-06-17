@@ -52,6 +52,9 @@ class EvaluationConfig(ModynBaseModel):
         min_length=1,
     )
 
+    after_training_evaluation_workers: int = Field(5, description="Number of workers for after training evaluation.")
+    after_pipeline_evaluation_workers: int = Field(5, description="Number of workers for post pipeline evaluation.")
+
     @field_validator("datasets")
     @classmethod
     def validate_datasets(cls, value: List[EvalDataConfig]) -> List[EvalDataConfig]:

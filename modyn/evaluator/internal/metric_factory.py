@@ -7,7 +7,7 @@ all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc}
 class MetricFactory:
     @staticmethod
     def get_evaluation_metric(config_json: str) -> AbstractEvaluationMetric:
-        parsed_metric_config = validate_metric_config_json(str(config_json))
+        parsed_metric_config = validate_metric_config_json(config_json)
         for metric in all_metrics:
             if metric.__name__.lower() == parsed_metric_config.name.lower():
                 return metric(parsed_metric_config)

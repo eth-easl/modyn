@@ -4,6 +4,7 @@
 ---
 
 [![GitHub Workflow Status](https://github.com/eth-easl/modyn/actions/workflows/workflow.yaml/badge.svg)](https://github.com/eth-easl/modyn/actions/workflows/workflow.yaml)
+[![codecov](https://codecov.io/github/eth-easl/modyn/graph/badge.svg?token=KFDCE03SQ4)](https://codecov.io/github/eth-easl/modyn)
 [![License](https://img.shields.io/github/license/eth-easl/modyn)](https://img.shields.io/github/license/eth-easl/modyn)
 
 Modyn is an open-source platform for model training on dynamic datasets, i.e., datasets where points get added or removed over time.
