@@ -415,6 +415,7 @@ def run_experiment() -> None:
 
             config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
             if run_id % num_gpus == gpu_id:
+                logger.info(f"Running {config_id} on this GPU.")
                 pipeline_configs.append(
                     pipeline_gen_func(
                         config_id,
@@ -432,7 +433,7 @@ def run_experiment() -> None:
                 )
 
             run_id += 1
-
+    logger.info(f"Overview of configurations: {pipeline_configs}")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
 
