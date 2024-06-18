@@ -1,5 +1,4 @@
 import logging
-import time
 from typing import Callable, Generator, Iterable, Optional
 
 import grpc
@@ -17,7 +16,7 @@ from modyn.utils.utils import (
     grpc_connection_established,
     instantiate_class,
 )
-from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
+from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -112,81 +111,64 @@ class EvaluationDataset(IterableDataset):
 
     def _get_keys_from_storage(self, worker_id: int, total_workers: int) -> Iterable[list[int]]:
         self._info("Getting keys from storage", worker_id)
-        # We don't use tenacity here due to the last_processed_index logic which would be cumbersome to redo in tenacity
-        max_retries = 5
-        retries = 0
         last_processed_index = -1
-        backoff = 2
-        while retries < max_retries:
-            try:
-                req_keys = GetDataPerWorkerRequest(
-                    dataset_id=self._dataset_id,
-                    worker_id=worker_id,
-                    total_workers=total_workers,
-                    start_timestamp=self._start_timestamp,
-                    end_timestamp=self._end_timestamp,
-                )
-                resp_keys: GetDataPerWorkerResponse
-                for index, resp_keys in enumerate(self._storagestub.GetDataPerWorker(req_keys)):
-                    if index <= last_processed_index:
-                        continue  # Skip already processed responses
-                    yield resp_keys.keys
-                    last_processed_index = index
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    req_keys = GetDataPerWorkerRequest(
+                        dataset_id=self._dataset_id,
+                        worker_id=worker_id,
+                        total_workers=total_workers,
+                        start_timestamp=self._start_timestamp,
+                        end_timestamp=self._end_timestamp,
+                    )
+                    resp_keys: GetDataPerWorkerResponse
+                    for index, resp_keys in enumerate(self._storagestub.GetDataPerWorker(req_keys)):
+                        if index <= last_processed_index:
+                            continue  # Skip already processed responses
+                        yield resp_keys.keys
+                        last_processed_index = index
 
-                # If the loop completes without errors, break out of the retry loop
-                break
-
-            except grpc.RpcError as e:
-                self._info(
-                    f"Attempt {retries + 1}: gRPC error occurred, last index = "
-                    + f"{last_processed_index}: {e.code()} - {e.details()}",
-                    worker_id,
-                )
-                self._info(f"Stringified exception: {str(e)}", worker_id)
-                self._info(f"Error occured while asking {self._dataset_id} for worker data:\n{worker_id}", worker_id)
-                self._init_grpc(worker_id=worker_id)
-                retries += 1
-                if retries >= max_retries:
-                    raise RuntimeError(f"Failed to get data after {max_retries} attempts.") from e
-                else:
-                    time.sleep(backoff)
-                    backoff *= 2
+                except grpc.RpcError as e:
+                    self._info(
+                        "gRPC error occurred, last index = " + f"{last_processed_index}: {e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(
+                        f"Error occured while asking {self._dataset_id} for worker data:\n{worker_id}", worker_id
+                    )
+                    self._init_grpc(worker_id=worker_id)
+                    raise e
 
     def _get_data_from_storage(
         self, keys: list[int], worker_id: Optional[int] = None
     ) -> Iterable[list[tuple[int, bytes, int]]]:
-        max_retries = 5
-        retries = 0
         last_processed_index = -1
-        backoff = 2
-        while retries < max_retries:
-            try:
-                request = GetRequest(dataset_id=self._dataset_id, keys=keys)
-                response: GetResponse
-                for index, response in enumerate(self._storagestub.Get(request)):
-                    if index <= last_processed_index:
-                        continue  # Skip already processed responses
-                    yield list(zip(response.keys, response.samples, response.labels))
-                    last_processed_index = index
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    request = GetRequest(dataset_id=self._dataset_id, keys=keys)
+                    response: GetResponse
+                    for index, response in enumerate(self._storagestub.Get(request)):
+                        if index <= last_processed_index:
+                            continue  # Skip already processed responses
+                        yield list(zip(response.keys, response.samples, response.labels))
+                        last_processed_index = index
 
-                # If the loop completes without errors, break out of the retry loop
-                break
-
-            except grpc.RpcError as e:
-                self._info(
-                    f"Attempt {retries + 1}: gRPC error occurred, last index = "
-                    + f"{last_processed_index}: {e.code()} - {e.details()}",
-                    worker_id,
-                )
-                self._info(f"Stringified exception: {str(e)}", worker_id)
-                self._info(f"Error occured while asking {self._dataset_id} for keys:\n{keys}", worker_id)
-                self._init_grpc(worker_id=worker_id)
-                retries += 1
-                if retries >= max_retries:
-                    raise RuntimeError(f"Failed to get data after {max_retries} attempts.") from e
-                else:
-                    time.sleep(backoff)
-                    backoff *= 2
+                except grpc.RpcError as e:  # We catch and reraise to log and reconnect
+                    self._info(
+                        f"gRPC error occurred, last index = {last_processed_index}: {e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(f"Error occured while asking {self._dataset_id} for keys:\n{keys}", worker_id)
+                    self._init_grpc(worker_id=worker_id)
+                    raise e
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()

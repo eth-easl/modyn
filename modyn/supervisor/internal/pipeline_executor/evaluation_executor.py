@@ -4,7 +4,6 @@ import datetime
 import logging
 import pickle
 import sys
-import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
@@ -33,6 +32,7 @@ from modyn.supervisor.internal.pipeline_executor.models import (
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.utils.utils import current_time_micros, dynamic_module_import
 from pydantic import BaseModel
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -274,26 +274,17 @@ class EvaluationExecutor:
             eval_req.interval_start,
             eval_req.interval_end,
         )
-
-        # Fault tolerant starting of evaluation
-        max_retries = 5
-        retries = 0
-        backoff = 2
-        while retries < max_retries:
-            try:
-                response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-                break
-            except grpc.RpcError as e:
-                logger.error(e)
-                logger.error(f"Attempt {retries + 1}: gRPC connection error, trying to reconnect...")
-                self.grpc.init_evaluator()
-                retries += 1
-                if retries >= max_retries:
-                    raise RuntimeError(f"Failed to evaluate model after {max_retries} attempts.") from e
-                else:
-                    logger.error(f"Sleeping for {backoff} seconds before trying again.")
-                    time.sleep(backoff)
-                    backoff *= 2  # Exponential backoff
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+                except grpc.RpcError as e:  # We catch and reraise to reconnect
+                    logger.error(e)
+                    logger.error("gRPC connection error, trying to reconnect...")
+                    self.grpc.init_evaluator()
+                    raise e
 
         if not response.evaluation_started:
             log.info.failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
