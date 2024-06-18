@@ -5,7 +5,12 @@ from pathlib import Path
 from typing import Literal
 
 import torch
-from benchmark_utils import create_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
+from benchmark.wildtime_benchmarks.benchmark_utils import (
+    create_timestamp,
+    download_if_not_exists,
+    setup_argparser_wildtime,
+    setup_logger,
+)
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -23,7 +28,8 @@ def main():
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
-    HuffpostDownloader(args.dir).store_data(args.mode, args.dummyyear)
+    hp = HuffpostDownloader(args.dir)
+    hp.store_data(args.mode, args.dummyyear)
 
 
 class HuffpostDownloader(Dataset):
