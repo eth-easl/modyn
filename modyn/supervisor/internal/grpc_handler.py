@@ -47,6 +47,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.supervisor.internal.eval.result_writer import AbstractEvaluationResultWriter
 from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import grpc_common_config, grpc_connection_established
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -270,6 +271,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
+    # pylint: disable=too-many-branches
     def wait_for_evaluation_completion(
         self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]
     ) -> None:
@@ -292,7 +294,18 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             current_evaluation_id = working_queue.popleft()
             current_evaluation_reporter = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
-            res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+
+            for attempt in Retrying(
+                stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            ):
+                with attempt:
+                    try:
+                        res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+                    except grpc.RpcError as e:  # We catch and reraise to easily reconnect
+                        logger.error(e)
+                        logger.error(f"[Training {training_id}]: gRPC connection error, trying to reconnect.")
+                        self.init_evaluator()
+                        raise e
 
             if not res.valid:
                 exception_msg = f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n"

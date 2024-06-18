@@ -1,7 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module, too-many-locals
 
 import platform
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import grpc
 import pytest
@@ -216,6 +216,57 @@ def test_get_data_from_storage(
     assert set(result_keys) == set(keys)
     assert set(result_samples) == set(data)
     assert set(result_labels) == set(labels)
+
+
+class MockRpcError(grpc.RpcError):
+    def code(self):
+        return grpc.StatusCode.UNAVAILABLE
+
+    def details(self):
+        return "Mocked gRPC error for testing retry logic."
+
+
+@patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub")
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+def test_get_data_from_storage_with_retry(
+    test_insecure_channel,
+    test_grpc_connection_established,
+    test_grpc_connection_established_selector,
+    mock_storage_stub,
+):
+    # Arrange
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+        tokenizer=None,
+        log_path=None,
+        shuffle=False,
+        num_prefetched_partitions=0,
+        parallel_prefetch_requests=1,
+    )
+    online_dataset._init_grpc = MagicMock()  # cannot patch this with annotations due to tenacity
+    mock_storage_stub.Get.side_effect = [MockRpcError(), MockRpcError(), MagicMock()]
+    online_dataset._storagestub = mock_storage_stub
+
+    try:
+        for _ in online_dataset._get_data_from_storage(list(range(10))):
+            pass
+    except Exception as e:
+        assert isinstance(e, RuntimeError), "Expected a RuntimeError after max retries."
+
+    assert mock_storage_stub.Get.call_count == 3, "StorageStub.Get should have been retried twice before succeeding."
 
 
 @patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
