@@ -10,12 +10,12 @@ from modyn.config import (
     OptimizerParamGroup,
 )
 from modyn.config.schema.pipeline import (
+    AccuracyMetricConfig,
     DataConfig,
     EvalDataConfig,
     EvaluationConfig,
-    FullModelStrategy,
-    AccuracyMetricConfig,
     F1ScoreMetricConfig,
+    FullModelStrategy,
     ModelConfig,
     ModynPipelineConfig,
     Pipeline,
