@@ -26,6 +26,7 @@ from modyn.utils import (
     grpc_connection_established,
     instantiate_class,
 )
+from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -126,23 +127,22 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=2, max=60),
+        before=before_log(logger, logging.ERROR),
+        after=after_log(logger, logging.ERROR),
+        reraise=True,
+    )
     def _init_grpc(self, worker_id: Optional[int] = None) -> None:  # pragma: no cover
-        max_retries = 5
-        retry_delay = 1  # seconds
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        if grpc_connection_established(self._storage_channel):
+            self._storagestub = StorageStub(self._storage_channel)
+            return
 
-        for attempt in range(1, max_retries + 1):
-            self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
-            if grpc_connection_established(self._storage_channel):
-                self._storagestub = StorageStub(self._storage_channel)
-                return
-            # no connection established
-
-            self._info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...", worker_id)
-            time.sleep(retry_delay)
-            retry_delay *= 2  # Exponential backoff
-
-        self._info(f"Failed to establish gRPC connection after {max_retries} attempts.", worker_id)
-        raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
+        raise ConnectionError(
+            f"[Worker {worker_id}]: Could not establish gRPC connection to storage at address {self._storage_address}."
+        )
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
@@ -157,9 +157,11 @@ class OnlineDataset(IterableDataset):
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[Tuple[list[int], list[bytes], list[int], int]]:
-        max_retries = 3
+        # We don't use tenacity here due to the last_processed_index logic which would be cumbersome to redo in tenacity
+        max_retries = 5
         retries = 0
         last_processed_index = -1
+        backoff = 2
 
         while retries < max_retries:
             try:
@@ -179,14 +181,22 @@ class OnlineDataset(IterableDataset):
                 break
 
             except grpc.RpcError as e:
-                self._info(f"Attempt {retries + 1}: gRPC connection error, trying to reconnect...", worker_id)
+                self._info(
+                    f"Attempt {retries + 1}: gRPC error occurred, last index = {last_processed_index}: {e.code()} - {e.details()}",
+                    worker_id,
+                )
+                self._info(f"Stringified exception: {str(e)}")
+                self._info(f"Error occured while asking {self._dataset_id} for keys:\n{selector_keys}")
                 self._init_grpc(worker_id=worker_id)
                 retries += 1
                 if retries >= max_retries:
                     raise RuntimeError(f"Failed to get data after {max_retries} attempts.") from e
-
+                else:
+                    time.sleep(backoff)
+                    backoff *= 2
 
     # pylint: disable=too-many-locals
+
     def _get_data(
         self,
         data_container: dict,

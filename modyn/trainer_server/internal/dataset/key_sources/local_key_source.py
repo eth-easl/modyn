@@ -35,7 +35,7 @@ class LocalKeySource(AbstractKeySource):
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        del state['_trigger_sample_storage'] # not pickable
+        del state["_trigger_sample_storage"]  # not pickable
         return state
 
     def __setstate__(self, state):

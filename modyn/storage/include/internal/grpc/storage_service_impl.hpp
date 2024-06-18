@@ -127,7 +127,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       return {StatusCode::OK, "Data retrieved."};
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in Get: {}", e.what());
-      return {StatusCode::OK, fmt::format("Error in Get: {}", e.what())};
+      return {StatusCode::INTERNAL, fmt::format("Error in Get: {}", e.what())};
     }
   }
 
@@ -152,7 +152,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse, WriterT>(writer, dataset_id, request_timestamp);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
-      return {StatusCode::OK, fmt::format("Error in GetNewDataSince: {}", e.what())};
+      return {StatusCode::INTERNAL, fmt::format("Error in GetNewDataSince: {}", e.what())};
     }
     return {StatusCode::OK, "Data retrieved."};
   }
@@ -181,7 +181,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                                                                    end_timestamp);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in GetDataInInterval: {}", e.what());
-      return {StatusCode::OK, fmt::format("Error in GetDataInInterval: {}", e.what())};
+      return {StatusCode::INTERNAL, fmt::format("Error in GetDataInInterval: {}", e.what())};
     }
     return {StatusCode::OK, "Data retrieved."};
   }
@@ -299,7 +299,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in GetDataPerWorker: {}", e.what());
       session.close();
-      return {StatusCode::OK, fmt::format("Error in GetDataPerWorker: {}", e.what())};
+      return {StatusCode::INTERNAL, fmt::format("Error in GetDataPerWorker: {}", e.what())};
     }
 
     session.close();
@@ -623,7 +623,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file: {}", e.what());
-      throw;
+      writer->Finish(grpc::Status(grpc::StatusCode::INTERNAL, e.what()));
     }
   }
 

@@ -159,7 +159,7 @@ SingleDownsamplingConfig = Annotated[
         GradNormDownsamplingConfig,
         NoDownsamplingConfig,
         RHOLossDownsamplingConfig,
-        RS2DownsamplingConfig
+        RS2DownsamplingConfig,
     ],
     Field(discriminator="strategy"),
 ]

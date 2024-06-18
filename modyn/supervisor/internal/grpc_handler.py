@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections import deque
 from time import sleep
 from typing import Any, Iterable, Optional, Sequence
@@ -305,7 +306,28 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             current_evaluation_id = working_queue.popleft()
             current_evaluation_reporter = evaluations[current_evaluation_id]
             req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
-            res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+
+            # Fault tolerant watching of evaluation
+            max_retries = 5
+            retries = 0
+            backoff = 1
+            while retries < max_retries:
+                try:
+                    res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
+                    break
+                except grpc.RpcError as e:
+                    logger.error(e)
+                    logger.error(
+                        f"[Training {training_id}]: Attempt {retries + 1}: gRPC connection error, trying to reconnect..."
+                    )
+                    self.init_evaluator()
+                    retries += 1
+                    if retries >= max_retries:
+                        raise RuntimeError(f"Failed to evaluate model after {max_retries} attempts.") from e
+                    else:
+                        logger.error(f"Sleeping for {backoff} seconds before trying again.")
+                        time.sleep(backoff)
+                        backoff *= 2  # Exponential backoff
 
             if not res.valid:
                 exception_msg = f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n"

@@ -39,18 +39,18 @@ int64_t SingleSampleFileWrapper::get_label(uint64_t /* index */) {
 std::vector<int64_t> SingleSampleFileWrapper::get_all_labels() { return std::vector<int64_t>{get_label(0)}; }
 
 std::vector<unsigned char> SingleSampleFileWrapper::get_sample(uint64_t index) {
-  ASSERT(index == 0, "Single sample file wrappers can only access the first sample");
+  ASSERT(index == 0, fmt::format("Single sample file wrappers can only access the first sample. file_path = {}, index = {}", file_path_, index));
   return filesystem_wrapper_->get(file_path_);
 }
 
 std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples(uint64_t start, uint64_t end) {
-  ASSERT(start == 0 && end == 1, "Single sample file wrappers can only access the first sample");
+  ASSERT(start == 0 && end == 1, fmt::format("Single sample file wrappers can only access the first sample. file_path = {}, start = {}, end = {}", file_path_, start, end));
   return std::vector<std::vector<unsigned char>>{get_sample(0)};
 }
 
 std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples_from_indices(
     const std::vector<uint64_t>& indices) {
-  ASSERT(indices.size() == 1 && indices[0] == 0, "Single sample file wrappers can only access the first sample");
+  ASSERT(indices.size() == 1 && indices[0] == 0, fmt::format("Single sample file wrappers can only access the first sample. file_path = {}, indices.size() = {}, indices = [{}]", file_path_, indices.size(), fmt::join(indices, ", ")));
   return std::vector<std::vector<unsigned char>>{get_sample(0)};
 }
 

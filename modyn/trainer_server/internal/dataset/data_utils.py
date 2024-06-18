@@ -67,7 +67,7 @@ def prepare_dataloaders(
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
-        train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=drop_last
+        train_set, batch_size=batch_size, num_workers=num_dataloaders, drop_last=drop_last, timeout=60
     )
 
     # TODO(#50): what to do with the val set in the general case?

@@ -4,12 +4,14 @@ import datetime
 import logging
 import pickle
 import sys
+import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from multiprocessing import Queue
 from pathlib import Path
 
+import grpc
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
@@ -272,7 +274,27 @@ class EvaluationExecutor:
             eval_req.interval_start,
             eval_req.interval_end,
         )
-        response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+
+        # Fault tolerant starting of evaluation
+        max_retries = 5
+        retries = 0
+        backoff = 2
+        while retries < max_retries:
+            try:
+                response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+                break
+            except grpc.RpcError as e:
+                logger.error(e)
+                logger.error(f"Attempt {retries + 1}: gRPC connection error, trying to reconnect...")
+                self.grpc.init_evaluator()
+                retries += 1
+                if retries >= max_retries:
+                    raise RuntimeError(f"Failed to evaluate model after {max_retries} attempts.") from e
+                else:
+                    logger.error(f"Sleeping for {backoff} seconds before trying again.")
+                    time.sleep(backoff)
+                    backoff *= 2  # Exponential backoff
+
         if not response.evaluation_started:
             log.info.failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
                 response.eval_aborted_reason
