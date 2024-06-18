@@ -5,7 +5,6 @@ from modyn.config.schema.pipeline import (
     EvalHandlerConfig,
     EvaluationConfig,
     FullModelStrategy,
-    Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
@@ -17,6 +16,7 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
     TriggerConfig,
 )
+from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig
 
 
 def gen_pipeline_config(
@@ -24,7 +24,7 @@ def gen_pipeline_config(
 ) -> ModynPipelineConfig:
     return ModynPipelineConfig(
         pipeline=Pipeline(name=name, description="Huffpost pipeline for comparing trigger policies", version="0.0.1"),
-        model=ModelConfig(id="ArticleNet", config={"num_classes": 55}),
+        model=ModelConfig(id="ArticleNet", config={"num_classes": 42}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
@@ -74,23 +74,22 @@ def gen_pipeline_config(
                     batch_size=64,
                     dataloader_workers=8,
                     metrics=[
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
                         ),
-                        Metric(
+                        F1ScoreMetricConfig(
                             name="F1score",
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
+                            num_classes=42,
+                            average="weighted",
                         ),
                     ],
                 )

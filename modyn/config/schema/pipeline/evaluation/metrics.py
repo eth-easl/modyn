@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Callable, Literal, Union
+from typing import Annotated, Callable, Literal, Union
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
-from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class _BaseMetricConfig(ModynBaseModel):
-    config: dict[str, Any] = Field({}, description="Configuration for the evaluation metric.")
     evaluation_transformer_function: str | None = Field(
         None,
         description="A function used to transform the model output before evaluation.",
