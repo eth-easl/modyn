@@ -126,7 +126,7 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
-    def _init_grpc(self, worker_id: Optional[int] = None) -> None:
+    def _init_grpc(self, worker_id: Optional[int] = None) -> None:  # pragma: no cover
         max_retries = 5
         retry_delay = 1  # seconds
 
@@ -136,15 +136,13 @@ class OnlineDataset(IterableDataset):
                 self._storagestub = StorageStub(self._storage_channel)
                 return
             # no connection established
-            if attempt < max_retries:
-                self._info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...", worker_id)
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
-            else:
-                self._info(f"Failed to establish gRPC connection after {max_retries} attempts.", worker_id)
-                raise ConnectionError(
-                    f"Could not establish gRPC connection to storage at address {self._storage_address}."
-                )
+
+            self._info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...", worker_id)
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
+
+        self._info(f"Failed to establish gRPC connection after {max_retries} attempts.", worker_id)
+        raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")

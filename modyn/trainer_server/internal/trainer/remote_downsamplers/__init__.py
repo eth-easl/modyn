@@ -5,6 +5,8 @@ from .remote_grad_match_downsampling_strategy import RemoteGradMatchDownsampling
 from .remote_gradnorm_downsampling import RemoteGradNormDownsampling  # noqa: F401
 from .remote_kcenter_greedy_downsampling_strategy import RemoteKcenterGreedyDownsamplingStrategy  # noqa: F401
 from .remote_loss_downsampling import RemoteLossDownsampling  # noqa: F401
+from .remote_rho_loss_downsampling import RemoteRHOLossDownsampling  # noqa: F401
+from .remote_rs2_downsampling import RemoteRS2Downsampling  # noqa: F401
 from .remote_submodular_downsampling_strategy import RemoteSubmodularDownsamplingStrategy  # noqa: F401
 from .remote_uncertainty_downsampling_strategy import RemoteUncertaintyDownsamplingStrategy  # noqa: F401
 

@@ -156,7 +156,9 @@ class EvaluationExecutor:
             )
             eval_requests += handler_eval_requests
 
-        num_workers = self.config.supervisor.after_training_evaluation_workers if self.config.supervisor else 1
+        if len(eval_requests) == 0:
+            return SupervisorLogs()
+        num_workers = self.pipeline.evaluation.after_training_evaluation_workers
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
@@ -184,6 +186,11 @@ class EvaluationExecutor:
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
             eval_requests += handler_eval_requests
 
+        if len(eval_requests) == 0:
+            return SupervisorLogs()
+        # self.Eval_handlers is not an empty list if and only if self.pipeline.evaluation is not None
+        assert self.pipeline.evaluation is not None
+
         logs = self._launch_evaluations_async(
             eval_requests,
             # as we don't execute this during the training pipeline, we don't have a reference how
@@ -197,7 +204,7 @@ class EvaluationExecutor:
                 trigger_idx=-1,
             ),
             eval_status_queue=eval_status_queue,
-            num_workers=(self.config.supervisor.after_pipeline_evaluation_workers if self.config.supervisor else 1),
+            num_workers=self.pipeline.evaluation.after_pipeline_evaluation_workers,
         )
         return logs
 
@@ -253,14 +260,14 @@ class EvaluationExecutor:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.pipeline.evaluation
         logger.info(
-            f"Evaluation Starts for model {eval_req.model_id} on split {eval_req.interval_start} "
+            f"Evaluation Starts for model {eval_req.id_model} on split {eval_req.interval_start} "
             f"to {eval_req.interval_end} of dataset {eval_req.dataset_id}."
         )
         dataset_config = next((d for d in self.pipeline.evaluation.datasets if d.dataset_id == eval_req.dataset_id))
         log.info = SingleEvaluationInfo(eval_request=eval_req)
         request = GRPCHandler.prepare_evaluation_request(
             dataset_config.model_dump(by_alias=True),
-            eval_req.model_id,
+            eval_req.id_model,
             self.pipeline.evaluation.device,
             eval_req.interval_start,
             eval_req.interval_end,
@@ -271,13 +278,13 @@ class EvaluationExecutor:
                 response.eval_aborted_reason
             ].name
             logger.error(
-                f"Evaluation for model {eval_req.model_id} on split {eval_req.interval_start} to "
+                f"Evaluation for model {eval_req.id_model} on split {eval_req.interval_start} to "
                 f"{eval_req.interval_end} not started with reason: {log.info.failure_reason}."
             )
             return
 
         logger.info(
-            f"Evaluation started for model {eval_req.model_id} on split {eval_req.interval_start} "
+            f"Evaluation started for model {eval_req.id_model} on split {eval_req.interval_start} "
             f"to {eval_req.interval_end}."
         )
         reporter = EvaluationStatusReporter(

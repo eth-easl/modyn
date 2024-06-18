@@ -336,8 +336,6 @@ class SupervisorConfig(HostnamePortMixin):
     """
 
     eval_directory: str | Path = Field(description="The directory to store the evaluation results.")
-    after_training_evaluation_workers: int = Field(5, description="Number of workers for after training evaluation.")
-    after_pipeline_evaluation_workers: int = Field(5, description="Number of workers for post pipeline evaluation.")
 
 
 # ------------------------------------------------------ CONFIG ------------------------------------------------------ #

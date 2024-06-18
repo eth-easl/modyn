@@ -1,19 +1,7 @@
-from enum import Enum
-from typing import Any
-
 import numpy as np
 import torch
+from modyn.config.schema.pipeline import F1ScoreMetricConfig
 from modyn.evaluator.internal.metrics.abstract_decomposable_metric import AbstractDecomposableMetric
-
-
-class F1ScoreTypes(Enum):
-    MACRO = "macro"
-    MICRO = "micro"
-    WEIGHTED = "weighted"
-    BINARY = "binary"
-
-
-VALID_SCORE_TYPES = {score_type.value for score_type in F1ScoreTypes}
 
 
 class F1Score(AbstractDecomposableMetric):
@@ -24,33 +12,11 @@ class F1Score(AbstractDecomposableMetric):
     - (optional) pos_label: the positive label used in binary classification (default 1), only its f1-score is returned.
     """
 
-    def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
-        super().__init__(evaluation_transform_func, config)
-
-        if "num_classes" not in config:
-            raise ValueError("Must provide num_classes to the F1-score metric.")
-        self.num_classes = config["num_classes"]
-
-        self.average = F1ScoreTypes.MACRO
-        if "average" in config:
-            average_type_name = config["average"]
-            if average_type_name in VALID_SCORE_TYPES:
-                self.average = F1ScoreTypes(average_type_name)
-            else:
-                raise ValueError(
-                    f"Provided invalid average strategy {average_type_name}. "
-                    f"Must be one of: {', '.join(VALID_SCORE_TYPES)}"
-                )
-
-        self.pos_label = 1
-        if "pos_label" in config:
-            self.pos_label = config["pos_label"]
-
-        if self.average == F1ScoreTypes.BINARY and self.num_classes != 2:
-            raise ValueError("Must only have 2 classes for binary F1-score.")
+    def __init__(self, config: F1ScoreMetricConfig) -> None:
+        super().__init__(config)
 
         # store true positives (tp), false positives (fp) and false negatives (fn) in matrix
-        self.classification_matrix = np.zeros((3, self.num_classes))
+        self.classification_matrix = np.zeros((3, self.config.num_classes))
 
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
         y_true = y_true.detach().cpu().numpy()
@@ -80,7 +46,7 @@ class F1Score(AbstractDecomposableMetric):
             return 0
 
         # equivalent to accuracy
-        if self.average == F1ScoreTypes.MICRO:
+        if self.config.average == "micro":
             return sum_tp / total_samples
 
         false_negatives = self.classification_matrix[2]
@@ -92,10 +58,10 @@ class F1Score(AbstractDecomposableMetric):
             numerator, denominator, out=np.zeros(numerator.shape, dtype=float), where=denominator != 0
         )
 
-        if self.average == F1ScoreTypes.BINARY:
-            return f1_scores[self.pos_label]
+        if self.config.average == "binary":
+            return f1_scores[self.config.pos_label]
 
-        if self.average == F1ScoreTypes.MACRO:
+        if self.config.average == "macro":
             return np.mean(f1_scores, dtype=float)
 
         # weighted case
@@ -103,4 +69,4 @@ class F1Score(AbstractDecomposableMetric):
         return float(np.average(f1_scores, weights=total_labels_per_class / total_samples))
 
     def get_name(self) -> str:
-        return f"F1-{self.average.value}"
+        return f"F1-{self.config.average}"

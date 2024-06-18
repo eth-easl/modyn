@@ -1,5 +1,4 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
-import json
 import logging
 import multiprocessing as mp
 import pathlib
@@ -11,13 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    DatasetInfo,
-    EvaluateModelRequest,
-    JsonString,
-    MetricConfiguration,
-    PythonString,
-)
+from modyn.config.schema.pipeline import AccuracyMetricConfig
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import DatasetInfo, EvaluateModelRequest
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, Accuracy
 from modyn.evaluator.internal.pytorch_evaluator import PytorchEvaluator
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
@@ -98,7 +94,7 @@ def get_evaluation_info(
     trained_model_path: pathlib.Path,
     label_transformer: bool,
     model_dynamic_module_patch: MagicMock,
-):
+) -> None:
     model_dynamic_module_patch.return_value = MockModule()
     request = EvaluateModelRequest(
         model_id=1,
@@ -106,10 +102,10 @@ def get_evaluation_info(
         device="cpu",
         batch_size=4,
         metrics=[
-            MetricConfiguration(
-                name="Accuracy",
-                config=JsonString(value=json.dumps({})),
-                evaluation_transformer=PythonString(value=get_mock_accuracy_transformer()),
+            EvaluatorJsonString(
+                value=AccuracyMetricConfig(
+                    evaluation_transformer_function=get_mock_accuracy_transformer()
+                ).model_dump_json()
             )
         ],
         transform_list=[],
@@ -126,11 +122,11 @@ def get_mock_evaluator(
     metric_result_queue: mp.Queue,
     trained_model_path: pathlib.Path,
     label_transformer: bool,
-):
+) -> None:
     evaluation_info = get_evaluation_info(
         1,
         "storage:5000",
-        [Accuracy(config={}, evaluation_transform_func=get_mock_accuracy_transformer())],
+        [Accuracy(AccuracyMetricConfig(evaluation_transformer_function=get_mock_accuracy_transformer()))],
         trained_model_path,
         label_transformer,
     )
@@ -141,7 +137,7 @@ def get_mock_evaluator(
 
 
 @patch.object(PytorchEvaluator, "_load_state")
-def test_evaluator_init(load_state_mock: MagicMock):
+def test_evaluator_init(load_state_mock: MagicMock) -> None:
     evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), "trained_model.modyn", True)
 
     assert isinstance(evaluator._model, MockModelWrapper)
@@ -291,5 +287,5 @@ def test_evaluate(load_state_mock: MagicMock):
 
     # accuracy
     metric_name, metric_result = metric_result_queue.get()
-    assert metric_name == Accuracy("", {}).get_name()
+    assert metric_name == Accuracy(AccuracyMetricConfig()).get_name()
     assert metric_result == pytest.approx(1)
