@@ -22,9 +22,10 @@ from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig
 def gen_pipeline_config(
     name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig]
 ) -> ModynPipelineConfig:
+    num_classes = 42
     return ModynPipelineConfig(
         pipeline=Pipeline(name=name, description="Huffpost pipeline for comparing trigger policies", version="0.0.1"),
-        model=ModelConfig(id="ArticleNet", config={"num_classes": 42}),
+        model=ModelConfig(id="ArticleNet", config={"num_classes": num_classes}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
@@ -82,13 +83,12 @@ def gen_pipeline_config(
                             ),
                         ),
                         F1ScoreMetricConfig(
-                            name="F1score",
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            num_classes=42,
+                            num_classes=num_classes,
                             average="weighted",
                         ),
                     ],

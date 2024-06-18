@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Annotated, Callable, Literal, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class _BaseMetricConfig(ModynBaseModel):
