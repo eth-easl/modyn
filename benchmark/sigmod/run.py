@@ -356,6 +356,7 @@ def run_experiment() -> None:
     lr = None  # ignored for non arxiv
     num_classes = 6404  # necessary for CGLM, ignored for others
     train_conf_func = None
+    maximum_triggers = None
     if pipeline_gen_func == gen_yearbook_config:
         min_lr = 1e-4
         warmup_triggers = 2
@@ -402,6 +403,7 @@ def run_experiment() -> None:
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
         train_conf_func = gen_cglm_training_conf
+        maximum_triggers = 17 # last triggers are meaningless and cost time
 
     run_id = 0
     for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
@@ -445,7 +447,7 @@ def run_experiment() -> None:
         pipeline_configs=pipeline_configs,
         start_replay_at=0,
         stop_replay_at=None,
-        maximum_triggers=None,
+        maximum_triggers=maximum_triggers,
         show_eval_progress=False,
     )
 

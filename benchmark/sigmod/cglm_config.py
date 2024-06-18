@@ -108,7 +108,7 @@ def gen_cglm_config(
                     models="matrix",
                     datasets=[dataset, f"{dataset}-test"],
                     strategy=SlicingEvalStrategyConfig(
-                        eval_every="1y", eval_start_from=1041379200, eval_end_at=1717200000
+                        eval_every="1y", eval_start_from=1041379200, eval_end_at=1610000000 #1717200000
                     ),
                 )
             ],
