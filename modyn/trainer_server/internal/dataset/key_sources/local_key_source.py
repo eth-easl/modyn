@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
