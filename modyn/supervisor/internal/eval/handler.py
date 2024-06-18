@@ -14,11 +14,11 @@ class EvalRequest(BaseModel):
 
     trigger_id: int
     training_id: int
-    model_id: int
+    id_model: int
     most_recent_model: bool
     eval_handler: str
     dataset_id: str
-    interval_start: int | None = None
+    interval_start: int = 0
     interval_end: int | None = None
 
 
@@ -61,7 +61,7 @@ class EvalHandler:
                     EvalRequest(
                         trigger_id=trigger_id,
                         training_id=training_id,
-                        model_id=model_id,
+                        id_model=model_id,
                         most_recent_model=(i == most_recent_interval),
                         eval_handler=self.config.name,
                         dataset_id=dataset_id,
@@ -126,7 +126,7 @@ class EvalHandler:
                     EvalRequest(
                         trigger_id=eval_candidate["trigger_id"],
                         training_id=eval_candidate["training_id"],
-                        model_id=eval_candidate["id_model"],
+                        id_model=eval_candidate["id_model"],
                         most_recent_model=eval_candidate["most_recent_model"],
                         eval_handler=self.config.name,
                         dataset_id=dataset_id,

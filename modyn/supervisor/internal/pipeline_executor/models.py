@@ -239,7 +239,10 @@ class TrainingInfo(_TrainInfoMixin):
     @override
     @property
     def df(self) -> pd.DataFrame:
-        return pd.DataFrame([(self.trigger_id, self.training_id)], columns=["trigger_id", "training_id"])
+        return pd.DataFrame(
+            [(self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])],
+            columns=["trigger_id", "training_id", "num_batches", "num_samples"],
+        )
 
 
 class StoreModelInfo(_TrainInfoMixin):
@@ -259,23 +262,23 @@ class SingleEvaluationInfo(StageInfo):
     results: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str | None = None
 
-    def results_df(self) -> pd.DataFrame:
-        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+    @override
+    @property
+    def df(self) -> pd.DataFrame:
+        """One dataframe per requests (does not contain metrics)"""
         return pd.DataFrame(
             [
                 (
                     self.eval_request.trigger_id,
                     self.eval_request.training_id,
-                    self.eval_request.model_id,
+                    self.eval_request.id_model,
                     self.eval_request.most_recent_model,
                     self.eval_request.eval_handler,
                     self.eval_request.dataset_id,
                     self.eval_request.interval_start,
                     self.eval_request.interval_end,
-                    metric["name"],
-                    metric["result"],
+                    self.results.get("dataset_size", 0),
                 )
-                for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",
@@ -286,9 +289,21 @@ class SingleEvaluationInfo(StageInfo):
                 "dataset_id",
                 "interval_start",
                 "interval_end",
-                "metric",
-                "value",
+                "num_samples",
             ],
+        )
+
+    def results_df(self) -> pd.DataFrame:
+        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        return self.df.merge(
+            pd.DataFrame(
+                [
+                    (metric["name"], metric["result"])
+                    for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
+                ],
+                columns=["metric", "value"],
+            ),
+            how="cross",
         )
 
 

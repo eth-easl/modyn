@@ -51,14 +51,14 @@ def test_get_eval_requests_after_training() -> None:
     ]
 
     assert [
-        (r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests
+        (r.id_model, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests
     ] == expected_eval_requests
 
     # models=most_recent
     eval_handler.config.models = "most_recent"
     eval_requests = eval_handler.get_eval_requests_after_training(trigger_id, training_id, model_id, training_interval)
 
-    assert [(r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests] == [
+    assert [(r.id_model, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests] == [
         exp for exp in expected_eval_requests if exp[1]
     ]
 
@@ -134,13 +134,13 @@ def test_get_eval_requests_after_pipeline() -> None:
     ]
 
     assert [
-        (r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests
+        (r.id_model, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests
     ] == expected_eval_requests
 
     # models=most_recent
     eval_handler.config.models = "most_recent"
     eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
 
-    assert [(r.model_id, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests] == [
+    assert [(r.id_model, r.most_recent_model, r.interval_start, r.interval_end) for r in eval_requests] == [
         exp for exp in expected_eval_requests if exp[1]
     ]
