@@ -46,6 +46,20 @@ else
     exit 1
 fi
 
+if $MAMBA_CMD run -n modyn ruff check experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle ; then
+    echo "No ruff check errors"
+else
+    echo "ruf check errors"
+    exit 1
+fi
+
+if $MAMBA_CMD run -n modyn ruff format experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle ; then
+    echo "No ruff format errors"
+else
+    echo "ruff format errors"
+    exit 1
+fi
+
 if $MAMBA_CMD run -n modyn pylint modyn ; then
     echo "No pylint errors"
 else
