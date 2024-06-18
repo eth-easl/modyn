@@ -18,7 +18,7 @@ class EvalRequest(BaseModel):
     most_recent_model: bool
     eval_handler: str
     dataset_id: str
-    interval_start: int | None = None
+    interval_start: int = 0
     interval_end: int | None = None
 
 
