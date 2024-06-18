@@ -156,14 +156,6 @@ def gen_yearbook_config(
                             ),
                             topn=1
                         ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=2
-                        ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=5
-                        ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
