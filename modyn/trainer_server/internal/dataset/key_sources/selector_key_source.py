@@ -27,6 +27,7 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = None  # connection is made when the pytorch worker is started
         self._uses_weights: Optional[bool] = None  # get via gRPC, so unavailable if the connection is not yet made.
 
+    @staticmethod
     def retry_reconnection_callback(retry_state: Any) -> None:
         self: SelectorKeySource = retry_state.args[0]
         logger.error(f"Retry attempt {retry_state.attempt_number}. State = \n {str(retry_state)}")
