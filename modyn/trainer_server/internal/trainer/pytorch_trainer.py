@@ -380,7 +380,8 @@ class PytorchTrainer:
         total_stopw.stop("TotalTrain")
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
-        self._log["num_samples"] = self._num_samples
+        self._log["num_samples_seen"] = self._num_samples
+        self._log["num_samples_trained"] = trained_batches * self._batch_size
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
@@ -841,8 +842,8 @@ class PytorchTrainer:
             num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
-        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         self._expected_num_epochs = self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         if self.num_samples_to_pass > 0:
             self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
             self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
