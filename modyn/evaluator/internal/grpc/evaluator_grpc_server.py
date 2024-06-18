@@ -26,7 +26,7 @@ class EvaluatorGRPCServer:
         self.tempdir = tempdir
         self.server = grpc.server(
             futures.ThreadPoolExecutor(
-                max_workers=10,
+                max_workers=64,
             ),
             options=[
                 ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
