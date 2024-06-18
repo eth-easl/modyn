@@ -12,7 +12,8 @@ from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    Metric,
+    AccuracyMetricConfig,
+    F1ScoreMetricConfig,
     ModelConfig,
     ModynPipelineConfig,
     Pipeline,
@@ -63,7 +64,7 @@ def gen_arxiv_training_conf(
             shuffle=True,
             amp=False,
             seed=seed,
-        ),
+        )
     )
 
 
@@ -127,51 +128,48 @@ def gen_arxiv_config(
                     batch_size=256,
                     dataloader_workers=1,
                     metrics=[
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 172},
+                            topn=1
                         ),
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function="",
-                            config={"num_classes": 172, "topn": 2},
+                            topn=2
                         ),
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function="",
-                            config={"num_classes": 172, "topn": 5},
+                            topn=5
                         ),
-                        Metric(
-                            name="F1Score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 172, "average": "weighted"},
+                            num_classes=172,
+                            average="weighted"
                         ),
-                        Metric(
-                            name="F1Score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 172, "average": "macro"},
+                            num_classes=172,
+                            average="macro"
                         ),
-                        Metric(
-                            name="F1Score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 172, "average": "micro"},
+                            num_classes=172,
+                            average="micro"
                         ),
                     ],
                 )

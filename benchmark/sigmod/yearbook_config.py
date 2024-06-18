@@ -12,7 +12,8 @@ from modyn.config.schema.pipeline import (
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    Metric,
+    AccuracyMetricConfig,
+    F1ScoreMetricConfig,
     ModelConfig,
     ModynPipelineConfig,
     Pipeline,
@@ -147,42 +148,50 @@ def gen_yearbook_config(
                     batch_size=512,
                     dataloader_workers=1,
                     metrics=[
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2},
+                            topn=1
                         ),
-                        Metric(
-                            name="F1Score",
+                        AccuracyMetricConfig(
+                            evaluation_transformer_function="",
+                            topn=2
+                        ),
+                        AccuracyMetricConfig(
+                            evaluation_transformer_function="",
+                            topn=5
+                        ),
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
+                            num_classes=2,
+                            average="weighted"
                         ),
-                        Metric(
-                            name="F1Score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "macro"},
+                            num_classes=2,
+                            average="macro"
                         ),
-                        Metric(
-                            name="F1Score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "micro"},
+                            num_classes=2,
+                            average="micro"
                         ),
+
                     ],
                 )
                 for dataset in ["yearbook", "yearbook-test"]

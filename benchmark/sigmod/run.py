@@ -177,7 +177,6 @@ def gen_selection_strategies(
         "il_model_config": {"use_pretrained": True, "num_classes": num_classes},
         "use_previous_model": False,
     }
-
     training_config_dict = training_config.model_dump()
     training_config_dict.update(il_config_options)
     strategies.append(
@@ -337,9 +336,9 @@ def run_experiment() -> None:
     logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    #pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
-    # pipeline_gen_func = gen_arxiv_config
-    pipeline_gen_func = gen_cglm_config
+    pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
+    pipeline_gen_func = gen_arxiv_config
+    #pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
@@ -347,8 +346,8 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seed = 42  # set to None to disable, should be 0-100
-    num_gpus = 4  # to parallelize across gpus
-    gpu_id = 3
+    num_gpus = 1  # to parallelize across gpus
+    gpu_id = 0
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
