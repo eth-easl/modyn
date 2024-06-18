@@ -10,7 +10,10 @@ Titles belonging to the same year are grouped into the same CSV file and stored 
 Each year is mapped to a year starting from 1/1/1970.
 There is a total of 42 categories/classes.
 
-> Note: The wild-time variant of the huffpost dataset has only 11 classes. We did not investigate where this discrepancy comes from.
+> Note: The wild-time variant of the huffpost dataset has only 11 classes. This is due to the fact that
+> the wild-time variant only considers tags that are present in all years.
+> We argue that the introduction of new tags is also a relevant aspect of data drift and should be a factor in
+> the evaluation of our pipelines. Stripping all data for a recently introduced topic/tag does not reflect reality.
 
 ## Data Download
 
