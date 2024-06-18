@@ -736,6 +736,7 @@ class PytorchTrainer:
             strategy_name, downsampler_config, modyn_config, self._criterion_nored
         )
         assert "sample_then_batch" in downsampler_config
+        self._log["received_downsampler_config"] = downsampler_config
         if downsampler_config["sample_then_batch"]:
             self._downsampling_mode = DownsamplingMode.SAMPLE_THEN_BATCH
             assert "downsampling_period" in downsampler_config
