@@ -61,7 +61,7 @@ def evaluation_executor(
         pipeline_logdir=tmp_dir_tests,
         config=dummy_system_config,
         pipeline=pipeline_config,
-        grpc=GRPCHandler(eval_state_config.config.model_dump(by_alias=True)),
+        grpc_handler=GRPCHandler(eval_state_config.config.model_dump(by_alias=True)),
     )
 
 
