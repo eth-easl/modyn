@@ -1,5 +1,5 @@
 from argparse import Namespace
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import numpy as np
 import torch
@@ -33,10 +33,11 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         trigger_id: int,
         batch_size: int,
         params_from_selector: dict,
+        modyn_config: dict,
         per_sample_loss: Any,
         device: str,
     ) -> None:
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, device)
+        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
 
         self.criterion = per_sample_loss
 
@@ -69,6 +70,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
     def inform_samples(
         self,
         sample_ids: list[int],
+        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
         forward_output: torch.Tensor,
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,

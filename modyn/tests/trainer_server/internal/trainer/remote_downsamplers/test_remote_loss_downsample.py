@@ -1,4 +1,5 @@
 import torch
+from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
 )
@@ -6,20 +7,22 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_loss_downs
 from torch import nn
 
 
-def test_sample_shape():
+def test_sample_shape(dummy_system_config: ModynConfig):
     model = torch.nn.Linear(10, 2)
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
-    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
+    sampler = RemoteLossDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         data = torch.randn(8, 10)
         target = torch.randint(2, size=(8,))
         ids = list(range(8))
 
         forward_output = model(data)
-        sampler.inform_samples(ids, forward_output, target)
+        sampler.inform_samples(ids, data, forward_output, target)
         indexes, weights = sampler.select_points()
 
         sampled_data, sampled_target = get_tensors_subset(indexes, data, target, ids)
@@ -31,20 +34,22 @@ def test_sample_shape():
         assert len(indexes) == 4
 
 
-def test_sample_weights():
+def test_sample_weights(dummy_system_config: ModynConfig):
     model = torch.nn.Linear(10, 2)
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
-    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
+    sampler = RemoteLossDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         data = torch.randn(8, 10)
         target = torch.randint(2, size=(8,))
         ids = list(range(8))
 
         forward_output = model(data)
-        sampler.inform_samples(ids, forward_output, target)
+        sampler.inform_samples(ids, data, forward_output, target)
         selected_ids, weights = sampler.select_points()
 
         assert weights.sum() > 0
@@ -57,13 +62,15 @@ class AlwaysZeroModel(torch.nn.Module):
         return torch.zeros(data.shape[0])
 
 
-def test_sample_loss_dependent_sampling():
+def test_sample_loss_dependent_sampling(dummy_system_config: ModynConfig):
     model = AlwaysZeroModel()
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
-    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
+    sampler = RemoteLossDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         # Create a target with two classes, where half have a true label of 0 and half have a true label of 1
         target = torch.cat([torch.zeros(4), torch.ones(4)])
@@ -74,7 +81,7 @@ def test_sample_loss_dependent_sampling():
         ids = list(range(8))
 
         forward_output = model(data)
-        sampler.inform_samples(ids, forward_output, target)
+        sampler.inform_samples(ids, data, forward_output, target)
         indexes, _ = sampler.select_points()
 
         _, sampled_target = get_tensors_subset(indexes, data, target, ids)
@@ -97,7 +104,7 @@ class DictLikeModel(nn.Module):
         return output
 
 
-def test_sample_dict_input():
+def test_sample_dict_input(dummy_system_config: ModynConfig):
     data = {
         "tensor1": torch.randn(6, 10),
         "tensor2": torch.randn(6, 10),
@@ -110,10 +117,12 @@ def test_sample_dict_input():
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
     params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
-    sampler = RemoteLossDownsampling(0, 0, 0, params_from_selector, per_sample_loss_fct, "cpu")
+    sampler = RemoteLossDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         forward_output = mymodel(data)
-        sampler.inform_samples(sample_ids, forward_output, target)
+        sampler.inform_samples(sample_ids, data, forward_output, target)
         indexes, weights = sampler.select_points()
         sampled_data, sampled_target = get_tensors_subset(indexes, data, target, sample_ids)
 

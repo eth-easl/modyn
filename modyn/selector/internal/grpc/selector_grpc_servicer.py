@@ -78,15 +78,19 @@ class SelectorGRPCServicer(SelectorServicer):
 
     def inform_data(self, request: DataInformRequest, context: grpc.ServicerContext) -> DataInformResponse:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
-        logger.info(f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points")
+        tid = threading.get_native_id()
+        pid = os.getpid()
+        logger.info(f"[{pid}][{tid}][Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points")
 
         log = self.selector_manager.inform_data(pipeline_id, keys, timestamps, labels)
         return DataInformResponse(log=JsonString(value=json.dumps(log)))
 
     def inform_data_and_trigger(self, request: DataInformRequest, context: grpc.ServicerContext) -> TriggerResponse:
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
+        tid = threading.get_native_id()
+        pid = os.getpid()
         logger.info(
-            f"[Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points"
+            f"[{pid}][{tid}][Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points"
             + f"+ trigger at timestamp {timestamps[-1] if len(keys) > 0 else 'n/a'}"
         )
 

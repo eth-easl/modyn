@@ -85,6 +85,7 @@ class Selector:
         return self._strategy.get_trigger_partition_keys(trigger_id, partition_id, worker_id, self._num_workers)
 
     def inform_data(self, keys: list[int], timestamps: list[int], labels: list[int]) -> dict[str, Any]:
+        self._strategy._update_next_trigger_id()
         return self._strategy.inform_data(keys, timestamps, labels)
 
     def inform_data_and_trigger(
@@ -92,6 +93,8 @@ class Selector:
     ) -> tuple[int, dict[str, Any]]:
         assert len(keys) == len(timestamps) and len(keys) == len(labels), "Inconsistent list lengths"
         log: dict[str, Any] = {"cached": False}
+
+        self._strategy._update_next_trigger_id()
 
         if len(keys) > 0:
             log["inform"] = self._strategy.inform_data(keys, timestamps, labels)
@@ -143,6 +146,7 @@ class Selector:
         return self._trigger_partition_cache[trigger_id]
 
     def get_available_labels(self) -> list[int]:
+        self._strategy._update_next_trigger_id()
         return self._strategy.get_available_labels()
 
     def uses_weights(self) -> bool:
@@ -150,6 +154,7 @@ class Selector:
 
     def get_selection_strategy_remote(self) -> tuple[bool, str, dict]:
         if isinstance(self._strategy, CoresetStrategy):
+            self._strategy._update_next_trigger_id()
             return (
                 self._strategy.requires_remote_computation,
                 self._strategy.downsampling_strategy,
