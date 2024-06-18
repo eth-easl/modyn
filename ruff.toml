@@ -11,7 +11,7 @@ exclude = [
     "*_pb2.py",
     "**/generated/*",
     "./benchmark/*",
-    "./plotting/*",
+    "./analytics/plotting/*",
     "./build/*",
     "./libbuild/*",
     "./clang-tidy-build/*",

@@ -42,8 +42,8 @@ class IrreducibleLossProducer:
         # The time to compute irreducible loss for cache-missing samples should be the same as compute irreducible loss
         # for the full batch. Therefore, to simplify logic as long as there is one cache miss we compute IR loss for the
         # full batch.
-        fullly_in_cache = all(sample_id in self.loss_cache for sample_id in sample_ids)
-        if fullly_in_cache:
+        fully_in_cache = all(sample_id in self.loss_cache for sample_id in sample_ids)
+        if fully_in_cache:
             # torch.stack creates a new tensor
             return torch.stack([self.loss_cache[sample_id] for sample_id in sample_ids]).to(self.device)
 

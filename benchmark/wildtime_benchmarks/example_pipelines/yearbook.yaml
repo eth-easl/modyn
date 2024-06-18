@@ -40,7 +40,7 @@ data:
     def bytes_parser_function(data: memoryview) -> torch.Tensor:
       with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)
+      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)  # TODO: check
 
 trigger:
   id: TimeTrigger

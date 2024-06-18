@@ -249,6 +249,10 @@ class PipelineExecutor:
 
             self._process_new_data(s, self.logs, replay_data, request_time)
 
+            # to identify the dataset end in the logs
+            s.current_sample_time = replay_data[-1][1] if replay_data else s.start_timestamp
+            s.current_sample_index = replay_data[-1][0] if replay_data else 0
+
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 logger.info("Exiting replay loop due to trigger limit.")
                 break

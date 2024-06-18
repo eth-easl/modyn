@@ -442,7 +442,7 @@ def main() -> None:
     try:
         test_dataset()
     except Exception as e:
-        print(f"An exception occured: {e}")
+        print(f"An exception occurred: {e}")
         raise
     finally:
         print("Test is exiting, running cleanup.")

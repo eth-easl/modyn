@@ -123,7 +123,7 @@ trigger:
 """
 
 
-def main():
+def main() -> None:
     curr_dir = pathlib.Path(__file__).resolve().parent
     for num_dataloader_workers in [16, 1, 4, 8]:
         for partition_size in [10000, 100000, 2500000, 5000000]:

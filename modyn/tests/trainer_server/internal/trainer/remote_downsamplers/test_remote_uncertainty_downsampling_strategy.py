@@ -50,7 +50,7 @@ def test_inform_samples(sampler_config):
 test_data = {
     "LeastConfidence": {
         "outputs": torch.tensor([[0.1, 0.1, 0.8], [0.3, 0.4, 0.3], [0.33, 0.34, 0.33]]),
-        "expected_scores": np.array([0.8, 0.4, 0.34]),  # confidence just picks the highest probabilty
+        "expected_scores": np.array([0.8, 0.4, 0.34]),  # confidence just picks the highest probability
     },
     "Entropy": {
         "outputs": torch.tensor([[0.1, 0.9], [0.4, 0.6]]),
