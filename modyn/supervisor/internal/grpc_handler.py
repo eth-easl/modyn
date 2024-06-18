@@ -271,6 +271,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
 
         return EvaluateModelRequest(**start_evaluation_kwargs)
 
+    # pylint: disable=too-many-branches
     def wait_for_evaluation_completion(
         self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]
     ) -> None:

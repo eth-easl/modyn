@@ -58,13 +58,13 @@ class EvaluationExecutor:
         pipeline_logdir: Path,
         config: ModynConfig,
         pipeline: ModynPipelineConfig,
-        grpc: GRPCHandler,
+        grpc_handler: GRPCHandler,
     ):
         self.pipeline_id = pipeline_id
         self.pipeline_logdir = pipeline_logdir
         self.config = config
         self.pipeline = pipeline
-        self.grpc = grpc
+        self.grpc = grpc_handler
         self.context: AfterPipelineEvalContext | None = None
         self.eval_handlers = (
             [EvalHandler(eval_handler_config) for eval_handler_config in pipeline.evaluation.handlers]
