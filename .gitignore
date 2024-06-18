@@ -72,7 +72,7 @@ docker-compose.yml.original
 Dockerfile.original
 
 # Experimental things
-plots/
+/plots/
 
 # Unity build files
 cmake-build-debug/

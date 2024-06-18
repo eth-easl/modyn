@@ -63,7 +63,7 @@ trigger:
 """
 
 
-def main():
+def main() -> None:
     curr_dir = pathlib.Path(__file__).resolve().parent
     for num_dataloader_workers in [16, 1, 2, 8]:
         for partition_size in [5000, 30000, 85000]:
