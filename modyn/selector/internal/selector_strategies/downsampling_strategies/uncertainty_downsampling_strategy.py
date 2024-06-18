@@ -20,6 +20,7 @@ class UncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
     @cached_property
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
+
         config["score_metric"] = self.downsampling_config.score_metric
         config["balance"] = self.balance
 

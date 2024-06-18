@@ -173,8 +173,9 @@ class Client:
             return False
         else:
             filename = f"client_error_{current_time_millis()}.log"
-            logger.error(f"unknown pipeline status. writing to file as well. {json.dumps(res, sort_keys=True, indent=2)}")
+            logger.error(f"Unknown pipeline status: {json.dumps(res, sort_keys=True, indent=2)}\n\nAlso persisted to {filename}.")
             with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(res, sort_keys=True, indent=2)
+                json.dump(res, f, sort_keys=True, indent=2)
 
             return False
+        

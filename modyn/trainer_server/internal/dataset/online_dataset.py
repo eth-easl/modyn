@@ -8,7 +8,6 @@ import os
 import pathlib
 import random
 import threading
-import time
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
 import grpc
@@ -26,7 +25,7 @@ from modyn.utils import (
     grpc_connection_established,
     instantiate_class,
 )
-from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
+from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -157,43 +156,36 @@ class OnlineDataset(IterableDataset):
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[Tuple[list[int], list[bytes], list[int], int]]:
-        # We don't use tenacity here due to the last_processed_index logic which would be cumbersome to redo in tenacity
-        max_retries = 5
-        retries = 0
         last_processed_index = -1
-        backoff = 2
 
-        while retries < max_retries:
-            try:
-                req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
-                stopw = Stopwatch()
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+                    stopw = Stopwatch()
 
-                response: GetResponse
-                stopw.start("ResponseTime", overwrite=True)
-                for index, response in enumerate(self._storagestub.Get(req)):
-                    if index <= last_processed_index:
-                        continue  # Skip already processed responses
-                    yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
-                    last_processed_index = index  # Update the last processed index
+                    response: GetResponse
                     stopw.start("ResponseTime", overwrite=True)
+                    for index, response in enumerate(self._storagestub.Get(req)):
+                        if index <= last_processed_index:
+                            continue  # Skip already processed responses
+                        yield list(response.keys), list(response.samples), list(response.labels), stopw.stop(
+                            "ResponseTime"
+                        )
+                        last_processed_index = index  # Update the last processed index
+                        stopw.start("ResponseTime", overwrite=True)
 
-                # If the loop completes without errors, break out of the retry loop
-                break
-
-            except grpc.RpcError as e:
-                self._info(
-                    f"Attempt {retries + 1}: gRPC error occurred, last index = {last_processed_index}: {e.code()} - {e.details()}",
-                    worker_id,
-                )
-                self._info(f"Stringified exception: {str(e)}")
-                self._info(f"Error occured while asking {self._dataset_id} for keys:\n{selector_keys}")
-                self._init_grpc(worker_id=worker_id)
-                retries += 1
-                if retries >= max_retries:
-                    raise RuntimeError(f"Failed to get data after {max_retries} attempts.") from e
-                else:
-                    time.sleep(backoff)
-                    backoff *= 2
+                except grpc.RpcError as e:  # We catch and reraise to reconnect to rpc and do logging
+                    self._info(
+                        "gRPC error occurred, last index = " + f"{last_processed_index}: {e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(f"Error occured while asking {self._dataset_id} for keys:\n{selector_keys}", worker_id)
+                    self._init_grpc(worker_id=worker_id)
+                    raise e
 
     # pylint: disable=too-many-locals
 
