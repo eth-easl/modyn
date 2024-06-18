@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+import logging
+
+from modyn.config import (
+    CheckpointingConfig,
+    LrSchedulerConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
+)
 from modyn.config.schema.pipeline import (
     DataConfig,
     EvalDataConfig,
@@ -10,18 +19,10 @@ from modyn.config.schema.pipeline import (
     ModynPipelineConfig,
     Pipeline,
     PipelineModelStorageConfig,
+    SelectionStrategy,
     TimeTriggerConfig,
     TrainingConfig,
-    SelectionStrategy,
 )
-from modyn.config import (
-    CheckpointingConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
-)
-from modyn.config import LrSchedulerConfig
-import logging
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 

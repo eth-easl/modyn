@@ -1,33 +1,31 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sys
 
-from experiments.utils.experiment_runner import run_multiple_pipelines
-from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
 from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
+from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
+from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
+from experiments.utils.experiment_runner import run_multiple_pipelines
+from modyn.config import (
+    GradNormDownsamplingConfig,
+    LossDownsamplingConfig,
+    LrSchedulerConfig,
+    RHOLossDownsamplingConfig,
+    RS2DownsamplingConfig,
+    UncertaintyDownsamplingConfig,
+)
+from modyn.config.schema.pipeline import (
+    CoresetStrategyConfig,
+    ModynPipelineConfig,
+    NewDataStrategyConfig,
+    PresamplingConfig,
+    SelectionStrategy,
+)
 from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig
 from modyn.config.schema.pipeline.training.config import TrainingConfig
 from modyn.utils.utils import current_time_millis
-
-from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
-from modyn.config.schema.pipeline import ModynPipelineConfig
-from modyn.config import LrSchedulerConfig
-
-from modyn.config.schema.pipeline import (
-    SelectionStrategy,
-    NewDataStrategyConfig,
-    CoresetStrategyConfig,
-    PresamplingConfig,
-)
-from modyn.config import (
-    RS2DownsamplingConfig,
-    LossDownsamplingConfig,
-    GradNormDownsamplingConfig,
-    RHOLossDownsamplingConfig,
-    UncertaintyDownsamplingConfig,
-)
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 logging.basicConfig(
@@ -339,9 +337,9 @@ def run_experiment() -> None:
     logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
+    #pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
     # pipeline_gen_func = gen_arxiv_config
-    # pipeline_gen_func = gen_cglm_config
+    pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
@@ -349,8 +347,8 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seed = 42  # set to None to disable, should be 0-100
-    num_gpus = 1  # to parallelize across gpus
-    gpu_id = 0
+    num_gpus = 4  # to parallelize across gpus
+    gpu_id = 3
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
@@ -392,7 +390,7 @@ def run_experiment() -> None:
         min_lr = 0.0025
         warmup_triggers = 5
         num_epochs = 5
-        optimizer = "CGLM"
+        optimizer = "SGD"
         config_str_fn = (
             lambda model,
             selection_strategy_id,
@@ -411,6 +409,9 @@ def run_experiment() -> None:
         for selection_strategy_id, selection_strategy in gen_selection_strategies(
             warmup_triggers, num_classes, train_conf
         ):
+            if dataset == "cglm_landmark_min25" and pipeline_gen_func == gen_cglm_config and selection_strategy_id == "classb":
+                continue # classb on landmark does not work
+
             config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
             if run_id % num_gpus == gpu_id:
                 pipeline_configs.append(

@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-import os
 import logging
+import os
 import sys
 
-from experiments.utils.experiment_runner import run_multiple_pipelines
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
-from modyn.utils.utils import current_time_millis
-
-from modyn.config.schema.pipeline import ModynPipelineConfig
+from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config import LrSchedulerConfig
-
-from modyn.config.schema.pipeline import (
-    SelectionStrategy,
-    NewDataStrategyConfig,
-)
+from modyn.config.schema.pipeline import ModynPipelineConfig, NewDataStrategyConfig, SelectionStrategy
+from modyn.utils.utils import current_time_millis
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 logging.basicConfig(
