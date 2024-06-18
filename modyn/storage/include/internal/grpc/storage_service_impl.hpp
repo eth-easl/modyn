@@ -570,7 +570,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
 
-      if (current_file_path.empty() || std::all_of(current_file_path.begin(), current_file_path.end(), std::isspace);) {
+      if (current_file_path.empty() || std::all_of(current_file_path.begin(), current_file_path.end(), std::isspace)) {
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
