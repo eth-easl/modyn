@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import json
 import pathlib
 import shutil
 from datetime import datetime
@@ -85,14 +86,13 @@ def main():
 
     label_to_new_label = {old_label: label for label, old_label in enumerate(df[label_column].unique())}
     df['label'] = df[label_column].map(label_to_new_label)
-
+    df["year"] = df["upload_date"].apply(lambda x: datetime.fromtimestamp(x).year)
     print(f"We got {df.shape[0]} samples with {len(label_to_new_label)} classes for this configuration. Generating subset.")
 
     if args.eval_split:
         if args.eval_split == "uniform":
             train_df, eval_df = train_test_split(df, test_size=0.1, random_state=42)
         elif args.eval_split == "yearly":
-            df["year"] = df["upload_date"].apply(lambda x: datetime.fromtimestamp(x).year)
             train_dfs, eval_dfs = [], []
             for _year, group in df.groupby("year"):
                 train_group, eval_group = train_test_split(group, test_size=0.1, random_state=42)
@@ -105,7 +105,10 @@ def main():
     else:
         loop_iterator = [("train", df, args.output / identifier / "train")]
     
+    overall_stats = {}
     for split, split_df, output_dir in loop_iterator:
+        split_stats = {"total_samples": 0, "total_classes": len(label_to_new_label), "per_year": {}, "per_class": {}, "per_year_and_class": {}}
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Generating {split} split with {len(split_df)} samples...")
@@ -115,6 +118,29 @@ def main():
             timestamp = row["upload_date"]
             file_path = args.sourcedir / f"{id[0]}/{id[1]}/{id[2]}/{id}.jpg"
 
+            # Generate stats
+            year = row["year"]
+            split_stats["total_samples"] += 1
+            if year not in split_stats["per_year"]:
+                split_stats["per_year"][year] = 1
+            else:
+                split_stats["per_year"][year] += 1
+
+            if label not in split_stats["per_class"]:
+                split_stats["per_class"][label] = 1
+            else:
+                split_stats["per_class"][label] += 1
+
+            if year not in split_stats["per_year_and_class"]:
+                split_stats["per_year_and_class"][year] = {}
+                split_stats["per_year_and_class"][year][label] = 1
+            else:
+                if label not in split_stats["per_year_and_class"][year]:
+                    split_stats["per_year_and_class"][year][label] = 1
+                else:
+                    split_stats["per_year_and_class"][year][label] += 1
+
+            # Create files
             if not file_path.exists():
                 logger.error(f"File {file_path} is supposed to exist, but it does not. Skipping...")
                 continue
@@ -132,6 +158,12 @@ def main():
                 file.write(str(int(label)))
             os.utime(output_dir / f"{id}.label", (timestamp, timestamp))
 
+        overall_stats[split] = split_stats
+
+    with open(args.output / identifier / "dataset_stats.json", "w") as f:
+        json.dump(overall_stats, f, indent=4)
+
+
     if args.dummy:
         dummy_path =  args.output / identifier / "train" / "dummy.jpg"
         shutil.copy(file_path, dummy_path) # just use the last file_path
@@ -147,5 +179,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
