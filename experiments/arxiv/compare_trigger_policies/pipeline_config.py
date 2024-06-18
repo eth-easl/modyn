@@ -5,7 +5,6 @@ from modyn.config.schema.pipeline import (
     EvalHandlerConfig,
     EvaluationConfig,
     FullModelStrategy,
-    Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
@@ -17,6 +16,7 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
     TriggerConfig,
 )
+from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig
 
 
 def gen_pipeline_config(
@@ -74,23 +74,21 @@ def gen_pipeline_config(
                     dataloader_workers=2,
                     tokenizer="DistilBertTokenizerTransform",
                     metrics=[
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": num_classes, "average": "weighted"},
                         ),
-                        Metric(
-                            name="F1score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.argmax(model_output, dim=-1)"
+                                "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": num_classes, "average": "macro"},
+                            num_classes=num_classes,
+                            average="weighted",
                         ),
                     ],
                 )
