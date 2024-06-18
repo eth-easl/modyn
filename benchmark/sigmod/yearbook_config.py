@@ -132,7 +132,7 @@ def gen_yearbook_config(
                     models="matrix",
                     datasets=["yearbook-test"],
                     strategy=PeriodicEvalStrategyConfig(
-                        every="1d", interval="[-25h; +25h]", start_timestamp=0, end_timestamp=1400000
+                        every="1d", interval="[-25h; +25h]", start_timestamp=0, end_timestamp=7258000
                     ),
                 ),
             ],
