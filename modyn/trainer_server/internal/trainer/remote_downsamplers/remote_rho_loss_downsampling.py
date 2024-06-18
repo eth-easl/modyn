@@ -36,10 +36,11 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         )
         self.rho_loss: torch.Tensor = torch.tensor([])
         self.number_of_points_seen = 0
+        self._device = device
 
     def init_downsampler(self) -> None:
         self.index_sampleid_map: list[int] = []
-        self.rho_loss = torch.tensor([])
+        self.rho_loss = torch.tensor([]).to(self._device)
         self.number_of_points_seen = 0
 
     def inform_samples(
