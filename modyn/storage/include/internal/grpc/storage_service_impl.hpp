@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
+#include <cctype>
 #include <exception>
 #include <future>
 #include <mutex>
@@ -568,9 +569,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
 
-      if (current_file_path.empty()) {
-        SPDLOG_ERROR(fmt::format("Could not obtain full path of file id {} in dataset {}", current_file_id,
-                                 dataset_data.dataset_id));
+      ASSERT()
+      if (current_file_path.empty() || std::all_of(current_file_path.begin(), current_file_path.end(), std::isspace);) {
+        throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
+                                                       current_file_id, dataset_data.dataset_id));
       }
       const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
       auto filesystem_wrapper =
@@ -617,6 +619,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           current_file_path = "",
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
+          if (current_file_path.empty() ||
+                  std::all_of(current_file_path.begin(), current_file_path.end(), std::isspace);) {
+            throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
+                                                           current_file_id, dataset_data.dataset_id));
+          }
           file_wrapper->set_file_path(current_file_path);
           current_file_start_idx = sample_idx;
         }
@@ -646,6 +653,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file: {}", e.what());
+      SPDLOG_ERROR(fmt::format("Query that caused this: {}"))
       SPDLOG_ERROR("Propagating error up the call chain to handle gRPC calls.");
       throw;
     }
