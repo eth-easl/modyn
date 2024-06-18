@@ -104,30 +104,6 @@ class JsonString(google.protobuf.message.Message):
 global___JsonString = JsonString
 
 @typing.final
-class MetricConfiguration(google.protobuf.message.Message):
-    DESCRIPTOR: google.protobuf.descriptor.Descriptor
-
-    NAME_FIELD_NUMBER: builtins.int
-    CONFIG_FIELD_NUMBER: builtins.int
-    EVALUATION_TRANSFORMER_FIELD_NUMBER: builtins.int
-    name: builtins.str
-    @property
-    def config(self) -> global___JsonString: ...
-    @property
-    def evaluation_transformer(self) -> global___PythonString: ...
-    def __init__(
-        self,
-        *,
-        name: builtins.str = ...,
-        config: global___JsonString | None = ...,
-        evaluation_transformer: global___PythonString | None = ...,
-    ) -> None: ...
-    def HasField(self, field_name: typing.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["config", b"config", "evaluation_transformer", b"evaluation_transformer", "name", b"name"]) -> None: ...
-
-global___MetricConfiguration = MetricConfiguration
-
-@typing.final
 class EvaluateModelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -146,7 +122,7 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
-    def metrics(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___MetricConfiguration]: ...
+    def metrics(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___JsonString]: ...
     @property
     def transform_list(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     @property
@@ -162,7 +138,7 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         dataset_info: global___DatasetInfo | None = ...,
         device: builtins.str = ...,
         batch_size: builtins.int = ...,
-        metrics: collections.abc.Iterable[global___MetricConfiguration] | None = ...,
+        metrics: collections.abc.Iterable[global___JsonString] | None = ...,
         transform_list: collections.abc.Iterable[builtins.str] | None = ...,
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,

@@ -12,6 +12,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
+from modyn.config.schema.pipeline import AccuracyMetricConfig, F1ScoreMetricConfig
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
@@ -21,17 +22,16 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationCleanupRequest,
     EvaluationResultRequest,
     EvaluationStatusRequest,
-    JsonString,
-    MetricConfiguration,
-    PythonString,
 )
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
 from modyn.evaluator.internal.metrics import Accuracy, F1Score
-from modyn.evaluator.internal.metrics.f1_score import F1ScoreTypes
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
+from pydantic import ValidationError
 
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_evaluator.database"
 
@@ -136,13 +136,7 @@ def get_evaluate_model_request(start_timestamp=None, end_timestamp=None):
         ),
         device="cpu",
         batch_size=4,
-        metrics=[
-            MetricConfiguration(
-                name="Accuracy",
-                config=JsonString(value=json.dumps({})),
-                evaluation_transformer=PythonString(value=""),
-            )
-        ],
+        metrics=[EvaluatorJsonString(value=AccuracyMetricConfig().model_dump_json())],
         transform_list=[],
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=""),
@@ -158,7 +152,7 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict):
         amp=False,
         model_config="{}",
         storage_address=storage_address,
-        metrics=[Accuracy("", {}), F1Score("", {"num_classes": 2, "average": "macro"})],
+        metrics=[Accuracy(AccuracyMetricConfig()), F1Score(F1ScoreMetricConfig(num_classes=2, average="macro"))],
         model_path=model_path,
     )
 
@@ -251,7 +245,7 @@ def test_evaluate_model_download_trained_model(
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 def test_evaluate_model_correct_time_range_used(
     test_connect_to_model_storage, test_download_trained_model, test__run_evaluation
-):
+) -> None:
     # (start_timestamp, end_timestamp, expected_dataset_size)
     test_cases = [(None, None, 400), (1000, None, 200), (None, 2000, 300), (1000, 2000, 100)]
 
@@ -292,7 +286,7 @@ def test_evaluate_model_correct_time_range_used(
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock):
+def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock) -> None:
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(), None)
@@ -314,26 +308,18 @@ def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_sto
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage):
+def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage) -> None:
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
-        acc_metric_config = MetricConfiguration(
-            name="Accuracy",
-            config=JsonString(value=json.dumps({})),
-            evaluation_transformer=PythonString(value=""),
-        )
+        acc_metric_config = AccuracyMetricConfig().model_dump_json()
         metrics = evaluator._setup_metrics([acc_metric_config])
 
         assert len(metrics) == 1
         assert isinstance(metrics[0], Accuracy)
 
-        unknown_metric_config = MetricConfiguration(
-            name="UnknownMetric",
-            config=JsonString(value=json.dumps({})),
-            evaluation_transformer=PythonString(value=""),
-        )
-        with pytest.raises(NotImplementedError):
+        unknown_metric_config = '{"name": "UnknownMetric", "config": "", "evaluation_transformer_function": ""}'
+        with pytest.raises(ValidationError):
             evaluator._setup_metrics([unknown_metric_config])
 
         metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
@@ -347,25 +333,26 @@ def test_setup_metrics_multiple_f1(test_connect_to_model_storage, test_connect_t
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
-        macro_f1_config = MetricConfiguration(
-            name="F1Score",
-            config=JsonString(value=json.dumps({"num_classes": 2, "average": "macro"})),
-            evaluation_transformer=PythonString(value=""),
-        )
+        macro_f1_config = F1ScoreMetricConfig(
+            evaluation_transformer_function="",
+            num_classes=2,
+            average="macro",
+        ).model_dump_json()
 
-        micro_f1_config = MetricConfiguration(
-            name="F1Score",
-            config=JsonString(value=json.dumps({"num_classes": 2, "average": "micro"})),
-            evaluation_transformer=PythonString(value=""),
-        )
+        micro_f1_config = F1ScoreMetricConfig(
+            evaluation_transformer_function="",
+            num_classes=2,
+            average="micro",
+        ).model_dump_json()
+
         # not double macro, but macro and micro work
         metrics = evaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
 
         assert len(metrics) == 2
         assert isinstance(metrics[0], F1Score)
         assert isinstance(metrics[1], F1Score)
-        assert metrics[0].average == F1ScoreTypes.MACRO
-        assert metrics[1].average == F1ScoreTypes.MICRO
+        assert metrics[0].config.average == "macro"
+        assert metrics[1].config.average == "micro"
         assert metrics[0].get_name() == "F1-macro"
         assert metrics[1].get_name() == "F1-micro"
 
@@ -609,10 +596,13 @@ def test_get_evaluation_result(
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_data) == 2
-        assert response.evaluation_data[0].metric == Accuracy("", {}).get_name()
+        assert response.evaluation_data[0].metric == Accuracy(AccuracyMetricConfig()).get_name()
         assert response.evaluation_data[0].result == 0.5
         test_acc.assert_called_once()
-        assert response.evaluation_data[1].metric == F1Score("", {"num_classes": 2, "average": "macro"}).get_name()
+        assert (
+            response.evaluation_data[1].metric
+            == F1Score(F1ScoreMetricConfig(num_classes=2, average="macro")).get_name()
+        )
         assert response.evaluation_data[1].result == 0.75
         test_f1.assert_called_once()
 

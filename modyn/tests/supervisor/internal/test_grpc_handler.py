@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import grpc
 import pytest
+from modyn.config.schema.pipeline import EvalDataConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationData,
     EvaluationResultRequest,
@@ -50,39 +51,16 @@ def get_simple_config() -> dict:
     }
 
 
-def get_minimal_pipeline_config() -> dict:
-    return {
-        "pipeline": {"name": "Test"},
-        "model": {"id": "ResNet18"},
-        "training": {
-            "gpus": 1,
-            "device": "cpu",
-            "amp": False,
-            "dataloader_workers": 1,
-            "initial_model": "random",
-            "batch_size": 42,
-            "optimizers": [
-                {"name": "default", "algorithm": "SGD", "source": "PyTorch", "param_groups": [{"module": "model"}]},
-            ],
-            "optimization_criterion": {"name": "CrossEntropyLoss"},
-            "checkpointing": {"activated": False},
-            "selection_strategy": {"name": "NewDataStrategy"},
-        },
-        "data": {"dataset_id": "test", "bytes_parser_function": "def bytes_parser_function(x):\n\treturn x"},
-        "trigger": {"id": "DataAmountTrigger", "trigger_config": {"data_points_for_trigger": 1}},
-        "evaluation": {
-            "device": "cpu",
-            "datasets": [
-                {
-                    "dataset_id": "MNIST_eval",
-                    "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
-                    "dataloader_workers": 2,
-                    "batch_size": 64,
-                    "metrics": [{"name": "Accuracy"}],
-                }
-            ],
-        },
-    }
+def get_minimal_dataset_config() -> EvalDataConfig:
+    return EvalDataConfig.model_validate(
+        {
+            "dataset_id": "MNIST_eval",
+            "bytes_parser_function": "def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
+            "dataloader_workers": 2,
+            "batch_size": 64,
+            "metrics": [{"name": "Accuracy"}],
+        }
+    )
 
 
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
@@ -348,11 +326,10 @@ def test_stop_training_at_trainer_server():
 
 
 def test_prepare_evaluation_request():
-    pipeline_config = get_minimal_pipeline_config()
-    dataset_config = pipeline_config["evaluation"]["datasets"][0]
-    dataset_config["tokenizer"] = "DistilBertTokenizerTransform"
+    dataset_config = get_minimal_dataset_config()
+    dataset_config.tokenizer = "DistilBertTokenizerTransform"
     request = GRPCHandler.prepare_evaluation_request(
-        pipeline_config["evaluation"]["datasets"][0], 23, "cpu", start_timestamp=42, end_timestamp=43
+        dataset_config.model_dump(by_alias=True), 23, "cpu", start_timestamp=42, end_timestamp=43
     )
 
     assert request.model_id == 23
@@ -360,8 +337,7 @@ def test_prepare_evaluation_request():
     assert request.batch_size == 64
     assert request.dataset_info.dataset_id == "MNIST_eval"
     assert request.dataset_info.num_dataloaders == 2
-    assert request.metrics[0].name == "Accuracy"
-    assert request.metrics[0].config.value == "{}"
+    assert json.loads(str(request.metrics[0].value))["name"] == "Accuracy"
     assert request.tokenizer.value == "DistilBertTokenizerTransform"
     assert request.dataset_info.start_timestamp == 42
     assert request.dataset_info.end_timestamp == 43

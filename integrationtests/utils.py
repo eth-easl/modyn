@@ -34,14 +34,17 @@ MODYN_CONFIG_FILE = MODYN_CONFIG_PATH / "modyn_config.yaml"
 MODYNCLIENT_CONFIG_PATH = pathlib.Path(
     os.getenv("MODYNCLIENT_CONFIG_PATH", SCRIPT_PATH.parent.parent / "modynclient" / "config" / "examples")
 )
+MODYN_INTEGRATIONTESTS_CONFIG_PATH = pathlib.Path(
+    os.getenv("MODYN_INTEGRATIONTESTS_CONFIG_PATH", SCRIPT_PATH.parent / "config")
+)
 MODYN_DATASET_PATH = pathlib.Path(os.getenv("MODYN_DATASET_PATH", pathlib.Path("/app") / "storage" / "datasets"))
 MODYN_MODELS_PATH = pathlib.Path(os.getenv("MODYN_MODELS_PATH", pathlib.Path("/app") / "model_storage"))
 
 CLIENT_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "modyn_client_config_container.yaml"
-MNIST_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "mnist.yaml"
-DUMMY_CONFIG_FILE = MODYNCLIENT_CONFIG_PATH / "dummy.yaml"
+DUMMY_CONFIG_FILE = MODYN_INTEGRATIONTESTS_CONFIG_PATH / "dummy.yaml"
+RHO_LOSS_CONFIG_FILE = MODYN_INTEGRATIONTESTS_CONFIG_PATH / "rho_loss.yaml"
 CLIENT_ENTRYPOINT = SCRIPT_PATH.parent.parent / "modynclient" / "client" / "modyn-client"
-NEW_DATASET_TIMEOUT = 600
+NEW_DATASET_TIMEOUT = 30
 
 DEFAULT_SELECTION_STRATEGY = {"name": "NewDataStrategy", "maximum_keys_in_memory": 10}
 DEFAULT_MODEL_STORAGE_CONFIG = {"full_model_strategy": {"name": "PyTorchFullModel"}}
@@ -254,6 +257,7 @@ class ImageDatasetHelper(DatasetHelper):
         dataset_size: int = 10,
         dataset_dir: pathlib.Path = MODYN_DATASET_PATH,
         desc: str = "Test dataset for integration tests.",
+        num_classes: int = 10,
     ) -> None:
         super().__init__(
             dataset_id,
@@ -262,6 +266,7 @@ class ImageDatasetHelper(DatasetHelper):
             desc,
             {"file_extension": ".png", "label_file_extension": ".txt"},
         )
+        self.num_classes = num_classes
 
     def create_random_image(self) -> Image:
         image = Image.new("RGB", (100, 100))
@@ -284,7 +289,8 @@ class ImageDatasetHelper(DatasetHelper):
             image = self.create_random_image()
             self.add_image_to_dataset(image, f"image_{i}.png")
             with open(self.dataset_path / f"image_{i}.txt", "w") as label_file:
-                label_file.write(f"{i}")
+                label = random.randint(0, self.num_classes - 1)
+                label_file.write(f"{label}")
 
     def create_dataset(self) -> None:
         self.add_images_to_dataset(0, self.dataset_size)  # Add images to the dataset.
