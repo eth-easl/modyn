@@ -201,3 +201,33 @@ def test_multiple_epochs_without_replacement_leftover_data(dummy_system_config: 
 
             assert all(idx in sample_ids for idx in selected_ids)
             assert len(set(selected_ids)) == len(selected_ids)
+
+
+def test_multiple_epochs_empty_without_replacement_leftover_data(dummy_system_config: ModynConfig):
+    pipeline_id = 0
+    trigger_id = 0
+    batch_size = 32
+    params_from_selector = {"replacement": False, "downsampling_ratio": 40}
+    per_sample_loss = None
+    device = "cpu"
+
+    downsampler = RemoteRS2Downsampling(
+        pipeline_id,
+        trigger_id,
+        batch_size,
+        params_from_selector,
+        dummy_system_config.model_dump(by_alias=True),
+        per_sample_loss,
+        device,
+    )
+    with torch.inference_mode(mode=(not downsampler.requires_grad)):
+        sample_ids = []
+        data = torch.tensor([])
+        target = torch.tensor([])
+
+        for _ in range(3):
+            downsampler.inform_samples(sample_ids, data, data, target)
+
+            selected_ids, weights = downsampler.select_points()
+            assert len(selected_ids) == 0
+            assert weights.shape == (0,)
