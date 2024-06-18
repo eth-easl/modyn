@@ -127,9 +127,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       return {StatusCode::OK, "Data retrieved."};
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in Get: {}", e.what());
-      if (session.get_backend_name() != "sqlite3" && session.is_connected()) {
-        session.close();
-      }
       return {StatusCode::INTERNAL, fmt::format("Error in Get: {}", e.what())};
     }
   }
