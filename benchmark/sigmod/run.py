@@ -433,7 +433,7 @@ def run_experiment() -> None:
                 )
 
             run_id += 1
-    logger.info(f"Overview of configurations: {pipeline_configs}")
+    #logger.info(f"Overview of configurations: {pipeline_configs}")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
 
