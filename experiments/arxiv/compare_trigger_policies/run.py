@@ -11,9 +11,7 @@ from modyn.config.schema.pipeline import (
 )
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
-from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
@@ -65,8 +63,17 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
                 eval_handlers=eval_handlers,
             )
         )
-        
-    for interval, threshold in [(20_000, 0.5), (100_000, 0.6), (100_000, 0.7), (100_000, 0.8), (100_000, 0.9), (250_000, 0.7), (500_000, 0.7), (1_000_000, 0.7)]:
+
+    for interval, threshold in [
+        (20_000, 0.5),
+        (100_000, 0.6),
+        (100_000, 0.7),
+        (100_000, 0.8),
+        (100_000, 0.9),
+        (250_000, 0.7),
+        (500_000, 0.7),
+        (1_000_000, 0.7),
+    ]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"datadrifttrigger_{interval}_{threshold}",

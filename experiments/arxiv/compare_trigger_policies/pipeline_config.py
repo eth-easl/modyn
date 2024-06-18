@@ -56,10 +56,7 @@ def gen_pipeline_config(
         ),
         data=DataConfig(
             dataset_id="arxiv_kaggle",
-            bytes_parser_function=(
-                "def bytes_parser_function(data: bytes) -> str:\n"
-                "    return str(data, 'utf8')"
-            ),
+            bytes_parser_function=("def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"),
             tokenizer="DistilBertTokenizerTransform",
         ),
         trigger=trigger,
@@ -71,8 +68,7 @@ def gen_pipeline_config(
                 EvalDataConfig(
                     dataset_id=yb_dataset_name,
                     bytes_parser_function=(
-                        "def bytes_parser_function(data: bytes) -> str:\n"
-                        "    return str(data, 'utf8')"
+                        "def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"
                     ),
                     batch_size=96,
                     dataloader_workers=2,

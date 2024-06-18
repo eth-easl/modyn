@@ -158,7 +158,9 @@ class EvaluationExecutor:
             )
             eval_requests += handler_eval_requests
 
-        num_workers = self.config.supervisor.after_training_evaluation_workers if self.config.supervisor else 1
+        if len(eval_requests) == 0:
+            return SupervisorLogs()
+        num_workers = self.pipeline.evaluation.after_training_evaluation_workers
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
@@ -185,6 +187,12 @@ class EvaluationExecutor:
 
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
             eval_requests += handler_eval_requests
+
+        if len(eval_requests) == 0:
+            return SupervisorLogs()
+        # self.Eval_handlers is not an empty list if and only if self.pipeline.evaluation is not None
+        assert self.pipeline.evaluation is not None
+
         logs = self._launch_evaluations_async(
             eval_requests,
             # as we don't execute this during the training pipeline, we don't have a reference how
@@ -198,7 +206,7 @@ class EvaluationExecutor:
                 trigger_idx=-1,
             ),
             eval_status_queue=eval_status_queue,
-            num_workers=(self.config.supervisor.after_pipeline_evaluation_workers if self.config.supervisor else 1),
+            num_workers=self.pipeline.evaluation.after_pipeline_evaluation_workers,
         )
         return logs
 
