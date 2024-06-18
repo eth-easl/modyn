@@ -5,7 +5,9 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
+#include <exception>
 #include <future>
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <variant>
@@ -319,6 +321,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_);
 
     } else {
+      std::vector<std::exception_ptr> thread_exceptions(retrieval_threads_);
+      std::mutex exception_mutex;
       std::vector<std::pair<std::vector<int64_t>::const_iterator, std::vector<int64_t>::const_iterator>>
           its_per_thread = get_keys_per_thread(request_keys, retrieval_threads_);
       std::vector<std::thread> retrieval_threads_vector(retrieval_threads_);
@@ -326,9 +330,17 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         const std::vector<int64_t>::const_iterator begin = its_per_thread[thread_id].first;
         const std::vector<int64_t>::const_iterator end = its_per_thread[thread_id].second;
 
-        retrieval_threads_vector[thread_id] =
-            std::thread(StorageServiceImpl::get_samples_and_send<WriterT>, begin, end, writer, &writer_mutex,
-                        &dataset_data, &config_, sample_batch_size_);
+        retrieval_threads_vector[thread_id] = std::thread([thread_id, begin, end, writer, &writer_mutex, &dataset_data,
+                                                           &thread_exceptions, &exception_mutex, this]() {
+          try {
+            get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_,
+                                          sample_batch_size_);
+          } catch (const std::exception& e) {
+            const std::lock_guard<std::mutex> lock(exception_mutex);
+            SPDLOG_ERROR("Error in thread started by send_sample_data_from_keys: {}", e.what());
+            thread_exceptions[thread_id] = std::current_exception();
+          }
+        });
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -337,6 +349,17 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         }
       }
       retrieval_threads_vector.clear();
+      // In order for the gRPC call to return an error, we need to rethrow the threaded exceptions.
+      for (auto& e_ptr : thread_exceptions) {
+        if (e_ptr) {
+          try {
+            std::rethrow_exception(e_ptr);
+          } catch (const std::exception& e) {
+            SPDLOG_ERROR("Error while unwinding thread: {}\nPropagating it up the call chain.", e.what());
+            throw;
+          }
+        }
+      }
     }
   }
 
