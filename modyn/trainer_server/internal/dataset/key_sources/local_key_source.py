@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
@@ -33,11 +33,11 @@ class LocalKeySource(AbstractKeySource):
     def end_of_trigger_cleaning(self) -> None:
         self._trigger_sample_storage.clean_trigger_data(self._pipeline_id, self._trigger_id)
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         state = self.__dict__.copy()
         del state["_trigger_sample_storage"]  # not pickable
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: Dict[str, Any]) -> None:
         self.__dict__.update(state)
         self._trigger_sample_storage = TriggerSampleStorage(self.offline_dataset_path)
