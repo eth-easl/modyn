@@ -28,7 +28,7 @@ The dataset contains more than 100.000 samples collected from 2002 to 2017.
 Every picture is stored separately (in png format and loaded using SingleSampleFileWrapper) and the os timestamp is set accordingly.
 
 ### HuffPost
-The goal is to predict the tag of news given headlines. 
+The goal is to predict the tag (11 classes) of news given headlines. 
 The dataset contains more than 60k samples collected from 2012 to 2018. 
 Titles belonging to the same year are grouped into the same CSV file and stored together. 
 Each year is mapped to a year starting from 1/1/1970.
