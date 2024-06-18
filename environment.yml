@@ -23,6 +23,7 @@ dependencies:
     - protobuf==5.26.*
     - types-protobuf==5.26.*
     - evidently
+    - tenacity
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
