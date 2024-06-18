@@ -12,7 +12,10 @@ from typing import Tuple
 import numpy as np
 import torch
 from benchmark.wildtime_benchmarks.benchmark_utils import (
-    create_fake_timestamp, download_if_not_exists, setup_argparser_wildtime, setup_logger
+    create_fake_timestamp,
+    download_if_not_exists,
+    setup_argparser_wildtime,
+    setup_logger,
 )
 from torch.utils.data import Dataset
 
