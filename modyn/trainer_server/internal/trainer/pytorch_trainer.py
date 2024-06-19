@@ -38,7 +38,7 @@ from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, Se
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.batch_accumulator import BatchAccumulator
-from modyn.trainer_server.internal.trainer.maybe_measure_gpu_ops import MaybeMeasureGPUOps
+from modyn.trainer_server.internal.trainer.gpu_measurement import GPUMeasurement
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -241,7 +241,7 @@ class PytorchTrainer:
 
             if self._sample_then_batch_this_epoch(epoch):
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
-                with MaybeMeasureGPUOps(self._measure_operation_time, "DownsampleSTB", self._device, stopw):
+                with GPUMeasurement(self._measure_operation_time, "DownsampleSTB", self._device, stopw):
                     self.downsample_trigger_training_set()
 
             stopw.start("IndivFetchBatch", overwrite=True)
@@ -258,7 +258,7 @@ class PytorchTrainer:
 
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
 
-                with MaybeMeasureGPUOps(
+                with GPUMeasurement(
                     self._measure_operation_time, "PreprocessBatch", self._device, stopw, resume=True
                 ):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
@@ -273,7 +273,7 @@ class PytorchTrainer:
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-                        with MaybeMeasureGPUOps(
+                        with GPUMeasurement(
                             self._measure_operation_time, "DownsampleBTS", self._device, stopw, resume=True
                         ):
                             data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
@@ -286,10 +286,10 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                     self._assert_data_size(self._batch_size, data, sample_ids, target)
-                    with MaybeMeasureGPUOps(self._measure_operation_time, "Forward", self._device, stopw, resume=True):
+                    with GPUMeasurement(self._measure_operation_time, "Forward", self._device, stopw, resume=True):
                         output = self._model.model(data)
 
-                    with MaybeMeasureGPUOps(self._measure_operation_time, "Loss", self._device, stopw, resume=True):
+                    with GPUMeasurement(self._measure_operation_time, "Loss", self._device, stopw, resume=True):
                         if weighted_optimization:
                             # weighted gradient descent
                             assert weights is not None
@@ -304,10 +304,10 @@ class PytorchTrainer:
                     )
                 stopw.stop()
 
-                with MaybeMeasureGPUOps(self._measure_operation_time, "Backward", self._device, stopw, resume=True):
+                with GPUMeasurement(self._measure_operation_time, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
 
-                with MaybeMeasureGPUOps(
+                with GPUMeasurement(
                     self._measure_operation_time, "OptimizerStep", self._device, stopw, resume=True
                 ):
                     for _, optimizer in self._optimizers.items():
@@ -509,10 +509,10 @@ class PytorchTrainer:
             target = batch[2]
         stopw.stop("LabelTransform")
 
-        with MaybeMeasureGPUOps(self._measure_operation_time, "MoveLabelToGPU", self._device, stopw, resume=True):
+        with GPUMeasurement(self._measure_operation_time, "MoveLabelToGPU", self._device, stopw, resume=True):
             target = target.to(self._device)
 
-        with MaybeMeasureGPUOps(self._measure_operation_time, "MoveDataToGPU", self._device, stopw, resume=True):
+        with GPUMeasurement(self._measure_operation_time, "MoveDataToGPU", self._device, stopw, resume=True):
             data: Union[torch.Tensor, dict]
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(self._device)
