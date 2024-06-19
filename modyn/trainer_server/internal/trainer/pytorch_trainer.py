@@ -380,7 +380,7 @@ class PytorchTrainer:
         total_stopw.stop("TotalTrain")
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
-        self._log["num_samples_seen"] = self._num_samples
+        self._log["num_samples"] = self._num_samples
         self._log["num_samples_trained"] = trained_batches * self._batch_size
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
