@@ -71,6 +71,9 @@ def dfs_models_and_evals(
     convert_epoch_to_datetime(df_models, "train_start")
     convert_epoch_to_datetime(df_models, "train_end")
 
+    # sort models by trigger_id
+    df_models.sort_values(by=["trigger_id"], inplace=True)
+
     # model_usage period
     df_models["usage_start"] = df_models["train_end"] + pd.DateOffset(seconds=1)
     df_models["usage_end"] = df_models["train_end"].shift(-1)

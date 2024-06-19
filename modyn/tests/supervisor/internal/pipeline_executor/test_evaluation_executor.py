@@ -112,7 +112,13 @@ def test_evaluation_executor_state_management(
 
 def dummy_eval_request() -> EvalRequest:
     return EvalRequest(
-        trigger_id=1, training_id=1, id_model=1, most_recent_model=True, dataset_id="MNIST_eval", eval_handler="e"
+        trigger_id=1,
+        training_id=1,
+        id_model=1,
+        currently_active_model=True,
+        currently_trained_model=False,
+        dataset_id="MNIST_eval",
+        eval_handler="e",
     )
 
 

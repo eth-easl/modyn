@@ -149,7 +149,7 @@ class EvaluationDataset(IterableDataset):
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
                     self._info(
-                        f"Error occured while asking {self._dataset_id} for worker data:\n{worker_id}", worker_id
+                        f"Error occurred while asking {self._dataset_id} for worker data:\n{worker_id}", worker_id
                     )
                     self._init_grpc()
                     raise e
@@ -194,7 +194,7 @@ class EvaluationDataset(IterableDataset):
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
-                    self._info(f"Error occured while asking {self._dataset_id} for keys:\n{keys}", worker_id)
+                    self._info(f"Error occurred while asking {self._dataset_id} for keys:\n{keys}", worker_id)
                     self._init_grpc()
                     raise e
 
