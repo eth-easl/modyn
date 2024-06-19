@@ -6,6 +6,7 @@ from modyn.common.benchmark import Stopwatch
 
 
 class MaybeMeasureGPUOps:
+    # type: ignore[no-untyped-def]
     def __init__(self, measure: bool, measurement_name: str, device: str, stop_watch: Stopwatch, **kwargs) -> None:
         self._device = device
         self._measure = measure
@@ -13,7 +14,7 @@ class MaybeMeasureGPUOps:
         self._kwargs = kwargs
         self._stop_watch = stop_watch
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         if self._measure:
             torch.cuda.synchronize(device=self._device)
             self._stop_watch.start(name=self._measurement_name, **self._kwargs)
