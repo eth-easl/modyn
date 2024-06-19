@@ -107,7 +107,7 @@ class TrainingConfig(ModynBaseModel):
     enable_accurate_gpu_measurements: bool = Field(
         default=False,
         description="If True, we measure the time of individual GPU related operations within a training process more "
-        "accurately by cuda synchronization. Note this can have a significant impact on performance on training."
+        "accurately by cuda synchronization. Note this can have a significant impact on performance on training.",
     )
     use_previous_model: bool = Field(
         description=(

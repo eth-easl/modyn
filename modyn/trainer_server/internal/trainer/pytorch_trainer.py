@@ -258,9 +258,7 @@ class PytorchTrainer:
 
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
 
-                with GPUMeasurement(
-                    self._measure_operation_time, "PreprocessBatch", self._device, stopw, resume=True
-                ):
+                with GPUMeasurement(self._measure_operation_time, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
 
                 if retrieve_weights_from_dataloader:
@@ -307,9 +305,7 @@ class PytorchTrainer:
                 with GPUMeasurement(self._measure_operation_time, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
 
-                with GPUMeasurement(
-                    self._measure_operation_time, "OptimizerStep", self._device, stopw, resume=True
-                ):
+                with GPUMeasurement(self._measure_operation_time, "OptimizerStep", self._device, stopw, resume=True):
                     for _, optimizer in self._optimizers.items():
                         self._scaler.step(optimizer)
 
