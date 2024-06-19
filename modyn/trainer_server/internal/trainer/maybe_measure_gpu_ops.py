@@ -1,0 +1,29 @@
+from types import TracebackType
+from typing import Optional, Type
+
+import torch
+from modyn.common.benchmark import Stopwatch
+
+
+class MaybeMeasureGPUOps:
+    def __init__(self, measure: bool, measurement_name: str, device: str, stop_watch: Stopwatch, **kwargs) -> None:
+        self._device = device
+        self._measure = measure
+        self._measurement_name = measurement_name
+        self._kwargs = kwargs
+        self._stop_watch = stop_watch
+
+    def __enter__(self):
+        if self._measure:
+            torch.cuda.synchronize(device=self._device)
+            self._stop_watch.start(name=self._measurement_name, **self._kwargs)
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        ex_traceback: Optional[TracebackType],
+    ) -> None:
+        if self._measure:
+            torch.cuda.synchronize(device=self._device)
+            self._stop_watch.stop(name=self._measurement_name)
