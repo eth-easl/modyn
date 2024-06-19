@@ -88,7 +88,7 @@ def test_get_eval_requests_after_pipeline() -> None:
     eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
 
     # now assert the actual values in the full cross product (matrix mode)
-    # (model_id, most_recent_model, start_interval, end_interval)
+    # (model_id, currently_active_model, currently_trained_model, start_interval, end_interval)
     expected_eval_requests = [
         # interval 1: for models/triggers 1-8
         (21, False, False, 8, 12),
@@ -178,7 +178,7 @@ def test_between_two_trigger_after_pipeline() -> None:
     eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
 
     # now assert the actual values in the full cross product (matrix mode)
-    # (model_id, most_recent_model, start_interval, end_interval)
+    # (model_id, currently_active_model, currently_trained_model, start_interval, end_interval)
     expected_eval_requests = [
         # interval 1: for models/triggers 1-8
         (21, False, True, 0, 5 - 1),

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
+from pydantic import BaseModel, Field
+
 from modyn.config.schema.pipeline import EvalHandlerConfig
 from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
 from modyn.utils import dynamic_module_import
-from pydantic import BaseModel, Field
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -111,7 +112,7 @@ class EvalHandler:
         # now build & potentially reduce the Trainings x EvalIntervals space
         df_cross = df_eval_intervals.merge(df_trainings, how="cross")
 
-        # to check if a combination is the most recent or currently, we first compute if model was trained before
+        # Check if a combination is the active. We first compute if model was trained before
         # the usage starts last_timestamp (df_trainings) defines the end of the training data;
         # active_model_trained_before (df_eval_intervals): defines center of an eval intervals.
         df_cross["active_candidate"] = df_cross["real_last_timestamp"] < df_cross["active_model_trained_before"]
@@ -138,7 +139,10 @@ class EvalHandler:
         # if there's no active model for the first interval(s), we still need to define the next model as the
         # trained model
         model_successor_relation = pd.concat(
-            [model_successor_relation, pd.DataFrame([{"id_model": None, "next_id_model": 21}])]
+            [
+                model_successor_relation,
+                pd.DataFrame([{"id_model": None, "next_id_model": df_active_models["id_model"].min()}]),
+            ]
         )
 
         df_trained_models = df_active_models.merge(

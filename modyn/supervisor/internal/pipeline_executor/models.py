@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
+from pydantic import BaseModel, Field, model_serializer, model_validator
+from typing_extensions import override
+
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +273,7 @@ class SingleEvaluationInfo(StageInfo):
                     self.eval_request.trigger_id,
                     self.eval_request.training_id,
                     self.eval_request.id_model,
-                    self.eval_request.most_recent_model,
+                    self.eval_request.currently_active_model,
                     self.eval_request.currently_trained_model,
                     self.eval_request.eval_handler,
                     self.eval_request.dataset_id,
@@ -285,7 +286,7 @@ class SingleEvaluationInfo(StageInfo):
                 "trigger_id",
                 "training_id",
                 "id_model",
-                "most_recent_model",
+                "currently_active_model",
                 "currently_trained_model",
                 "eval_handler",
                 "dataset_id",
