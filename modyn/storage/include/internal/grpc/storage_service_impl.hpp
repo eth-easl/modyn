@@ -339,7 +339,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                           sample_batch_size_);
           } catch (const std::exception& e) {
             const std::lock_guard<std::mutex> lock(exception_mutex);
-            SPDLOG_ERROR("Error in thread started by send_sample_data_from_keys: {}", e.what());
+            spdlog::error(
+                fmt::format("Error in thread {} started by send_sample_data_from_keys: {}", thread_id, e.what()));
             thread_exceptions[thread_id] = std::current_exception();
           }
         });
@@ -554,6 +555,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     // keys than this
     try {
       const uint64_t num_keys = sample_keys.size();
+
+      if (num_keys == 0) {
+        SPDLOG_ERROR("num_keys is 0, this should not have happened. Exiting send_sample_data_for_keys_and_file");
+        return;
+      }
+
       std::vector<int64_t> sample_labels(num_keys);
       std::vector<uint64_t> sample_indices(num_keys);
       std::vector<int64_t> sample_fileids(num_keys);
@@ -564,13 +571,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       session << sample_query, soci::into(sample_labels), soci::into(sample_indices), soci::into(sample_fileids),
           soci::use(dataset_data.dataset_id);
 
-      int64_t current_file_id = sample_fileids[0];
+      int64_t current_file_id = sample_fileids.at(0);
       uint64_t current_file_start_idx = 0;
       std::string current_file_path;
       session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
 
       if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
+        SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
@@ -620,6 +628,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
+            SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
             throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                            current_file_id, dataset_data.dataset_id));
           }
