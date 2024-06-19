@@ -104,11 +104,10 @@ class TrainingConfig(ModynBaseModel):
             "Otherwise, the output order is deterministic."
         )
     )
-    measure_operation_time: bool = Field(
+    enable_accurate_gpu_measurements: bool = Field(
         default=False,
-        description="If True, we measure the time of individual operations within a training process and log them. "
-        "Note that this can have a significant impact on performance as it requires cuda synchronization "
-        "at every measurement.",
+        description="If True, we measure the time of individual GPU related operations within a training process more "
+        "accurately by cuda synchronization. Note this can have a significant impact on performance on training."
     )
     use_previous_model: bool = Field(
         description=(

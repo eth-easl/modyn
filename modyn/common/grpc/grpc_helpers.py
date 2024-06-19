@@ -244,7 +244,7 @@ class TrainerServerGRPCHandlerMixin:
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
             "num_samples_to_pass": num_samples_to_pass,
             "shuffle": training_config.shuffle,
-            "measure_operation_time": training_config.measure_operation_time,
+            "enable_accurate_gpu_measurements": training_config.enable_accurate_gpu_measurements,
         }
 
         cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}

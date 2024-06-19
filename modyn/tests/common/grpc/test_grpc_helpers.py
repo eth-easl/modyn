@@ -88,7 +88,7 @@ def test_prepare_start_training_request(
 ):
     # for bool value False is the default value so we don't need to test it
     pipeline_training_config.shuffle = True
-    pipeline_training_config.measure_operation_time = True
+    pipeline_training_config.enable_accurate_gpu_measurements = True
     pipeline_training_config.optimization_criterion.config = {"key": "value"}
     pipeline_training_config.use_previous_model = previous_model_id is not None
 

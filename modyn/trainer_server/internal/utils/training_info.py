@@ -57,7 +57,7 @@ class TrainingInfo:
         self.log_file_path = log_file_path
 
         self.shuffle = request.shuffle
-        self.measure_operation_time = request.measure_operation_time
+        self.enable_accurate_gpu_measurements = request.enable_accurate_gpu_measurements
 
         assert (
             self.pretrained_model_path or not self.use_pretrained_model
