@@ -203,15 +203,7 @@ class TrainerServerGRPCHandlerMixin:
             lr_scheduler_configs = training_config.lr_scheduler.model_dump(by_alias=True)
 
         criterion_config = json.dumps(training_config.optimization_criterion.config)
-
-        epochs_per_trigger = training_config.epochs_per_trigger
-        num_prefetched_partitions = training_config.num_prefetched_partitions
-        parallel_prefetch_requests = training_config.parallel_prefetch_requests
-
-        seed = training_config.seed
         tokenizer = data_config.tokenizer
-        transform_list = data_config.transformations
-        label_transformer = data_config.label_transformer_function
 
         if training_config.checkpointing.activated:
             # the None-ility of the two fields are already validated by pydantic
@@ -240,15 +232,15 @@ class TrainerServerGRPCHandlerMixin:
                 num_dataloaders=training_config.dataloader_workers,
             ),
             "checkpoint_info": checkpoint_info,
-            "transform_list": transform_list,
+            "transform_list": data_config.transformations,
             "bytes_parser": PythonString(value=data_config.bytes_parser_function),
-            "label_transformer": PythonString(value=label_transformer),
+            "label_transformer": PythonString(value=data_config.label_transformer_function),
             "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            "epochs_per_trigger": epochs_per_trigger,
-            "num_prefetched_partitions": num_prefetched_partitions,
-            "parallel_prefetch_requests": parallel_prefetch_requests,
-            "seed": seed,
+            "epochs_per_trigger": training_config.epochs_per_trigger,
+            "num_prefetched_partitions": training_config.num_prefetched_partitions,
+            "parallel_prefetch_requests": training_config.parallel_prefetch_requests,
+            "seed": training_config.seed,
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
             "num_samples_to_pass": num_samples_to_pass,
             "shuffle": training_config.shuffle,
