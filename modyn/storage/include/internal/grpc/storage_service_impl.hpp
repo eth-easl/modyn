@@ -571,6 +571,19 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       session << sample_query, soci::into(sample_labels), soci::into(sample_indices), soci::into(sample_fileids),
           soci::use(dataset_data.dataset_id);
 
+      if (sample_fileids.size() != num_keys) {
+        SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+        SPDLOG_ERROR(
+            fmt::format("num_keys = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+                        "sample_fileids = [{}]",
+                        num_keys, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
+                        fmt::join(sample_fileids, ", ")));
+        throw modyn::utils::ModynException(
+            fmt::format("Got back {} samples from DB, while asking for {} keys. You might have asked for duplicate "
+                        "keys, which is not supported.",
+                        sample_fileids.size(), num_keys));
+      }
+
       int64_t current_file_id = sample_fileids.at(0);
       uint64_t current_file_start_idx = 0;
       std::string current_file_path;
