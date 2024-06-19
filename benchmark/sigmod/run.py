@@ -352,7 +352,7 @@ def run_experiment() -> None:
     num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seeds = [42, 99, 12]  # set to None to disable, should be 0-100
+    seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
     small_run = True
