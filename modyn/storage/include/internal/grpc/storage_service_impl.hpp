@@ -579,6 +579,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
         SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+        SPDLOG_ERROR(
+            fmt::format("num_keys = {}, current_file_id = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+                        "sample_fileids = [{}]",
+                        num_keys, current_file_id, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
+                        fmt::join(sample_fileids, ", ")));
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
@@ -591,7 +596,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                            file_wrapper_config_node, filesystem_wrapper);
 
       for (uint64_t sample_idx = 0; sample_idx < num_keys; ++sample_idx) {
-        const int64_t& sample_fileid = sample_fileids[sample_idx];
+        const int64_t& sample_fileid = sample_fileids.at(sample_idx);
 
         if (sample_fileid != current_file_id) {
           // 1. Prepare response
@@ -629,6 +634,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
           if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
             SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+            const int64_t& previous_fid = sample_fileids.at(sample_idx - 1);
+            SPDLOG_ERROR(
+                fmt::format("num_keys = {}, sample_idx = {}, previous_fid = {}\n sample_labels = [{}]\n sample_indices "
+                            "= [{}]\n sample_fileids = [{}]",
+                            num_keys, sample_idx, previous_fid, fmt::join(sample_labels, ", "),
+                            fmt::join(sample_indices, ", "), fmt::join(sample_fileids, ", ")));
             throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                            current_file_id, dataset_data.dataset_id));
           }
