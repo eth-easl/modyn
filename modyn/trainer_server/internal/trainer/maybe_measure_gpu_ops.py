@@ -6,8 +6,9 @@ from modyn.common.benchmark import Stopwatch
 
 
 class MaybeMeasureGPUOps:
-    # type: ignore[no-untyped-def]
-    def __init__(self, measure: bool, measurement_name: str, device: str, stop_watch: Stopwatch, **kwargs) -> None:
+    def __init__(  # type: ignore[no-untyped-def]
+            self, measure: bool, measurement_name: str, device: str, stop_watch: Stopwatch, **kwargs
+    ) -> None:
         self._device = device
         self._measure = measure
         self._measurement_name = measurement_name
