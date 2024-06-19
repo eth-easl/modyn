@@ -177,20 +177,16 @@ class TrainerServerGRPCHandlerMixin:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
-    def start_training(
-        self,
+    # pylint: disable=too-many-locals, too-many-branches
+    @staticmethod
+    def prepare_start_training_request(
         pipeline_id: int,
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
         previous_model_id: Optional[int],
         num_samples_to_pass: Optional[int] = None,
-    ) -> int:
-        assert self.trainer_server is not None
-        if not self.connected_to_trainer_server:
-            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
-
+    ) -> StartTrainingRequest:
         optimizers_config = {}
         for optimizer in training_config.optimizers:
             optimizer_config: dict[str, Any] = {
@@ -255,12 +251,35 @@ class TrainerServerGRPCHandlerMixin:
             "seed": seed,
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
             "num_samples_to_pass": num_samples_to_pass,
+            "shuffle": training_config.shuffle,
+            "measure_operation_time": training_config.measure_operation_time,
         }
 
         cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}
 
-        req = StartTrainingRequest(**cleaned_kwargs)
+        return StartTrainingRequest(**cleaned_kwargs)
 
+    def start_training(
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        training_config: TrainingConfig,
+        data_config: DataConfig,
+        previous_model_id: Optional[int],
+        num_samples_to_pass: Optional[int] = None,
+    ) -> int:
+        assert self.trainer_server is not None
+        if not self.connected_to_trainer_server:
+            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
+
+        req = self.prepare_start_training_request(
+            pipeline_id,
+            trigger_id,
+            training_config,
+            data_config,
+            previous_model_id,
+            num_samples_to_pass,
+        )
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
         if not response.training_started:

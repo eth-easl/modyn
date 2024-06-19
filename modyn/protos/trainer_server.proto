@@ -56,6 +56,7 @@ message StartTrainingRequest {
   optional PythonString tokenizer = 22;
   int64 num_samples_to_pass = 23;
   bool shuffle = 24;
+  bool measure_operation_time = 25;
 }
 
 message StartTrainingResponse {

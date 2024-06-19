@@ -104,6 +104,12 @@ class TrainingConfig(ModynBaseModel):
             "Otherwise, the output order is deterministic."
         )
     )
+    measure_operation_time: bool = Field(
+        default=False,
+        description="If True, we measure the time of individual operations within a training process and log them. "
+        "Note that this can have a significant impact on performance as it requires cuda synchronization "
+        "at every measurement.",
+    )
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
