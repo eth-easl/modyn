@@ -121,14 +121,14 @@ def gen_yearbook_config(
             handlers=[
                 EvalHandlerConfig(
                     name="exactmatrix",
-                    execution_time="after_training",
+                    execution_time="after_pipeline",
                     models="matrix",
                     datasets=["yearbook-test"],
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=7258000),
                 ),
                 EvalHandlerConfig(
                     name="slidingmatrix",
-                    execution_time="after_training",
+                    execution_time="after_pipeline",
                     models="matrix",
                     datasets=["yearbook-test"],
                     strategy=PeriodicEvalStrategyConfig(
@@ -154,7 +154,7 @@ def gen_yearbook_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            topn=1
+                            topn=1,
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -163,7 +163,7 @@ def gen_yearbook_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=2,
-                            average="weighted"
+                            average="weighted",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -172,7 +172,7 @@ def gen_yearbook_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=2,
-                            average="macro"
+                            average="macro",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -181,9 +181,8 @@ def gen_yearbook_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=2,
-                            average="micro"
+                            average="micro",
                         ),
-
                     ],
                 )
                 for dataset in ["yearbook", "yearbook-test"]

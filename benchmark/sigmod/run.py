@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 def gen_selection_strategies(
-    warmup_triggers: int, num_classes: int, training_config: TrainingConfig
+    warmup_triggers: int, num_classes: int, training_config: TrainingConfig, small_run: bool = False
 ) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
@@ -83,20 +83,22 @@ def gen_selection_strategies(
         )
     )
 
-    # RS2 with replacement
-    strategies.append(
-        (
-            "rs2w",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=True),
-            ),
+    if not small_run:
+        # RS2 with replacement
+        strategies.append(
+            (
+                "rs2w",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=True),
+                ),
+            )
         )
-    )
+
     # RS2 without replacement
     strategies.append(
         (
@@ -111,20 +113,21 @@ def gen_selection_strategies(
             ),
         )
     )
-    # Loss StB every epoch
-    strategies.append(
-        (
-            "loss_stb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
-            ),
+    if not small_run:
+        # Loss StB every epoch
+        strategies.append(
+            (
+                "loss_stb",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
+                ),
+            )
         )
-    )
 
     # Loss BtS
     strategies.append(
@@ -141,20 +144,21 @@ def gen_selection_strategies(
         )
     )
 
-    # Gradnorm StB every epoch
-    strategies.append(
-        (
-            "grad_stb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
-            ),
+    if not small_run:
+        # Gradnorm StB every epoch
+        strategies.append(
+            (
+                "grad_stb",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
+                ),
+            )
         )
-    )
 
     # Gradnorm BtS
     strategies.append(
@@ -199,22 +203,23 @@ def gen_selection_strategies(
         )
     )
 
-    # Margin StB every epoch
-    strategies.append(
-        (
-            "margin_stb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=True, period=1, score_metric="Margin"
+    if not small_run:
+        # Margin StB every epoch
+        strategies.append(
+            (
+                "margin_stb",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=50, sample_then_batch=True, period=1, score_metric="Margin"
+                    ),
                 ),
-            ),
+            )
         )
-    )
 
     # Margin BtS
     strategies.append(
@@ -233,22 +238,23 @@ def gen_selection_strategies(
         )
     )
 
-    # LeastConf StB every epoch
-    strategies.append(
-        (
-            "lc_stb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=True, period=1, score_metric="LeastConfidence"
+    if not small_run:
+        # LeastConf StB every epoch
+        strategies.append(
+            (
+                "lc_stb",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=50, sample_then_batch=True, period=1, score_metric="LeastConfidence"
+                    ),
                 ),
-            ),
+            )
         )
-    )
 
     # LeastConf BtS
     strategies.append(
@@ -267,39 +273,40 @@ def gen_selection_strategies(
         )
     )
 
-    # Entropy StB every epoch
-    strategies.append(
-        (
-            "entropy_stb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=True, period=1, score_metric="Entropy"
+    if not small_run:
+        # Entropy StB every epoch
+        strategies.append(
+            (
+                "entropy_stb",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=50, sample_then_batch=True, period=1, score_metric="Entropy"
+                    ),
                 ),
-            ),
+            )
         )
-    )
 
-    # Entropy BtS
-    strategies.append(
-        (
-            "entropy_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=False, period=1, score_metric="Entropy"
+        # Entropy BtS
+        strategies.append(
+            (
+                "entropy_bts",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=50, sample_then_batch=False, period=1, score_metric="Entropy"
+                    ),
                 ),
-            ),
+            )
         )
-    )
 
     return strategies
 
@@ -338,16 +345,17 @@ def run_experiment() -> None:
 
     pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
     pipeline_gen_func = gen_arxiv_config
-    #pipeline_gen_func = gen_cglm_config
+    # pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
     num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seed = 42  # set to None to disable, should be 0-100
+    seeds = [42, 99, 12]  # set to None to disable, should be 0-100
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
+    small_run = True
 
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
@@ -402,38 +410,45 @@ def run_experiment() -> None:
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
         train_conf_func = gen_cglm_training_conf
-        maximum_triggers = 17 # last triggers are meaningless and cost time
+        maximum_triggers = 17  # last triggers are meaningless and cost time
 
     run_id = 0
-    for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-        train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
-        for selection_strategy_id, selection_strategy in gen_selection_strategies(
-            warmup_triggers, num_classes, train_conf
-        ):
-            if dataset == "cglm_landmark_min25" and pipeline_gen_func == gen_cglm_config and selection_strategy_id == "classb":
-                continue # classb on landmark does not work
+    for seed in seeds:
+        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
+            train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
+            for selection_strategy_id, selection_strategy in gen_selection_strategies(
+                warmup_triggers, num_classes, train_conf, small_run=small_run
+            ):
+                if (
+                    dataset == "cglm_landmark_min25"
+                    and pipeline_gen_func == gen_cglm_config
+                    and selection_strategy_id == "classb"
+                ):
+                    continue  # classb on landmark does not work
 
-            config_id = config_str_fn(model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset)
-            if run_id % num_gpus == gpu_id:
-                logger.info(f"Running {config_id} on this GPU.")
-                pipeline_configs.append(
-                    pipeline_gen_func(
-                        config_id,
-                        num_epochs,
-                        train_gpu,
-                        selection_strategy,
-                        lr_scheduler_config,
-                        model,
-                        dataset,
-                        num_classes,
-                        seed,
-                        optimizer,
-                        lr,
-                    )
+                config_id = config_str_fn(
+                    model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset
                 )
+                if run_id % num_gpus == gpu_id:
+                    logger.info(f"Running {config_id} with seed {seed} on this GPU.")
+                    pipeline_configs.append(
+                        pipeline_gen_func(
+                            config_id,
+                            num_epochs,
+                            train_gpu,
+                            selection_strategy,
+                            lr_scheduler_config,
+                            model,
+                            dataset,
+                            num_classes,
+                            seed,
+                            optimizer,
+                            lr,
+                        )
+                    )
 
-            run_id += 1
-    #logger.info(f"Overview of configurations: {pipeline_configs}")
+                run_id += 1
+    # logger.info(f"Overview of configurations: {pipeline_configs}")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
 

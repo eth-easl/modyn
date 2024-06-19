@@ -104,12 +104,14 @@ def gen_cglm_config(
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(
-                    name="MatrixEval",
-                    execution_time="after_training",
+                    name="exactmatrix",
+                    execution_time="after_pipeline",
                     models="matrix",
-                    datasets=[dataset, f"{dataset}-test"],
+                    datasets=[f"{dataset}-test"],  # [dataset, f"{dataset}-test"],
                     strategy=SlicingEvalStrategyConfig(
-                        eval_every="1y", eval_start_from=1041379200, eval_end_at=1610000000 #1717200000 for the entire dataset
+                        eval_every="1y",
+                        eval_start_from=1041379200,
+                        eval_end_at=1610000000,  # 1717200000 for the entire dataset
                     ),
                 )
             ],
@@ -131,15 +133,18 @@ def gen_cglm_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            topn=1
+                            topn=1,
                         ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=2
-                        ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=5
+                        AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
+                        AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            num_classes=num_classes,
+                            average="weighted",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -148,7 +153,7 @@ def gen_cglm_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=num_classes,
-                            average="weighted"
+                            average="macro",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -157,16 +162,7 @@ def gen_cglm_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=num_classes,
-                            average="macro"
-                        ),
-                        F1ScoreMetricConfig(
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            num_classes=num_classes,
-                            average="micro"
+                            average="micro",
                         ),
                     ],
                 )

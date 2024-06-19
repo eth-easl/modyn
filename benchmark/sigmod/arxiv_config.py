@@ -48,23 +48,21 @@ def gen_arxiv_training_conf(
     else:
         raise ValueError(optimizer)
 
-    return (
-        TrainingConfig(
-            gpus=1,
-            device=gpu_device,
-            dataloader_workers=1,
-            use_previous_model=True,
-            initial_model="random",
-            batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
-            optimizers=[opti_conf],
-            optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
-            checkpointing=CheckpointingConfig(activated=False),
-            lr_scheduler=lr_scheduler,
-            epochs_per_trigger=num_epochs,
-            shuffle=True,
-            amp=False,
-            seed=seed,
-        )
+    return TrainingConfig(
+        gpus=1,
+        device=gpu_device,
+        dataloader_workers=1,
+        use_previous_model=True,
+        initial_model="random",
+        batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
+        optimizers=[opti_conf],
+        optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
+        checkpointing=CheckpointingConfig(activated=False),
+        lr_scheduler=lr_scheduler,
+        epochs_per_trigger=num_epochs,
+        shuffle=True,
+        amp=False,
+        seed=seed,
     )
 
 
@@ -106,7 +104,7 @@ def gen_arxiv_config(
             handlers=[
                 EvalHandlerConfig(
                     name="exactmatrix",
-                    execution_time="after_training",
+                    execution_time="after_pipeline",
                     models="matrix",
                     datasets=["arxiv-test"],
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
@@ -134,15 +132,18 @@ def gen_arxiv_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)"
                             ),
-                            topn=1
+                            topn=1,
                         ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=2
-                        ),
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function="",
-                            topn=5
+                        AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
+                        AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.argmax(model_output, dim=-1)"
+                            ),
+                            num_classes=172,
+                            average="weighted",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -151,7 +152,7 @@ def gen_arxiv_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=172,
-                            average="weighted"
+                            average="macro",
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
@@ -160,16 +161,7 @@ def gen_arxiv_config(
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
                             num_classes=172,
-                            average="macro"
-                        ),
-                        F1ScoreMetricConfig(
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            num_classes=172,
-                            average="micro"
+                            average="micro",
                         ),
                     ],
                 )
