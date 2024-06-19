@@ -11,14 +11,13 @@ from pathlib import Path
 from typing import Any, Callable, Literal, Optional, Union, cast
 
 import pandas as pd
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
-
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from pydantic import BaseModel, Field, model_serializer, model_validator
+from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 

@@ -37,7 +37,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
         EvalHandlerConfig(
             name="full",
             execution_time="after_pipeline",
-            models="most_recent",
+            models="active",
             strategy=BetweenTwoTriggersEvalStrategyConfig(),
             datasets=["huffpost_kaggle", "huffpost_kaggle_test"],
         ),
