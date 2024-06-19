@@ -255,6 +255,7 @@ class TrainerServerGRPCHandlerMixin:
             "seed": seed,
             "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
             "num_samples_to_pass": num_samples_to_pass,
+            "shuffle": training_config.shuffle
         }
 
         cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}
