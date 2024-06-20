@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 import sys
 
 from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
@@ -356,7 +357,7 @@ def run_experiment() -> None:
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
     small_run = True
-
+    skip_existing = True
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
     optimizer = None  # ignored for non arxiv
@@ -412,6 +413,18 @@ def run_experiment() -> None:
         train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
 
+    existing_pipelines = set()
+    if skip_existing:
+        log_directory = Path(input("Please enter the directory in which to search for existing pipelines: ")) or Path(
+            "/raid/modyn/maxi/sigmod/logs"
+        )
+        if not log_directory.exists():
+            raise RuntimeError(f"{log_directory} does not exist.")
+
+        names = list(log_directory.glob("**/.name"))
+        existing_pipelines = set([name_file.read_text() for name_file in names])
+        logger.info(f"Found these existing pipelines: {existing_pipelines}")
+
     run_id = 0
     for seed in seeds:
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
@@ -429,7 +442,8 @@ def run_experiment() -> None:
                 config_id = config_str_fn(
                     model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset
                 )
-                if run_id % num_gpus == gpu_id:
+
+                if run_id % num_gpus == gpu_id and config_id not in existing_pipelines:
                     logger.info(f"Running {config_id} with seed {seed} on this GPU.")
                     pipeline_configs.append(
                         pipeline_gen_func(
