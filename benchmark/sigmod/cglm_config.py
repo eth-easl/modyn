@@ -115,8 +115,8 @@ def gen_cglm_config(
                     ),
                 )
             ],
-            after_pipeline_evaluation_workers=3,
-            after_training_evaluation_workers=3,
+            after_pipeline_evaluation_workers=4,
+            after_training_evaluation_workers=4,
             device=gpu_device,
             result_writers=["json"],
             datasets=[
