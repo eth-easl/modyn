@@ -378,7 +378,7 @@ class PytorchTrainer:
         self._info(f"Finished training: {self._num_samples} samples, {passed_batches} batches.")
         self._log["num_samples"] = self._num_samples
         self._log["num_samples_trained"] = trained_batches * self._batch_size
-        self._log["num_batches"] = passed_batches + 1
+        self._log["num_batches"] = passed_batches
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
         self._assert_training_size(epoch, trained_batches)
