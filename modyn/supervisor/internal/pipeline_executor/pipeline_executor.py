@@ -477,7 +477,6 @@ class PipelineExecutor:
         Returns:
             The list of the actually processed triggers
         """
-        logger.info(f"Processing {len(s.triggers)} triggers in this batch.")
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.GENERAL))
 
         previous_trigger_index = 0
