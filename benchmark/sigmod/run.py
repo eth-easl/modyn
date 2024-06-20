@@ -489,7 +489,7 @@ def run_experiment() -> None:
                     )
 
                     if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
-                        logger.info(f"Running {config_id} with seed {seed} on this GPU.")
+                        logger.info(f"Running {config_id} with seed {seed} and ratio {ratio} on this GPU.")
                         pipeline_configs.append(pipeline_config)
 
                     run_id += 1
