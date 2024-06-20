@@ -43,17 +43,25 @@ logger = logging.getLogger(__name__)
 
 
 def gen_selection_strategies(
-    ratio: int, warmup_triggers: int, num_classes: int, training_config: TrainingConfig, small_run: bool = False
+    ratio: int,
+    warmup_triggers: int,
+    num_classes: int,
+    training_config: TrainingConfig,
+    small_run: bool = False,
+    include_full=True,
 ) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
-    # Full data training
-    strategies.append(
-        (
-            "full",
-            NewDataStrategyConfig(maximum_keys_in_memory=100000, storage_backend="database", tail_triggers=0, limit=-1),
+    if include_full:
+        # Full data training
+        strategies.append(
+            (
+                "full",
+                NewDataStrategyConfig(
+                    maximum_keys_in_memory=100000, storage_backend="database", tail_triggers=0, limit=-1
+                ),
+            )
         )
-    )
 
     # Uniform random sampling
     strategies.append(
@@ -98,7 +106,7 @@ def gen_selection_strategies(
                 downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=True),
             ),
         )
-        )
+    )
 
     # RS2 without replacement
     strategies.append(
@@ -453,7 +461,7 @@ def run_experiment() -> None:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
                 train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
-                    warmup_triggers, num_classes, train_conf, small_run=small_run
+                    warmup_triggers, num_classes, train_conf, small_run=small_run, include_full=(ratio == ratios[0])
                 ):
                     if (
                         dataset == "cglm_landmark_min25"
