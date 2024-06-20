@@ -42,7 +42,7 @@ def gen_fig_scatter_num_triggers(
     df_logs_eval_single = df_logs_eval_single[
         (df_logs_eval_single["dataset_id"] == dataset_id)
         & (df_logs_eval_single["eval_handler"] == eval_handler)
-        & (df_logs_eval_single["most_recent_model"])
+        & (df_logs_eval_single["currently_active_model"])
         # & (df_adjusted["metric"] == metric)
     ]
 

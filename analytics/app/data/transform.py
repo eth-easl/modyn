@@ -2,8 +2,10 @@ import datetime
 from typing import Any, Literal, cast
 
 import pandas as pd
+
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo
+from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
 
 AGGREGATION_FUNCTION = Literal["mean", "median", "max", "min", "sum", "std"]
 EVAL_AGGREGATION_FUNCTION = Literal["time_weighted_avg", "mean", "median", "max", "min", "sum", "std"]
@@ -61,22 +63,25 @@ def dfs_models_and_evals(
     joined_models = df_models.merge(df_single_triggers, on="trigger_idx", how="left", suffixes=("", "_trigger")).merge(
         df_single_trainings, on="trigger_idx", how="left", suffixes=("", "_training")
     )
+
+    # sort models by trigger_id (we need that for the shift functions in generate_real_training_end_timestamp etc.)
+    joined_models.sort_values(by=["trigger_id"], inplace=True)
+
     joined_models["train_start"] = joined_models["first_timestamp"]
     joined_models["train_end"] = joined_models["last_timestamp"]
+    joined_models["real_train_end"] = generate_real_training_end_timestamp(joined_models)
 
     df_models = joined_models[
-        [col for col in df_models.columns] + ["train_start", "train_end", "num_batches", "num_samples"]
+        [col for col in df_models.columns] + ["train_start", "train_end",  "real_train_end","num_batches", "num_samples"]
     ]
 
     convert_epoch_to_datetime(df_models, "train_start")
     convert_epoch_to_datetime(df_models, "train_end")
-
-    # sort models by trigger_id
-    df_models.sort_values(by=["trigger_id"], inplace=True)
+    convert_epoch_to_datetime(df_models, "real_train_end")
 
     # model_usage period
-    df_models["usage_start"] = df_models["train_end"] + pd.DateOffset(seconds=1)
-    df_models["usage_end"] = df_models["train_end"].shift(-1)
+    df_models["usage_start"] = df_models["real_train_end"] + pd.DateOffset(seconds=1)
+    df_models["usage_end"] = df_models["real_train_end"].shift(-1)
     df_models["usage_end"] = df_models["usage_end"].fillna(max_sample_time)
 
     # linearize ids:
@@ -232,7 +237,10 @@ def patch_yearbook_time(df: pd.DataFrame, column: str) -> pd.DataFrame:
     Returns:
         DataFrame with patched yearbook time.
     """
-    df[column] = pd.to_datetime(1930 + (df[column] - datetime.datetime(1970, 1, 1)).dt.days, format="%Y")
+    delta = (df[column] - datetime.datetime(1970, 1, 1))
+    df[column] = pd.to_datetime(
+        delta.apply(lambda x: f"{1930 + x.days}-{x.seconds // (2 * 3600)  + 1}-{1}")
+    )
     return df
 
 

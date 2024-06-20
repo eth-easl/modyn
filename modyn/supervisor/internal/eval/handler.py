@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import pandas as pd
+from pydantic import BaseModel, Field
+
 from modyn.config.schema.pipeline import EvalHandlerConfig
 from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
+from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
 from modyn.utils import dynamic_module_import
-from pydantic import BaseModel, Field
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -92,9 +94,7 @@ class EvalHandler:
         # the next training batch.
         # e.g. if we want to train for 1.1.2020-31.12.2020 but only have timestamps on 1.1.2020, last_timestamp
         # would be 1.1.2020, but the next training would start on 1.1.2021.
-        df_trainings["real_last_timestamp"] = (
-            df_trainings["first_timestamp"].shift(-1, fill_value=df_trainings.iloc[-1]["last_timestamp"] + 1) - 1
-        )
+        df_trainings["real_last_timestamp"] = generate_real_training_end_timestamp(df_trainings)
 
         training_intervals: list[tuple[int, int]] = [
             (row["first_timestamp"], row["real_last_timestamp"]) for _, row in df_trainings.iterrows()

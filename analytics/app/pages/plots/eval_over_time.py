@@ -3,9 +3,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -29,7 +30,7 @@ def gen_figure(
     page: str, multi_pipeline_mode: bool, patch_yearbook: bool, eval_handler: str, dataset_id: str, metric: str
 ) -> go.Figure:
     """
-    Create the cost over time figure with barplot or histogram. Histogram has nice binning while barplot is precise.
+    Create the evaluation over time figure with a line plot.
 
     Args:
         page: Page name where the plot is displayed
@@ -49,17 +50,17 @@ def gen_figure(
 
     # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
     if patch_yearbook:
-        for column in ["interval_center", "interval_start", "interval_end", "sample_time", "sample_time_until"]:
+        for column in ["interval_center", "interval_start", "interval_end"]:
             patch_yearbook_time(df_adjusted, column)
 
     if multi_pipeline_mode:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_adjusted = df_adjusted[df_adjusted["most_recent_model"]]
+        df_adjusted = df_adjusted[df_adjusted["currently_active_model"]]
     else:
         assert df_adjusted["pipeline_ref"].nunique() == 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_adjusted[df_adjusted["most_recent_model"]]
+        pipeline_composite_model = df_adjusted[df_adjusted["currently_active_model"]]
         pipeline_composite_model["model_idx"] = "00-pipeline-composite-model"
         number_digits = len(str(df_adjusted["model_idx"].max()))
         df_adjusted["model_idx"] = df_adjusted["model_idx"].astype(str).str.zfill(number_digits)

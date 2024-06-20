@@ -59,14 +59,14 @@ def gen_fig_scatter_num_triggers(
 
     if multi_pipeline_mode or only_active_periods:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
 
     if not multi_pipeline_mode:
         assert df_logs_eval_single["pipeline_ref"].nunique() == 1
 
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
         pipeline_composite_model["id_model"] = "0-pipeline-composite-model"
         df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str)
         df_logs_eval_single = pd.concat([df_logs_eval_single, pipeline_composite_model])

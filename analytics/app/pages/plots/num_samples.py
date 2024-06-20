@@ -55,7 +55,7 @@ def gen_figure(
         df_evals = df_evals[(df_evals["dataset_id"] == dataset_id) & (df_evals["eval_handler"] == eval_handler)]
 
         if multi_pipeline_mode:
-            df_evals = df_evals[df_evals["most_recent_model"]]
+            df_evals = df_evals[df_evals["currently_active_model"]]
 
         # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
         if time_metric == "sample_time" and patch_yearbook:

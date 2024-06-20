@@ -2,9 +2,10 @@ import dataclasses
 from dataclasses import dataclass
 
 import pandas as pd
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -52,14 +53,16 @@ def gen_figure(
 
     # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
     if patch_yearbook:
-        for column in ["interval_center", "interval_start", "interval_end", "sample_time", "sample_time_until"]:
+        for column in ["interval_start", "interval_center", "interval_end"]:
             patch_yearbook_time(df_adjusted, column)
+        for column in ["train_start", "train_end", "usage_start", "usage_end"]:
+            patch_yearbook_time(df_logs_models, column)
 
     df_adjusted = df_adjusted.sort_values(by=["interval_center"])
 
     if multi_pipeline_mode:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_adjusted = df_adjusted[df_adjusted["most_recent_model"]]
+        df_adjusted = df_adjusted[df_adjusted["currently_active_model"]]
 
         # in model dataframe convert pipeline_ref to pipeline_id as we need int for the heatmap
         df_adjusted["pipeline_id"] = df_adjusted["pipeline_ref"].str.split("-").str[0].astype(int)
@@ -69,7 +72,7 @@ def gen_figure(
         assert df_adjusted["pipeline_ref"].nunique() == 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_adjusted[df_adjusted["most_recent_model"]]
+        pipeline_composite_model = df_adjusted[df_adjusted["currently_active_model"]]
         pipeline_composite_model["model_idx"] = "0-pipeline-composite-model"
 
     # build heatmap matrix dataframe:
@@ -83,6 +86,7 @@ def gen_figure(
             x=heatmap_data.columns,
             y=heatmap_data.index,
             colorscale="RdBu_r",
+            dx=0.5,
         )
     )
     fig.update_layout(
@@ -108,7 +112,7 @@ def gen_figure(
                 line=dict(color="Green", width=5),
             )
             for active_ in df_adjusted[
-                df_adjusted["most_recent_model"]
+                df_adjusted["currently_active_model"]
             ].iterrows()  # if "pipeline-composite-model" not in active_[1]["id_model"]
         ]
         # diagonal 2
@@ -122,7 +126,7 @@ def gen_figure(
                 line=dict(color="Green", width=5),
             )
             for active_ in df_adjusted[
-                df_adjusted["most_recent_model"]
+                df_adjusted["currently_active_model"]
             ].iterrows()  # if "pipeline-composite-model" not in active_[1]["id_model"]
         ]
 
@@ -133,7 +137,7 @@ def gen_figure(
             dict(
                 type="rect",
                 x0=active_[1][f"{type_}_start"],
-                x1=active_[1][f"{type_}_end"],
+                x1=active_[1][f"{'real_' if type_ == 'train' else ''}{type_}_end"],
                 y0=active_[1][y_column] - 0.5,
                 y1=active_[1][y_column] + 0.5,
                 line=dict(color="Orange" if type_ == "train" else "Black", width=4),
