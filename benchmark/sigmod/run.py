@@ -26,6 +26,7 @@ from modyn.config.schema.pipeline import (
 )
 from modyn.config.schema.pipeline.sampling.downsampling_config import ILTrainingConfig
 from modyn.config.schema.pipeline.training.config import TrainingConfig
+from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 from modyn.utils.utils import current_time_millis
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -413,7 +414,7 @@ def run_experiment() -> None:
         train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
 
-    existing_pipelines = set()
+    existing_pipelines = []
     if skip_existing:
         log_directory = Path(input("Please enter the directory in which to search for existing pipelines: ")) or Path(
             "/raid/modyn/maxi/sigmod/logs"
@@ -422,9 +423,27 @@ def run_experiment() -> None:
             raise RuntimeError(f"{log_directory} does not exist.")
 
         names = list(log_directory.glob("**/.name"))
-        existing_pipelines = set([name_file.read_text() for name_file in names])
+
+        for name_file in names:
+            name = name_file.read_text()
+            pipeline_file = name_file.parent / "pipeline.log"
+
+            if not pipeline_file.exists():
+                logger.info(f"{name_file} exists, but {pipeline_file} does not")
+                continue
+
+            try:
+                parsed_log = PipelineLogs.model_validate_json(pipeline_file.read_text())
+            except:
+                print(f"Skipping file {pipeline_file} due to invalid format")
+                continue
+
+            seed = parsed_log.config.pipeline.training.seed
+            existing_pipelines.append((name, seed))
+
         logger.info(f"Found these existing pipelines: {existing_pipelines}")
 
+    existing_pipelines = set(existing_pipelines)
     run_id = 0
     for seed in seeds:
         for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
@@ -443,7 +462,7 @@ def run_experiment() -> None:
                     model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset
                 )
 
-                if run_id % num_gpus == gpu_id and config_id not in existing_pipelines:
+                if run_id % num_gpus == gpu_id and (config_id, seed) not in existing_pipelines:
                     logger.info(f"Running {config_id} with seed {seed} on this GPU.")
                     pipeline_configs.append(
                         pipeline_gen_func(
