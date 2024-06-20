@@ -734,7 +734,6 @@ class PipelineExecutor:
     def _done(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.DONE, MsgType.GENERAL))
         self.logs.pipeline_stages = _pipeline_stage_parents  # now includes chronology info
-        self.logs.materialize(s.log_directory, mode="final")
 
     @pipeline_stage(PipelineStage.POST_EVALUATION_CHECKPOINT, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation_checkpoint(self, s: ExecutionState, log: StageLog) -> None:
