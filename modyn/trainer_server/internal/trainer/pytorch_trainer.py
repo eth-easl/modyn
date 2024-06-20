@@ -211,7 +211,6 @@ class PytorchTrainer:
         self._info("Handled OnBegin Callbacks.")
         self._log["epochs"] = []
 
-        batch_number = -1
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
         else:
@@ -234,29 +233,31 @@ class PytorchTrainer:
             batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
         trained_batches = 0
+        passed_batches = 0
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
             batch_timings = []
 
             if self._sample_then_batch_this_epoch(epoch):
-                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
+                self.update_queue("TRAINING", passed_batches, self._num_samples, training_active=False)
                 with GPUMeasurement(self._measure_gpu_ops, "DownsampleSTB", self._device, stopw):
                     self.downsample_trigger_training_set()
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
-            for batch_number, batch in enumerate(self._train_dataloader):
+            for _, batch in enumerate(self._train_dataloader):
+                passed_batches += 1
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
                 stopw.start("OnBatchBeginCallbacks", resume=True)
                 for _, callback in self._callbacks.items():
-                    callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
+                    callback.on_batch_begin(self._model.model, self._optimizers, batch, passed_batches)
                 stopw.stop()
 
-                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
+                self.update_queue("TRAINING", passed_batches, self._num_samples, training_active=True)
 
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
@@ -283,6 +284,7 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                     self._assert_data_size(self._batch_size, data, sample_ids, target)
+
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         output = self._model.model(data)
 
@@ -297,7 +299,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
-                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, passed_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
 
@@ -313,10 +315,10 @@ class PytorchTrainer:
 
                 self._step_lr_if_necessary(True)
 
-                if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
                     stopw.start("Checkpoint", resume=True)
-                    checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
-                    self.save_state(checkpoint_file_name, batch_number)
+                    checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
+                    self.save_state(checkpoint_file_name, trained_batches)
                     stopw.stop("Checkpoint")
 
                 self._num_samples += self._batch_size
@@ -324,7 +326,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_end(
-                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, passed_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
                 if 0 < self.num_samples_to_pass <= self._num_samples:
@@ -374,10 +376,10 @@ class PytorchTrainer:
 
         total_stopw.stop("TotalTrain")
 
-        self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
+        self._info(f"Finished training: {self._num_samples} samples, {passed_batches} batches.")
         self._log["num_samples"] = self._num_samples
         self._log["num_samples_trained"] = trained_batches * self._batch_size
-        self._log["num_batches"] = batch_number + 1
+        self._log["num_batches"] = passed_batches + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
         self._assert_training_size(epoch, trained_batches)
@@ -385,7 +387,7 @@ class PytorchTrainer:
         self._persist_pipeline_log()
 
         for _, callback in self._callbacks.items():
-            callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
+            callback.on_train_end(self._model.model, self._optimizers, self._num_samples, passed_batches)
 
         for metric in self._callbacks:
             self._metadata_collector.send_metadata(metric)
