@@ -116,7 +116,7 @@ def gen_yearbook_config(
         data=DataConfig(
             dataset_id="yearbook", transformations=transformations, bytes_parser_function=bytes_parser_func
         ),
-        trigger=TimeTriggerConfig(every="1d"),
+        trigger=TimeTriggerConfig(every="1d", start_timestamp=0),
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(

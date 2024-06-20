@@ -99,7 +99,7 @@ def gen_arxiv_config(
             ),
             tokenizer="DistilBertTokenizerTransform",
         ),
-        trigger=TimeTriggerConfig(every="1d"),
+        trigger=TimeTriggerConfig(every="1d", start_timestamp=0),
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(
