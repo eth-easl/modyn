@@ -246,7 +246,7 @@ class PytorchTrainer:
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
-            for _, batch in enumerate(self._train_dataloader):
+            for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
@@ -434,7 +434,7 @@ class PytorchTrainer:
             available_labels = self.get_available_labels_from_selector()
 
             number_of_samples = 0
-            batch_number = 0
+            batch_number = -1
             first_label = True
             for label in available_labels:
                 if first_label:
@@ -479,7 +479,7 @@ class PytorchTrainer:
         )
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
-        self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=True)
+        self.update_queue("DOWNSAMPLING", batch_number + 1, number_of_samples, training_active=True)
         # set the model to train
         self._model.model.train()
 
@@ -859,16 +859,16 @@ class PytorchTrainer:
     def _iterate_dataloader_and_compute_scores(
         self,
         dataloader: torch.utils.data.DataLoader,
-        previous_batch_number: int = 0,
+        previous_batch_number: int = -1,
         previous_number_of_samples: int = 0,
     ) -> Tuple[int, int]:
         """
         Function to iterate a dataloader, compute the forward pass and send the forward output to the downsampler.
         Args:
             dataloader: torch.dataloader to get the data
-            previous_batch_number: number of batches processed before calling this function. Useful when this function
-            is called several times to keep track of previous invocations (ex label by label dataloader). We need to
-            have a total to correctly update the queue and show the progress in the supervisor counter.
+            previous_batch_number: The batch number returned from the last call to this method. Useful when this
+            function is called several times to keep track of previous invocations (ex label by label dataloader). We
+            need to have a total to correctly update the queue and show the progress in the supervisor counter.
             previous_number_of_samples: number of samples processed before calling this function. See above for the use.
 
         Returns:
@@ -876,9 +876,9 @@ class PytorchTrainer:
         """
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
-        for batch_number, batch in enumerate(dataloader):
+        for batch in dataloader:
             self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=False)
-
+            batch_number += 1
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 
