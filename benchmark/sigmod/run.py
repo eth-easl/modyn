@@ -85,20 +85,19 @@ def gen_selection_strategies(
         )
     )
 
-    if not small_run:
-        # RS2 with replacement
-        strategies.append(
-            (
-                "rs2w",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=True),
-                ),
-            )
+    # RS2 with replacement
+    strategies.append(
+        (
+            "rs2w",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=True),
+            ),
+        )
         )
 
     # RS2 without replacement
@@ -293,22 +292,22 @@ def gen_selection_strategies(
             )
         )
 
-        # Entropy BtS
-        strategies.append(
-            (
-                "entropy_bts",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, sample_then_batch=False, period=1, score_metric="Entropy"
-                    ),
+    # Entropy BtS
+    strategies.append(
+        (
+            "entropy_bts",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=ratio, sample_then_batch=False, period=1, score_metric="Entropy"
                 ),
-            )
+            ),
         )
+    )
 
     return strategies
 
@@ -450,41 +449,42 @@ def run_experiment() -> None:
     existing_pipelines = set(existing_pipelines)
     run_id = 0
     for seed in seeds:
-        for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-            train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
-            for selection_strategy_id, selection_strategy in gen_selection_strategies(
-                warmup_triggers, num_classes, train_conf, small_run=small_run
-            ):
-                if (
-                    dataset == "cglm_landmark_min25"
-                    and pipeline_gen_func == gen_cglm_config
-                    and selection_strategy_id == "classb"
+        for ratio in ratios:
+            for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
+                train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
+                for selection_strategy_id, selection_strategy in gen_selection_strategies(
+                    warmup_triggers, num_classes, train_conf, small_run=small_run
                 ):
-                    continue  # classb on landmark does not work
+                    if (
+                        dataset == "cglm_landmark_min25"
+                        and pipeline_gen_func == gen_cglm_config
+                        and selection_strategy_id == "classb"
+                    ):
+                        continue  # classb on landmark does not work
 
-                config_id = config_str_fn(
-                    model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset
-                )
+                    config_id = config_str_fn(
+                        model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, dataset
+                    )
 
-                pipeline_config = pipeline_gen_func(
-                    config_id,
-                    num_epochs,
-                    train_gpu,
-                    selection_strategy,
-                    lr_scheduler_config,
-                    model,
-                    dataset,
-                    num_classes,
-                    seed,
-                    optimizer,
-                    lr,
-                )
+                    pipeline_config = pipeline_gen_func(
+                        config_id,
+                        num_epochs,
+                        train_gpu,
+                        selection_strategy,
+                        lr_scheduler_config,
+                        model,
+                        dataset,
+                        num_classes,
+                        seed,
+                        optimizer,
+                        lr,
+                    )
 
-                if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
-                    logger.info(f"Running {config_id} with seed {seed} on this GPU.")
-                    pipeline_configs.append(pipeline_config)
+                    if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
+                        logger.info(f"Running {config_id} with seed {seed} on this GPU.")
+                        pipeline_configs.append(pipeline_config)
 
-                run_id += 1
+                    run_id += 1
     # logger.info(f"Overview of configurations: {pipeline_configs}")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
