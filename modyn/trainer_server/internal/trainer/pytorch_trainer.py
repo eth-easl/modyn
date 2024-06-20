@@ -279,6 +279,7 @@ class PytorchTrainer:
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
                             stopw.start("FetchBatch", resume=True)
                             stopw.start("IndivFetchBatch", overwrite=True)
+                            self._num_samples += self._batch_size
                             continue
 
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
@@ -377,6 +378,7 @@ class PytorchTrainer:
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         self._log["num_samples"] = self._num_samples
+        self._log["num_samples_trained"] = trained_batches * self._batch_size
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
@@ -623,9 +625,6 @@ class PytorchTrainer:
         bytes_state = buffer.read()
         self._status_response_queue_training.put(bytes_state)
 
-    def send_status_to_server_training(self, batch_number: int) -> None:
-        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
-
     def get_selection_strategy(self) -> tuple[bool, str, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
 
@@ -839,8 +838,8 @@ class PytorchTrainer:
             num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
-        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         self._expected_num_epochs = self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         if self.num_samples_to_pass > 0:
             self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
             self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)
