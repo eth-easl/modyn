@@ -327,12 +327,7 @@ class EvaluationExecutor:
 #                                       DevTools                                       #
 # ------------------------------------------------------------------------------------ #
 
-if __name__ == "__main__":
-    snapshot_path = Path(input("Enter eval snapshot path to (re)run evaluation executor: "))
-    if not snapshot_path.exists():
-        print("Path not found")
-        sys.exit(1)
-
+def rerun_evaluations_from_path(snapshot_path: Path) -> None:
     # restart evaluation executor
     ex = EvaluationExecutor.init_from_path(snapshot_path)
 
@@ -346,3 +341,12 @@ if __name__ == "__main__":
 
     logs_.supervisor_logs = ex.run_post_pipeline_evaluations(eval_status_queue=Queue())
     logs_.materialize(snapshot_path, mode="final")
+
+
+if __name__ == "__main__":
+    snapshot_path = Path(input("Enter eval snapshot path to (re)run evaluation executor: "))
+    if not snapshot_path.exists():
+        print("Path not found")
+        sys.exit(1)
+
+    rerun_evaluations_from_path(snapshot_path)
