@@ -2,9 +2,10 @@ import dataclasses
 from dataclasses import dataclass
 
 import pandas as pd
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -54,7 +55,7 @@ def gen_figure(
     if patch_yearbook:
         for column in ["interval_start", "interval_center", "interval_end"]:
             patch_yearbook_time(df_adjusted, column)
-        for column in ["train_start", "train_end", "usage_start", "usage_end"]:
+        for column in ["train_start", "train_end", "real_train_end", "usage_start", "usage_end"]:
             patch_yearbook_time(df_logs_models, column)
 
     df_adjusted = df_adjusted.sort_values(by=["interval_center"])

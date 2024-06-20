@@ -2,9 +2,11 @@ import datetime
 from typing import Any, Literal, cast
 
 import pandas as pd
+
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo
 from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
+from modyn.utils.utils import SECONDS_PER_UNIT
 
 AGGREGATION_FUNCTION = Literal["mean", "median", "max", "min", "sum", "std"]
 EVAL_AGGREGATION_FUNCTION = Literal["time_weighted_avg", "mean", "median", "max", "min", "sum", "std"]
@@ -75,6 +77,7 @@ def dfs_models_and_evals(
         + ["train_start", "train_end", "real_train_end", "num_batches", "num_samples"]
     ]
 
+    convert_epoch_to_datetime(df_models, "sample_time")
     convert_epoch_to_datetime(df_models, "train_start")
     convert_epoch_to_datetime(df_models, "train_end")
     convert_epoch_to_datetime(df_models, "real_train_end")
@@ -237,8 +240,13 @@ def patch_yearbook_time(df: pd.DataFrame, column: str) -> pd.DataFrame:
     Returns:
         DataFrame with patched yearbook time.
     """
-    delta = df[column] - datetime.datetime(1970, 1, 1)
-    df[column] = pd.to_datetime(delta.apply(lambda x: f"{1930 + x.days}-{x.seconds // (2 * 3600)  + 1}-{1}"))
+    if df.shape[0] == 0:
+        df[column] = pd.to_datetime([])
+        return df
+    delta = df[column] - pd.to_datetime("1970-01-01")
+    partial_years = delta.dt.seconds / SECONDS_PER_UNIT["d"]
+    partial_years_delta = partial_years.apply(lambda x: datetime.timedelta(seconds=x * SECONDS_PER_UNIT["y"]))
+    df[column] = pd.to_datetime(delta.apply(lambda x: f"{1930 + x.days}-1-1")) + partial_years_delta
     return df
 
 
