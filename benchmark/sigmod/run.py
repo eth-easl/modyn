@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def gen_selection_strategies(
-    warmup_triggers: int, num_classes: int, training_config: TrainingConfig, small_run: bool = False
+    ratio: int, warmup_triggers: int, num_classes: int, training_config: TrainingConfig, small_run: bool = False
 ) -> list[tuple[str, SelectionStrategy]]:
     strategies = []
 
@@ -65,7 +65,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="Random", ratio=50),
+                presampling_config=PresamplingConfig(strategy="Random", ratio=ratio),
             ),
         )
     )
@@ -80,7 +80,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=50),
+                presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=ratio),
             ),
         )
     )
@@ -96,7 +96,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=True),
+                    downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=True),
                 ),
             )
         )
@@ -111,7 +111,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=50, with_replacement=False),
+                downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=False),
             ),
         )
     )
@@ -126,7 +126,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
+                    downsampling_config=LossDownsamplingConfig(ratio=ratio, sample_then_batch=True, period=1),
                 ),
             )
         )
@@ -141,7 +141,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=LossDownsamplingConfig(ratio=50, sample_then_batch=False),
+                downsampling_config=LossDownsamplingConfig(ratio=ratio, sample_then_batch=False),
             ),
         )
     )
@@ -157,7 +157,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=True, period=1),
+                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, sample_then_batch=True, period=1),
                 ),
             )
         )
@@ -172,7 +172,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=GradNormDownsamplingConfig(ratio=50, sample_then_batch=False),
+                downsampling_config=GradNormDownsamplingConfig(ratio=ratio, sample_then_batch=False),
             ),
         )
     )
@@ -195,7 +195,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=RHOLossDownsamplingConfig(
-                    ratio=50,
+                    ratio=ratio,
                     sample_then_batch=False,
                     period=1,
                     holdout_set_ratio=10,
@@ -217,7 +217,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=50, sample_then_batch=True, period=1, score_metric="Margin"
+                        ratio=ratio, sample_then_batch=True, period=1, score_metric="Margin"
                     ),
                 ),
             )
@@ -234,7 +234,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=False, period=1, score_metric="Margin"
+                    ratio=ratio, sample_then_batch=False, period=1, score_metric="Margin"
                 ),
             ),
         )
@@ -252,7 +252,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=50, sample_then_batch=True, period=1, score_metric="LeastConfidence"
+                        ratio=ratio, sample_then_batch=True, period=1, score_metric="LeastConfidence"
                     ),
                 ),
             )
@@ -269,7 +269,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=50, sample_then_batch=False, period=1, score_metric="LeastConfidence"
+                    ratio=ratio, sample_then_batch=False, period=1, score_metric="LeastConfidence"
                 ),
             ),
         )
@@ -287,7 +287,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=50, sample_then_batch=True, period=1, score_metric="Entropy"
+                        ratio=ratio, sample_then_batch=True, period=1, score_metric="Entropy"
                     ),
                 ),
             )
@@ -304,7 +304,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=50, sample_then_batch=False, period=1, score_metric="Entropy"
+                        ratio=ratio, sample_then_batch=False, period=1, score_metric="Entropy"
                     ),
                 ),
             )
@@ -355,6 +355,7 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
+    ratios = [50, 10, 30]
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
     small_run = True
@@ -377,7 +378,8 @@ def run_experiment() -> None:
             lr_sched_id,
             num_epochs,
             warmup_triggers,
-            dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
+            ratio,
+            dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
         )
         train_conf_func = gen_yearbook_training_conf
     elif pipeline_gen_func == gen_arxiv_config:
@@ -392,7 +394,8 @@ def run_experiment() -> None:
             lr_sched_id,
             num_epochs,
             warmup_triggers,
-            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}"
+            ratio,
+            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
         )
         train_conf_func = gen_arxiv_training_conf
 
@@ -407,7 +410,8 @@ def run_experiment() -> None:
             lr_sched_id,
             num_epochs,
             warmup_triggers,
-            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}"
+            ratio,
+            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}_r{ratio}"
         )
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
