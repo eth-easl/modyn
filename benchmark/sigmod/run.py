@@ -462,23 +462,23 @@ def run_experiment() -> None:
                     model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, dataset
                 )
 
-                if run_id % num_gpus == gpu_id and (config_id, seed) not in existing_pipelines:
+                pipeline_config = pipeline_gen_func(
+                    config_id,
+                    num_epochs,
+                    train_gpu,
+                    selection_strategy,
+                    lr_scheduler_config,
+                    model,
+                    dataset,
+                    num_classes,
+                    seed,
+                    optimizer,
+                    lr,
+                )
+
+                if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
                     logger.info(f"Running {config_id} with seed {seed} on this GPU.")
-                    pipeline_configs.append(
-                        pipeline_gen_func(
-                            config_id,
-                            num_epochs,
-                            train_gpu,
-                            selection_strategy,
-                            lr_scheduler_config,
-                            model,
-                            dataset,
-                            num_classes,
-                            seed,
-                            optimizer,
-                            lr,
-                        )
-                    )
+                    pipeline_configs.append(pipeline_config)
 
                 run_id += 1
     # logger.info(f"Overview of configurations: {pipeline_configs}")
