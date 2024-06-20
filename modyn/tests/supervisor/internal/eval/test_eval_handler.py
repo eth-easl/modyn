@@ -95,9 +95,9 @@ def test_get_eval_requests_after_pipeline() -> None:
         # checking the data above if looks like model 3 is the biggest model with
         # last_timestamp < active_model_trained_before;
         # however, we use next trainings start - 1 as training interval end.
-        (22, True, False, 8, 12),
-        (23, False, True, 8, 12),
-        (26, False, False, 8, 12),
+        (22, False, False, 8, 12),
+        (23, True, False, 8, 12),
+        (26, False, True, 8, 12),
         (27, False, False, 8, 12),
         (28, False, False, 8, 12),
         # interval 2: for models/triggers 1-8
@@ -111,9 +111,9 @@ def test_get_eval_requests_after_pipeline() -> None:
         (21, False, False, 23, 27),
         (22, False, False, 23, 27),
         (23, False, False, 23, 27),
-        (26, True, False, 23, 27),
-        (27, False, True, 23, 27),
-        (28, False, False, 23, 27),
+        (26, False, False, 23, 27),
+        (27, True, False, 23, 27),
+        (28, False, True, 23, 27),
         # interval 4: for models/triggers 1-8
         (21, False, False, 24, 28),
         (22, False, False, 24, 28),
@@ -181,20 +181,20 @@ def test_between_two_trigger_after_pipeline() -> None:
     # (model_id, currently_active_model, currently_trained_model, start_interval, end_interval)
     expected_eval_requests = [
         # interval 1: for models/triggers 1-8
-        (21, False, True, 0, 5 - 1),
-        (26, False, False, 0, 5 - 1),
-        (28, False, False, 0, 5 - 1),
-        (29, False, False, 0, 5 - 1),
+        (21, False, True, 0, 0),
+        (26, False, False, 0, 0),
+        (28, False, False, 0, 0),
+        (29, False, False, 0, 0),
         # interval 2: for models/triggers 1-8
-        (21, True, False, 5, 8 - 1),
-        (26, False, True, 5, 8 - 1),
-        (28, False, False, 5, 8 - 1),
-        (29, False, False, 5, 8 - 1),
+        (21, True, False, 5, 7),
+        (26, False, True, 5, 7),
+        (28, False, False, 5, 7),
+        (29, False, False, 5, 7),
         # interval 3: for models/triggers 1-8
-        (21, False, False, 8, 14 - 1),
-        (26, True, False, 8, 14 - 1),
-        (28, False, True, 8, 14 - 1),
-        (29, False, False, 8, 14 - 1),
+        (21, False, False, 8, 10),
+        (26, True, False, 8, 10),
+        (28, False, True, 8, 10),
+        (29, False, False, 8, 10),
         # interval 4: for models/triggers 1-8
         (21, False, False, 14, 16),
         (26, False, False, 14, 16),
