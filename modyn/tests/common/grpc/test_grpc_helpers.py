@@ -135,7 +135,7 @@ def test_prepare_start_training_request(
     assert req.seed == 0
     assert req.num_samples_to_pass == (num_samples_to_pass if num_samples_to_pass is not None else 0)
     assert req.shuffle
-    assert req.measure_operation_time
+    assert req.enable_accurate_gpu_measurements
 
 
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
