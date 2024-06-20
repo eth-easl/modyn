@@ -2,7 +2,6 @@ import datetime
 from typing import Any, Literal, cast
 
 import pandas as pd
-
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo
 from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
