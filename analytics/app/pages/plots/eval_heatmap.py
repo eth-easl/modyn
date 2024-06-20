@@ -2,10 +2,9 @@ import dataclasses
 from dataclasses import dataclass
 
 import pandas as pd
+from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
-
-from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
