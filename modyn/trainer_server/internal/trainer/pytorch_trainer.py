@@ -247,7 +247,6 @@ class PytorchTrainer:
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
             for _, batch in enumerate(self._train_dataloader):
-                passed_batches += 1
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
@@ -258,7 +257,7 @@ class PytorchTrainer:
                 stopw.stop()
 
                 self.update_queue("TRAINING", passed_batches, self._num_samples, training_active=True)
-
+                passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
 
