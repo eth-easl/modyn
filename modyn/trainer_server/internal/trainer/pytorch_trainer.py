@@ -38,6 +38,7 @@ from modyn.trainer_server.internal.dataset.key_sources import LocalKeySource, Se
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.batch_accumulator import BatchAccumulator
+from modyn.trainer_server.internal.trainer.gpu_measurement import GPUMeasurement
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -114,6 +115,7 @@ class PytorchTrainer:
         self._device = device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = training_info.amp
+        self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
@@ -239,9 +241,8 @@ class PytorchTrainer:
 
             if self._sample_then_batch_this_epoch(epoch):
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
-                stopw.start("DownsampleSTB")
-                self.downsample_trigger_training_set()
-                stopw.stop()
+                with GPUMeasurement(self._measure_gpu_ops, "DownsampleSTB", self._device, stopw):
+                    self.downsample_trigger_training_set()
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
@@ -257,9 +258,8 @@ class PytorchTrainer:
 
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
 
-                stopw.start("PreprocessBatch", resume=True)
-                sample_ids, target, data = self.preprocess_batch(batch, stopw)
-                stopw.stop("PreprocessBatch")
+                with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
+                    sample_ids, target, data = self.preprocess_batch(batch, stopw)
 
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
@@ -271,30 +271,28 @@ class PytorchTrainer:
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-                        stopw.start("DownsampleBTS", resume=True)
-                        data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
-                        stopw.stop()
+                        with GPUMeasurement(self._measure_gpu_ops, "DownsampleBTS", self._device, stopw, resume=True):
+                            data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         self._assert_data_size(post_downsampling_size, data, sample_ids, target)
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
                             stopw.start("FetchBatch", resume=True)
                             stopw.start("IndivFetchBatch", overwrite=True)
+                            self._num_samples += self._batch_size
                             continue
 
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                     self._assert_data_size(self._batch_size, data, sample_ids, target)
-                    stopw.start("Forward", resume=True)
-                    output = self._model.model(data)
-                    stopw.stop("Forward")
+                    with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
+                        output = self._model.model(data)
 
-                    stopw.start("Loss", resume=True)
-                    if weighted_optimization:
-                        # weighted gradient descent
-                        assert weights is not None
-                        loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
-                    else:
-                        loss = self._criterion(output, target)
-                    stopw.stop("Loss")
+                    with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
+                        if weighted_optimization:
+                            # weighted gradient descent
+                            assert weights is not None
+                            loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                        else:
+                            loss = self._criterion(output, target)
 
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
@@ -303,16 +301,14 @@ class PytorchTrainer:
                     )
                 stopw.stop()
 
-                stopw.start("Backward", resume=True)
-                self._scaler.scale(loss).backward()
-                stopw.stop("Backward")
+                with GPUMeasurement(self._measure_gpu_ops, "Backward", self._device, stopw, resume=True):
+                    self._scaler.scale(loss).backward()
 
-                stopw.start("OptimizerStep", resume=True)
-                for _, optimizer in self._optimizers.items():
-                    self._scaler.step(optimizer)
+                with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
+                    for _, optimizer in self._optimizers.items():
+                        self._scaler.step(optimizer)
 
-                self._scaler.update()
-                stopw.stop("OptimizerStep")
+                    self._scaler.update()
                 trained_batches += 1
 
                 self._step_lr_if_necessary(True)
@@ -380,6 +376,7 @@ class PytorchTrainer:
 
         self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
         self._log["num_samples"] = self._num_samples
+        self._log["num_samples_trained"] = trained_batches * self._batch_size
         self._log["num_batches"] = batch_number + 1
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
@@ -508,24 +505,22 @@ class PytorchTrainer:
             target = batch[2]
         stopw.stop("LabelTransform")
 
-        stopw.start("MoveLabelToGPU", resume=True)
-        target = target.to(self._device)
-        stopw.stop("MoveLabelToGPU")
+        with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
+            target = target.to(self._device)
 
-        stopw.start("MoveDataToGPU", resume=True)
-        data: Union[torch.Tensor, dict]
-        if isinstance(batch[1], torch.Tensor):
-            data = batch[1].to(self._device)
-        elif isinstance(batch[1], dict):
-            data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-            for name, tensor in batch[1].items():
-                data[name] = tensor.to(self._device)
-        else:
-            raise ValueError(
-                "The format of the data provided is not supported in modyn. "
-                "Please use either torch tensors or dict[str, torch.Tensor]"
-            )
-        stopw.stop("MoveDataToGPU")
+        with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
+            data: Union[torch.Tensor, dict]
+            if isinstance(batch[1], torch.Tensor):
+                data = batch[1].to(self._device)
+            elif isinstance(batch[1], dict):
+                data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+                for name, tensor in batch[1].items():
+                    data[name] = tensor.to(self._device)
+            else:
+                raise ValueError(
+                    "The format of the data provided is not supported in modyn. "
+                    "Please use either torch tensors or dict[str, torch.Tensor]"
+                )
 
         return sample_ids, target, data
 
@@ -627,9 +622,6 @@ class PytorchTrainer:
         buffer.seek(0)
         bytes_state = buffer.read()
         self._status_response_queue_training.put(bytes_state)
-
-    def send_status_to_server_training(self, batch_number: int) -> None:
-        self._status_response_queue_training.put({"num_batches": batch_number, "num_samples": self._num_samples})
 
     def get_selection_strategy(self) -> tuple[bool, str, dict]:
         req = GetSelectionStrategyRequest(pipeline_id=self.pipeline_id)
@@ -844,8 +836,8 @@ class PytorchTrainer:
             num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
-        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         self._expected_num_epochs = self.epochs_per_trigger
+        # Handle special case of num_samples_to_pass instead of specifying number of epochs
         if self.num_samples_to_pass > 0:
             self._expected_num_batches = math.ceil(self.num_samples_to_pass / self._batch_size)
             self._expected_num_epochs = math.ceil(self._expected_num_batches / batches_per_epoch)

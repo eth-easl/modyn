@@ -111,7 +111,8 @@ class EvaluationDataset(IterableDataset):
 
     def _get_keys_from_storage(self, worker_id: int, total_workers: int) -> Iterable[list[int]]:
         self._info("Getting keys from storage", worker_id)
-        last_processed_index = -1
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
         for attempt in Retrying(
             stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
         ):
@@ -125,15 +126,24 @@ class EvaluationDataset(IterableDataset):
                         end_timestamp=self._end_timestamp,
                     )
                     resp_keys: GetDataPerWorkerResponse
-                    for index, resp_keys in enumerate(self._storagestub.GetDataPerWorker(req_keys)):
-                        if index <= last_processed_index:
-                            continue  # Skip already processed responses
-                        yield resp_keys.keys
-                        last_processed_index = index
+                    for resp_keys in self._storagestub.GetDataPerWorker(req_keys):
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(resp_keys.keys)
+                            yield resp_keys.keys
+                        else:
+                            assert isinstance(processed_keys, set)
+                            new_keys = [key for key in resp_keys.keys if key not in processed_keys]
+                            processed_keys.update(resp_keys.keys)
+                            yield new_keys
 
                 except grpc.RpcError as e:
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
+
                     self._info(
-                        "gRPC error occurred, last index = " + f"{last_processed_index}: {e.code()} - {e.details()}",
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
@@ -146,7 +156,8 @@ class EvaluationDataset(IterableDataset):
     def _get_data_from_storage(
         self, keys: list[int], worker_id: Optional[int] = None
     ) -> Iterable[list[tuple[int, bytes, int]]]:
-        last_processed_index = -1
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
         for attempt in Retrying(
             stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
         ):
@@ -154,15 +165,31 @@ class EvaluationDataset(IterableDataset):
                 try:
                     request = GetRequest(dataset_id=self._dataset_id, keys=keys)
                     response: GetResponse
-                    for index, response in enumerate(self._storagestub.Get(request)):
-                        if index <= last_processed_index:
-                            continue  # Skip already processed responses
-                        yield list(zip(response.keys, response.samples, response.labels))
-                        last_processed_index = index
+                    for response in self._storagestub.Get(request):
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(response.keys)
+                            yield list(zip(response.keys, response.samples, response.labels))
+                        else:
+                            assert isinstance(processed_keys, set)
+                            new_keys: list[int] = [key for key in response.keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
+                                sample
+                                for key, sample in zip(response.keys, response.samples)
+                                if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(response.keys, response.labels) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            yield list(zip(new_keys, new_samples, new_labels))
 
                 except grpc.RpcError as e:  # We catch and reraise to log and reconnect
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
                     self._info(
-                        f"gRPC error occurred, last index = {last_processed_index}: {e.code()} - {e.details()}",
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)

@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Iterator
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -79,8 +79,12 @@ def tracking_df() -> pd.DataFrame:
     )
 
 
+@patch.object(GRPCHandler, "init_cluster_connection", return_value=None)
 def test_evaluation_executor_state_management(
-    evaluation_executor: EvaluationExecutor, tracking_df: pd.DataFrame, tmp_dir_tests: Path
+    test_init_cluster_connection: MagicMock,
+    evaluation_executor: EvaluationExecutor,
+    tracking_df: pd.DataFrame,
+    tmp_dir_tests: Path,
 ) -> None:
     evaluation_executor.register_tracking_info(
         {
@@ -95,7 +99,9 @@ def test_evaluation_executor_state_management(
     assert (tmp_dir_tests / "snapshot" / "eval_state.yaml").exists()
     assert (tmp_dir_tests / "snapshot" / "context.pcl").exists()
 
+    test_init_cluster_connection.assert_not_called()
     loaded_eval_executor = EvaluationExecutor.init_from_path(tmp_dir_tests)
+    test_init_cluster_connection.assert_called_once()
 
     assert loaded_eval_executor.pipeline_id == evaluation_executor.pipeline_id
     assert loaded_eval_executor.pipeline_logdir == evaluation_executor.pipeline_logdir
@@ -112,7 +118,13 @@ def test_evaluation_executor_state_management(
 
 def dummy_eval_request() -> EvalRequest:
     return EvalRequest(
-        trigger_id=1, training_id=1, id_model=1, most_recent_model=True, dataset_id="MNIST_eval", eval_handler="e"
+        trigger_id=1,
+        training_id=1,
+        id_model=1,
+        currently_active_model=True,
+        currently_trained_model=False,
+        dataset_id="MNIST_eval",
+        eval_handler="e",
     )
 
 

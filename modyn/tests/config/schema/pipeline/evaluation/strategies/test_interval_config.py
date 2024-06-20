@@ -70,6 +70,7 @@ def test_interval_eval_strategy_config_invalid_intervals(interval: str) -> None:
                     "eval_start_from": 0,
                     "eval_end_at": 300,
                 },
+                "models": "matrix",
                 "datasets": ["mnist_eval"],
             }
         ],

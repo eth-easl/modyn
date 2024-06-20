@@ -477,7 +477,6 @@ class PipelineExecutor:
         Returns:
             The list of the actually processed triggers
         """
-        logger.info(f"Processing {len(s.triggers)} triggers in this batch.")
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.GENERAL))
 
         previous_trigger_index = 0
@@ -734,7 +733,6 @@ class PipelineExecutor:
     def _done(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.DONE, MsgType.GENERAL))
         self.logs.pipeline_stages = _pipeline_stage_parents  # now includes chronology info
-        self.logs.materialize(s.log_directory, mode="final")
 
     @pipeline_stage(PipelineStage.POST_EVALUATION_CHECKPOINT, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation_checkpoint(self, s: ExecutionState, log: StageLog) -> None:
@@ -758,7 +756,7 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
     def _exit(self, s: ExecutionState, log: StageLog) -> None:
-        return None  # end of pipeline
+        self.logs.materialize(s.log_directory, mode="final")
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 
