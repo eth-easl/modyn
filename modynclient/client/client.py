@@ -145,7 +145,7 @@ class Client:
                 self.eval_err_count += 1
                 logger.info(f"Evaluation {id} failed with error: {params['exception_msg']}")
 
-    def _process_msgs(self, res: dict, show_eval_progress: bool = True ) -> None:
+    def _process_msgs(self, res: dict, show_eval_progress: bool = True) -> None:
         if "training_status" in res:
             for i, msg in enumerate(res["training_status"]):
                 self._monitor_training_progress(msg)
@@ -173,9 +173,10 @@ class Client:
             return False
         else:
             filename = f"client_error_{current_time_millis()}.log"
-            logger.error(f"Unknown pipeline status: {json.dumps(res, sort_keys=True, indent=2)}\n\nAlso persisted to {filename}.")
-            with open(filename, 'w', encoding='utf-8') as f:
+            logger.error(
+                f"Unknown pipeline status: {json.dumps(res, sort_keys=True, indent=2)}\n\nAlso persisted to {filename}."
+            )
+            with open(filename, "w", encoding="utf-8") as f:
                 json.dump(res, f, sort_keys=True, indent=2)
 
             return False
-        

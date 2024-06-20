@@ -6,8 +6,8 @@ We do this by converting the year to days since epoch (1970-01-01).
 """
 
 import os
-from pathlib import Path
 import pickle
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
