@@ -759,7 +759,6 @@ class PipelineExecutor:
     @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
     def _exit(self, s: ExecutionState, log: StageLog) -> None:
         self.logs.materialize(s.log_directory, mode="final")
-        return None  # end of pipeline
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 
