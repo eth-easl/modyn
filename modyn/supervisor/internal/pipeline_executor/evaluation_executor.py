@@ -103,12 +103,14 @@ class EvaluationExecutor:
         eval_state_config = EvalStateConfig.model_validate_json((snapshot_dir / "eval_state.yaml").read_text())
         context = pickle.loads((snapshot_dir / "context.pcl").read_bytes())
 
+        grpc = GRPCHandler(eval_state_config.config.model_dump(by_alias=True))
+        grpc.init_cluster_connection()
         executor = EvaluationExecutor(
             eval_state_config.pipeline_id,
             eval_state_config.eval_dir,
             eval_state_config.config,
             eval_state_config.pipeline,
-            GRPCHandler(eval_state_config.config.model_dump(by_alias=True)),
+            grpc,
         )
         executor.context = context
         return executor
@@ -164,7 +166,9 @@ class EvaluationExecutor:
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
-    def run_post_pipeline_evaluations(self, eval_status_queue: Queue) -> SupervisorLogs:
+    def run_post_pipeline_evaluations(
+        self, eval_status_queue: Queue, manual_run: bool = False
+    ) -> SupervisorLogs:
         """Evaluate the trained models after the core pipeline and store the results."""
         if not self.pipeline.evaluation:
             return SupervisorLogs(stage_runs=[])
@@ -182,7 +186,10 @@ class EvaluationExecutor:
 
         eval_requests: list[EvalRequest] = []
         for eval_handler in self.eval_handlers:
-            if eval_handler.config.execution_time != "after_pipeline":
+            if (
+                (eval_handler.config.execution_time not in ("after_pipeline", "manual"))
+                or (eval_handler.config.execution_time == "manual" and not manual_run)
+            ):
                 continue
 
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
