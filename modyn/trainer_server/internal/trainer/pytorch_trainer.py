@@ -115,11 +115,7 @@ class PytorchTrainer:
         self._device = device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = training_info.amp
-<<<<<<< HEAD
-        self._measure_operation_time = training_info.enable_accurate_gpu_measurements
-=======
         self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
->>>>>>> origin/main
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
