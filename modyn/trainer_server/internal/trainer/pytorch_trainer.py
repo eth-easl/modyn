@@ -115,7 +115,7 @@ class PytorchTrainer:
         self._device = device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = training_info.amp
-        self._measure_operation_time = training_info.measure_operation_time
+        self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._final_checkpoint_path = training_info.final_checkpoint_path
@@ -241,7 +241,7 @@ class PytorchTrainer:
 
             if self._sample_then_batch_this_epoch(epoch):
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
-                with GPUMeasurement(self._measure_operation_time, "DownsampleSTB", self._device, stopw):
+                with GPUMeasurement(self._measure_gpu_ops, "DownsampleSTB", self._device, stopw):
                     self.downsample_trigger_training_set()
 
             stopw.start("IndivFetchBatch", overwrite=True)
@@ -258,7 +258,7 @@ class PytorchTrainer:
 
                 self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
 
-                with GPUMeasurement(self._measure_operation_time, "PreprocessBatch", self._device, stopw, resume=True):
+                with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
 
                 if retrieve_weights_from_dataloader:
@@ -271,9 +271,7 @@ class PytorchTrainer:
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-                        with GPUMeasurement(
-                            self._measure_operation_time, "DownsampleBTS", self._device, stopw, resume=True
-                        ):
+                        with GPUMeasurement(self._measure_gpu_ops, "DownsampleBTS", self._device, stopw, resume=True):
                             data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
                         self._assert_data_size(post_downsampling_size, data, sample_ids, target)
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
@@ -285,10 +283,10 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                     self._assert_data_size(self._batch_size, data, sample_ids, target)
-                    with GPUMeasurement(self._measure_operation_time, "Forward", self._device, stopw, resume=True):
+                    with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         output = self._model.model(data)
 
-                    with GPUMeasurement(self._measure_operation_time, "Loss", self._device, stopw, resume=True):
+                    with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
                         if weighted_optimization:
                             # weighted gradient descent
                             assert weights is not None
@@ -303,10 +301,10 @@ class PytorchTrainer:
                     )
                 stopw.stop()
 
-                with GPUMeasurement(self._measure_operation_time, "Backward", self._device, stopw, resume=True):
+                with GPUMeasurement(self._measure_gpu_ops, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
 
-                with GPUMeasurement(self._measure_operation_time, "OptimizerStep", self._device, stopw, resume=True):
+                with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
                     for _, optimizer in self._optimizers.items():
                         self._scaler.step(optimizer)
 
@@ -507,10 +505,10 @@ class PytorchTrainer:
             target = batch[2]
         stopw.stop("LabelTransform")
 
-        with GPUMeasurement(self._measure_operation_time, "MoveLabelToGPU", self._device, stopw, resume=True):
+        with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
             target = target.to(self._device)
 
-        with GPUMeasurement(self._measure_operation_time, "MoveDataToGPU", self._device, stopw, resume=True):
+        with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: Union[torch.Tensor, dict]
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(self._device)
