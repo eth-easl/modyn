@@ -16,6 +16,7 @@ from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.utils.git_utils import get_head_sha
 from pydantic import BaseModel, Field, model_serializer, model_validator
 from typing_extensions import override
 
@@ -472,6 +473,7 @@ class PipelineLogs(BaseModel):
     # static logs
 
     pipeline_id: int
+    commit_sha: str | None = Field(None, description="The commit SHA that the pipeline was executed on.")
     pipeline_stages: dict[str, tuple[int, list[str]]]
     """List of all pipeline stages, their execution order index, and their parent stages."""
 
@@ -516,6 +518,11 @@ class PipelineLogs(BaseModel):
         # output logs
 
         if mode == "initial":
+            try:
+                self.commit_sha = get_head_sha()
+            except Exception as e:  # pylint: disable=broad-except
+                logger.warning(f"Failed to get commit SHA: {e}")
+
             with open(pipeline_logdir / "pipeline.part.log", "w", encoding="utf-8") as logfile:
                 logfile.write(self.model_dump_json(indent=2, exclude={"supervisor", "partial_idx"}, by_alias=True))
             return
