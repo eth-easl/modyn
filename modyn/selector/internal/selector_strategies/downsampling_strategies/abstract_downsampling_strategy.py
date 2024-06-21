@@ -43,8 +43,8 @@ class AbstractDownsamplingStrategy(ABC):
         self.maximum_keys_in_memory = maximum_keys_in_memory
         self.downsampling_config = downsampling_config
         # the status bar scale is used in conjunction with the total number of samples (after presampling)
-        # and the number of currently trained batches to show current training progress
-        # No matter it is BtS or StB, the number of trained batches should be compared to the total number of samples
+        # and the number of already trained samples to show current training progress
+        # No matter it is BtS or StB, the number of trained samples should be compared to the total number of samples
         # divided by the downsampling ratio. Therefore, the status bar scale should be the downsampling ratio.
         self.status_bar_scale = self.downsampling_ratio
 
