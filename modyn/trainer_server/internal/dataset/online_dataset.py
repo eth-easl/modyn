@@ -156,7 +156,8 @@ class OnlineDataset(IterableDataset):
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None
     ) -> Iterator[Tuple[list[int], list[bytes], list[int], int]]:
-        last_processed_index = -1
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
 
         for attempt in Retrying(
             stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
@@ -168,18 +169,34 @@ class OnlineDataset(IterableDataset):
 
                     response: GetResponse
                     stopw.start("ResponseTime", overwrite=True)
-                    for index, response in enumerate(self._storagestub.Get(req)):
-                        if index <= last_processed_index:
-                            continue  # Skip already processed responses
-                        yield list(response.keys), list(response.samples), list(response.labels), stopw.stop(
-                            "ResponseTime"
-                        )
-                        last_processed_index = index  # Update the last processed index
+                    for response in self._storagestub.Get(req):
+                        response_time = stopw.stop("ResponseTime")
+                        keys = list(response.keys)
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(keys)
+                            yield keys, list(response.samples), list(response.labels), response_time
+                        else:  # If we have failed, we need to filter out yielded samples
+                            # Note that the returned order by storage is non-deterministic
+                            assert isinstance(processed_keys, set)
+                            new_keys: list[int] = [key for key in keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
+                                sample for key, sample in zip(keys, response.samples) if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(keys, response.labels) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            yield new_keys, new_samples, new_labels, response_time
+
                         stopw.start("ResponseTime", overwrite=True)
 
                 except grpc.RpcError as e:  # We catch and reraise to reconnect to rpc and do logging
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
                     self._info(
-                        "gRPC error occurred, last index = " + f"{last_processed_index}: {e.code()} - {e.details()}",
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
