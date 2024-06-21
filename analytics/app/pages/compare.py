@@ -1,5 +1,9 @@
 import dash
 import pandas as pd
+from dash import Input, Output, callback, dcc, html
+from typing_extensions import get_args
+
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.load import list_pipelines, load_pipeline_logs
 from analytics.app.data.transform import (
     add_pipeline_ref,
@@ -8,11 +12,11 @@ from analytics.app.data.transform import (
     logs_dataframe,
     logs_dataframe_agg_by_stage,
 )
+from analytics.app.pages.const.text import COMPOSITE_MODEL_TEXT
 from analytics.app.pages.plots.cost_over_time import section1_stacked_bar
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
 from analytics.app.pages.plots.num_samples import section_num_samples
-from dash import Input, Output, callback, dcc, html
 
 from .plots.cost_vs_eval_metric_agg import section3_scatter_cost_eval_metric
 from .plots.num_triggers_eval_metric import section3_scatter_num_triggers
@@ -30,9 +34,13 @@ pipelines = list_pipelines()
 initial_pipeline_ids = list(sorted(pipelines.keys()))[:1]
 
 
-@callback(Output("pipelines-info", "children"), Input("pipelines-selector", "value"))
-def switch_pipelines(pipeline_ids: list[int]):
-    return render_pipeline_infos(pipeline_ids)
+@callback(
+    Output("pipelines-info", "children"),
+    Input("pipelines-selector", "value"),
+    Input("composite-model-variant", "value"),
+)
+def switch_pipelines(pipeline_ids: list[int], composite_model_variant: CompositeModelOptions) -> list[html.Div]:
+    return render_pipeline_infos(pipeline_ids, composite_model_variant)
 
 
 ui_pipelines_selection = html.Div(
@@ -50,11 +58,19 @@ ui_pipelines_selection = html.Div(
             persistence=True,
             style={"color": "black"},
         ),
+        html.Br(),
+        dcc.Markdown(COMPOSITE_MODEL_TEXT),
+        dcc.RadioItems(
+            id="composite-model-variant",
+            options=[{"label": variant, "value": variant} for variant in get_args(CompositeModelOptions)],
+            value="currently_active_model",
+            persistence=True,
+        ),
     ]
 )
 
 
-def render_pipeline_infos(pipeline_ids: list[int]) -> list[html.Div]:
+def render_pipeline_infos(pipeline_ids: list[int], composite_model_variant: CompositeModelOptions) -> list[html.Div]:
     # --------------------------------------------------- DATA --------------------------------------------------- #
 
     pipeline_refs = {pipeline_id: f"{pipeline_id} - {pipelines[pipeline_id][0]}" for pipeline_id in pipeline_ids}
@@ -110,18 +126,22 @@ def render_pipeline_infos(pipeline_ids: list[int]) -> list[html.Div]:
             )
         )
     else:
+        eval_items.append(section_metricovertime("compare", True, df_logs_eval_single, composite_model_variant))
         eval_items.append(
-            section_metricovertime("compare", True, df_logs_eval_single),
-        )
-        eval_items.append(section_evalheatmap("compare", True, df_logs_eval_single, df_logs_models))
-        eval_items.append(section_num_samples("compare", True, df_logs_models, df_logs_eval_requests))
-        eval_items.append(
-            section3_scatter_num_triggers("compare", True, df_logs_agg, df_logs_eval_single),
+            section_evalheatmap("compare", True, df_logs_eval_single, df_logs_models, composite_model_variant)
         )
         eval_items.append(
-            section3_scatter_cost_eval_metric("compare", df_logs, df_logs_agg_leaf, df_logs_eval_single),
+            section_num_samples("compare", True, df_logs_models, df_logs_eval_requests, composite_model_variant)
         )
-        eval_items.append(section4_1d_boxplots("compare", True, df_logs, df_logs_eval_single))
+        eval_items.append(
+            section3_scatter_num_triggers("compare", True, df_logs_agg, df_logs_eval_single, composite_model_variant)
+        )
+        eval_items.append(
+            section3_scatter_cost_eval_metric(
+                "compare", df_logs, df_logs_agg_leaf, df_logs_eval_single, composite_model_variant
+            )
+        )
+        eval_items.append(section4_1d_boxplots("compare", True, df_logs, df_logs_eval_single, composite_model_variant))
 
     return [
         html.H1("Cost over time comparison"),
@@ -141,6 +161,6 @@ layout = html.Div(
     """
         ),
         ui_pipelines_selection,
-        html.Div(id="pipelines-info", children=render_pipeline_infos(initial_pipeline_ids)),
+        html.Div(id="pipelines-info", children=render_pipeline_infos(initial_pipeline_ids, "currently_active_model")),
     ]
 )

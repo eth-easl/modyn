@@ -2,6 +2,7 @@ import dataclasses
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -29,6 +30,7 @@ _shared_data = _SharedData()
 def gen_fig_scatter_num_triggers(
     page: str,
     multi_pipeline_mode: bool,
+    composite_model_variant: CompositeModelOptions,
     eval_handler: str,
     dataset_id: str,
     metric: str,
@@ -59,14 +61,14 @@ def gen_fig_scatter_num_triggers(
 
     if multi_pipeline_mode or only_active_periods:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
+        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
 
     if not multi_pipeline_mode:
         assert df_logs_eval_single["pipeline_ref"].nunique() == 1
 
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
+        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
         pipeline_composite_model["id_model"] = "0-pipeline-composite-model"
         df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str)
         df_logs_eval_single = pd.concat([df_logs_eval_single, pipeline_composite_model])
@@ -124,7 +126,11 @@ def gen_fig_scatter_num_triggers(
 
 
 def section3_scatter_num_triggers(
-    page: str, multi_pipeline_mode: bool, df_logs_agg: pd.DataFrame, df_logs_eval_single: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_logs_agg: pd.DataFrame,
+    df_logs_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     assert "pipeline_ref" in df_logs_agg.columns.tolist()
     assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
@@ -151,6 +157,7 @@ def section3_scatter_num_triggers(
         return gen_fig_scatter_num_triggers(
             page,
             multi_pipeline_mode,
+            composite_model_variant,
             eval_handler_ref,
             dataset_id,
             metric,
@@ -293,6 +300,7 @@ def section3_scatter_num_triggers(
                             figure=gen_fig_scatter_num_triggers(
                                 page,
                                 multi_pipeline_mode,
+                                composite_model_variant,
                                 eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
                                 dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                                 metric=eval_metrics[0] if len(eval_metrics) > 0 else None,

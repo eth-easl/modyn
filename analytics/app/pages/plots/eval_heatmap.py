@@ -5,6 +5,7 @@ import pandas as pd
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
 
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import patch_yearbook_time
 
 
@@ -29,7 +30,13 @@ _shared_data = _SharedData()
 
 
 def gen_figure(
-    page: str, multi_pipeline_mode: bool, patch_yearbook: bool, eval_handler: str, dataset_id: str, metric: str
+    page: str,
+    composite_model_variant: CompositeModelOptions,
+    multi_pipeline_mode: bool,
+    patch_yearbook: bool,
+    eval_handler: str,
+    dataset_id: str,
+    metric: str,
 ) -> go.Figure:
     """
     Create the cost over time figure with barplot or histogram. Histogram has nice binning while barplot is precise.
@@ -62,7 +69,7 @@ def gen_figure(
 
     if multi_pipeline_mode:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_adjusted = df_adjusted[df_adjusted["currently_active_model"]]
+        df_adjusted = df_adjusted[df_adjusted[composite_model_variant]]
 
         # in model dataframe convert pipeline_ref to pipeline_id as we need int for the heatmap
         df_adjusted["pipeline_id"] = df_adjusted["pipeline_ref"].str.split("-").str[0].astype(int)
@@ -72,7 +79,7 @@ def gen_figure(
         assert df_adjusted["pipeline_ref"].nunique() == 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_adjusted[df_adjusted["currently_active_model"]]
+        pipeline_composite_model = df_adjusted[df_adjusted[composite_model_variant]]
         pipeline_composite_model["model_idx"] = "0-pipeline-composite-model"
 
     # build heatmap matrix dataframe:
@@ -112,7 +119,7 @@ def gen_figure(
                 line=dict(color="Green", width=5),
             )
             for active_ in df_adjusted[
-                df_adjusted["currently_active_model"]
+                df_adjusted[composite_model_variant]
             ].iterrows()  # if "pipeline-composite-model" not in active_[1]["id_model"]
         ]
         # diagonal 2
@@ -126,7 +133,7 @@ def gen_figure(
                 line=dict(color="Green", width=5),
             )
             for active_ in df_adjusted[
-                df_adjusted["currently_active_model"]
+                df_adjusted[composite_model_variant]
             ].iterrows()  # if "pipeline-composite-model" not in active_[1]["id_model"]
         ]
 
@@ -154,7 +161,11 @@ def gen_figure(
 
 
 def section_evalheatmap(
-    page: str, multi_pipeline_mode: bool, df_logs_eval_single: pd.DataFrame, df_logs_models: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_logs_eval_single: pd.DataFrame,
+    df_logs_models: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     _shared_data.df_logs_eval_single[page] = df_logs_eval_single
     _shared_data.df_logs_models[page] = df_logs_models
@@ -167,7 +178,9 @@ def section_evalheatmap(
         Input(f"{page}-evalheatmap-evaluation-metric", "value"),
     )
     def update_figure(patch_yearbook: bool, eval_handler_ref: str, dataset_id: str, metric: str) -> go.Figure:
-        return gen_figure(page, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric)
+        return gen_figure(
+            page, composite_model_variant, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric
+        )
 
     eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
     eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
@@ -263,6 +276,7 @@ def section_evalheatmap(
                 id=f"{page}-evalheatmap-plot",
                 figure=gen_figure(
                     page,
+                    composite_model_variant,
                     multi_pipeline_mode,
                     False,
                     eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
