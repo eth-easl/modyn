@@ -246,7 +246,7 @@ def patch_yearbook_time(df: pd.DataFrame, column: str) -> pd.DataFrame:
     delta = df[column] - pd.to_datetime("1970-01-01")
     partial_years = delta.dt.seconds / SECONDS_PER_UNIT["d"]
     partial_years_delta = partial_years.apply(lambda x: datetime.timedelta(seconds=x * SECONDS_PER_UNIT["y"]))
-    df[column] = pd.to_datetime(delta.apply(lambda x: f"{1930 + x.days}-1-1")) + partial_years_delta
+    df[column] = pd.to_datetime(delta.apply(lambda x: f"{1930 + x.days}-01-01")) + partial_years_delta
     return df
 
 
