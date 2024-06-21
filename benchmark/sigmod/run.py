@@ -461,7 +461,7 @@ def run_experiment() -> None:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
                 train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
-                    warmup_triggers, num_classes, train_conf, small_run=small_run, include_full=(ratio == ratios[0])
+                    ratio, warmup_triggers, num_classes, train_conf, small_run=small_run, include_full=(ratio == ratios[0])
                 ):
                     if (
                         dataset == "cglm_landmark_min25"
