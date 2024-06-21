@@ -362,7 +362,7 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [50, 10, 30]
+    ratios = [10, 50, 30]
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
     small_run = True
@@ -392,9 +392,9 @@ def run_experiment() -> None:
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
-        num_epochs = 10  # OR 5??? OR 15??
-        optimizer = "SGD"  # alternative: AdamW
-        lr = 0.00002  # alternative: 0.00005
+        num_epochs = 5
+        optimizer = "AdamW"
+        lr = 0.00002
         config_str_fn = (
             lambda model,
             selection_strategy_id,
@@ -436,7 +436,7 @@ def run_experiment() -> None:
         names = list(log_directory.glob("**/.name"))
 
         for name_file in names:
-            name = name_file.read_text()         
+            name = name_file.read_text()
             pipeline_file = name_file.parent / "pipeline.log"
 
             if not pipeline_file.exists():
@@ -451,8 +451,8 @@ def run_experiment() -> None:
 
             seed = parsed_log.config.pipeline.training.seed
             # patch legacy names
-            if name[-3] != 'r':
-                name = f"{name}_r50" # we only did 50% runs before
+            if name[-3] != "r":
+                name = f"{name}_r50"  # we only did 50% runs before
 
             existing_pipelines.append((name, seed))
 
@@ -465,7 +465,12 @@ def run_experiment() -> None:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
                 train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
-                    ratio, warmup_triggers, num_classes, train_conf, small_run=small_run, include_full=(ratio == ratios[0])
+                    ratio,
+                    warmup_triggers,
+                    num_classes,
+                    train_conf,
+                    small_run=small_run,
+                    include_full=(ratio == ratios[0]),
                 ):
                     if (
                         dataset == "cglm_landmark_min25"
@@ -473,6 +478,9 @@ def run_experiment() -> None:
                         and selection_strategy_id == "classb"
                     ):
                         continue  # classb on landmark does not work
+
+                    if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
+                        continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
                     config_id = config_str_fn(
                         model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, dataset
