@@ -87,17 +87,8 @@ class EvalHandler:
         ) == set()
         df_trainings = df_trainings.copy()
 
-        # for sparse datasets we want to use next_training_start-1 as training interval end instead of last_timestamp
-        # as there could be a long gap between the max(sample_time) in one training batch and the min(sample_time) in
-        # the next training batch.
-        # e.g. if we want to train for 1.1.2020-31.12.2020 but only have timestamps on 1.1.2020, last_timestamp
-        # would be 1.1.2020, but the next training would start on 1.1.2021.
-        df_trainings["real_last_timestamp"] = (
-            df_trainings["first_timestamp"].shift(-1, fill_value=df_trainings.iloc[-1]["last_timestamp"] + 1) - 1
-        )
-
         training_intervals: list[tuple[int, int]] = [
-            (row["first_timestamp"], row["real_last_timestamp"]) for _, row in df_trainings.iterrows()
+            (row["first_timestamp"], row["last_timestamp"]) for _, row in df_trainings.iterrows()
         ]
         eval_intervals = self.eval_strategy.get_eval_intervals(training_intervals)
         df_eval_intervals = pd.DataFrame(
@@ -114,7 +105,7 @@ class EvalHandler:
         # Check if a combination is the active. We first compute if model was trained before
         # the usage starts last_timestamp (df_trainings) defines the end of the training data;
         # active_model_trained_before (df_eval_intervals): defines center of an eval intervals.
-        df_cross["active_candidate"] = df_cross["real_last_timestamp"] < df_cross["active_model_trained_before"]
+        df_cross["active_candidate"] = df_cross["last_timestamp"] < df_cross["active_model_trained_before"]
 
         # find the maximum model for every EvalCandidate that doesn't violate that constraint
         max_model_id = (
