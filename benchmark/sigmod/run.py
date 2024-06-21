@@ -436,7 +436,7 @@ def run_experiment() -> None:
         names = list(log_directory.glob("**/.name"))
 
         for name_file in names:
-            name = name_file.read_text()
+            name = name_file.read_text()         
             pipeline_file = name_file.parent / "pipeline.log"
 
             if not pipeline_file.exists():
@@ -450,6 +450,10 @@ def run_experiment() -> None:
                 continue
 
             seed = parsed_log.config.pipeline.training.seed
+            # patch legacy names
+            if name[-3] != 'r':
+                name = f"{name}_r50" # we only did 50% runs before
+
             existing_pipelines.append((name, seed))
 
         logger.info(f"Found these existing pipelines: {existing_pipelines}")
