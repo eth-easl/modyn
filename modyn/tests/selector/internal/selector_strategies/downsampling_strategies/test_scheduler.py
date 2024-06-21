@@ -100,7 +100,7 @@ def test_switch_functions():
             "sample_then_batch": False,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
 
 def test_wrong_number_threshold():
@@ -154,7 +154,7 @@ def test_double_threshold():
             "sample_then_batch": False,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
     # above the last threshold
     for i in range(15, 25):
@@ -197,7 +197,7 @@ def test_wrong_trigger():
             "sample_then_batch": False,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
 
 def test_instantiate_scheduler_just_one():

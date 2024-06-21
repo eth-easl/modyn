@@ -240,7 +240,9 @@ class PytorchTrainer:
             batch_timings = []
 
             if self._sample_then_batch_this_epoch(epoch):
-                self.update_queue("TRAINING", passed_batches, self._num_samples, training_active=False)
+                self.update_queue(
+                    "TRAINING", trained_batches, trained_batches * self._batch_size, training_active=False
+                )
                 with GPUMeasurement(self._measure_gpu_ops, "DownsampleSTB", self._device, stopw):
                     self.downsample_trigger_training_set()
 
@@ -256,7 +258,7 @@ class PytorchTrainer:
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, passed_batches)
                 stopw.stop()
 
-                self.update_queue("TRAINING", passed_batches, self._num_samples, training_active=True)
+                self.update_queue("TRAINING", trained_batches, trained_batches * self._batch_size, training_active=True)
                 passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
@@ -298,7 +300,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
-                        self._model.model, self._optimizers, passed_batches, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
 
@@ -325,7 +327,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_end(
-                        self._model.model, self._optimizers, passed_batches, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
                 if 0 < self.num_samples_to_pass <= self._num_samples:
