@@ -1,4 +1,8 @@
 import dash
+from dash import Input, Output, callback, dcc, html
+from typing_extensions import get_args
+
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.load import list_pipelines, load_pipeline_logs
 from analytics.app.data.transform import (
     add_pipeline_ref,
@@ -8,11 +12,11 @@ from analytics.app.data.transform import (
     logs_dataframe_agg_by_stage,
     pipeline_stage_parents,
 )
+from analytics.app.pages.const.text import COMPOSITE_MODEL_TEXT
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
 from analytics.app.pages.plots.num_samples import section_num_samples
 from analytics.app.pages.plots.one_dimensional_comparison import section4_1d_boxplots
-from dash import Input, Output, callback, dcc, html
 
 from .plots.cost_over_time import section1_stacked_bar
 from .plots.num_triggers_eval_metric import section3_scatter_num_triggers
@@ -30,10 +34,13 @@ initial_pipeline_id = min(pipelines.keys())
 
 
 @callback(
-    Output("pipeline-info", "children"), Input("pipeline-selector", "value"), prevent_initial_call="initial_duplicate"
+    Output("pipeline-info", "children"),
+    Input("pipeline-selector", "value"),
+    Input("composite-model-variant", "value"),
+    prevent_initial_call="initial_duplicate",
 )
-def switch_pipeline(pipeline_id: int):
-    return render_pipeline_info(pipeline_id)
+def switch_pipeline(pipeline_id: int, composite_model_variant: CompositeModelOptions) -> list[html.Div]:
+    return render_pipeline_info(pipeline_id, composite_model_variant)
 
 
 ui_pipeline_selection = html.Div(
@@ -50,11 +57,19 @@ ui_pipeline_selection = html.Div(
             persistence=True,
             style={"color": "black", "width": "65%"},
         ),
+        html.Br(),
+        dcc.Markdown(COMPOSITE_MODEL_TEXT),
+        dcc.RadioItems(
+            id="composite-model-variant",
+            options=[{"label": variant, "value": variant} for variant in get_args(CompositeModelOptions)],
+            value="currently_active_model",
+            persistence=True,
+        ),
     ]
 )
 
 
-def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
+def render_pipeline_info(pipeline_id: int, composite_model_variant: CompositeModelOptions) -> list[html.Div]:
     # ----------------------------------------------------- DATA ----------------------------------------------------- #
 
     pipeline_ref = f"{pipeline_id} - {pipelines[pipeline_id][1]}"
@@ -89,7 +104,9 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
         )
     else:
         eval_items.append(
-            section_metricovertime("pipeline", False, add_pipeline_ref(df_logs_eval_single, pipeline_ref))
+            section_metricovertime(
+                "pipeline", False, add_pipeline_ref(df_logs_eval_single, pipeline_ref), composite_model_variant
+            )
         )
         eval_items.append(
             section_evalheatmap(
@@ -97,6 +114,7 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                 False,
                 add_pipeline_ref(df_logs_eval_single, pipeline_ref),
                 add_pipeline_ref(df_logs_models, pipeline_ref),
+                composite_model_variant,
             )
         )
         eval_items.append(
@@ -105,6 +123,7 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                 False,
                 add_pipeline_ref(df_logs_models, pipeline_ref),
                 add_pipeline_ref(df_logs_eval_requests, pipeline_ref),
+                composite_model_variant,
             )
         )
         eval_items.append(
@@ -113,6 +132,7 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                 False,
                 add_pipeline_ref(df_logs_agg, pipeline_ref),
                 add_pipeline_ref(df_logs_eval_single, pipeline_ref),
+                composite_model_variant,
             )
         )
         eval_items.append(
@@ -121,6 +141,7 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                 False,
                 add_pipeline_ref(df_logs, pipeline_ref),
                 add_pipeline_ref(df_logs_eval_single, pipeline_ref),
+                composite_model_variant,
             )
         )
 
@@ -157,6 +178,6 @@ layout = html.Div(
     """
         ),
         ui_pipeline_selection,
-        html.Div(id="pipeline-info", children=render_pipeline_info(initial_pipeline_id)),
+        html.Div(id="pipeline-info", children=render_pipeline_info(initial_pipeline_id, "currently_active_model")),
     ]
 )

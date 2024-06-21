@@ -1,11 +1,14 @@
 import dataclasses
+from collections import defaultdict
 from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -13,6 +16,11 @@ class _SharedData:
     """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
     Therefore the need a reference to the data structure at startup time (even though data is not available yet).
     """
+
+    composite_model_variant: dict[str, CompositeModelOptions] = dataclasses.field(
+        default_factory=lambda: defaultdict(lambda: "currently_active_model")
+    )
+    """page, data"""
 
     df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
     """page, data"""
@@ -40,12 +48,16 @@ def gen_figure(
         dataset_id: Dataset id
         metric: Evaluation metric (replaced with facet)
     """
+    composite_model_variant = _shared_data.composite_model_variant[page]
+
     df_adjusted = _shared_data.df_logs_eval_single[page].copy()
     df_adjusted = df_adjusted[
         (df_adjusted["dataset_id"] == dataset_id)
         & (df_adjusted["eval_handler"] == eval_handler)
         # & (df_adjusted["metric"] == metric)
     ]
+
+    print("composite_model_variant", composite_model_variant)
 
     # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
     if patch_yearbook:
@@ -54,12 +66,12 @@ def gen_figure(
 
     if multi_pipeline_mode:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_adjusted = df_adjusted[df_adjusted["currently_active_model"]]
+        df_adjusted = df_adjusted[df_adjusted[composite_model_variant]]
     else:
         assert df_adjusted["pipeline_ref"].nunique() == 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_adjusted[df_adjusted["currently_active_model"]]
+        pipeline_composite_model = df_adjusted[df_adjusted[composite_model_variant]]
         pipeline_composite_model["model_idx"] = "00-pipeline-composite-model"
         number_digits = len(str(df_adjusted["model_idx"].max()))
         df_adjusted["model_idx"] = df_adjusted["model_idx"].astype(str).str.zfill(number_digits)
@@ -97,7 +109,13 @@ def gen_figure(
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def section_metricovertime(page: str, multi_pipeline_mode: bool, df_logs_eval_single: pd.DataFrame) -> html.Div:
+def section_metricovertime(
+    page: str,
+    multi_pipeline_mode: bool,
+    df_logs_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
+) -> html.Div:
+    _shared_data.composite_model_variant[page] = composite_model_variant
     _shared_data.df_logs_eval_single[page] = df_logs_eval_single
 
     @callback(

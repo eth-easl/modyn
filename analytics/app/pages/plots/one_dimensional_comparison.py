@@ -2,6 +2,7 @@ import dataclasses
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import OPTIONAL_EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -42,6 +43,7 @@ def gen_fig_1d_cost(page: str) -> go.Figure:
 def gen_figs_1d_eval(
     page: str,
     multi_pipeline_mode: bool,
+    composite_model_variant: CompositeModelOptions,
     eval_handler: str,
     dataset_id: str,
     agg_func_eval_metric: OPTIONAL_EVAL_AGGREGATION_FUNCTION,
@@ -55,14 +57,14 @@ def gen_figs_1d_eval(
 
     if multi_pipeline_mode or only_active_periods:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
+        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
 
     if not multi_pipeline_mode:
         assert df_logs_eval_single["pipeline_ref"].nunique() == 1
 
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["currently_active_model"]]
+        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
         pipeline_composite_model["id_model"] = "0-pipeline-composite-model"
         df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str)
         df_logs_eval_single = pd.concat([df_logs_eval_single, pipeline_composite_model])
@@ -110,7 +112,11 @@ def gen_figs_1d_eval(
 
 
 def section4_1d_boxplots(
-    page: str, multi_pipeline_mode: bool, df_logs: pd.DataFrame, df_logs_eval_single: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_logs: pd.DataFrame,
+    df_logs_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     assert "pipeline_ref" in df_logs.columns.tolist()
     assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
@@ -132,7 +138,13 @@ def section4_1d_boxplots(
         only_active_periods: bool = True,
     ) -> go.Figure:
         return gen_figs_1d_eval(
-            page, multi_pipeline_mode, eval_handler_ref, dataset_id, agg_func_eval_metric, only_active_periods
+            page,
+            multi_pipeline_mode,
+            composite_model_variant,
+            eval_handler_ref,
+            dataset_id,
+            agg_func_eval_metric,
+            only_active_periods,
         )
 
     # DATA (bring all metrics into columns of one dataframe)
@@ -230,7 +242,9 @@ def section4_1d_boxplots(
             ),
             dcc.Graph(
                 id=f"{page}-1d-box-plot-metrics",
-                figure=gen_figs_1d_eval(page, multi_pipeline_mode, eval_handler_refs[0], eval_datasets[0], "sum"),
+                figure=gen_figs_1d_eval(
+                    page, multi_pipeline_mode, composite_model_variant, eval_handler_refs[0], eval_datasets[0], "sum"
+                ),
             ),
         ]
     )

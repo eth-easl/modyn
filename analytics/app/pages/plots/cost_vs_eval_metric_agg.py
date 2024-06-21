@@ -3,9 +3,11 @@ from typing import get_args
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.transform import AGGREGATION_FUNCTION, EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import AGGREGATION_FUNCTION, EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 
 
 @dataclasses.dataclass
@@ -29,6 +31,7 @@ _shared_data = _SharedData()
 
 def gen_fig_scatter_num_triggers(
     page: str,
+    composite_model_variant: CompositeModelOptions,
     eval_handler: str,
     dataset_id: str,
     metric: str,
@@ -42,7 +45,7 @@ def gen_fig_scatter_num_triggers(
     df_logs_eval_single = df_logs_eval_single[
         (df_logs_eval_single["dataset_id"] == dataset_id)
         & (df_logs_eval_single["eval_handler"] == eval_handler)
-        & (df_logs_eval_single["currently_active_model"])
+        & (df_logs_eval_single[composite_model_variant])
         # & (df_adjusted["metric"] == metric)
     ]
 
@@ -85,7 +88,11 @@ def gen_fig_scatter_num_triggers(
 
 
 def section3_scatter_cost_eval_metric(
-    page: str, df_logs: pd.DataFrame, df_logs_agg_leaf: pd.DataFrame, df_logs_eval_single: pd.DataFrame
+    page: str,
+    df_logs: pd.DataFrame,
+    df_logs_agg_leaf: pd.DataFrame,
+    df_logs_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     assert "pipeline_ref" in df_logs.columns.tolist()
     assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
@@ -111,7 +118,7 @@ def section3_scatter_cost_eval_metric(
         stages: list[str],
     ) -> go.Figure:
         return gen_fig_scatter_num_triggers(
-            page, eval_handler_ref, dataset_id, metric_y, agg_func_x, agg_func_y, stages
+            page, composite_model_variant, eval_handler_ref, dataset_id, metric_y, agg_func_x, agg_func_y, stages
         )
 
     eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
@@ -234,6 +241,7 @@ def section3_scatter_cost_eval_metric(
                             id=f"{page}-scatter-cost-eval",
                             figure=gen_fig_scatter_num_triggers(
                                 page,
+                                composite_model_variant,
                                 eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
                                 dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                                 metric=eval_metrics[0] if len(eval_metrics) > 0 else None,

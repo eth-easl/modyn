@@ -4,9 +4,11 @@ from typing import Literal
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -32,6 +34,7 @@ YAxis = Literal["eval_samples", "train_samples", "train_batches"]
 def gen_figure(
     page: str,
     multi_pipeline_mode: bool,
+    composite_model_variant: CompositeModelOptions,
     time_metric: str,
     y_axis: YAxis,
     use_scatter_size: bool,
@@ -55,7 +58,7 @@ def gen_figure(
         df_evals = df_evals[(df_evals["dataset_id"] == dataset_id) & (df_evals["eval_handler"] == eval_handler)]
 
         if multi_pipeline_mode:
-            df_evals = df_evals[df_evals["currently_active_model"]]
+            df_evals = df_evals[df_evals[composite_model_variant]]
 
         # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
         if time_metric == "sample_time" and patch_yearbook:
@@ -103,7 +106,11 @@ def gen_figure(
 
 
 def section_num_samples(
-    page: str, multi_pipeline_mode: bool, df_logs_models: pd.DataFrame, df_logs_eval_requests: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_logs_models: pd.DataFrame,
+    df_logs_eval_requests: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     _shared_data.df_logs_models[page] = df_logs_models
     _shared_data.df_logs_eval_requests[page] = df_logs_eval_requests
@@ -127,7 +134,15 @@ def section_num_samples(
         eval_handler: str,
     ) -> go.Figure:
         return gen_figure(
-            page, multi_pipeline_mode, time_metric, y_axis, use_scatter_size, patch_yearbook, dataset_id, eval_handler
+            page,
+            multi_pipeline_mode,
+            composite_model_variant,
+            time_metric,
+            y_axis,
+            use_scatter_size,
+            patch_yearbook,
+            dataset_id,
+            eval_handler,
         )
 
     @callback(
@@ -246,6 +261,7 @@ def section_num_samples(
                 figure=gen_figure(
                     page,
                     multi_pipeline_mode,
+                    composite_model_variant,
                     "sample_time",
                     "train_samples",
                     use_scatter_size=True,
