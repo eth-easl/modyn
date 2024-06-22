@@ -164,3 +164,22 @@ def test_dataset_size_various_scenarios():
     strat.tail_triggers = 1
     trigger_size = strat._get_trigger_dataset_size()
     assert presampling_strat.get_target_size(trigger_size, None) == 22  # 75% of presampling
+
+
+def test_target_size_ratio_max():
+    config = get_config()
+    config.ratio_max = 1000
+    config.ratio = 125
+    strat = RandomPresamplingStrategy(
+        config,
+        get_minimal_modyn_config(),
+        10,
+        DatabaseStorageBackend(0, get_minimal_modyn_config(), 123),
+    )
+    assert strat.get_target_size(128, None) == 16
+    assert strat.get_target_size(100, None) == 12
+    assert strat.get_target_size(12, None) == 1
+    assert strat.get_target_size(0, None) == 0
+
+    with pytest.raises(AssertionError):
+        strat.get_target_size(-1, None)
