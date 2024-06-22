@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import pandas as pd
+
 from analytics.app.data.load import list_pipelines, load_pipeline_logs
 from analytics.app.data.transform import (
     dfs_models_and_evals,
@@ -36,12 +37,13 @@ class ProcessedPipelineData:
 # ---------------------------------------- Global state (shared by all pages) ---------------------------------------- #
 
 pipelines = list_pipelines()
+max_pipeline_id = max(pipelines.keys())
 
 pipeline_data: dict[int, ProcessedPipelineData] = {}
 
 
 def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
-    pipeline_ref = f"{pipeline_id} - {pipelines[pipeline_id][1]}"
+    pipeline_ref = f"{pipeline_id}".zfill(len(str(max_pipeline_id))) + f" - {pipelines[pipeline_id][0]}"
 
     logs = load_pipeline_logs(pipeline_id)
     pipeline_leaf_stages = leaf_stages(logs)
