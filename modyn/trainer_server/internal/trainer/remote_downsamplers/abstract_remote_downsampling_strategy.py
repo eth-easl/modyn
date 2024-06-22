@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 import torch
 
@@ -100,3 +100,23 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     @abstractmethod
     def requires_grad(self) -> bool:
         raise NotImplementedError
+
+    @staticmethod
+    def _compute_last_layer_gradient(
+            per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor
+    ):
+        if isinstance(per_sample_loss_fct, torch.nn.CrossEntropyLoss):
+            # no need to autograd if cross entropy loss is used since closed form solution exists.
+            # Because CrossEntropyLoss includes the softmax, we need to apply the
+            # softmax to the forward output to obtain the probabilities
+            probs = torch.nn.functional.softmax(forward_output, dim=1)
+            num_classes = forward_output.shape[-1]
+
+            one_hot_targets = torch.nn.functional.one_hot(
+                target, num_classes=num_classes
+            )
+            last_layer_gradients = probs - one_hot_targets
+        else:
+            sample_losses = per_sample_loss_fct(forward_output, target)
+            last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
+        return last_layer_gradients

@@ -65,7 +65,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         assert self.matrix_content is not None
 
         if self.matrix_content == MatrixContent.GRADIENTS:
-            new_elements = self._compute_gradients(forward_output, target, embedding)
+            new_elements = self._compute_last_layer_gradient(self.criterion, forward_output, target).detach().cpu()
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
             new_elements = embedding.detach().cpu()
         else:
@@ -74,22 +74,6 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         self.matrix_elements.append(new_elements)
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
-
-    def _compute_gradients(
-        self, forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
-    ) -> torch.Tensor:
-        loss = self.criterion(forward_output, target).mean()
-        embedding_dim = embedding.shape[1]
-        num_classes = forward_output.shape[1]
-        batch_num = target.shape[0]
-        # compute the gradient for each element provided
-        with torch.no_grad():
-            bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
-            weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
-                1, num_classes, 1
-            ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
-            gradients = torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy()
-        return gradients
 
     def inform_end_of_current_label(self) -> None:
         assert self.balance
