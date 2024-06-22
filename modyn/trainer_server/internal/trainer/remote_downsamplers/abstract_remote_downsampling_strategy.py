@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Any
+from typing import Any, Optional, Union
 
 import torch
 
@@ -102,9 +102,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _compute_last_layer_gradient(
-            per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor
-    ):
+    def _compute_last_layer_gradient(per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor):
         if isinstance(per_sample_loss_fct, torch.nn.CrossEntropyLoss):
             # no need to autograd if cross entropy loss is used since closed form solution exists.
             # Because CrossEntropyLoss includes the softmax, we need to apply the
@@ -112,7 +110,8 @@ class AbstractRemoteDownsamplingStrategy(ABC):
             probs = torch.nn.functional.softmax(forward_output, dim=1)
             num_classes = forward_output.shape[-1]
 
-            one_hot_targets = torch.nn.functional.one_hot(
+            # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
+            one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
                 target, num_classes=num_classes
             )
             last_layer_gradients = probs - one_hot_targets
