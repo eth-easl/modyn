@@ -119,6 +119,7 @@ def section_num_samples(
             df_models=df_models,
             df_eval_requests=df_eval_requests,
         )
+    _shared_data[page].composite_model_variant = composite_model_variant
     _shared_data[page].df_models = df_models
     _shared_data[page].df_eval_requests = df_eval_requests
 

@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import pandas as pd
-
 from analytics.app.data.load import list_pipelines, load_pipeline_logs
 from analytics.app.data.transform import (
     dfs_models_and_evals,
@@ -56,7 +55,7 @@ def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
     df_parents = pipeline_stage_parents(logs)
     df_add_parents = df_agg.merge(df_parents, left_on="id", right_on="id", how="left")
 
-    df_logs_models, df_eval_requests, df_logs_eval_single = dfs_models_and_evals(
+    df_logs_models, df_eval_requests, df_eval_single = dfs_models_and_evals(
         logs, df_all["sample_time"].max(), pipeline_ref
     )
 
@@ -72,5 +71,5 @@ def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
         df_add_parents=df_add_parents,
         df_models=df_logs_models,
         df_eval_requests=df_eval_requests,
-        df_eval_single=df_logs_eval_single,
+        df_eval_single=df_eval_single,
     )
