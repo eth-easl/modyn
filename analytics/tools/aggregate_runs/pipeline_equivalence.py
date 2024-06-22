@@ -17,9 +17,15 @@ def assert_pipeline_equivalence(logs: list[PipelineLogs]) -> None:
         candidate.config.pipeline.training.device = candidates[0].config.pipeline.training.device
         candidate.config.pipeline.evaluation.device = candidates[0].config.pipeline.evaluation.device
 
-        if isinstance(candidate.config.pipeline.selection_strategy, CoresetStrategyConfig) and isinstance(candidate.config.pipeline.selection_strategy.downsampling_config, RHOLossDownsamplingConfig):
-            candidate.config.pipeline.selection_strategy.downsampling_config.il_training_config.device = candidates[0].config.pipeline.selection_strategy.downsampling_config.il_training_config.device
-            candidate.config.pipeline.selection_strategy.downsampling_config.il_training_config.seed = candidates[0].config.pipeline.selection_strategy.downsampling_config.il_training_config.seed
+        if isinstance(candidate.config.pipeline.selection_strategy, CoresetStrategyConfig) and isinstance(
+            candidate.config.pipeline.selection_strategy.downsampling_config, RHOLossDownsamplingConfig
+        ):
+            candidate.config.pipeline.selection_strategy.downsampling_config.il_training_config.device = candidates[
+                0
+            ].config.pipeline.selection_strategy.downsampling_config.il_training_config.device
+            candidate.config.pipeline.selection_strategy.downsampling_config.il_training_config.seed = candidates[
+                0
+            ].config.pipeline.selection_strategy.downsampling_config.il_training_config.seed
 
     assert all(
         [candidate.config == candidates[0].config for candidate in candidates]

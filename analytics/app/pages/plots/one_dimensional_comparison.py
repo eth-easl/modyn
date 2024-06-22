@@ -38,6 +38,7 @@ def gen_fig_1d_cost(page: str) -> go.Figure:
         color="id",
         labels={"pipeline_ref": "Pipeline", "duration": "duration in seconds", "id": "Pipeline Stage"},
         title="Stage costs",
+        height=900,
     )
 
 
@@ -133,6 +134,7 @@ def section4_1d_boxplots(
             df_all=df_all,
             df_eval_single=df_eval_single,
         )
+    _shared_data[page].composite_model_variant = composite_model_variant
     _shared_data[page].df_all = df_all
     _shared_data[page].df_eval_single = df_eval_single
 

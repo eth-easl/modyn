@@ -36,12 +36,13 @@ class ProcessedPipelineData:
 # ---------------------------------------- Global state (shared by all pages) ---------------------------------------- #
 
 pipelines = list_pipelines()
+max_pipeline_id = max(pipelines.keys())
 
 pipeline_data: dict[int, ProcessedPipelineData] = {}
 
 
 def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
-    pipeline_ref = f"{pipeline_id} - {pipelines[pipeline_id][1]}"
+    pipeline_ref = f"{pipeline_id}".zfill(len(str(max_pipeline_id))) + f" - {pipelines[pipeline_id][0]}"
 
     logs = load_pipeline_logs(pipeline_id)
     pipeline_leaf_stages = leaf_stages(logs)
@@ -54,7 +55,7 @@ def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
     df_parents = pipeline_stage_parents(logs)
     df_add_parents = df_agg.merge(df_parents, left_on="id", right_on="id", how="left")
 
-    df_logs_models, df_eval_requests, df_logs_eval_single = dfs_models_and_evals(
+    df_logs_models, df_eval_requests, df_eval_single = dfs_models_and_evals(
         logs, df_all["sample_time"].max(), pipeline_ref
     )
 
@@ -70,5 +71,5 @@ def process_pipeline_data(pipeline_id: int) -> ProcessedPipelineData:
         df_add_parents=df_add_parents,
         df_models=df_logs_models,
         df_eval_requests=df_eval_requests,
-        df_eval_single=df_logs_eval_single,
+        df_eval_single=df_eval_single,
     )

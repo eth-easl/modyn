@@ -41,17 +41,17 @@ def gen_fig_scatter_num_triggers(
 ) -> go.Figure:
     # unpack data
     composite_model_variant = _shared_data[page].composite_model_variant
-    df_logs = _shared_data[page].df_all
-    df_logs_eval_single = _shared_data[page].df_eval_single.copy()  # TODO get rid of this
-    df_logs_eval_single = df_logs_eval_single[
-        (df_logs_eval_single["dataset_id"] == dataset_id)
-        & (df_logs_eval_single["eval_handler"] == eval_handler)
-        & (df_logs_eval_single[composite_model_variant])
+    df_all = _shared_data[page].df_all
+    df_eval_single = _shared_data[page].df_eval_single
+    df_eval_single = df_eval_single[
+        (df_eval_single["dataset_id"] == dataset_id)
+        & (df_eval_single["eval_handler"] == eval_handler)
+        & (df_eval_single[composite_model_variant])
         # & (df_adjusted["metric"] == metric)
     ]
 
     agg_eval_metric = df_aggregate_eval_metric(
-        df_logs_eval_single,
+        df_eval_single,
         group_by=["pipeline_ref", "metric"],
         in_col="value",
         out_col="metric_value",
@@ -59,10 +59,13 @@ def gen_fig_scatter_num_triggers(
     )
 
     agg_duration = (
-        df_logs[df_logs["id"].isin(stages)].groupby(["pipeline_ref"]).agg(cost=("duration", agg_func_x)).reset_index()
+        df_all[df_all["id"].isin(stages)].groupby(["pipeline_ref"]).agg(cost=("duration", agg_func_x)).reset_index()
     )
 
     merged = agg_eval_metric.merge(agg_duration, on="pipeline_ref")
+    assert (
+        agg_eval_metric.shape[0] == merged.shape[0] == agg_duration.shape[0] * len(agg_eval_metric["metric"].unique())
+    )
     fig = px.scatter(
         merged,
         x="cost",
@@ -71,7 +74,7 @@ def gen_fig_scatter_num_triggers(
         facet_col="metric",
         labels={
             "cost": f"{agg_func_x} duration in sec. (proxy for cost)",
-            "metric_value": f"{agg_func_y} {metric}",
+            "metric_value": f"{agg_func_y}",
             "pipeline_ref": "Pipeline",
         },
         category_orders={
