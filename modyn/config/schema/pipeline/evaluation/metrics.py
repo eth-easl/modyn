@@ -13,8 +13,6 @@ class _BaseMetricConfig(ModynBaseModel):
         description="A function used to transform the model output before evaluation.",
     )
 
-    config: dict = Field(default={})
-
     @field_validator("evaluation_transformer_function", mode="before")
     @classmethod
     def validate_evaluation_transformer_function(cls, value: str) -> str | None:
@@ -51,7 +49,7 @@ F1ScoreTypes = Literal["macro", "micro", "weighted", "binary"]
 
 class F1ScoreMetricConfig(_BaseMetricConfig):
     name: Literal["F1Score"] = Field("F1Score")
-    num_classes: int = Field(description="The total number of classes.", default=172)
+    num_classes: int = Field(description="The total number of classes.")
     average: Literal["macro", "micro", "weighted", "binary"] = Field(
         "macro", description="The method used to average f1-score in the multiclass setting."
     )
