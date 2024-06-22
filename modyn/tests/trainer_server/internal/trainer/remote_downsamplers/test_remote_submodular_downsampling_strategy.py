@@ -19,6 +19,7 @@ def get_sampler_config(modyn_config: ModynConfig, submodular: str = "GraphCut", 
         "submodular_function": submodular,
         "balance": balance,
         "selection_batch": 64,
+        "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 
@@ -124,6 +125,7 @@ def _get_selected_samples(
             "submodular_function": submodular,
             "balance": False,
             "selection_batch": 64,
+            "ratio_max": 100,
         },
         modyn_config.model_dump(by_alias=True),
         BCEWithLogitsLoss(reduction="none"),
