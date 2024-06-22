@@ -74,7 +74,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="Random", ratio=ratio),
+                presampling_config=PresamplingConfig(strategy="Random", ratio=ratio, ratio_max=ratio_max),
             ),
         )
     )
@@ -89,7 +89,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=ratio),
+                presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=ratio, ratio_max=ratio_max),
             ),
         )
     )
