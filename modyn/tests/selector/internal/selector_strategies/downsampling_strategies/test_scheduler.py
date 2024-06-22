@@ -86,6 +86,7 @@ def test_switch_functions():
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteLossDownsampling"
         assert downs.training_status_bar_scale == 50
@@ -98,6 +99,7 @@ def test_switch_functions():
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
         assert downs.training_status_bar_scale == 100
@@ -140,6 +142,7 @@ def test_double_threshold():
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteLossDownsampling"
         assert downs.training_status_bar_scale == 50
@@ -152,6 +155,7 @@ def test_double_threshold():
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
         assert downs.training_status_bar_scale == 100
@@ -179,6 +183,7 @@ def test_wrong_trigger():
             "downsampling_ratio": 50,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": True,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteLossDownsampling"
         assert downs.training_status_bar_scale == 50
@@ -195,6 +200,7 @@ def test_wrong_trigger():
             "downsampling_ratio": 25,
             "maximum_keys_in_memory": 1000,
             "sample_then_batch": False,
+            "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
         assert downs.training_status_bar_scale == 100
