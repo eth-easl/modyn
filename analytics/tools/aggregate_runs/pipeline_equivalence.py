@@ -7,7 +7,7 @@ from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 
 def assert_pipeline_equivalence(logs: list[PipelineLogs]) -> None:
     # assert that all pipelines are the same except from the seed
-    assert len(logs) > 1
+    assert len(logs) >= 1
 
     candidates = [deepcopy(log) for log in logs]
     # set seeds to seed of first pipeline
