@@ -877,7 +877,6 @@ def test_create_trainer_with_exception(
         assert pathlib.Path(temp.name).exists()
 
 
-
 @pytest.mark.parametrize("downsampling_ratio, ratio_max", [(25, 100), (50, 100), (250, 1000), (125, 1000)])
 @patch.object(BaseCallback, "on_train_begin", return_value=None)
 @patch.object(BaseCallback, "on_train_end", return_value=None)
@@ -911,8 +910,7 @@ def test_train_batch_then_sample_accumulation(
 
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = 
-    (
+    trainer = get_mock_trainer(
         dummy_system_config,
         query_status_queue,
         status_queue,
@@ -1067,6 +1065,7 @@ def test_downsample_trigger_training_set_label_by_label(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": True,
+                "ratio_max": 100,
             },
         ),
     )
@@ -1127,6 +1126,7 @@ def test_downsample_trigger_training_set(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": False,
+                "ratio_max": 100,
             },
         ),
     )
