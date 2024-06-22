@@ -2,7 +2,6 @@ from copy import deepcopy
 from pathlib import Path
 
 import pandas as pd
-
 from analytics.app.data.transform import dfs_models_and_evals, logs_dataframe
 from analytics.tools.aggregate_runs.dir_utils import load_multiple_logfiles
 from analytics.tools.aggregate_runs.pipeline_equivalence import assert_pipeline_equivalence
@@ -24,7 +23,7 @@ def merge_files_for_equivalence_group(pipeline_files: list[Path], output_directo
 
     max_sample_time = max([df["sample_time"].max() for df in dfs_logs])
 
-    dfs_models_evals: list[str, tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame | None]] = [
+    dfs_models_evals: list[tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame | None]] = [
         dfs_models_and_evals(log, max_sample_time) for log in logs
     ]
 

@@ -1,3 +1,5 @@
+from typing import Any
+
 import dash_cytoscape as cyto
 import pandas as pd
 import plotly.express as px
@@ -8,13 +10,13 @@ from plotly import graph_objects as go
 
 
 def section0_pipeline(
-    logs: PipelineLogs, df_logs: pd.DataFrame, df_logs_agg_leaf: pd.DataFrame, df_logs_add_parents: pd.DataFrame
+    logs: PipelineLogs, df_all: pd.DataFrame, df_agg_leaf: pd.DataFrame, df_add_parents: pd.DataFrame
 ) -> html.Div:
     def gen_stage_duration_histogram(stage_id: str) -> go.Figure:
         return px.histogram(
-            df_logs[df_logs["id"] == stage_id],
+            df_all[df_all["id"] == stage_id],
             title="Stage Duration Histogram",
-            hover_data=df_logs.columns,
+            hover_data=df_all.columns,
             marginal="rug",  # rug, box, violin
             x="duration",
             labels={"duration": "duration in seconds", "id": "Pipeline Stage"},
@@ -24,13 +26,13 @@ def section0_pipeline(
         )
 
     @callback(Output("pipeline-graph-info", "children"), Input("pipeline-graph", "tapNodeData"))
-    def display_tap_node_info(data) -> str:
+    def display_tap_node_info(data: Any) -> str:
         if not data or "id" not in data:
             return "Click a node to get more information"
-        series_info = df_logs[df_logs["id"] == data["id"]]["duration"].describe().to_string()
+        series_info = df_all[df_all["id"] == data["id"]]["duration"].describe().to_string()
         return (
             f"Pipeline Stage: {data['id']}\n"
-            f"Number of Runs: {df_logs[df_logs['id'] == data['id']].shape[0]}\n"
+            f"Number of Runs: {df_all[df_all['id'] == data['id']].shape[0]}\n"
             f"Info about pipeline stage duration:\n"
             f"{series_info}"
         )
@@ -39,9 +41,8 @@ def section0_pipeline(
     @callback(
         Output("hist-stage-duration", "figure"),
         Input("pipeline-graph", "tapNodeData"),
-        prevent_initial_call="initial_duplicate",
     )
-    def display_tap_node_duration(data) -> go.Figure:
+    def display_tap_node_duration(data: Any) -> go.Figure:
         if not data or "id" not in data:
             stage_id = PipelineStage.MAIN.name
         else:
@@ -50,11 +51,11 @@ def section0_pipeline(
         return fig_hist_stage_duration
 
     fig_pie_pipeline = px.pie(
-        df_logs_agg_leaf,
+        df_agg_leaf,
         values="sum",
         names="id",
         hole=0.4,
-        hover_data=df_logs_agg_leaf,
+        hover_data=df_agg_leaf,
         custom_data=["max", "min", "mean", "median", "std", "count"],
     )
     # fig_pie_pipeline.update_traces(textposition='inside', textinfo='percent+label')
@@ -76,9 +77,9 @@ def section0_pipeline(
 
     fig_sunburst = go.Figure(
         go.Sunburst(
-            labels=df_logs_add_parents["id"],
-            parents=df_logs_add_parents["parent_id"],
-            values=df_logs_add_parents["sum"],
+            labels=df_add_parents["id"],
+            parents=df_add_parents["parent_id"],
+            values=df_add_parents["sum"],
         )
     )
 
