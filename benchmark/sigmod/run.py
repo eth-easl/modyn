@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 
 def gen_selection_strategies(
     ratio: int,
+    ratio_max: int,
     warmup_triggers: int,
     num_classes: int,
     training_config: TrainingConfig,
@@ -103,7 +104,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=True),
+                downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=True),
             ),
         )
     )
@@ -118,7 +119,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=ratio, with_replacement=False),
+                downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=False),
             ),
         )
     )
@@ -133,7 +134,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=LossDownsamplingConfig(ratio=ratio, sample_then_batch=True, period=1),
+                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1),
                 ),
             )
         )
@@ -148,7 +149,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=LossDownsamplingConfig(ratio=ratio, sample_then_batch=False),
+                downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
             ),
         )
     )
@@ -164,7 +165,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, sample_then_batch=True, period=1),
+                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1),
                 ),
             )
         )
@@ -179,7 +180,7 @@ def gen_selection_strategies(
                 tail_triggers=0,
                 limit=-1,
                 warmup_triggers=warmup_triggers,
-                downsampling_config=GradNormDownsamplingConfig(ratio=ratio, sample_then_batch=False),
+                downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
             ),
         )
     )
@@ -202,7 +203,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=RHOLossDownsamplingConfig(
-                    ratio=ratio,
+                    ratio=ratio, ratio_max=ratio_max, 
                     sample_then_batch=False,
                     period=1,
                     holdout_set_ratio=10,
@@ -224,7 +225,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, sample_then_batch=True, period=1, score_metric="Margin"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="Margin"
                     ),
                 ),
             )
@@ -241,7 +242,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, sample_then_batch=False, period=1, score_metric="Margin"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="Margin"
                 ),
             ),
         )
@@ -259,7 +260,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, sample_then_batch=True, period=1, score_metric="LeastConfidence"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="LeastConfidence"
                     ),
                 ),
             )
@@ -276,7 +277,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, sample_then_batch=False, period=1, score_metric="LeastConfidence"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="LeastConfidence"
                 ),
             ),
         )
@@ -294,7 +295,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, sample_then_batch=True, period=1, score_metric="Entropy"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="Entropy"
                     ),
                 ),
             )
@@ -311,7 +312,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, sample_then_batch=False, period=1, score_metric="Entropy"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="Entropy"
                 ),
             ),
         )
@@ -352,9 +353,10 @@ def run_experiment() -> None:
     logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    pipeline_gen_func = gen_yearbook_config  # gen_arxiv_config
+    # Pick the line you want.
+    pipeline_gen_func = gen_yearbook_config
     pipeline_gen_func = gen_arxiv_config
-    # pipeline_gen_func = gen_cglm_config
+    pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = "cuda:0"
@@ -362,7 +364,8 @@ def run_experiment() -> None:
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [10, 50, 30]
+    ratios = [125, 500, 250] # 12.5%, 50%, 25% due to ratio max scaling
+    ratio_max = 1000
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
     small_run = True
@@ -452,7 +455,7 @@ def run_experiment() -> None:
             seed = parsed_log.config.pipeline.training.seed
             # patch legacy names
             if name[-3] != "r":
-                name = f"{name}_r50"  # we only did 50% runs before
+                name = f"{name}_r500"  # we only did 50% runs before
 
             existing_pipelines.append((name, seed))
 
@@ -466,6 +469,7 @@ def run_experiment() -> None:
                 train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
                     ratio,
+                    ratio_max,
                     warmup_triggers,
                     num_classes,
                     train_conf,
