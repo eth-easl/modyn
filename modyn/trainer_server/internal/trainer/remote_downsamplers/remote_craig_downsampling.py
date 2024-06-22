@@ -178,7 +178,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
 
     def _select_points_from_distance_matrix(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = self.distance_matrix.shape[0]
-        target_size = max(int(self.downsampling_ratio * number_of_samples / 100), 1)
+        target_size = max(int(self.downsampling_ratio * number_of_samples / self.ratio_max), 1)
 
         all_index = np.arange(number_of_samples)
         submod_function = FacilityLocation(index=all_index, similarity_matrix=self.distance_matrix)
