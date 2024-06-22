@@ -877,6 +877,8 @@ def test_create_trainer_with_exception(
         assert pathlib.Path(temp.name).exists()
 
 
+
+@pytest.mark.parametrize("downsampling_ratio, ratio_max", [(25, 100), (50, 100), (250, 1000), (125, 1000)])
 @patch.object(BaseCallback, "on_train_begin", return_value=None)
 @patch.object(BaseCallback, "on_train_end", return_value=None)
 @patch.object(BaseCallback, "on_batch_begin", return_value=None)
@@ -901,14 +903,16 @@ def test_train_batch_then_sample_accumulation(
     test_on_train_end,
     test_on_train_begin,
     dummy_system_config: ModynConfig,
+    downsampling_ratio,
+    ratio_max,
 ):
     num_batches = 100  # hardcoded into mock dataloader
     batch_size = 32
-    downsampling_ratio = 25
 
     query_status_queue = mp.Queue()
     status_queue = mp.Queue()
-    trainer = get_mock_trainer(
+    trainer = 
+    (
         dummy_system_config,
         query_status_queue,
         status_queue,
@@ -922,13 +926,13 @@ def test_train_batch_then_sample_accumulation(
         selection_strategy=(
             True,
             "RemoteGradNormDownsampling",
-            {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False},
+            {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": ratio_max},
         ),
     )
     assert trainer._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
 
     # Mock the downsample_batch method to return batches of the expected size
-    expected_bts_size = int(batch_size * (downsampling_ratio / 100.0))
+    expected_bts_size = int(batch_size * (downsampling_ratio / ratio_max))
     bts_accumulate_period = batch_size // expected_bts_size
 
     def mock_downsample_batch(data, sample_ids, target):
@@ -956,8 +960,9 @@ def test_train_batch_then_sample_accumulation(
 
     assert trainer._num_samples == batch_size * num_batches
     assert trainer._log["num_samples"] == batch_size * num_batches
-    assert trainer._log["num_samples_trained"] == expected_bts_size * num_batches
     assert trainer._log["num_batches"] == num_batches
+    # We only train on whole batches, hence we have to scale by batch size
+    assert trainer._log["num_samples_trained"] == ((expected_bts_size * num_batches) // batch_size) * batch_size
     assert test_on_batch_begin.call_count == len(trainer._callbacks) * num_batches
     assert test_on_batch_end.call_count == len(trainer._callbacks) * num_batches
     assert test_downsample_batch.call_count == num_batches
