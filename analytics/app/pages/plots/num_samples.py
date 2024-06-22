@@ -1,28 +1,28 @@
-import dataclasses
 from dataclasses import dataclass
 from typing import Literal
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
 
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import patch_yearbook_time
-
 
 @dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs_models: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_eval_requests: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_models: pd.DataFrame
+    df_eval_requests: pd.DataFrame
+
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -34,7 +34,6 @@ YAxis = Literal["eval_samples", "train_samples", "train_batches"]
 def gen_figure(
     page: str,
     multi_pipeline_mode: bool,
-    composite_model_variant: CompositeModelOptions,
     time_metric: str,
     y_axis: YAxis,
     use_scatter_size: bool,
@@ -53,8 +52,10 @@ def gen_figure(
         use_scatter_size: If True, the size of the scatter points is proportional to the number of samples
         patch_yearbook: If True, the time metric is patched to be a yearbook
     """
+    composite_model_variant = _shared_data[page].composite_model_variant
+
     if y_axis == "eval_samples":
-        df_evals = _shared_data.df_logs_eval_requests[page].copy()
+        df_evals = _shared_data[page].df_eval_requests
         df_evals = df_evals[(df_evals["dataset_id"] == dataset_id) & (df_evals["eval_handler"] == eval_handler)]
 
         if multi_pipeline_mode:
@@ -78,7 +79,7 @@ def gen_figure(
         assert y_axis != "eval_center"
 
         # y_axis = "train_*""
-        df_trainings = _shared_data.df_logs_models[page].copy()
+        df_trainings = _shared_data[page].df_models.copy()  # TODO: remove copy
 
         # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
         if time_metric == "sample_time" and patch_yearbook:
@@ -108,12 +109,18 @@ def gen_figure(
 def section_num_samples(
     page: str,
     multi_pipeline_mode: bool,
-    df_logs_models: pd.DataFrame,
-    df_logs_eval_requests: pd.DataFrame,
+    df_models: pd.DataFrame,
+    df_eval_requests: pd.DataFrame,
     composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    _shared_data.df_logs_models[page] = df_logs_models
-    _shared_data.df_logs_eval_requests[page] = df_logs_eval_requests
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_models=df_models,
+            df_eval_requests=df_eval_requests,
+        )
+    _shared_data[page].df_models = df_models
+    _shared_data[page].df_eval_requests = df_eval_requests
 
     @callback(
         Output(f"{page}-num-samples-plot", "figure"),
@@ -136,7 +143,6 @@ def section_num_samples(
         return gen_figure(
             page,
             multi_pipeline_mode,
-            composite_model_variant,
             time_metric,
             y_axis,
             use_scatter_size,
@@ -160,8 +166,8 @@ def section_num_samples(
         "interval_center": "Evaluation interval center (only for y=eval_samples)",
     }
 
-    eval_handler_refs = list(df_logs_eval_requests["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_requests["dataset_id"].unique())
+    eval_handler_refs = list(df_eval_requests["eval_handler"].unique())
+    eval_datasets = list(df_eval_requests["dataset_id"].unique())
 
     return html.Div(
         [
@@ -261,7 +267,6 @@ def section_num_samples(
                 figure=gen_figure(
                     page,
                     multi_pipeline_mode,
-                    composite_model_variant,
                     "sample_time",
                     "train_samples",
                     use_scatter_size=True,

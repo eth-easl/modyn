@@ -71,7 +71,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
             self._subsets = [self._all_sample_ids[i * target_size : (i + 1) * target_size] for i in range(max_subset)]
 
     def _epoch_step(self) -> None:
-        target_size = max(int(self.downsampling_ratio * len(self._all_sample_ids) / 100), 1)
+        target_size = max(int(self.downsampling_ratio * len(self._all_sample_ids) / self.ratio_max), 1)
 
         if self._with_replacement:
             self._epoch_step_wr(target_size)

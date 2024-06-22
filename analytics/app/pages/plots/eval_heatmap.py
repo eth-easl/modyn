@@ -1,28 +1,26 @@
-import dataclasses
 from dataclasses import dataclass
 
 import pandas as pd
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import linearize_ids, patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
 
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import patch_yearbook_time
-
 
 @dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_models: pd.DataFrame
+    df_eval_single: pd.DataFrame
 
-    df_logs_models: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -31,7 +29,6 @@ _shared_data = _SharedData()
 
 def gen_figure(
     page: str,
-    composite_model_variant: CompositeModelOptions,
     multi_pipeline_mode: bool,
     patch_yearbook: bool,
     eval_handler: str,
@@ -50,8 +47,10 @@ def gen_figure(
         dataset_id: Dataset id
         metric: Evaluation metric (replaced with facet)
     """
-    df_logs_models = _shared_data.df_logs_models[page].copy()
-    df_adjusted = _shared_data.df_logs_eval_single[page].copy()
+    composite_model_variant = _shared_data[page].composite_model_variant
+
+    df_logs_models = _shared_data[page].df_models.copy()  # TODO: remove copy
+    df_adjusted = _shared_data[page].df_eval_single.copy()  # TODO: remove copy
     df_adjusted = df_adjusted[
         (df_adjusted["dataset_id"] == dataset_id)
         & (df_adjusted["eval_handler"] == eval_handler)
@@ -75,12 +74,29 @@ def gen_figure(
         df_adjusted["pipeline_id"] = df_adjusted["pipeline_ref"].str.split("-").str[0].astype(int)
         df_logs_models["pipeline_id"] = df_logs_models["pipeline_ref"].str.split("-").str[0].astype(int)
 
+        full_refs = {
+            pipeline_id: pipeline_name
+            for pipeline_id, pipeline_name in df_logs_models[["pipeline_id", "pipeline_ref"]].values
+        }
+
+        _, mapping = linearize_ids(df_adjusted, [], "pipeline_id")
+        linearize_ids(df_logs_models, [], "pipeline_id", mapping)
+
+        # invert the mapping
+        label_map = {v: full_refs[k] for k, v in mapping[()].items()}
+
     else:
         assert df_adjusted["pipeline_ref"].nunique() == 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
         pipeline_composite_model = df_adjusted[df_adjusted[composite_model_variant]]
-        pipeline_composite_model["model_idx"] = "0-pipeline-composite-model"
+        pipeline_composite_model["model_idx"] = 0
+        pipeline_composite_model["id_model"] = 0
+
+        label_map = {k: f"model_idx={k}, id={v}" for k, v in df_adjusted[["model_idx", "id_model"]].values}
+        label_map[0] = "Pipeline composite model"
+
+        df_adjusted = pd.concat([pipeline_composite_model, df_adjusted])
 
     # build heatmap matrix dataframe:
     heatmap_data = df_adjusted.pivot(
@@ -94,6 +110,7 @@ def gen_figure(
             y=heatmap_data.index,
             colorscale="RdBu_r",
             dx=0.5,
+            dy=1,
         )
     )
     fig.update_layout(
@@ -101,9 +118,9 @@ def gen_figure(
         yaxis_nticks=2 * min(20, len(heatmap_data.index)),
         width=2200,
         height=1100,
-        # "pipeline_id": "Pipeline",
-        # "metric": "Metric",
-        # "interval_center": "Evaluation time (interval center)",
+        showlegend=True,
+        yaxis=dict(tickmode="array", tickvals=heatmap_data.index, ticktext=[label_map[y] for y in heatmap_data.index]),
+        xaxis=dict(tickangle=45),
     )
     shapes = []
 
@@ -116,7 +133,7 @@ def gen_figure(
                 y0=active_[1]["model_idx"] - 0.5,
                 x1=active_[1]["interval_end"],
                 y1=active_[1]["model_idx"] + 0.5,
-                line=dict(color="Green", width=5),
+                line=dict(color="Green", width=2),
             )
             for active_ in df_adjusted[
                 df_adjusted[composite_model_variant]
@@ -130,7 +147,7 @@ def gen_figure(
                 y0=active_[1]["model_idx"] + 0.5,
                 x1=active_[1]["interval_end"],
                 y1=active_[1]["model_idx"] - 0.5,
-                line=dict(color="Green", width=5),
+                line=dict(color="Green", width=2),
             )
             for active_ in df_adjusted[
                 df_adjusted[composite_model_variant]
@@ -147,7 +164,7 @@ def gen_figure(
                 x1=active_[1][f"{'real_' if type_ == 'train' else ''}{type_}_end"],
                 y0=active_[1][y_column] - 0.5,
                 y1=active_[1][y_column] + 0.5,
-                line=dict(color="Orange" if type_ == "train" else "Black", width=4),
+                line=dict(color="Orange" if type_ == "train" else "Black", width=2),
             )
             for active_ in df_logs_models.iterrows()
         ]
@@ -163,12 +180,19 @@ def gen_figure(
 def section_evalheatmap(
     page: str,
     multi_pipeline_mode: bool,
-    df_logs_eval_single: pd.DataFrame,
-    df_logs_models: pd.DataFrame,
+    df_models: pd.DataFrame,
+    df_eval_single: pd.DataFrame,
     composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    _shared_data.df_logs_eval_single[page] = df_logs_eval_single
-    _shared_data.df_logs_models[page] = df_logs_models
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_models=df_models,
+            df_eval_single=df_eval_single,
+        )
+    _shared_data[page].composite_model_variant = composite_model_variant
+    _shared_data[page].df_models = df_models
+    _shared_data[page].df_eval_single = df_eval_single
 
     @callback(
         Output(f"{page}-evalheatmap-plot", "figure"),
@@ -178,13 +202,11 @@ def section_evalheatmap(
         Input(f"{page}-evalheatmap-evaluation-metric", "value"),
     )
     def update_figure(patch_yearbook: bool, eval_handler_ref: str, dataset_id: str, metric: str) -> go.Figure:
-        return gen_figure(
-            page, composite_model_variant, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric
-        )
+        return gen_figure(page, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric)
 
-    eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
-    eval_metrics = list(df_logs_eval_single["metric"].unique())
+    eval_handler_refs = list(df_eval_single["eval_handler"].unique())
+    eval_datasets = list(df_eval_single["dataset_id"].unique())
+    eval_metrics = list(df_eval_single["metric"].unique())
 
     return html.Div(
         [
@@ -276,7 +298,6 @@ def section_evalheatmap(
                 id=f"{page}-evalheatmap-plot",
                 figure=gen_figure(
                     page,
-                    composite_model_variant,
                     multi_pipeline_mode,
                     False,
                     eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,

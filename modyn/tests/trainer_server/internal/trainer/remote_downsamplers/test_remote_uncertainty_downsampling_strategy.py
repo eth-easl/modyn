@@ -18,6 +18,7 @@ def sampler_config(dummy_system_config: ModynConfig, request):
         "args": {},
         "balance": False,
         "score_metric": request.param,
+        "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 

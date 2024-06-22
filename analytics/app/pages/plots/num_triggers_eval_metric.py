@@ -10,17 +10,18 @@ from plotly import graph_objects as go
 
 
 @dataclasses.dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs_agg: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_agg: pd.DataFrame
+    df_eval_single: pd.DataFrame
+
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -30,7 +31,6 @@ _shared_data = _SharedData()
 def gen_fig_scatter_num_triggers(
     page: str,
     multi_pipeline_mode: bool,
-    composite_model_variant: CompositeModelOptions,
     eval_handler: str,
     dataset_id: str,
     metric: str,
@@ -50,9 +50,9 @@ def gen_fig_scatter_num_triggers(
         time_weighted: Whether to weight the aggregation by the evaluation interval length
     """
     # unpack data
-    df_logs_agg = _shared_data.df_logs_agg[page]
-
-    df_logs_eval_single = _shared_data.df_logs_eval_single[page]
+    composite_model_variant = _shared_data[page].composite_model_variant
+    df_logs_agg = _shared_data[page].df_agg
+    df_logs_eval_single = _shared_data[page].df_eval_single
     df_logs_eval_single = df_logs_eval_single[
         (df_logs_eval_single["dataset_id"] == dataset_id)
         & (df_logs_eval_single["eval_handler"] == eval_handler)
@@ -128,14 +128,20 @@ def gen_fig_scatter_num_triggers(
 def section3_scatter_num_triggers(
     page: str,
     multi_pipeline_mode: bool,
-    df_logs_agg: pd.DataFrame,
-    df_logs_eval_single: pd.DataFrame,
+    df_agg: pd.DataFrame,
+    df_eval_single: pd.DataFrame,
     composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    assert "pipeline_ref" in df_logs_agg.columns.tolist()
-    assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
-    _shared_data.df_logs_agg[page] = df_logs_agg
-    _shared_data.df_logs_eval_single[page] = df_logs_eval_single
+    assert "pipeline_ref" in list(df_agg.columns)
+    assert "pipeline_ref" in list(df_eval_single.columns)
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_agg=df_agg,
+            df_eval_single=df_eval_single,
+        )
+    _shared_data[page].df_agg = df_agg
+    _shared_data[page].df_eval_single = df_eval_single
 
     @callback(
         Output(f"{page}-scatter-plot-num-triggers", "figure"),
@@ -157,7 +163,6 @@ def section3_scatter_num_triggers(
         return gen_fig_scatter_num_triggers(
             page,
             multi_pipeline_mode,
-            composite_model_variant,
             eval_handler_ref,
             dataset_id,
             metric,
@@ -166,9 +171,9 @@ def section3_scatter_num_triggers(
             only_active_periods,
         )
 
-    eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
-    eval_metrics = list(df_logs_eval_single["metric"].unique())
+    eval_handler_refs = list(df_eval_single["eval_handler"].unique())
+    eval_datasets = list(df_eval_single["dataset_id"].unique())
+    eval_metrics = list(df_eval_single["metric"].unique())
 
     return html.Div(
         [
@@ -300,7 +305,6 @@ def section3_scatter_num_triggers(
                             figure=gen_fig_scatter_num_triggers(
                                 page,
                                 multi_pipeline_mode,
-                                composite_model_variant,
                                 eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
                                 dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                                 metric=eval_metrics[0] if len(eval_metrics) > 0 else None,

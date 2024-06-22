@@ -1,28 +1,29 @@
-import dataclasses
+from dataclasses import dataclass
 from typing import get_args
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import AGGREGATION_FUNCTION, EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
 
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import AGGREGATION_FUNCTION, EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 
-
-@dataclasses.dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+@dataclass
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_agg_leaf: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_all: pd.DataFrame
+    df_agg_leaf: pd.DataFrame
+    df_eval_single: pd.DataFrame
+
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -31,7 +32,6 @@ _shared_data = _SharedData()
 
 def gen_fig_scatter_num_triggers(
     page: str,
-    composite_model_variant: CompositeModelOptions,
     eval_handler: str,
     dataset_id: str,
     metric: str,
@@ -40,8 +40,9 @@ def gen_fig_scatter_num_triggers(
     stages: list[str],
 ) -> go.Figure:
     # unpack data
-    df_logs = _shared_data.df_logs[page]
-    df_logs_eval_single = _shared_data.df_logs_eval_single[page].copy()
+    composite_model_variant = _shared_data[page].composite_model_variant
+    df_logs = _shared_data[page].df_all
+    df_logs_eval_single = _shared_data[page].df_eval_single.copy()  # TODO get rid of this
     df_logs_eval_single = df_logs_eval_single[
         (df_logs_eval_single["dataset_id"] == dataset_id)
         & (df_logs_eval_single["eval_handler"] == eval_handler)
@@ -89,16 +90,25 @@ def gen_fig_scatter_num_triggers(
 
 def section3_scatter_cost_eval_metric(
     page: str,
-    df_logs: pd.DataFrame,
-    df_logs_agg_leaf: pd.DataFrame,
-    df_logs_eval_single: pd.DataFrame,
+    df_all: pd.DataFrame,
+    df_agg_leaf: pd.DataFrame,
+    df_eval_single: pd.DataFrame,
     composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    assert "pipeline_ref" in df_logs.columns.tolist()
-    assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
-    _shared_data.df_logs[page] = df_logs
-    _shared_data.df_logs_agg_leaf[page] = df_logs_agg_leaf
-    _shared_data.df_logs_eval_single[page] = df_logs_eval_single
+    assert "pipeline_ref" in list(df_all.columns)
+    assert "pipeline_ref" in list(df_eval_single.columns)
+
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_all=df_all,
+            df_agg_leaf=df_agg_leaf,
+            df_eval_single=df_eval_single,
+        )
+    _shared_data[page].composite_model_variant = composite_model_variant
+    _shared_data[page].df_all = df_all
+    _shared_data[page].df_agg_leaf = df_agg_leaf
+    _shared_data[page].df_eval_single = df_eval_single
 
     @callback(
         Output(f"{page}-scatter-cost-eval", "figure"),
@@ -118,14 +128,14 @@ def section3_scatter_cost_eval_metric(
         stages: list[str],
     ) -> go.Figure:
         return gen_fig_scatter_num_triggers(
-            page, composite_model_variant, eval_handler_ref, dataset_id, metric_y, agg_func_x, agg_func_y, stages
+            page, eval_handler_ref, dataset_id, metric_y, agg_func_x, agg_func_y, stages
         )
 
-    eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
-    eval_metrics = list(df_logs_eval_single["metric"].unique())
+    eval_handler_refs = list(df_eval_single["eval_handler"].unique())
+    eval_datasets = list(df_eval_single["dataset_id"].unique())
+    eval_metrics = list(df_eval_single["metric"].unique())
 
-    stages = list(df_logs_agg_leaf["id"].unique())
+    stages = list(df_agg_leaf["id"].unique())
 
     return html.Div(
         [
@@ -241,7 +251,6 @@ def section3_scatter_cost_eval_metric(
                             id=f"{page}-scatter-cost-eval",
                             figure=gen_fig_scatter_num_triggers(
                                 page,
-                                composite_model_variant,
                                 eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
                                 dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                                 metric=eval_metrics[0] if len(eval_metrics) > 0 else None,

@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
-
 from analytics.tools.aggregate_runs.core_aggregation import merge_files_for_equivalence_group
 from analytics.tools.aggregate_runs.dir_utils import group_pipelines_by_name
 
