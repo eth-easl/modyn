@@ -38,6 +38,7 @@ class AbstractDownsamplingStrategy(ABC):
 
         self.downsampling_period = downsampling_config.period
         self.downsampling_ratio = downsampling_config.ratio
+        self.ratio_max = downsampling_config.ratio_max
 
         self.requires_remote_computation = True
         self.maximum_keys_in_memory = maximum_keys_in_memory
@@ -60,6 +61,7 @@ class AbstractDownsamplingStrategy(ABC):
     def downsampling_params(self) -> dict:
         config = {
             "downsampling_ratio": self.downsampling_ratio,
+            "ratio_max": self.ratio_max,
             "maximum_keys_in_memory": self.maximum_keys_in_memory,
             "sample_then_batch": self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH,
         }

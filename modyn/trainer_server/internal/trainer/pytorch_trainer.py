@@ -223,7 +223,9 @@ class PytorchTrainer:
             # assertion since model validation by pydantic should catch this.
             assert self._downsampler.supports_bts, "The downsampler does not support batch then sample"
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
-            post_downsampling_size = max((self._downsampler.downsampling_ratio * self._batch_size) // 100, 1)
+            post_downsampling_size = max(
+                (self._downsampler.downsampling_ratio * self._batch_size) // self._downsampling_ratio_max, 1
+            )
             assert post_downsampling_size < self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
@@ -728,6 +730,7 @@ class PytorchTrainer:
             strategy_name, downsampler_config, modyn_config, self._criterion_nored
         )
         self._log["received_downsampler_config"] = downsampler_config
+        self._downsampling_ratio_max = downsampler_config["ratio_max"]
         assert "sample_then_batch" in downsampler_config
         self._log["received_downsampler_config"] = downsampler_config
         if downsampler_config["sample_then_batch"]:
@@ -834,7 +837,9 @@ class PytorchTrainer:
         )  # scale up again to multiples of batch size
 
         if downsampling_enabled:
-            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
+            num_samples_per_epoch = max(
+                (self._downsampler.downsampling_ratio * num_samples_per_epoch) // self._downsampling_ratio_max, 1
+            )
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
         self._expected_num_epochs = self.epochs_per_trigger
