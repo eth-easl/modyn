@@ -454,7 +454,7 @@ def run_experiment() -> None:
 
             seed = parsed_log.config.pipeline.training.seed
             # patch legacy names
-            if name[-3] != "r":
+            if name[-4] != "r":
                 name = f"{name}_r500"  # we only did 50% runs before
 
             existing_pipelines.append((name, seed))
