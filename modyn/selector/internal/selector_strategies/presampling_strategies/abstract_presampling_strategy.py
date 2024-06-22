@@ -18,6 +18,7 @@ class AbstractPresamplingStrategy(ABC):
         self.pipeline_id = pipeline_id
         self._storage_backend = storage_backend
         self.presampling_ratio = presampling_config.ratio
+        self.ratio_max = presampling_config.ratio_max
         self.requires_trigger_dataset_size = False
 
     @abstractmethod
@@ -36,7 +37,7 @@ class AbstractPresamplingStrategy(ABC):
 
     def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:
         assert trigger_dataset_size >= 0
-        target_presampling = int(trigger_dataset_size * self.presampling_ratio / 100)
+        target_presampling = (trigger_dataset_size * self.presampling_ratio) // self.ratio_max
 
         if limit is not None:
             assert limit >= 0
