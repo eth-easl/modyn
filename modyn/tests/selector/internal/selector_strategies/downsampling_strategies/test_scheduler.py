@@ -102,7 +102,7 @@ def test_switch_functions():
             "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
 
 def test_wrong_number_threshold():
@@ -158,7 +158,7 @@ def test_double_threshold():
             "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
     # above the last threshold
     for i in range(15, 25):
@@ -203,7 +203,7 @@ def test_wrong_trigger():
             "ratio_max": 100,
         }
         assert downs.downsampling_strategy == "RemoteGradNormDownsampling"
-        assert downs.training_status_bar_scale == 100
+        assert downs.training_status_bar_scale == 25
 
 
 def test_instantiate_scheduler_just_one():
