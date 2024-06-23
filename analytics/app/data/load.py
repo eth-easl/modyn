@@ -27,7 +27,7 @@ def list_pipelines() -> dict[int, tuple[str, Path]]:
 
         pipelines[pipeline_id] = (pipeline_name, Path(pipeline))
 
-    return pipelines
+    return dict(sorted(pipelines.items()))
 
 
 def load_pipeline_logs(pipeline_id: int) -> PipelineLogs:

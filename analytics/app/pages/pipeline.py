@@ -1,39 +1,34 @@
 import dash
-from analytics.app.data.load import list_pipelines, load_pipeline_logs
-from analytics.app.data.transform import (
-    add_pipeline_ref,
-    dfs_models_and_evals,
-    leaf_stages,
-    logs_dataframe,
-    logs_dataframe_agg_by_stage,
-    pipeline_stage_parents,
-)
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.pages.const.text import COMPOSITE_MODEL_TEXT
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
 from analytics.app.pages.plots.num_samples import section_num_samples
 from analytics.app.pages.plots.one_dimensional_comparison import section4_1d_boxplots
 from dash import Input, Output, callback, dcc, html
+from typing_extensions import get_args
 
-from .plots.cost_over_time import section1_stacked_bar
+from .plots.cost_over_time import section_cost_over_time
 from .plots.num_triggers_eval_metric import section3_scatter_num_triggers
 from .plots.pipeline_info import section0_pipeline
+from .state import pipeline_data, pipelines, process_pipeline_data
 
 dash.register_page(__name__, path="/", title="Pipeline Evaluation")
 
+initial_pipeline_id = min(pipelines.keys())
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                         PAGE                                                         #
 # -------------------------------------------------------------------------------------------------------------------- #
 
-pipelines = list_pipelines()
-initial_pipeline_id = min(pipelines.keys())
-
 
 @callback(
-    Output("pipeline-info", "children"), Input("pipeline-selector", "value"), prevent_initial_call="initial_duplicate"
+    Output("pipeline-info", "children"),
+    Input("pipeline-selector", "value"),
+    Input("composite-model-variant", "value"),
 )
-def switch_pipeline(pipeline_id: int):
-    return render_pipeline_info(pipeline_id)
+def switch_pipeline(pipeline_id: int, composite_model_variant: CompositeModelOptions) -> list[html.Div]:
+    return render_pipeline_info(pipeline_id, composite_model_variant)
 
 
 ui_pipeline_selection = html.Div(
@@ -50,34 +45,30 @@ ui_pipeline_selection = html.Div(
             persistence=True,
             style={"color": "black", "width": "65%"},
         ),
+        html.Br(),
+        dcc.Markdown(COMPOSITE_MODEL_TEXT),
+        dcc.RadioItems(
+            id="composite-model-variant",
+            options=[{"label": variant, "value": variant} for variant in get_args(CompositeModelOptions)],
+            value="currently_active_model",
+            persistence=True,
+        ),
     ]
 )
 
 
-def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
+def render_pipeline_info(pipeline_id: int, composite_model_variant: CompositeModelOptions) -> list[html.Div]:
     # ----------------------------------------------------- DATA ----------------------------------------------------- #
 
-    pipeline_ref = f"{pipeline_id} - {pipelines[pipeline_id][1]}"
+    if pipeline_id not in pipeline_data:
+        pipeline_data[pipeline_id] = process_pipeline_data(pipeline_id)
 
-    logs = load_pipeline_logs(pipeline_id)
-    pipeline_leaf_stages = leaf_stages(logs)
-    df_logs = logs_dataframe(logs)
-    df_logs_leaf = df_logs[df_logs["id"].isin(pipeline_leaf_stages)]
-
-    df_logs_agg = logs_dataframe_agg_by_stage(df_logs)
-    df_logs_agg_leaf = df_logs_agg[df_logs_agg["id"].isin(pipeline_leaf_stages)]
-
-    df_parents = pipeline_stage_parents(logs)
-    df_logs_add_parents = df_logs_agg.merge(df_parents, left_on="id", right_on="id", how="left")
-
-    df_logs_models, df_logs_eval_requests, df_logs_eval_single = dfs_models_and_evals(
-        logs, df_logs["sample_time"].max()
-    )
+    data = pipeline_data[pipeline_id]
 
     # ---------------------------------------------------- LAYOUT ---------------------------------------------------- #
 
     eval_items = []
-    if df_logs_eval_single is None or df_logs_agg is None:
+    if data.df_eval_single is None or data.df_agg is None:
         eval_items.append(
             dcc.Markdown(
                 """
@@ -88,46 +79,48 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
             )
         )
     else:
-        eval_items.append(
-            section_metricovertime("pipeline", False, add_pipeline_ref(df_logs_eval_single, pipeline_ref))
-        )
+        eval_items.append(section_metricovertime("pipeline", False, data.df_eval_single, composite_model_variant))
         eval_items.append(
             section_evalheatmap(
                 "pipeline",
                 False,
-                add_pipeline_ref(df_logs_eval_single, pipeline_ref),
-                add_pipeline_ref(df_logs_models, pipeline_ref),
+                data.df_models,
+                data.df_eval_single,
+                composite_model_variant,
             )
         )
         eval_items.append(
             section_num_samples(
                 "pipeline",
                 False,
-                add_pipeline_ref(df_logs_models, pipeline_ref),
-                add_pipeline_ref(df_logs_eval_requests, pipeline_ref),
+                data.df_models,
+                data.df_eval_requests,
+                composite_model_variant,
             )
         )
         eval_items.append(
             section3_scatter_num_triggers(
                 "pipeline",
                 False,
-                add_pipeline_ref(df_logs_agg, pipeline_ref),
-                add_pipeline_ref(df_logs_eval_single, pipeline_ref),
+                data.df_agg,
+                data.df_eval_single,
+                composite_model_variant,
             )
         )
         eval_items.append(
             section4_1d_boxplots(
                 "pipeline",
                 False,
-                add_pipeline_ref(df_logs, pipeline_ref),
-                add_pipeline_ref(df_logs_eval_single, pipeline_ref),
+                data.df_all,
+                data.df_eval_single,
+                composite_model_variant,
             )
         )
 
     return [
         html.Div(
             [
-                section0_pipeline(logs, df_logs, df_logs_agg_leaf, df_logs_add_parents),
+                section0_pipeline(data.logs, data.df_all, data.df_agg_leaf, data.df_add_parents),
                 dcc.Markdown(
                     """
                         ## Cost-/Accuracy triggering tradeoff
@@ -139,7 +132,7 @@ def render_pipeline_info(pipeline_id: int) -> list[html.Div]:
                         executed (i.e. batches without triggers).
                     """
                 ),
-                section1_stacked_bar("pipeline", add_pipeline_ref(df_logs_leaf, pipeline_ref)),
+                section_cost_over_time("pipeline", data.df_leaf),
                 html.Div(eval_items),
             ]
         )
@@ -157,6 +150,6 @@ layout = html.Div(
     """
         ),
         ui_pipeline_selection,
-        html.Div(id="pipeline-info", children=render_pipeline_info(initial_pipeline_id)),
+        html.Div(id="pipeline-info", children=render_pipeline_info(initial_pipeline_id, "currently_active_model")),
     ]
 )

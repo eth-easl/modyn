@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import itertools
 import logging
 import multiprocessing as mp
 import os
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, Union, cast
+from typing import Any, Callable, Iterator, Literal, Optional, Union, cast
 
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
@@ -144,29 +145,34 @@ class StageInfo(BaseModel):
     `StageInfo` class is therefore intended to be subclassed for different pipeline stage information.
     """
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return []
+
     @property
-    def df(self) -> pd.DataFrame | None:
+    def df_row(self) -> tuple:
         """
         While appending StageLog subclasses to `StageLog.info` is sufficient to persist additional information in the
-        logs, this method is used to provide a DataFrame representation of the data for online analysis.
-
-        `Online` refers the to the ability to analyze the data while the pipeline is running as we do not only
-        want to analyze the data after the pipeline has finished (e.g. for triggering policies).
+        logs, this method is used to provide a DataFrame representation of the data for analytical purposes.
 
         Returns:
-            A DataFrame if the stage should collect data, else None.
+            The dataframe rows.
         """
-        return None
+        return ()
 
 
 class FetchDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed in the new data.")
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["num_samples", "trigger_indexes"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame([(self.num_samples, str(self.trigger_indexes))], columns=["num_samples", "trigger_indexes"])
+    def df_row(self) -> tuple:
+        return (self.num_samples, str(self.trigger_indexes))
 
 
 class ProcessNewDataInfo(StageInfo):
@@ -174,10 +180,14 @@ class ProcessNewDataInfo(StageInfo):
     num_samples: int = Field(..., description="Number of samples processed")
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["fetch_time", "num_samples"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame([(self.fetch_time, self.num_samples)], columns=["fetch_time", "num_samples"])
+    def df_row(self) -> tuple:
+        return (self.fetch_time, self.num_samples)
 
 
 class EvaluateTriggerInfo(StageInfo):
@@ -186,10 +196,14 @@ class EvaluateTriggerInfo(StageInfo):
     trigger_eval_times: list[int] = Field(default_factory=list)
     """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["batch_size", "trigger_indexes"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame([(self.batch_size, list(self.trigger_indexes))], columns=["batch_size", "trigger_indexes"])
+    def df_row(self) -> tuple:
+        return (self.batch_size, list(self.trigger_indexes))
 
 
 class _TriggerLogMixin(StageInfo):
@@ -207,26 +221,28 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     selector_log: dict[str, Any]
     num_samples_in_trigger: int
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)],
-            columns=["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"],
-        )
+    def df_row(self) -> tuple:
+        return (self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)
 
 
 class TriggerExecutionInfo(_TriggerLogMixin):
     first_timestamp: int | None
     last_timestamp: int | None
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)],
-            columns=["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"],
-        )
+    def df_row(self) -> tuple:
+        return (self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)
 
 
 class _TrainInfoMixin(StageInfo):
@@ -237,25 +253,27 @@ class _TrainInfoMixin(StageInfo):
 class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["trigger_id", "training_id", "num_batches", "num_samples"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])],
-            columns=["trigger_id", "training_id", "num_batches", "num_samples"],
-        )
+    def df_row(self) -> tuple:
+        return (self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])
 
 
 class StoreModelInfo(_TrainInfoMixin):
     id_model: int  # model_ prefix not allowed in pydantic
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["trigger_id", "training_id", "id_model"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.trigger_id, self.training_id, self.id_model)],
-            columns=["trigger_id", "training_id", "id_model"],
-        )
+    def df_row(self) -> tuple:
+        return (self.trigger_id, self.training_id, self.id_model)
 
 
 class SingleEvaluationInfo(StageInfo):
@@ -263,24 +281,60 @@ class SingleEvaluationInfo(StageInfo):
     results: dict[str, Any] = Field(default_factory=dict)
     failure_reason: str | None = None
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return [
+            "trigger_id",
+            "training_id",
+            "id_model",
+            "currently_active_model",
+            "currently_trained_model",
+            "eval_handler",
+            "dataset_id",
+            "interval_start",
+            "interval_end",
+            "num_samples",
+        ]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        """One dataframe per requests (does not contain metrics)"""
+    def df_row(self) -> tuple:
+        return (
+            self.eval_request.trigger_id,
+            self.eval_request.training_id,
+            self.eval_request.id_model,
+            self.eval_request.currently_active_model,
+            self.eval_request.currently_trained_model,
+            self.eval_request.eval_handler,
+            self.eval_request.dataset_id,
+            self.eval_request.interval_start,
+            self.eval_request.interval_end,
+            self.results.get("dataset_size", 0),
+        )
+
+    @classmethod
+    def results_df(cls, infos: list[SingleEvaluationInfo]) -> pd.DataFrame:
+        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
         return pd.DataFrame(
             [
                 (
-                    self.eval_request.trigger_id,
-                    self.eval_request.training_id,
-                    self.eval_request.id_model,
-                    self.eval_request.currently_active_model,
-                    self.eval_request.currently_trained_model,
-                    self.eval_request.eval_handler,
-                    self.eval_request.dataset_id,
-                    self.eval_request.interval_start,
-                    self.eval_request.interval_end,
-                    self.results.get("dataset_size", 0),
+                    # per request
+                    info.eval_request.trigger_id,
+                    info.eval_request.training_id,
+                    info.eval_request.id_model,
+                    info.eval_request.currently_active_model,
+                    info.eval_request.currently_trained_model,
+                    info.eval_request.eval_handler,
+                    info.eval_request.dataset_id,
+                    info.eval_request.interval_start,
+                    info.eval_request.interval_end,
+                    info.results.get("dataset_size", 0),
+                    # per metric
+                    metric["name"],
+                    metric["result"],
                 )
+                for info in infos
+                for metric in info.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",
@@ -292,21 +346,10 @@ class SingleEvaluationInfo(StageInfo):
                 "dataset_id",
                 "interval_start",
                 "interval_end",
-                "num_samples",
+                "dataset_size",
+                "metric",
+                "value",
             ],
-        )
-
-    def results_df(self) -> pd.DataFrame:
-        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
-        return self.df.merge(
-            pd.DataFrame(
-                [
-                    (metric["name"], metric["result"])
-                    for metric in self.results["metrics"]  # pylint: disable=unsubscriptable-object
-                ],
-                columns=["metric", "value"],
-            ),
-            how="cross",
         )
 
 
@@ -315,12 +358,14 @@ class SelectorInformInfo(StageInfo):
     remaining_data: bool
     trigger_indexes: list[int]
 
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["remaining_data", "trigger_indexes"]
+
     @override
     @property
-    def df(self) -> pd.DataFrame:
-        return pd.DataFrame(
-            [(self.remaining_data, self.trigger_indexes)], columns=["remaining_data", "trigger_indexes"]
-        )
+    def df_row(self) -> tuple:
+        return (self.remaining_data, self.trigger_indexes)
 
 
 StageInfoUnion = Union[
@@ -359,40 +404,23 @@ class StageLog(BaseModel):
     # stage specific log info
     info: StageInfo | None = Field(None)
 
-    def df(self, extended: bool = False) -> pd.DataFrame | None:
-        """
-        Provides a DataFrame with the log information of this stage.
-
-        To conveniently allow analysis of lists of log entries, this method provides a DataFrame representation of the
-        log entry.
-
-        Args:
-            extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
-
-        Returns:
-            A DataFrame with the log information of this stage.
-        """
-        df = pd.DataFrame(
-            [
-                (
-                    self.id,
-                    self.start,
-                    self.end,
-                    self.duration,
-                    self.batch_idx,
-                    self.sample_idx,
-                    self.sample_time,
-                    self.trigger_idx,
-                )
-            ],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
+    def df_columns(self, extended: bool = False) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"] + (
+            self.info.df_columns() if extended and self.info else []
         )
-        info_df = self.info.df if self.info else None
-        if info_df is not None and extended:
-            # add additional columns
-            df = pd.concat([df, info_df], axis=1)
 
-        return df
+    def df_row(self, extended: bool = False) -> tuple:
+        return (
+            self.id,
+            self.start,
+            self.end,
+            self.duration,
+            self.batch_idx,
+            self.sample_idx,
+            self.sample_time,
+            self.trigger_idx,
+        ) + (self.info.df_row if extended and self.info else ())
 
     # (De)Serialization to enable parsing all classes in the StageInfoUnion;
     # with that logic we avoid having to add disciminator fields to every subclass of StageInfo
@@ -416,6 +444,28 @@ class StageLog(BaseModel):
             else:
                 data["info"] = None
         return data
+
+    @classmethod
+    def df(cls, stage_logs: Iterator[StageLog], extended: bool = False) -> pd.DataFrame:
+        """
+        Provides a DataFrame with the log information of this stage.
+
+        To conveniently allow analysis of lists of log entries, this method provides a DataFrame representation of the
+        log entry.
+
+        Args:
+            extended: If True, include the columns of the info attribute. Requires all logs to have the same type.
+
+        Returns:
+            A DataFrame row with the log information of this stage.
+        """
+        if not stage_logs:
+            return pd.DataFrame()
+        stage_logs, iter_copy = itertools.tee(stage_logs)
+        return pd.DataFrame(
+            [stage.df_row(extended=extended) for stage in stage_logs],
+            columns=next(iter_copy).df_columns(extended=extended),
+        )
 
 
 class SupervisorLogs(BaseModel):
