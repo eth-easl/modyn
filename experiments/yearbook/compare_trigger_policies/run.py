@@ -1,4 +1,5 @@
 import os
+
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
@@ -59,7 +60,16 @@ def construct_pipelines() -> None:
             )
         )
 
-    for interval, threshold in [(500, 0.7), (1_000, 0.5), (1_000, 0.6), (1_000, 0.7), (1_000, 0.8), (1_000, 0.9), (5_000, 0.7), (10_000, 0.7)]:
+    for interval, threshold in [
+        (500, 0.7),
+        (1_000, 0.5),
+        (1_000, 0.6),
+        (1_000, 0.7),
+        (1_000, 0.8),
+        (1_000, 0.9),
+        (5_000, 0.7),
+        (10_000, 0.7),
+    ]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"datadrifttrigger_{interval}_{threshold}",
@@ -67,9 +77,7 @@ def construct_pipelines() -> None:
                     detection_interval_data_points=interval,
                     sample_size=None,
                     metric="model",
-                    metric_config={
-                        "threshold": threshold
-                    },
+                    metric_config={"threshold": threshold},
                 ),
                 eval_handlers=eval_handlers,
             )
