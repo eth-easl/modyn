@@ -111,7 +111,7 @@ class DlrmModel(CoresetSupportingModule):
         order = self._embedding_ordering.expand(dim0, -1)
         return torch.gather(cat_input, 1, order)
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         """
         Args:
             data: a dict containing:

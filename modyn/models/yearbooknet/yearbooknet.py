@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
@@ -35,7 +35,7 @@ class YearbookNetModel(CoresetSupportingModule):
             nn.Conv2d(in_channels, out_channels, 3, padding=1), nn.BatchNorm2d(out_channels), nn.ReLU(), nn.MaxPool2d(2)
         )
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]]) -> torch.Tensor:
         data = self.enc(data)
         data = torch.mean(data, dim=(2, 3))
         data = self.embedding_recorder(data)

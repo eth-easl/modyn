@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from torch import nn
 import torch
@@ -6,7 +6,14 @@ import torch
 from modyn.utils import dynamic_module_import
 
 
-class RHOLOSSModel(nn.Module):
+class RHOLOSSModel:
+
+    def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
+        self.model = RHOLOSSModelModyn(model_configuration, device, amp)
+        self.model.to(device)
+
+
+class RHOLOSSModelModyn(nn.Module):
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
@@ -14,14 +21,11 @@ class RHOLOSSModel(nn.Module):
         rho_model_class = model_configuration["rho_real_model_class"]
         rho_model_config = model_configuration["rho_real_model_config"]
         model_handler = getattr(model_module, rho_model_class)
-        self.model0 = model_handler(rho_model_config, device, amp)
-        self.model1 = model_handler(rho_model_config, device, amp)
+        # we only need the inner model, not the wrapper
+        self.model0 = model_handler(rho_model_config, device, amp).model
+        self.model1 = model_handler(rho_model_config, device, amp).model
         self.model0_seen_ids: set[int] = set()
         self.model1_seen_ids: set[int] = set()
-
-    @property
-    def model(self):
-        return self
 
     def get_extra_state(self) -> Any:
         return {
@@ -33,7 +37,8 @@ class RHOLOSSModel(nn.Module):
         self.model0_seen_ids = state["model0_seen_ids"]
         self.model1_seen_ids = state["model1_seen_ids"]
 
-    def forward(self, sample_ids: list[int], data: torch.Tensor):
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None):
+        assert sample_ids is not None
         if self.training:
             return self._training_forward(sample_ids, data)
         else:

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
@@ -55,6 +55,9 @@ class ResNet18Modyn(ResNet, CoresetSupportingModule):
         x = self.fc(x)
 
         return x
+
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        return super().forward(data)
 
     def get_last_layer(self) -> nn.Module:
         return self.fc
