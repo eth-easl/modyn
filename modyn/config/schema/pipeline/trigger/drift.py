@@ -1,15 +1,20 @@
-from typing import Any, Literal
+from __future__ import annotations
 
-from pydantic import Field
+from typing import Any, ForwardRef, Literal, Optional
 
 from modyn.config.schema.base_model import ModynBaseModel
+from pydantic import Field
 
-from .config import TriggerConfig
+__TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 
 
 class DataDriftTriggerConfig(ModynBaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
-    detection_interval: TriggerConfig
+
+    detection_interval: Optional[__TriggerConfig] = Field(  # type: ignore[valid-type]
+        None, description="The Trigger policy to determine the interval at which drift detection is performed."
+    )  # currently not used
+
     detection_interval_data_points: int = Field(
         1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
     )
