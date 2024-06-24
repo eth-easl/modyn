@@ -23,12 +23,13 @@ class HuffpostKaggleDataGenerator:
     def __init__(self, data_dir: Path, data_zip: Path) -> None:
         self.assert_data_exists(data_zip)
         self.data_dir = data_dir
+        self.data_zip = data_zip
 
     def assert_data_exists(self, data_zip: Path) -> None:
         assert data_zip.exists(), "Kaggle dataset zip file not found."
 
-    def extract_data(self, data_zip: Path) -> None:
-        shutil.unpack_archive(data_zip, self.data_dir)
+    def extract_data(self) -> None:
+        shutil.unpack_archive(self.data_zip, self.data_dir)
 
     @property
     def data_json(self) -> Path:
@@ -55,6 +56,8 @@ class HuffpostKaggleDataGenerator:
         if test_split:
             (self.data_dir / "train").mkdir(exist_ok=True, parents=True)
             (self.data_dir / "test").mkdir(exist_ok=True, parents=True)
+        else:
+            (self.data_dir / "all").mkdir(exist_ok=True, parents=True)
 
         # store partitions in files
         for name, partition in tqdm(partitions.items()):
@@ -69,14 +72,15 @@ class HuffpostKaggleDataGenerator:
                     df_to_csv_with_timestamp(df_train, name, self.data_dir / "train")
                     df_to_csv_with_timestamp(df_test, name, self.data_dir / "test")
             else:
-                df_to_csv_with_timestamp(partition[self.fields_to_keep], name, self.data_dir)
+                df_to_csv_with_timestamp(partition[self.fields_to_keep], name, self.data_dir / "all")
 
         if dummy_period:
-            df_to_csv_with_timestamp(
-                df=pd.DataFrame([{"title": "dummy", "category": 1}]),
-                period=max(partitions.keys()) + 1,
-                data_dir=self.data_dir / "train" if test_split else self.data_dir,
-            )
+            for mode in ["train", "test"] if test_split else ["all"]:
+                df_to_csv_with_timestamp(
+                    df=pd.DataFrame([{"title": "dummy", "category": 1}]),
+                    period=max(partitions.keys()) + 1,
+                    data_dir=self.data_dir / mode,
+                )
 
     @staticmethod
     def sanitize_dataframe(raw_df: pd.DataFrame) -> pd.DataFrame:
@@ -104,7 +108,7 @@ def main(
     test_split: Annotated[
         bool,
         typer.Option(help="Split the data into train and test sets"),
-    ] = True,
+    ] = False,
     dummy_period: Annotated[
         bool,
         typer.Option(help="Add a final dummy period to train also on the last trigger in Modyn"),
@@ -120,7 +124,7 @@ def main(
 
     downloader = HuffpostKaggleDataGenerator(dir, raw_data)
     if not skip_extraction:
-        downloader.extract_data(raw_data)
+        downloader.extract_data()
     df = downloader.load_into_dataframe()
     downloader.store_data(df, resolution, test_split, dummy_period)
     downloader.clean_folder()
