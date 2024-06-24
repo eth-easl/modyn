@@ -17,6 +17,7 @@ from modyn.config.schema.pipeline.config import (
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.metric import Metric
+from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig
 from modyn.config.schema.pipeline.model_storage import FullModelStrategy
 from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 
@@ -24,9 +25,10 @@ from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 def gen_pipeline_config(
     name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig]
 ) -> ModynPipelineConfig:
+    num_classes = 2
     return ModynPipelineConfig(
         pipeline=Pipeline(name=name, description="Yearbook pipeline for comparing trigger policies", version="0.0.1"),
-        model=ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": 2}),
+        model=ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": num_classes}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
@@ -79,22 +81,21 @@ def gen_pipeline_config(
                     batch_size=64,
                     dataloader_workers=2,
                     metrics=[
-                        Metric(
-                            name="Accuracy",
+                        AccuracyMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.argmax(model_output, dim=-1)\n"
                             ),
                         ),
-                        Metric(
-                            name="F1score",
+                        F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "   return torch.argmax(model_output, dim=-1)"
                             ),
-                            config={"num_classes": 2, "average": "weighted"},
+                            num_classes=num_classes,
+                            average="weighted",
                         ),
                     ],
                 )

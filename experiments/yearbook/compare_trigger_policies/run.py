@@ -1,4 +1,5 @@
 import os
+from experiments.huffpost.compare_trigger_policies.run import construct_pipelines
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
@@ -10,8 +11,8 @@ from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
-def run_experiment() -> None:
-    pipeline_configs: ModynPipelineConfig = []
+def construct_pipelines() -> None:
+    pipeline_configs: list[ModynPipelineConfig] = []
     first_timestamp = 0
     last_timestamp = SECONDS_PER_UNIT["d"] * (2015 - 1930)
 
@@ -44,7 +45,7 @@ def run_experiment() -> None:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{years}y",
-                trigger=TimeTriggerConfig(every=f"{years}d"),  # faked timestamps
+                trigger=TimeTriggerConfig(every=f"{years}d", start_timestamp=first_timestamp),  # faked timestamps
                 eval_handlers=eval_handlers,
             )
         )
