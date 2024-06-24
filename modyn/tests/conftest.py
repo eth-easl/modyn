@@ -2,23 +2,25 @@
 
 import pytest
 from modyn.config.schema.pipeline import (
+    AccuracyMetricConfig,
     CheckpointingConfig,
     DataAmountTriggerConfig,
     DataConfig,
     EvalDataConfig,
     EvaluationConfig,
     FullModelStrategy,
-    Metric,
     ModelConfig,
     ModynPipelineConfig,
     NewDataStrategyConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
     Pipeline,
     PipelineModelStorageConfig,
     TrainingConfig,
 )
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
-from modyn.config.schema.pipeline.training.config import OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.system.config import (
     DatabaseConfig,
     DatasetBinaryFileWrapperConfig,
@@ -195,7 +197,7 @@ def pipeline_evaluation_config(eval_strategies_config: SlicingEvalStrategyConfig
                 bytes_parser_function="def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 dataloader_workers=2,
                 batch_size=64,
-                metrics=[Metric(name="Accuracy")],
+                metrics=[AccuracyMetricConfig()],
             )
         ],
     )

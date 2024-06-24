@@ -97,9 +97,8 @@ evaluation:
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.argmax(model_output, dim=-1)
         - name: "F1Score"
-          config:
-            num_classes: 10
-            average: "macro"
+          num_classes: 10
+          average: "macro"
           evaluation_transformer_function: |
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:

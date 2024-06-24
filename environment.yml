@@ -14,7 +14,7 @@ channels:
   - huggingface
 
 dependencies:
-  - python>=3.11
+  - python=3.11
   - pip
   - tqdm
   - conda-forge::enlighten
@@ -22,13 +22,15 @@ dependencies:
     - grpcio>=1.63
     - protobuf==5.26.*
     - types-protobuf==5.26.*
-    - evidently
+    - evidently==0.4.27
+    - alibi-detect==0.12.*
+    - tenacity
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
   - pyaml
   - pydantic
-  - numpy
+  - numpy==1.26.*
   - pandas
   - bitstring
   - tensorboard

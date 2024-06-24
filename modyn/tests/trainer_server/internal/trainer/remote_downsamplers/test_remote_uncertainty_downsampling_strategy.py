@@ -18,6 +18,7 @@ def sampler_config(dummy_system_config: ModynConfig, request):
         "args": {},
         "balance": False,
         "score_metric": request.param,
+        "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 
@@ -50,7 +51,7 @@ def test_inform_samples(sampler_config):
 test_data = {
     "LeastConfidence": {
         "outputs": torch.tensor([[0.1, 0.1, 0.8], [0.3, 0.4, 0.3], [0.33, 0.34, 0.33]]),
-        "expected_scores": np.array([0.8, 0.4, 0.34]),  # confidence just picks the highest probabilty
+        "expected_scores": np.array([0.8, 0.4, 0.34]),  # confidence just picks the highest probability
     },
     "Entropy": {
         "outputs": torch.tensor([[0.1, 0.9], [0.4, 0.6]]),

@@ -10,7 +10,7 @@ from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
-def construct_pipelines() -> list[ModynPipelineConfig]:
+def run_experiment() -> None:
     pipeline_configs: ModynPipelineConfig = []
     first_timestamp = 0
     last_timestamp = SECONDS_PER_UNIT["d"] * (2015 - 1930)

@@ -114,8 +114,10 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 if track and stage_log.info:
                     # ensure df exists
                     old_df = state.tracking.get(stage_log.id, None)
-                    if (new_rows := stage_log.df(extended=True)) is not None:
-                        state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
+                    columns = old_df.columns if old_df is not None else stage_log.df_columns(extended=True)
+                    if (new_row := stage_log.df_row(extended=True)) is not None:
+                        new_df = pd.DataFrame([new_row], columns=columns)
+                        state.tracking[stage_log.id] = pd.concat([old_df, new_df]) if old_df is not None else new_df
 
                 # record logs
                 if log:
@@ -248,6 +250,10 @@ class PipelineExecutor:
             s.current_sample_index = replay_data[0][0] if replay_data else 0
 
             self._process_new_data(s, self.logs, replay_data, request_time)
+
+            # to identify the dataset end in the logs
+            s.current_sample_time = replay_data[-1][1] if replay_data else s.start_timestamp
+            s.current_sample_index = replay_data[-1][0] if replay_data else 0
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 logger.info("Exiting replay loop due to trigger limit.")
@@ -473,7 +479,6 @@ class PipelineExecutor:
         Returns:
             The list of the actually processed triggers
         """
-        logger.info(f"Processing {len(s.triggers)} triggers in this batch.")
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.GENERAL))
 
         previous_trigger_index = 0
@@ -730,7 +735,6 @@ class PipelineExecutor:
     def _done(self, s: ExecutionState, log: StageLog) -> None:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.DONE, MsgType.GENERAL))
         self.logs.pipeline_stages = _pipeline_stage_parents  # now includes chronology info
-        self.logs.materialize(s.log_directory, mode="final")
 
     @pipeline_stage(PipelineStage.POST_EVALUATION_CHECKPOINT, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation_checkpoint(self, s: ExecutionState, log: StageLog) -> None:
@@ -754,7 +758,7 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
     def _exit(self, s: ExecutionState, log: StageLog) -> None:
-        return None  # end of pipeline
+        self.logs.materialize(s.log_directory, mode="final")
 
     # ---------------------------------------------------- Helpers --------------------------------------------------- #
 

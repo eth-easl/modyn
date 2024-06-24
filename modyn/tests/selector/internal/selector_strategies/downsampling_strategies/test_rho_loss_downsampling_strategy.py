@@ -125,7 +125,7 @@ def register_pipeline(auxiliary_pipeline_id: Optional[int], data_config: DataCon
 
 
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
-@patch.object(AbstractSelectionStrategy, "store_training_set")
+@patch.object(AbstractSelectionStrategy, "store_training_set", return_value=(42, 42, {}))
 @patch(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy"
     ".get_trigger_dataset_size"
@@ -301,6 +301,7 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
 
     expected = {
         "downsampling_ratio": 60,
+        "ratio_max": 100,
         "maximum_keys_in_memory": maximum_keys_in_memory,
         "sample_then_batch": False,
         "il_model_id": 3,

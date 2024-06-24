@@ -49,8 +49,7 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         assert "downsampling_ratio" in params_from_selector
         self.downsampling_ratio = params_from_selector["downsampling_ratio"]
-
-        self.replacement = params_from_selector.get("replacement", True)
+        self.ratio_max = params_from_selector["ratio_max"]
 
         # The next variable is used to keep a mapping index <-> sample_id
         # This is needed since the data selection policy works on indexes (the policy does not care what the sample_id

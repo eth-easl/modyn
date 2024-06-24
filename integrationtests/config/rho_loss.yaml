@@ -1,0 +1,76 @@
+pipeline:
+  name: RHO-Loss Test Pipeline
+  description: Example pipeline
+  version: 1.0.0
+model:
+  id: Dummy
+  config:
+    num_classes: 10
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  device: "cpu"
+  dataloader_workers: 2
+  use_previous_model: False
+  initial_model: random
+  batch_size: 4
+  shuffle: False
+  optimizers:
+    - name: "default"
+      algorithm: "SGD"
+      source: "PyTorch"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.1
+            momentum: 0.001
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: False
+data:
+  dataset_id: tiny_dataset
+  bytes_parser_function: |
+    import pandas as pd
+    import numpy as np
+    from io import BytesIO
+    def bytes_parser_function(data: memoryview) -> np.array:
+      df = pd.read_csv(BytesIO(data))
+      arr = df.to_numpy()[0]
+      return arr.astype(np.float32)
+trigger:
+  id: DataAmountTrigger
+  num_samples: 10
+selection_strategy:
+  name: CoresetStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0
+  downsampling_config:
+    strategy: RHOLoss
+    sample_then_batch: False
+    holdout_set_ratio: 30
+    ratio: 60
+    il_training_config:
+      il_model_id: Dummy
+      il_model_config:
+          num_classes: 10
+      device: "cpu"
+      dataloader_workers: 1
+      use_previous_model: False
+      batch_size: 2
+      shuffle: False
+      optimizers:
+        - name: "default"
+          algorithm: "SGD"
+          source: "PyTorch"
+          param_groups:
+            - module: "model"
+              config:
+                lr: 0.1
+                momentum: 0.001
+      optimization_criterion:
+        name: "CrossEntropyLoss"

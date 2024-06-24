@@ -36,10 +36,11 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         )
         self.rho_loss: torch.Tensor = torch.tensor([])
         self.number_of_points_seen = 0
+        self._device = device
 
     def init_downsampler(self) -> None:
         self.index_sampleid_map: list[int] = []
-        self.rho_loss = torch.tensor([])
+        self.rho_loss = torch.tensor([]).to(self._device)
         self.number_of_points_seen = 0
 
     def inform_samples(
@@ -57,7 +58,7 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         self.number_of_points_seen += forward_output.shape[0]
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
-        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
         # find the indices of maximal "target_size" elements in the list of rho_loss
         selected_indices = torch.topk(self.rho_loss, target_size).indices
         # use sorted() because we keep the relative order of the selected samples

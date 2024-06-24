@@ -29,6 +29,7 @@ def dummy_init_params(dummy_system_config: ModynConfig):
         "il_model_id": 2,
         "downsampling_ratio": 50,
         "sample_then_batch": False,
+        "ratio_max": 100,
     }
     modyn_config = dummy_system_config.model_dump(by_alias=True)
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")

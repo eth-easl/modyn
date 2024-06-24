@@ -24,7 +24,7 @@ class PeriodicEvalStrategy(AbstractEvalStrategy, _IntervalEvalStrategyMixin):
                     start=adjusted_start,
                     end=adjusted_end,
                     # evaluations are independent of training intervals and centered around the evaluation timestamp
-                    most_recent_model_interval_end_before=eval_timestamp,
+                    active_model_trained_before=eval_timestamp,
                 )
             )
 

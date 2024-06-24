@@ -19,12 +19,29 @@ class PresamplingConfig(ModynBaseModel):
         "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
     )
     ratio: int = Field(
-        description="Percentage of points on which the metric (loss, gradient norm,..) is computed.",
+        description=(
+            "Ratio of points on which the metric (loss, gradient norm,..) is computed."
+            "By default with ratio_max=100, this describes the selection ratio in percent."
+        ),
         min=0,
-        max=100,
+    )
+
+    ratio_max: int = Field(
+        description=(
+            "Reference maximum ratio value. Defaults to 100, which implies percent."
+            " If you set this to 1000, ratio describes promille instead."
+        ),
+        default=100,
+        min=1,
     )
     force_column_balancing: bool = Field(False)
     force_required_target_size: bool = Field(False)
+
+    @model_validator(mode="after")
+    def validate_ratio(self) -> Self:
+        if self.ratio > self.ratio_max:
+            raise ValueError("ratio cannot be greater than ratio_max.")
+        return self
 
 
 StorageBackend = Literal["database", "local"]

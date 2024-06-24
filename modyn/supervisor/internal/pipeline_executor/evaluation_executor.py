@@ -10,6 +10,7 @@ from functools import partial
 from multiprocessing import Queue
 from pathlib import Path
 
+import grpc
 import pandas as pd
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
@@ -31,6 +32,7 @@ from modyn.supervisor.internal.pipeline_executor.models import (
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.utils.utils import current_time_micros, dynamic_module_import
 from pydantic import BaseModel
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -56,13 +58,13 @@ class EvaluationExecutor:
         pipeline_logdir: Path,
         config: ModynConfig,
         pipeline: ModynPipelineConfig,
-        grpc: GRPCHandler,
+        grpc_handler: GRPCHandler,
     ):
         self.pipeline_id = pipeline_id
         self.pipeline_logdir = pipeline_logdir
         self.config = config
         self.pipeline = pipeline
-        self.grpc = grpc
+        self.grpc = grpc_handler
         self.context: AfterPipelineEvalContext | None = None
         self.eval_handlers = (
             [EvalHandler(eval_handler_config) for eval_handler_config in pipeline.evaluation.handlers]
@@ -101,12 +103,14 @@ class EvaluationExecutor:
         eval_state_config = EvalStateConfig.model_validate_json((snapshot_dir / "eval_state.yaml").read_text())
         context = pickle.loads((snapshot_dir / "context.pcl").read_bytes())
 
+        grpc_handler = GRPCHandler(eval_state_config.config.model_dump(by_alias=True))
+        grpc_handler.init_cluster_connection()
         executor = EvaluationExecutor(
             eval_state_config.pipeline_id,
             eval_state_config.eval_dir,
             eval_state_config.config,
             eval_state_config.pipeline,
-            GRPCHandler(eval_state_config.config.model_dump(by_alias=True)),
+            grpc_handler,
         )
         executor.context = context
         return executor
@@ -162,7 +166,7 @@ class EvaluationExecutor:
         logs = self._launch_evaluations_async(eval_requests, log, eval_status_queue, num_workers)
         return logs
 
-    def run_post_pipeline_evaluations(self, eval_status_queue: Queue) -> SupervisorLogs:
+    def run_post_pipeline_evaluations(self, eval_status_queue: Queue, manual_run: bool = False) -> SupervisorLogs:
         """Evaluate the trained models after the core pipeline and store the results."""
         if not self.pipeline.evaluation:
             return SupervisorLogs(stage_runs=[])
@@ -180,7 +184,9 @@ class EvaluationExecutor:
 
         eval_requests: list[EvalRequest] = []
         for eval_handler in self.eval_handlers:
-            if eval_handler.config.execution_time != "after_pipeline":
+            if (eval_handler.config.execution_time not in ("after_pipeline", "manual")) or (
+                eval_handler.config.execution_time == "manual" and not manual_run
+            ):
                 continue
 
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
@@ -260,31 +266,42 @@ class EvaluationExecutor:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.pipeline.evaluation
         logger.info(
-            f"Evaluation Starts for model {eval_req.model_id} on split {eval_req.interval_start} "
+            f"Evaluation Starts for model {eval_req.id_model} on split {eval_req.interval_start} "
             f"to {eval_req.interval_end} of dataset {eval_req.dataset_id}."
         )
         dataset_config = next((d for d in self.pipeline.evaluation.datasets if d.dataset_id == eval_req.dataset_id))
         log.info = SingleEvaluationInfo(eval_request=eval_req)
         request = GRPCHandler.prepare_evaluation_request(
             dataset_config.model_dump(by_alias=True),
-            eval_req.model_id,
+            eval_req.id_model,
             self.pipeline.evaluation.device,
             eval_req.interval_start,
             eval_req.interval_end,
         )
-        response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
+                except grpc.RpcError as e:  # We catch and reraise to reconnect
+                    logger.error(e)
+                    logger.error("gRPC connection error, trying to reconnect...")
+                    self.grpc.init_evaluator()
+                    raise e
+
         if not response.evaluation_started:
             log.info.failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
                 response.eval_aborted_reason
             ].name
             logger.error(
-                f"Evaluation for model {eval_req.model_id} on split {eval_req.interval_start} to "
+                f"Evaluation for model {eval_req.id_model} on split {eval_req.interval_start} to "
                 f"{eval_req.interval_end} not started with reason: {log.info.failure_reason}."
             )
             return
 
         logger.info(
-            f"Evaluation started for model {eval_req.model_id} on split {eval_req.interval_start} "
+            f"Evaluation started for model {eval_req.id_model} on split {eval_req.interval_start} "
             f"to {eval_req.interval_end}."
         )
         reporter = EvaluationStatusReporter(

@@ -83,7 +83,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
             max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
             preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = (
                 -1.0
-            )  # remove highest class from softmax ouptut
+            )  # remove highest class from softmax output
             preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
             second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
             scores = (max_preds - second_max_preds).cpu().numpy()
@@ -119,7 +119,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
 
     def _select_from_scores(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = len(self.scores)
-        target_size = max(int(self.downsampling_ratio * number_of_samples / 100), 1)
+        target_size = max(int(self.downsampling_ratio * number_of_samples / self.ratio_max), 1)
         selected_indices, weights = self._select_indexes_from_scores(target_size)
         selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
         return selected_ids, weights

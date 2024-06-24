@@ -35,7 +35,7 @@ def noop_poll_pipeline_status(self) -> None:
 @patch.object(Client, "__init__", noop_constructor_mock)
 @patch.object(Client, "start_pipeline", return_value=True)
 @patch.object(Client, "poll_pipeline_status", noop_poll_pipeline_status)
-def test_modyn_client_script_runs(script_runner):
+def test_modyn_client_script_runs(mock_start_pipeline, script_runner):
     ret = script_runner.run("_modyn_client", str(EXAMPLE_PIPELINE), str(EXAMPLE_SYSTEM_CONFIG))
     assert ret.success
 

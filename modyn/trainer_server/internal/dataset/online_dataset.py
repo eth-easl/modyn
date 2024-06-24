@@ -8,7 +8,6 @@ import os
 import pathlib
 import random
 import threading
-import time
 from typing import Any, Callable, Generator, Iterator, Optional, Tuple, cast
 
 import grpc
@@ -26,6 +25,7 @@ from modyn.utils import (
     grpc_connection_established,
     instantiate_class,
 )
+from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -126,23 +126,22 @@ class OnlineDataset(IterableDataset):
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=2, max=60),
+        before=before_log(logger, logging.ERROR),
+        after=after_log(logger, logging.ERROR),
+        reraise=True,
+    )
     def _init_grpc(self, worker_id: Optional[int] = None) -> None:  # pragma: no cover
-        max_retries = 5
-        retry_delay = 1  # seconds
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        if grpc_connection_established(self._storage_channel):
+            self._storagestub = StorageStub(self._storage_channel)
+            return
 
-        for attempt in range(1, max_retries + 1):
-            self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
-            if grpc_connection_established(self._storage_channel):
-                self._storagestub = StorageStub(self._storage_channel)
-                return
-            # no connection established
-
-            self._info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...", worker_id)
-            time.sleep(retry_delay)
-            retry_delay *= 2  # Exponential backoff
-
-        self._info(f"Failed to establish gRPC connection after {max_retries} attempts.", worker_id)
-        raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
+        raise ConnectionError(
+            f"[Worker {worker_id}]: Could not establish gRPC connection to storage at address {self._storage_address}."
+        )
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
@@ -156,20 +155,57 @@ class OnlineDataset(IterableDataset):
 
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None
-    ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
-        req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
-        stopw = Stopwatch()
+    ) -> Iterator[Tuple[list[int], list[bytes], list[int], int]]:
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
 
-        response: GetResponse
-        stopw.start("ResponseTime", overwrite=True)
-        for _, response in enumerate(self._storagestub.Get(req)):
-            yield list(response.keys), list(response.samples), list(response.labels), stopw.stop("ResponseTime")
-            if not grpc_connection_established(self._storage_channel):
-                self._info("gRPC connection lost, trying to reconnect!", worker_id)
-                self._init_grpc(worker_id=worker_id)
-            stopw.start("ResponseTime", overwrite=True)
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+                    stopw = Stopwatch()
+
+                    response: GetResponse
+                    stopw.start("ResponseTime", overwrite=True)
+                    for response in self._storagestub.Get(req):
+                        response_time = stopw.stop("ResponseTime")
+                        keys = list(response.keys)
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(keys)
+                            yield keys, list(response.samples), list(response.labels), response_time
+                        else:  # If we have failed, we need to filter out yielded samples
+                            # Note that the returned order by storage is non-deterministic
+                            assert isinstance(processed_keys, set)
+                            new_keys: list[int] = [key for key in keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
+                                sample for key, sample in zip(keys, response.samples) if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(keys, response.labels) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            yield new_keys, new_samples, new_labels, response_time
+
+                        stopw.start("ResponseTime", overwrite=True)
+
+                except grpc.RpcError as e:  # We catch and reraise to reconnect to rpc and do logging
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
+                    self._info(
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}", worker_id)
+                    self._init_grpc(worker_id=worker_id)
+                    raise e
 
     # pylint: disable=too-many-locals
+
     def _get_data(
         self,
         data_container: dict,
