@@ -75,7 +75,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
                 self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target).detach().cpu()
             )
             grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size
-            new_elements = grads_wrt_loss_mean
+            new_elements = grads_wrt_loss_mean.detach().cpu()
         elif self.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS:
             assert embedding is not None
             # using the gradients w.r.t. the sum of the loss or the mean of the loss does not make a difference
