@@ -96,8 +96,9 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             for current_target in different_targets_in_this_batch:
                 mask = target == current_target
                 this_target_sample_ids = [sample_ids[i] for i, keep in enumerate(mask) if keep]
+                sub_embedding = embedding[mask] if embedding is not None else None
                 self._inform_samples_single_class(
-                    this_target_sample_ids, forward_output[mask], target[mask], embedding[mask] if embedding else None
+                    this_target_sample_ids, forward_output[mask], target[mask], sub_embedding
                 )
                 self.inform_end_of_current_label()
 
