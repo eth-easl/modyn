@@ -131,6 +131,10 @@ class TrainingConfig(ModynBaseModel):
         description="The ID of the model that should be used as the initial model.",
     )
     checkpointing: CheckpointingConfig = Field(description="Configuration of checkpointing during training")
+    record_loss_every: int = Field(
+        default=0,
+        description="Record the training loss in the trainer_log very n-th batch/step. If 0, loss is not recorded.",
+    )
     optimizers: List[OptimizerConfig] = Field(
         description="An array of the optimizers for the training",
         min_length=1,

@@ -737,6 +737,8 @@ def test_train(
     status = status_queue.get()
     assert status["num_batches"] == 0
     assert status["num_samples"] == 0
+    # we didn't enable recording the training loss
+    assert len(trainer._log["training_loss"]) == 0
     status_state = torch.load(io.BytesIO(status_queue.get()))
     checkpointed_state = {
         "model": OrderedDict(
