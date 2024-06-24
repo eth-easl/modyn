@@ -131,3 +131,22 @@ def test_collect_gradients(dummy_system_config: ModynConfig):
         assert np.concatenate(amds.matrix_elements).shape == (7, 12)
 
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
+
+
+@patch("modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy.torch.autograd.grad",
+       wraps=torch.autograd.grad)
+def test__compute_last_layer_gradient_wrt_loss_sum(mock_torch_auto_grad):
+    per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+    forward_output = torch.randn((4, 2), requires_grad=True)
+    # random target
+    target = torch.randint(0, 2, (4,))
+    last_layer_gradients = AbstractMatrixDownsamplingStrategy._compute_last_layer_gradient_wrt_loss_sum(
+        per_sample_loss_fct, forward_output, target
+    )
+    # as we use CrossEntropyLoss, the gradient is computed in a closed form
+    assert mock_torch_auto_grad.call_count == 0
+    expected_grad = torch.autograd.grad(
+        per_sample_loss_fct(forward_output, target).sum(), forward_output
+    )[0]
+    assert torch.allclose(last_layer_gradients, expected_grad)
+
