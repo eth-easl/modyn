@@ -50,7 +50,7 @@ class RHOLOSSTwinModelModyn(nn.Module):
         if is_seen_by_model0 and is_seen_by_model1:
             raise ValueError("Sample ID is seen by both models; This shouldn't happen with IL model.")
 
-        if is_seen_by_model0 or not is_seen_by_model1:
+        if is_seen_by_model0 or is_seen_by_model1:
             if is_seen_by_model0:
                 return self.model0(data)
             return self.model1(data)
