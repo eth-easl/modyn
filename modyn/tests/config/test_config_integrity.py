@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 
 import pytest
-from experiments.yearbook.compare_trigger_policies.run import construct_pipelines as yearbook_construct_pipelines
 from modyn.config import read_modyn_config, read_pipeline
 from modynclient.config import read_client_config
 

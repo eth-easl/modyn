@@ -16,7 +16,6 @@ from modyn.config.schema.pipeline.config import (
 )
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.metric import Metric
 from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig
 from modyn.config.schema.pipeline.model_storage import FullModelStrategy
 from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
