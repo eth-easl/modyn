@@ -16,7 +16,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-class HuffpostKaggleDownloader(Dataset):
+class HuffpostKaggleDataGenerator:
     fields_to_keep = ["headline", "category"]
     test_holdout = 0.25
 
@@ -32,6 +32,7 @@ class HuffpostKaggleDownloader(Dataset):
 
     @property
     def data_json(self) -> Path:
+        # Will be extracted automatically from the user provided raw zip file
         return self.data_dir / "News_Category_Dataset_v3.json"
 
     def clean_folder(self) -> None:
@@ -44,7 +45,7 @@ class HuffpostKaggleDownloader(Dataset):
             records.append({field: record[field] for field in ["headline", "category", "date"]})
 
         df = pd.DataFrame(records)
-        return HuffpostKaggleDownloader.sanitize_dataframe(df)
+        return HuffpostKaggleDataGenerator.sanitize_dataframe(df)
 
     def store_data(
         self, cleaned_df: pd.DataFrame, resolution: TimeResolution, test_split: bool, dummy_period: bool = False
@@ -117,7 +118,7 @@ def main(
 ) -> None:
     """Huffpost data generation script."""
 
-    downloader = HuffpostKaggleDownloader(dir, raw_data)
+    downloader = HuffpostKaggleDataGenerator(dir, raw_data)
     if not skip_extraction:
         downloader.extract_data(raw_data)
     df = downloader.load_into_dataframe()

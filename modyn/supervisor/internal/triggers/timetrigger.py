@@ -12,20 +12,23 @@ class TimeTrigger(Trigger):
     Clock starts with the first observed datapoint"""
 
     def __init__(self, config: TimeTriggerConfig):
-        self.trigger_every_s: int = config.every_seconds
+        self.config = config
         self.next_trigger_at: int | None = None
 
-        if self.trigger_every_s < 1:
-            raise ValueError(f"trigger_every must be > 0, but is {self.trigger_every_s}")
+        if self.config.every_seconds < 1:
+            raise ValueError(f"trigger_every must be > 0, but is {self.config.every_seconds}")
 
         super().__init__()
 
     def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
-            if len(new_data) > 0:
-                self.next_trigger_at = new_data[0][1] + self.trigger_every_s  # new_data is sorted
+            if self.config.start_timestamp is not None:
+                self.next_trigger_at = self.config.start_timestamp + self.config.every_seconds
             else:
-                return
+                if len(new_data) > 0:
+                    self.next_trigger_at = new_data[0][1] + self.config.every_seconds  # new_data is sorted
+                else:
+                    return
 
         max_timestamp = new_data[-1][1]  # new_data is sorted
         triggering_indices = []
@@ -42,9 +45,9 @@ class TimeTrigger(Trigger):
             # This means that there was a trigger before the first item that we got informed about
             # However, there might have been multiple triggers, e.g., if there is one trigger every second
             # and 5 seconds have passed since the last item came through
-            # This is caught by our while loop which increases step by step for `trigger_every_s`.
+            # This is caught by our while loop which increases step by step for `config.every_seconds`.
 
             triggering_indices.append(idx - 1)
-            self.next_trigger_at += self.trigger_every_s
+            self.next_trigger_at += self.config.every_seconds
 
         yield from triggering_indices

@@ -12,11 +12,10 @@ from benchmark.utils.time_resolution_binning import (
 )
 from modyn.const.types import TimeResolution
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-class ArxivKaggleDownloader(Dataset):
+class ArxivKaggleDataGenerator:
     test_holdout = 0.25
     fields_to_keep = ["title", "category"]
 
@@ -32,6 +31,7 @@ class ArxivKaggleDownloader(Dataset):
 
     @property
     def data_json(self) -> Path:
+        # Will be extracted automatically from the user provided raw zip file
         return self.data_dir / "arxiv-metadata-oai-snapshot.json"
 
     def clean_folder(self) -> None:
@@ -44,7 +44,7 @@ class ArxivKaggleDownloader(Dataset):
             records.append({field: record[field] for field in ["title", "categories", "versions", "update_date"]})
 
         df = pd.DataFrame(records)
-        return ArxivKaggleDownloader.sanitize_dataframe(df)
+        return ArxivKaggleDataGenerator.sanitize_dataframe(df)
 
     def store_data(
         self, cleaned_df: pd.DataFrame, resolution: TimeResolution, test_split: bool, dummy_period: bool = False
@@ -130,7 +130,7 @@ def main(
 ) -> None:
     """Arxiv data generation script."""
 
-    downloader = ArxivKaggleDownloader(dir, raw_data)
+    downloader = ArxivKaggleDataGenerator(dir, raw_data)
     if not skip_extraction:
         downloader.extract_data(raw_data)
     df = downloader.load_into_dataframe()

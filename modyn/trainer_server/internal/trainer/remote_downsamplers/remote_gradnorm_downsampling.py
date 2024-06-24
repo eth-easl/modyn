@@ -79,12 +79,12 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             return [], torch.Tensor([])
 
         # select always at least 1 point
-        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()
 
-        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=self.replacement)
+        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)
 
         # lower probability, higher weight to reduce the variance
         weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])

@@ -655,7 +655,7 @@ def test_train_and_store_model(
 
     test_start_training.return_value = training_id
     test_store_trained_model.return_value = model_id
-    test_wait_for_training_completion.return_value = {}
+    test_wait_for_training_completion.return_value = {"num_batches": 0, "num_samples": 0}
 
     ret_training_id, ret_model_id = pe._train_and_store_model(pe.state, pe.logs, trigger_id)
     assert (ret_training_id, ret_model_id) == (training_id, model_id)
@@ -669,7 +669,7 @@ def test_train_and_store_model(
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "wait_for_training_completion", return_value={})
+@patch.object(GRPCHandler, "wait_for_training_completion", return_value={"num_batches": 0, "num_samples": 0})
 @patch.object(GRPCHandler, "get_number_of_samples", return_value=34)
 @patch.object(GRPCHandler, "get_status_bar_scale", return_value=40)
 def test_run_training_set_num_samples_to_pass(
@@ -698,7 +698,7 @@ def test_run_training_set_num_samples_to_pass(
 
 
 @pytest.mark.parametrize("test_failure", [False, True])
-@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "wait_for_evaluation_completion", return_value={"num_batches": 0, "num_samples": 0})
 @patch.object(GRPCHandler, "cleanup_evaluations")
 @patch.object(GRPCHandler, "store_evaluation_results")
 def test__start_evaluations(
@@ -732,18 +732,16 @@ def test__start_evaluations(
 
         def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
             yield from [
-                EvalInterval(start=0, end=100, most_recent_model_interval_end_before=50),
-                EvalInterval(start=100, end=200, most_recent_model_interval_end_before=150),
-                EvalInterval(start=200, end=300, most_recent_model_interval_end_before=250),
+                EvalInterval(start=0, end=100, active_model_trained_before=50),
+                EvalInterval(start=100, end=200, active_model_trained_before=150),
+                EvalInterval(start=200, end=300, active_model_trained_before=250),
             ]
 
     else:
-        intervals = [(0, 100), (100, 200), (None, None), (None, 200), (None, 0), (200, None), (0, None), (0, 0)]
+        intervals = [(0, 100), (100, 200), (0, None), (0, 200), (0, 0), (200, None), (0, None), (0, 0)]
 
         def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
-            yield from [
-                EvalInterval(start=start, end=end, most_recent_model_interval_end_before=0) for start, end in intervals
-            ]
+            yield from [EvalInterval(start=start, end=end, active_model_trained_before=0) for start, end in intervals]
 
     with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
         model_id = 1
@@ -775,14 +773,16 @@ def test__start_evaluations(
                         eval_dataset_config.model_dump(by_alias=True),
                         model_id,
                         pipeline_evaluation_config.device,
-                        start_ts,
+                        start_ts or 0,
                         end_ts,
                     )
                 )
                 for start_ts, end_ts in intervals
             ]
 
-            assert evaluator_stub_mock.evaluate_model.call_args_list == expected_calls
+            # because of threadpool, ordering isn't guaranteed
+            assert len(evaluator_stub_mock.evaluate_model.call_args_list) == len(expected_calls)
+            assert all([eval_call in expected_calls for eval_call in evaluator_stub_mock.evaluate_model.call_args_list])
 
 
 @pytest.mark.parametrize("stop_replay_at", [None, 2, 43])

@@ -20,9 +20,20 @@ class BaseDownsamplingConfig(ModynBaseModel):
         ),
     )
     ratio: int = Field(
-        description="Ratio post_sampling_size/pre_sampling_size. E.g. with 160 records and a ratio of 50 we keep 80.",
+        description=(
+            "Ratio post_sampling_size/pre_sampling_size * ratio_max. "
+            "For the default of ratio_max of 100, this implies percent, "
+            "e.g., with 160 records and a ratio of 50 we keep 80."
+        ),
         min=0,
-        max=100,
+    )
+    ratio_max: int = Field(
+        description=(
+            "Reference maximum ratio value. Defaults to 100, which implies percent."
+            " If you set this to 1000, ratio describes promille instead."
+        ),
+        default=100,
+        min=1,
     )
     period: int = Field(
         1,
@@ -33,6 +44,12 @@ class BaseDownsamplingConfig(ModynBaseModel):
         ),
         min=0,
     )
+
+    @model_validator(mode="after")
+    def validate_ratio(self) -> Self:
+        if self.ratio > self.ratio_max:
+            raise ValueError("ratio cannot be greater than ratio_max.")
+        return self
 
 
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
@@ -159,6 +176,7 @@ SingleDownsamplingConfig = Annotated[
         GradNormDownsamplingConfig,
         NoDownsamplingConfig,
         RHOLossDownsamplingConfig,
+        RS2DownsamplingConfig,
     ],
     Field(discriminator="strategy"),
 ]

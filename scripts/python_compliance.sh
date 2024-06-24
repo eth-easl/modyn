@@ -22,6 +22,7 @@ echo "Running auto-formatters"
 $MAMBA_CMD run -n modyn isort . > /dev/null
 $MAMBA_CMD run -n modyn autopep8 modyn integrationtests --recursive --in-place --pep8-passes 2000 > /dev/null
 $MAMBA_CMD run -n modyn black modyn integrationtests --verbose --config black.toml > /dev/null
+$MAMBA_CMD run -n modyn ruff check --fix experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle > /dev/null
 
 echo "Running linters"
 

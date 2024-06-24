@@ -14,7 +14,7 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteGradNormDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
@@ -45,7 +45,7 @@ def test_sample_shape_other_losses(dummy_system_config: ModynConfig):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteGradNormDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
@@ -84,6 +84,7 @@ def test_sampling_crossentropy(dummy_system_config: ModynConfig):
         "downsampling_ratio": downsampling_ratio,
         "replacement": False,
         "sample_then_batch": False,
+        "ratio_max": 100,
     }
 
     # Here we use autograd since the number of classes is not provided
@@ -135,7 +136,7 @@ def test_sample_dict_input(dummy_system_config: ModynConfig):
     model = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteGradNormDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )

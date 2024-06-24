@@ -20,6 +20,7 @@ def get_sampler_config(modyn_config, balance=False):
         "balance": balance,
         "selection_batch": 64,
         "greedy": "NaiveGreedy",
+        "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 
@@ -347,7 +348,7 @@ def test_matching_results_with_deepcore(dummy_system_config: ModynConfig):
         0,
         0,
         5,
-        {"downsampling_ratio": 20, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        {"downsampling_ratio": 20, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy", "ratio_max": 100},
         dummy_system_config.model_dump(by_alias=True),
         BCEWithLogitsLoss(reduction="none"),
         "cpu",
@@ -402,7 +403,7 @@ def test_matching_results_with_deepcore_permutation(dummy_system_config: ModynCo
         0,
         0,
         5,
-        {"downsampling_ratio": 30, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        {"downsampling_ratio": 30, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy", "ratio_max": 100},
         dummy_system_config.model_dump(by_alias=True),
         BCEWithLogitsLoss(reduction="none"),
         "cpu",
@@ -461,7 +462,7 @@ def test_matching_results_with_deepcore_permutation_fancy_ids(dummy_system_confi
         0,
         0,
         5,
-        {"downsampling_ratio": 50, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy"},
+        {"downsampling_ratio": 50, "balance": False, "selection_batch": 64, "greedy": "NaiveGreedy", "ratio_max": 100},
         dummy_system_config.model_dump(by_alias=True),
         BCEWithLogitsLoss(reduction="none"),
         "cpu",

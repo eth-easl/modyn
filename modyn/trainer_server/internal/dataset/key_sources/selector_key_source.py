@@ -1,6 +1,5 @@
 import logging
-import time
-from typing import Optional
+from typing import Any, Optional
 
 import grpc
 
@@ -15,6 +14,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 from modyn.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
+from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,20 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = None  # connection is made when the pytorch worker is started
         self._uses_weights: Optional[bool] = None  # get via gRPC, so unavailable if the connection is not yet made.
 
+    @staticmethod
+    def retry_reconnection_callback(retry_state: Any) -> None:
+        self: SelectorKeySource = retry_state.args[0]
+        logger.error(f"Retry attempt {retry_state.attempt_number}. State = \n {str(retry_state)}")
+        self._connect_to_selector()
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=2, max=60),
+        before=before_log(logger, logging.ERROR),
+        after=after_log(logger, logging.ERROR),
+        reraise=True,
+        retry_error_callback=retry_reconnection_callback,
+    )
     def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
         assert self._selectorstub is not None
         assert self._uses_weights is not None
@@ -90,26 +104,24 @@ class SelectorKeySource(AbstractKeySource):
         self._selectorstub = self._connect_to_selector()
         self._uses_weights = self.uses_weights()
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=2, max=60),
+        before=before_log(logger, logging.ERROR),
+        after=after_log(logger, logging.ERROR),
+        reraise=True,
+    )
     def _connect_to_selector(self) -> SelectorStub:  # pragma: no cover
-        max_retries = 5
-        retry_delay = 1  # seconds
+        selector_channel = grpc.insecure_channel(
+            self._selector_address,
+            options=[
+                ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
+                ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
+            ],
+        )
+        if grpc_connection_established(selector_channel):
+            return SelectorStub(selector_channel)
 
-        for attempt in range(1, max_retries + 1):
-            selector_channel = grpc.insecure_channel(
-                self._selector_address,
-                options=[
-                    ("grpc.max_receive_message_length", MAX_MESSAGE_SIZE),
-                    ("grpc.max_send_message_length", MAX_MESSAGE_SIZE),
-                ],
-            )
-            if grpc_connection_established(selector_channel):
-                return SelectorStub(selector_channel)
-
-            logger.info(f"gRPC connection attempt {attempt} failed. Retrying in {retry_delay} seconds...")
-            time.sleep(retry_delay)
-            retry_delay *= 2  # Exponential backoff
-
-        logger.error(f"Failed to establish gRPC connection after {max_retries} attempts.")
         raise ConnectionError(f"Could not establish gRPC connection to selector at address {self._selector_address}.")
 
     def end_of_trigger_cleaning(self) -> None:

@@ -5,6 +5,7 @@ from typing import Optional
 
 import enlighten
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
+from modyn.utils.utils import current_time_millis
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
 from modynclient.config.schema.client_config import ModynClientConfig
@@ -144,12 +145,12 @@ class Client:
                 self.eval_err_count += 1
                 logger.info(f"Evaluation {id} failed with error: {params['exception_msg']}")
 
-    def _process_msgs(self, res: dict) -> None:
+    def _process_msgs(self, res: dict, show_eval_progress: bool = True) -> None:
         if "training_status" in res:
             for i, msg in enumerate(res["training_status"]):
                 self._monitor_training_progress(msg)
 
-        if "eval_status" in res:
+        if "eval_status" in res and show_eval_progress:
             for i, msg in enumerate(res["eval_status"]):
                 self._monitor_evaluation_progress(msg)
 
@@ -157,16 +158,25 @@ class Client:
             for i, msg in enumerate(res["pipeline_stage"]):
                 self._monitor_pipeline_progress(msg)
 
-    def poll_pipeline_status(self) -> None:
+    def poll_pipeline_status(self, show_eval_progress=True) -> bool:
         res = self.grpc.get_pipeline_status(self.pipeline_id)
         while res["status"] == PipelineStatus.RUNNING:
-            self._process_msgs(res)
+            self._process_msgs(res, show_eval_progress=show_eval_progress)
             time.sleep(POLL_TIMEOUT)
             res = self.grpc.get_pipeline_status(self.pipeline_id)
 
         if res["status"] == PipelineStatus.EXIT:
-            self._process_msgs(res)
+            self._process_msgs(res, show_eval_progress=show_eval_progress)
+            return True
         elif res["status"] == PipelineStatus.NOTFOUND:
             logger.info(f"Pipeline <{self.pipeline_id}> not found.")
+            return False
         else:
-            logger.error(f"unknown pipeline status {json.dumps(res, sort_keys=True, indent=2)}")
+            filename = f"client_error_{current_time_millis()}.log"
+            logger.error(
+                f"Unknown pipeline status: {json.dumps(res, sort_keys=True, indent=2)}\n\nAlso persisted to {filename}."
+            )
+            with open(filename, "w", encoding="utf-8") as f:
+                json.dump(res, f, sort_keys=True, indent=2)
+
+            return False

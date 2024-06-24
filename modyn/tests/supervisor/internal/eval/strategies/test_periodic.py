@@ -12,9 +12,9 @@ def test_periodic_eval_trigger() -> None:
         training_intervals=[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
     )
     assert intervals == [
-        EvalInterval(start=0, end=2, most_recent_model_interval_end_before=0),
-        EvalInterval(start=3, end=7, most_recent_model_interval_end_before=5),
-        EvalInterval(start=8, end=12, most_recent_model_interval_end_before=10),
-        EvalInterval(start=13, end=17, most_recent_model_interval_end_before=15),
-        EvalInterval(start=18, end=22, most_recent_model_interval_end_before=20),
+        EvalInterval(start=0, end=2, active_model_trained_before=0),
+        EvalInterval(start=3, end=7, active_model_trained_before=5),
+        EvalInterval(start=8, end=12, active_model_trained_before=10),
+        EvalInterval(start=13, end=17, active_model_trained_before=15),
+        EvalInterval(start=18, end=22, active_model_trained_before=20),
     ]
