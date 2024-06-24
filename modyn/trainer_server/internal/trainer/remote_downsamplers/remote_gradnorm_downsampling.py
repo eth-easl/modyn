@@ -48,7 +48,9 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
-        last_layer_gradients = self._compute_last_layer_gradient(self.per_sample_loss_fct, forward_output, target)
+        last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
+            self.per_sample_loss_fct, forward_output, target
+        )
         scores = torch.norm(last_layer_gradients, dim=-1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]

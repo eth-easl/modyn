@@ -18,6 +18,7 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.submodular_optimizer = downsampling_config.submodular_optimizer
         self.selection_batch = downsampling_config.selection_batch
         self.balance = downsampling_config.balance
+        self.full_grad_approximation = downsampling_config.full_grad_approximation
         self.remote_downsampling_strategy_name = "RemoteSubmodularDownsamplingStrategy"
 
     @cached_property
@@ -27,6 +28,7 @@ class SubmodularDownsamplingStrategy(AbstractDownsamplingStrategy):
         config["submodular_optimizer"] = self.submodular_optimizer
         config["selection_batch"] = self.selection_batch
         config["balance"] = self.balance
+        config["full_grad_approximation"] = self.full_grad_approximation
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
 

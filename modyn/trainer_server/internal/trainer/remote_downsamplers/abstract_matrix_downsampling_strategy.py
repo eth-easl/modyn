@@ -33,13 +33,14 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
 
         self.criterion = per_sample_loss
 
-        # This class uses the embedding recorder
-        self.requires_coreset_supporting_module = True
         self.matrix_elements: list[torch.Tensor] = []
 
         # actual classes must specify which content should be stored. Can be either Gradients or Embeddings. Use the
         # enum defined above to specify what should be stored
         self.matrix_content = matrix_content
+
+        # This class uses the embedding recorder
+        self.requires_coreset_supporting_module = self.matrix_content == MatrixContent.EMBEDDINGS
 
         # if true, the downsampling is balanced across classes ex class sizes = [10, 50, 30] and 50% downsampling
         # yields the following downsampled class sizes [5, 25, 15] while without balance something like [0, 45, 0] can
@@ -61,12 +62,13 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
-        assert embedding is not None
         assert self.matrix_content is not None
-
         if self.matrix_content == MatrixContent.GRADIENTS:
-            new_elements = self._compute_last_layer_gradient(self.criterion, forward_output, target).detach().cpu()
+            new_elements = (
+                self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target).detach().cpu()
+            )
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
+            assert embedding is not None
             new_elements = embedding.detach().cpu()
         else:
             raise AssertionError("The required content does not exits.")

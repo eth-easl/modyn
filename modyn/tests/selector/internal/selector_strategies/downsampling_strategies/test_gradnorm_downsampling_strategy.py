@@ -23,3 +23,4 @@ def test_init_gradnorm():
     params = strat.downsampling_params
     assert "downsampling_ratio" in params
     assert params["downsampling_ratio"] == 10
+    assert params["full_grad_approximation"] == "LastLayer"

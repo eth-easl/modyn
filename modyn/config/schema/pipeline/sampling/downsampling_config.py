@@ -35,6 +35,9 @@ class BaseDownsamplingConfig(ModynBaseModel):
     )
 
 
+FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
+
+
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 
@@ -57,6 +60,7 @@ class GradMatchDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["GradMatch"] = "GradMatch"
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class CraigDownsamplingConfig(BaseDownsamplingConfig):
@@ -68,6 +72,7 @@ class CraigDownsamplingConfig(BaseDownsamplingConfig):
     greedy: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
         "NaiveGreedy", description="The greedy strategy to use."
     )
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class LossDownsamplingConfig(BaseDownsamplingConfig):
@@ -86,6 +91,7 @@ class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
     )
     selection_batch: int = Field(64, description="The batch size for the selection.")
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class GradNormDownsamplingConfig(BaseDownsamplingConfig):
@@ -127,7 +133,7 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
     holdout_set_ratio: int = Field(
-        description=("How much of the training set is used as the holdout set."),
+        description="How much of the training set is used as the holdout set.",
         min=0,
         max=100,
     )

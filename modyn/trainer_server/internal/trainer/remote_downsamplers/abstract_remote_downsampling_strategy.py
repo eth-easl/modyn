@@ -102,9 +102,14 @@ class AbstractRemoteDownsamplingStrategy(ABC):
         raise NotImplementedError
 
     @staticmethod
-    def _compute_last_layer_gradient(
+    def _compute_last_layer_gradient_wrt_loss_sum(
         per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
+        """
+        Compute the gradient of the last layer with respect to the sum of the loss.
+        Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
+        divided by the number of samples in the batch.
+        """
         if isinstance(per_sample_loss_fct, torch.nn.CrossEntropyLoss):
             # no need to autograd if cross entropy loss is used since closed form solution exists.
             # Because CrossEntropyLoss includes the softmax, we need to apply the
