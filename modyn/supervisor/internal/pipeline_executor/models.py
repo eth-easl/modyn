@@ -104,6 +104,12 @@ class ExecutionState(PipelineExecutionParams):
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
+    stage_id_seq_counters: dict[str, int] = dataclasses.field(default_factory=dict)
+    """Tracks for every stage that can be logged in StageLog how many logs have been created using this id.
+    This information can be used to uniquely identify logs over multiple pipeline runs given the pipelines use
+    a deterministic configuration.
+    """
+
     # for logging
     seen_pipeline_stages: set[PipelineStage] = dataclasses.field(default_factory=set)
     current_batch_index: int = 0
@@ -384,6 +390,10 @@ StageInfoUnion = Union[
 class StageLog(BaseModel):
     id: str
     """Identifier for the pipeline stage, PipelineStage.name in most cases"""
+
+    id_seq_num: int
+    """Identifies the log within the group of logs with the same id (given by PipelineStage). Used for aggregation over
+    multiple pipeline runs."""
 
     # experiment time
     start: datetime.datetime
