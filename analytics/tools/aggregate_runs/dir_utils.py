@@ -11,7 +11,9 @@ def group_pipelines_by_name(pipeline_logs_directory: Path) -> dict[str, list[Pat
         pipeline_logs_directory / d for d in os.listdir(pipeline_logs_directory) if str(d).startswith("pipeline_")
     ]
 
-    pipeline_names: list[tuple[Path, str]] = [(d, (d / ".name").read_text()) for d in pipeline_directories if (d / "pipeline.log").exists()]
+    pipeline_names: list[tuple[Path, str]] = [
+        (d, (d / ".name").read_text()) for d in pipeline_directories if (d / "pipeline.log").exists()
+    ]
 
     pipeline_groups = {name: [d for d, n in pipeline_names if n == name] for name in set(n for _, n in pipeline_names)}
     return pipeline_groups
