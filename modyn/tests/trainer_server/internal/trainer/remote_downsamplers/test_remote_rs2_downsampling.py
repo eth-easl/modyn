@@ -10,7 +10,7 @@ def test_init(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": True, "downsampling_ratio": 50}
+    params_from_selector = {"replacement": True, "downsampling_ratio": 50, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 
@@ -41,7 +41,7 @@ def test_inform_samples(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": True, "downsampling_ratio": 50}
+    params_from_selector = {"replacement": True, "downsampling_ratio": 50, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 
@@ -76,7 +76,7 @@ def test_multiple_epochs_with_replacement(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": True, "downsampling_ratio": 50}
+    params_from_selector = {"replacement": True, "downsampling_ratio": 50, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 
@@ -110,7 +110,7 @@ def test_multiple_epochs_without_replacement(dummy_system_config: ModynConfig):
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": False, "downsampling_ratio": 50}
+    params_from_selector = {"replacement": False, "downsampling_ratio": 50, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 
@@ -171,7 +171,7 @@ def test_multiple_epochs_without_replacement_leftover_data(dummy_system_config: 
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": False, "downsampling_ratio": 40}
+    params_from_selector = {"replacement": False, "downsampling_ratio": 40, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 
@@ -207,7 +207,7 @@ def test_multiple_epochs_empty_without_replacement_leftover_data(dummy_system_co
     pipeline_id = 0
     trigger_id = 0
     batch_size = 32
-    params_from_selector = {"replacement": False, "downsampling_ratio": 40}
+    params_from_selector = {"replacement": False, "downsampling_ratio": 40, "ratio_max": 100}
     per_sample_loss = None
     device = "cpu"
 

@@ -20,6 +20,7 @@ def get_sampler_config(modyn_config: ModynConfig, balance=False):
         "args": {},
         "balance": balance,
         "full_grad_approximation": "LastLayerWithEmbedding",
+        "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 

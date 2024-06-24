@@ -12,7 +12,7 @@ def test_sample_shape(dummy_system_config: ModynConfig):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteLossDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
@@ -39,7 +39,7 @@ def test_sample_weights(dummy_system_config: ModynConfig):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteLossDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
@@ -67,7 +67,7 @@ def test_sample_loss_dependent_sampling(dummy_system_config: ModynConfig):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.MSELoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteLossDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
@@ -116,7 +116,7 @@ def test_sample_dict_input(dummy_system_config: ModynConfig):
     mymodel = DictLikeModel()
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
-    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False}
+    params_from_selector = {"downsampling_ratio": 50, "sample_then_batch": False, "ratio_max": 100}
     sampler = RemoteLossDownsampling(
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )

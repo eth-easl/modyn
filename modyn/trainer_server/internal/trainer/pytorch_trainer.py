@@ -211,7 +211,6 @@ class PytorchTrainer:
         self._info("Handled OnBegin Callbacks.")
         self._log["epochs"] = []
 
-        batch_number = -1
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
         else:
@@ -223,7 +222,9 @@ class PytorchTrainer:
             # assertion since model validation by pydantic should catch this.
             assert self._downsampler.supports_bts, "The downsampler does not support batch then sample"
             # We cannot pass the target size from the trainer server since that depends on StB vs BtS.
-            post_downsampling_size = max((self._downsampler.downsampling_ratio * self._batch_size) // 100, 1)
+            post_downsampling_size = max(
+                (self._downsampler.downsampling_ratio * self._batch_size) // self._downsampling_ratio_max, 1
+            )
             assert post_downsampling_size < self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
@@ -234,30 +235,33 @@ class PytorchTrainer:
             batch_accumulator = BatchAccumulator(self._batch_size // post_downsampling_size, self._device)
 
         trained_batches = 0
+        passed_batches = 0
         for epoch in epoch_num_generator:
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
             batch_timings = []
 
             if self._sample_then_batch_this_epoch(epoch):
-                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=False)
+                self.update_queue(
+                    "TRAINING", trained_batches, trained_batches * self._batch_size, training_active=False
+                )
                 with GPUMeasurement(self._measure_gpu_ops, "DownsampleSTB", self._device, stopw):
                     self.downsample_trigger_training_set()
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
-            for batch_number, batch in enumerate(self._train_dataloader):
+            for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
 
                 stopw.start("OnBatchBeginCallbacks", resume=True)
                 for _, callback in self._callbacks.items():
-                    callback.on_batch_begin(self._model.model, self._optimizers, batch, batch_number)
+                    callback.on_batch_begin(self._model.model, self._optimizers, batch, passed_batches)
                 stopw.stop()
 
-                self.update_queue("TRAINING", batch_number, self._num_samples, training_active=True)
-
+                self.update_queue("TRAINING", trained_batches, trained_batches * self._batch_size, training_active=True)
+                passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
 
@@ -283,6 +287,7 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                     self._assert_data_size(self._batch_size, data, sample_ids, target)
+
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         output = self._model.model(data)
 
@@ -297,7 +302,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
-                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
 
@@ -313,10 +318,10 @@ class PytorchTrainer:
 
                 self._step_lr_if_necessary(True)
 
-                if self._checkpoint_interval > 0 and batch_number % self._checkpoint_interval == 0:
+                if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
                     stopw.start("Checkpoint", resume=True)
-                    checkpoint_file_name = self._checkpoint_path / f"model_{batch_number}.modyn"
-                    self.save_state(checkpoint_file_name, batch_number)
+                    checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
+                    self.save_state(checkpoint_file_name, trained_batches)
                     stopw.stop("Checkpoint")
 
                 self._num_samples += self._batch_size
@@ -324,7 +329,7 @@ class PytorchTrainer:
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_end(
-                        self._model.model, self._optimizers, batch_number, sample_ids, data, target, output, loss
+                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
                     )
                 stopw.stop()
                 if 0 < self.num_samples_to_pass <= self._num_samples:
@@ -374,10 +379,11 @@ class PytorchTrainer:
 
         total_stopw.stop("TotalTrain")
 
-        self._info(f"Finished training: {self._num_samples} samples, {batch_number + 1} batches.")
+        self._info(f"Finished training: {self._num_samples} samples, {passed_batches} batches.")
         self._log["num_samples"] = self._num_samples
         self._log["num_samples_trained"] = trained_batches * self._batch_size
-        self._log["num_batches"] = batch_number + 1
+        self._log["num_batches"] = passed_batches
+        self._log["num_batches_trained"] = trained_batches
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
 
         self._assert_training_size(epoch, trained_batches)
@@ -385,7 +391,7 @@ class PytorchTrainer:
         self._persist_pipeline_log()
 
         for _, callback in self._callbacks.items():
-            callback.on_train_end(self._model.model, self._optimizers, self._num_samples, batch_number)
+            callback.on_train_end(self._model.model, self._optimizers, self._num_samples, passed_batches)
 
         for metric in self._callbacks:
             self._metadata_collector.send_metadata(metric)
@@ -433,7 +439,7 @@ class PytorchTrainer:
             available_labels = self.get_available_labels_from_selector()
 
             number_of_samples = 0
-            batch_number = 0
+            batch_number = -1
             first_label = True
             for label in available_labels:
                 if first_label:
@@ -478,7 +484,7 @@ class PytorchTrainer:
         )
         self._train_dataloader.dataset.change_key_source(new_key_source)
 
-        self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=True)
+        self.update_queue("DOWNSAMPLING", batch_number + 1, number_of_samples, training_active=True)
         # set the model to train
         self._model.model.train()
 
@@ -727,6 +733,7 @@ class PytorchTrainer:
         self._downsampler = self._instantiate_downsampler(
             strategy_name, downsampler_config, modyn_config, self._criterion_nored
         )
+        self._downsampling_ratio_max = downsampler_config["ratio_max"]
         assert "sample_then_batch" in downsampler_config
         self._log["received_downsampler_config"] = downsampler_config
         if downsampler_config["sample_then_batch"]:
@@ -833,7 +840,9 @@ class PytorchTrainer:
         )  # scale up again to multiples of batch size
 
         if downsampling_enabled:
-            num_samples_per_epoch = max((self._downsampler.downsampling_ratio * num_samples_per_epoch) // 100, 1)
+            num_samples_per_epoch = max(
+                (self._downsampler.downsampling_ratio * num_samples_per_epoch) // self._downsampling_ratio_max, 1
+            )
 
         self._expected_num_batches = (num_samples_per_epoch // self._batch_size) * self.epochs_per_trigger
         self._expected_num_epochs = self.epochs_per_trigger
@@ -858,16 +867,16 @@ class PytorchTrainer:
     def _iterate_dataloader_and_compute_scores(
         self,
         dataloader: torch.utils.data.DataLoader,
-        previous_batch_number: int = 0,
+        previous_batch_number: int = -1,
         previous_number_of_samples: int = 0,
     ) -> Tuple[int, int]:
         """
         Function to iterate a dataloader, compute the forward pass and send the forward output to the downsampler.
         Args:
             dataloader: torch.dataloader to get the data
-            previous_batch_number: number of batches processed before calling this function. Useful when this function
-            is called several times to keep track of previous invocations (ex label by label dataloader). We need to
-            have a total to correctly update the queue and show the progress in the supervisor counter.
+            previous_batch_number: The batch number returned from the last call to this method. Useful when this
+            function is called several times to keep track of previous invocations (ex label by label dataloader). We
+            need to have a total to correctly update the queue and show the progress in the supervisor counter.
             previous_number_of_samples: number of samples processed before calling this function. See above for the use.
 
         Returns:
@@ -875,9 +884,9 @@ class PytorchTrainer:
         """
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
-        for batch_number, batch in enumerate(dataloader):
+        for batch in dataloader:
             self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=False)
-
+            batch_number += 1
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 

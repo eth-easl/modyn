@@ -19,6 +19,7 @@ def get_sampler_config(dummy_system_config: ModynConfig, balance=False):
         "sample_then_batch": False,
         "args": {},
         "balance": balance,
+        "ratio_max": 100,
     }
     return (
         0,
