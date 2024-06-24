@@ -35,7 +35,8 @@ class YearbookNetModel(CoresetSupportingModule):
             nn.Conv2d(in_channels, out_channels, 3, padding=1), nn.BatchNorm2d(out_channels), nn.ReLU(), nn.MaxPool2d(2)
         )
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]]) -> torch.Tensor:
+    # pylint: disable-next=unused-argument
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         data = self.enc(data)
         data = torch.mean(data, dim=(2, 3))
         data = self.embedding_recorder(data)

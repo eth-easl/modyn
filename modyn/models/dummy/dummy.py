@@ -16,5 +16,6 @@ class DummyModyn(nn.Module):
         super().__init__()
         self.output = nn.Linear(2, 2)
 
+    # pylint: disable-next=unused-argument
     def forward(self, x: Tensor, sample_ids: Optional[list[int]] = None) -> Tensor:
         return self.output(x)

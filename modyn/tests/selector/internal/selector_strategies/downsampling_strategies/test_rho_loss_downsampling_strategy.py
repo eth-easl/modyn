@@ -144,6 +144,7 @@ def test__prepare_holdout_set(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
     trigger_id2dataset_size = [13, 24, 5]
@@ -226,6 +227,7 @@ def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
 
     with patch.object(RHOLossDownsamplingStrategy, "_create_rho_pipeline_id") as mock_create_rho_pipeline_id:
@@ -244,6 +246,7 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
@@ -291,6 +294,7 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 
@@ -335,6 +339,7 @@ def test__train_il_model(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 
@@ -377,6 +382,7 @@ def test_inform_next_trigger(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 

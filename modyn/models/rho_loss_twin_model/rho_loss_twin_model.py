@@ -1,19 +1,18 @@
 from typing import Any, Optional
 
-from torch import nn
 import torch
-
 from modyn.utils import dynamic_module_import
+from torch import nn
 
 
-class RHOLOSSModel:
+class RHOLOSSTwinModel:
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
-        self.model = RHOLOSSModelModyn(model_configuration, device, amp)
+        self.model = RHOLOSSTwinModelModyn(model_configuration, device, amp)
         self.model.to(device)
 
 
-class RHOLOSSModelModyn(nn.Module):
+class RHOLOSSTwinModelModyn(nn.Module):
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
@@ -33,43 +32,41 @@ class RHOLOSSModelModyn(nn.Module):
             "model1_seen_ids": self.model1_seen_ids,
         }
 
-    def set_extra_state(self, state: dict):
+    def set_extra_state(self, state: dict) -> None:
         self.model0_seen_ids = state["model0_seen_ids"]
         self.model1_seen_ids = state["model1_seen_ids"]
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None):
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
         if self.training:
-            return self._training_forward(sample_ids, data)
+            output_tensor = self._training_forward(sample_ids, data)
         else:
-            return self._eval_forward(sample_ids, data)
+            output_tensor = self._eval_forward(sample_ids, data)
+        return output_tensor
 
-    def _training_forward(self, sample_ids: list[int], data: torch.Tensor):
+    def _training_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
         is_seen_by_model0 = any(sample_id in self.model0_seen_ids for sample_id in sample_ids)
         is_seen_by_model1 = any(sample_id in self.model1_seen_ids for sample_id in sample_ids)
         if is_seen_by_model0 and is_seen_by_model1:
             raise ValueError("Sample ID is seen by both models; This shouldn't happen with IL model.")
 
-        if is_seen_by_model0:
-            return self.model0(data)
-        elif is_seen_by_model1:
-            return self.model1(data)
-        else:
-            train_by_model0 = len(self.model0_seen_ids) <= len(self.model1_seen_ids)
-            if train_by_model0:
-                self.model0_seen_ids.update(sample_ids)
+        if is_seen_by_model0 or not is_seen_by_model1:
+            if is_seen_by_model0:
                 return self.model0(data)
-            else:
-                self.model1_seen_ids.update(sample_ids)
-                return self.model1(data)
-
-    def _eval_forward(self, sample_ids: list[int], data: torch.Tensor):
-        is_seen_by_model0 = any(sample_id in self.model0_seen_ids for sample_id in sample_ids)
-        is_seen_by_model1 = any(sample_id in self.model1_seen_ids for sample_id in sample_ids)
-
-        if is_seen_by_model0:
             return self.model1(data)
-        elif is_seen_by_model1:
+
+        train_by_model0 = len(self.model0_seen_ids) <= len(self.model1_seen_ids)
+        if train_by_model0:
+            self.model0_seen_ids.update(sample_ids)
             return self.model0(data)
-        else:
+
+        self.model1_seen_ids.update(sample_ids)
+        return self.model1(data)
+
+    def _eval_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
+        is_seen_by_model1 = any(sample_id in self.model1_seen_ids for sample_id in sample_ids)
+        if is_seen_by_model1:
             return self.model0(data)
+
+        # when a sample is not seen by any model, we default to model0
+        return self.model0(data)

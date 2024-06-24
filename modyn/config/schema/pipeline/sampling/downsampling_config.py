@@ -143,12 +143,25 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
+    holdout_set_strategy: Literal["Simple", "Twin"] = Field(
+        description="Simple: holdout set is a subset randomly sampled from the training set based on the"
+        "holdout_set_ratio. The holdout set is used to train the il model and the original training set is"
+        "used to train the main model. Twin: training set is split into two halves. Each half is used to "
+        "train a separate il model. Each il model provides the irreducible loss for the samples that the"
+        "model is not trained on. The original training set is used to train the main model."
+    )
     holdout_set_ratio: int = Field(
-        description=("How much of the training set is used as the holdout set."),
+        description="How much of the training set is used as the holdout set.",
         min=0,
         max=100,
     )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
+
+    @model_validator(mode="after")
+    def validate_holdout_set_ratio(self) -> Self:
+        if self.holdout_set_strategy == "Twin" and self.holdout_set_ratio != 50:
+            raise ValueError("holdout_set_ratio should be 100 for the Twin strategy.")
+        return self
 
 
 class RS2DownsamplingConfig(BaseDownsamplingConfig):
