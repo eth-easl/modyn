@@ -76,6 +76,8 @@ if [ "$IS_MAC" != true ]; then
         sed -i "/nvidia::cuda-nvcc/c\  - nvidia::cuda-nvcc=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
         sed -i "/nvidia::cuda-nvtx/c\  - nvidia::cuda-nvtx=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
         sed -i "/nvidia::cuda-cupti/c\  - nvidia::cuda-cupti=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
+        sed -i "/nvidia::cuda-cudart-dev/c\  - nvidia::cuda-cudart-dev=$CUDA_VERSION.*" $PARENT_DIR/environment.yml
+        sed -i "/nvidia::cuda-profiler-api=/c\  - nvidia::cuda-profiler-api==$CUDA_VERSION.*" $PARENT_DIR/environment.yml
 
         # Fix $PARENT_DIR/docker-compose.yml
         startLine="$(grep -n "CUDASTART" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
