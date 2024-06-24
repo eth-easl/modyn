@@ -9,7 +9,11 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 
-MatrixContent = Enum("MatrixContent", ["EMBEDDINGS", "GRADIENTS"])
+
+class MatrixContent(Enum):
+    EMBEDDINGS = 1
+    LAST_LAYER_GRADIENTS = 2
+    LAST_TWO_LAYERS_GRADIENTS = 3
 
 
 class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
@@ -63,10 +67,15 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
         assert self.matrix_content is not None
-        if self.matrix_content == MatrixContent.GRADIENTS:
+        if self.matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
             new_elements = (
                 self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target).detach().cpu()
             )
+        elif self.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS:
+            assert embedding is not None
+            new_elements = self._compute_last_two_layers_gradient_wrt_loss_sum(
+                self.criterion, forward_output, target, embedding
+            ).detach().cpu()
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
             assert embedding is not None
             new_elements = embedding.detach().cpu()
@@ -113,4 +122,4 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     @property
     def requires_grad(self) -> bool:
         # Default to true if None
-        return self.matrix_content == MatrixContent.GRADIENTS
+        return self.matrix_content in [MatrixContent.LAST_LAYER_GRADIENTS, MatrixContent.LAST_TWO_LAYERS_GRADIENTS]

@@ -4,6 +4,8 @@ from typing import Any, Optional, Union
 import torch
 
 
+FULL_GRAD_APPROXIMATION = ["LastLayer", "LastLayerWithEmbedding"]
+
 def get_tensors_subset(
     selected_indexes: list[int], data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
 ) -> tuple[Union[torch.Tensor, dict], torch.Tensor]:
@@ -126,3 +128,25 @@ class AbstractRemoteDownsamplingStrategy(ABC):
             sample_losses = per_sample_loss_fct(forward_output, target)
             last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
         return last_layer_gradients
+
+    @staticmethod
+    def _compute_last_two_layers_gradient_wrt_loss_sum(
+        per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute the gradient of the last two layers with respect to the sum of the loss.
+        Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
+        divided by the number of samples in the batch.
+        """
+        loss = per_sample_loss_fct(forward_output, target).sum()
+        embedding_dim = embedding.shape[1]
+        num_classes = forward_output.shape[1]
+        batch_num = target.shape[0]
+
+        with torch.no_grad():
+            bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
+            weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
+                1, num_classes, 1
+            ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
+            gradients = torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy()
+        return gradients

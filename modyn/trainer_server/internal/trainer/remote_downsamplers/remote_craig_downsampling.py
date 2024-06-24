@@ -6,6 +6,8 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import \
+    FULL_GRAD_APPROXIMATION
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
@@ -44,6 +46,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         self.selection_batch = params_from_selector["selection_batch"]
         self.greedy = params_from_selector["greedy"]
         self.full_grad_approximation = params_from_selector["full_grad_approximation"]
+        assert self.full_grad_approximation in FULL_GRAD_APPROXIMATION
 
         if self.greedy not in OPTIMIZER_CHOICES:
             raise ValueError(
@@ -99,10 +102,15 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
     def _inform_samples_single_class(
         self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
     ) -> None:
+        if self.full_grad_approximation == "LastLayerWithEmbedding":
+            assert embedding is not None
+            grads_wrt_loss_sum = self._compute_last_two_layers_gradient_wrt_loss_sum(
+                self.criterion, forward_output, target, embedding
+            )
+        else:
+            grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
         batch_num = target.shape[0]
-        grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
         grads_wrt_loss_mean = grads_wrt_loss_sum / batch_num
-
         self.current_class_gradients.append(grads_wrt_loss_mean.cpu().numpy())
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
