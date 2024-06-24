@@ -3,8 +3,8 @@ from typing import Any, Optional, Union
 
 import torch
 
-
 FULL_GRAD_APPROXIMATION = ["LastLayer", "LastLayerWithEmbedding"]
+
 
 def get_tensors_subset(
     selected_indexes: list[int], data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
@@ -148,5 +148,5 @@ class AbstractRemoteDownsamplingStrategy(ABC):
             weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
                 1, num_classes, 1
             ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
-            gradients = torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy()
+            gradients = torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1)
         return gradients

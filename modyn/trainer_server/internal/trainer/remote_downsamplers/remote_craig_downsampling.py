@@ -6,8 +6,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
-from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import \
-    FULL_GRAD_APPROXIMATION
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    FULL_GRAD_APPROXIMATION,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
@@ -96,11 +97,15 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             for current_target in different_targets_in_this_batch:
                 mask = target == current_target
                 this_target_sample_ids = [sample_ids[i] for i, keep in enumerate(mask) if keep]
-                self._inform_samples_single_class(this_target_sample_ids, forward_output[mask], target[mask])
+                self._inform_samples_single_class(this_target_sample_ids, forward_output[mask], target[mask], embedding)
                 self.inform_end_of_current_label()
 
     def _inform_samples_single_class(
-        self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor],
     ) -> None:
         if self.full_grad_approximation == "LastLayerWithEmbedding":
             assert embedding is not None

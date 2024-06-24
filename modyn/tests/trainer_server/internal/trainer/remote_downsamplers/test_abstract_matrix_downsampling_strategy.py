@@ -28,7 +28,7 @@ def get_sampler_config(dummy_system_config: ModynConfig, balance=False):
         dummy_system_config.model_dump(by_alias=True),
         per_sample_loss_fct,
         "cpu",
-        MatrixContent.GRADIENTS,
+        MatrixContent.LAST_TWO_LAYERS_GRADIENTS,
     )
 
 
@@ -126,7 +126,7 @@ def test_collect_gradients(dummy_system_config: ModynConfig):
 
         # expected shape = (a,b)
         # a = 7 (4 samples in the first batch and 3 samples in the second batch)
-        # b = 2, output dimension
-        assert np.concatenate(amds.matrix_elements).shape == (7, 2)
+        # b = 5 * 2 + 2 where 5 is the input dimension of the last layer and 2 is the output one
+        assert np.concatenate(amds.matrix_elements).shape == (7, 12)
 
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]

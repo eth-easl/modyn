@@ -73,9 +73,11 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
             )
         elif self.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS:
             assert embedding is not None
-            new_elements = self._compute_last_two_layers_gradient_wrt_loss_sum(
-                self.criterion, forward_output, target, embedding
-            ).detach().cpu()
+            new_elements = (
+                self._compute_last_two_layers_gradient_wrt_loss_sum(self.criterion, forward_output, target, embedding)
+                .detach()
+                .cpu()
+            )
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
             assert embedding is not None
             new_elements = embedding.detach().cpu()
