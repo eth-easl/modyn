@@ -1,5 +1,4 @@
 import os
-from experiments.huffpost.compare_trigger_policies.run import construct_pipelines
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
