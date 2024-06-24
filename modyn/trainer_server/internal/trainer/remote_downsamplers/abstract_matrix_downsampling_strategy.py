@@ -43,8 +43,10 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         # enum defined above to specify what should be stored
         self.matrix_content = matrix_content
 
-        # This class uses the embedding recorder
-        self.requires_coreset_supporting_module = self.matrix_content == MatrixContent.EMBEDDINGS
+        self.requires_coreset_supporting_module = self.matrix_content in [
+            MatrixContent.LAST_TWO_LAYERS_GRADIENTS,
+            MatrixContent.EMBEDDINGS,
+        ]
 
         # if true, the downsampling is balanced across classes ex class sizes = [10, 50, 30] and 50% downsampling
         # yields the following downsampled class sizes [5, 25, 15] while without balance something like [0, 45, 0] can
@@ -66,18 +68,24 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
+        batch_size = len(sample_ids)
         assert self.matrix_content is not None
         if self.matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
-            new_elements = (
+            grads_wrt_loss_sum = (
                 self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target).detach().cpu()
             )
+            grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size
+            new_elements = grads_wrt_loss_mean
         elif self.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS:
             assert embedding is not None
-            new_elements = (
-                self._compute_last_two_layers_gradient_wrt_loss_sum(self.criterion, forward_output, target, embedding)
-                .detach()
-                .cpu()
+            # using the gradients w.r.t. the sum of the loss or the mean of the loss does not make a difference
+            # since the scaling factor is the same for all samples. We use mean here to pass the unit test
+            # containing the hard-coded values from deepcore
+            grads_wrt_loss_sum = self._compute_last_two_layers_gradient_wrt_loss_sum(
+                self.criterion, forward_output, target, embedding
             )
+            grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size
+            new_elements = grads_wrt_loss_mean.detach().cpu()
         elif self.matrix_content == MatrixContent.EMBEDDINGS:
             assert embedding is not None
             new_elements = embedding.detach().cpu()

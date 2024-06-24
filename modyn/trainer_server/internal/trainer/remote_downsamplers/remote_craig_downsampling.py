@@ -54,7 +54,6 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
                 f"The required Greedy optimizer is not available. Pick one of the following: {OPTIMIZER_CHOICES}"
             )
 
-        # This class does not use the embedding recorder
         self.requires_coreset_supporting_module = self.full_grad_approximation == "LastLayerWithEmbedding"
         self.requires_data_label_by_label = True
 
@@ -97,7 +96,9 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             for current_target in different_targets_in_this_batch:
                 mask = target == current_target
                 this_target_sample_ids = [sample_ids[i] for i, keep in enumerate(mask) if keep]
-                self._inform_samples_single_class(this_target_sample_ids, forward_output[mask], target[mask], embedding)
+                self._inform_samples_single_class(
+                    this_target_sample_ids, forward_output[mask], target[mask], embedding[mask]
+                )
                 self.inform_end_of_current_label()
 
     def _inform_samples_single_class(

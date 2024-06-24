@@ -39,7 +39,7 @@ def test_init(dummy_system_config: ModynConfig):
 
     assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements
-    assert amds.matrix_content == MatrixContent.GRADIENTS
+    assert amds.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
