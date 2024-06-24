@@ -98,7 +98,7 @@ def dummy_logs(dummy_pipeline_args: PipelineExecutionParams) -> PipelineLogs:
 
 @pytest.fixture
 def dummy_stage_log() -> StageLog:
-    return StageLog(id="dummy", start=0, sample_idx=1, sample_time=1000, trigger_idx=0)
+    return StageLog(id="dummy", id_seq_num=-1, start=0, sample_idx=1, sample_time=1000, trigger_idx=0)
 
 
 @overload

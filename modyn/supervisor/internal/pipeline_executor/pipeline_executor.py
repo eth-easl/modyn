@@ -136,9 +136,12 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 logger.info(f"[pipeline {state.pipeline_id}] Entering <{stage}>.")
 
             # execute stage
+            stage_seq_num = state.stage_id_seq_counters.get(stage.name, 0)
+            state.stage_id_seq_counters[stage.name] = stage_seq_num + 1
             epoch_micros_start = current_time_micros()
             stage_log = StageLog(
                 id=stage.name,
+                id_seq_num=stage_seq_num,
                 start=datetime.now(),
                 batch_idx=state.current_batch_index,
                 sample_idx=state.current_sample_index,
