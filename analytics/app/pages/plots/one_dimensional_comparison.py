@@ -1,7 +1,8 @@
-import dataclasses
+from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import OPTIONAL_EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -9,18 +10,20 @@ from plotly import graph_objects as go
 from typing_extensions import get_args
 
 
-@dataclasses.dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+@dataclass
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_all: pd.DataFrame
+    df_eval_single: pd.DataFrame
+
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -28,14 +31,14 @@ _shared_data = _SharedData()
 
 
 def gen_fig_1d_cost(page: str) -> go.Figure:
-    df_logs = _shared_data.df_logs[page]
     return px.box(
-        df_logs,
+        _shared_data[page].df_all,
         x="pipeline_ref",
         y="duration",
         color="id",
         labels={"pipeline_ref": "Pipeline", "duration": "duration in seconds", "id": "Pipeline Stage"},
         title="Stage costs",
+        height=900,
     )
 
 
@@ -47,22 +50,28 @@ def gen_figs_1d_eval(
     agg_func_eval_metric: OPTIONAL_EVAL_AGGREGATION_FUNCTION,
     only_active_periods: bool = True,
 ) -> go.Figure:
-    df_logs = _shared_data.df_logs[page]
-    df_logs_eval_single = _shared_data.df_logs_eval_single[page]
+    composite_model_variant = _shared_data[page].composite_model_variant
+
+    df_logs = _shared_data[page].df_all
+    df_logs_eval_single = _shared_data[page].df_eval_single
     df_logs_eval_single = df_logs_eval_single[
         (df_logs_eval_single["dataset_id"] == dataset_id) & (df_logs_eval_single["eval_handler"] == eval_handler)
     ]
 
     if multi_pipeline_mode or only_active_periods:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
 
     if not multi_pipeline_mode:
         assert df_logs_eval_single["pipeline_ref"].nunique() == 1
 
+        digits = len(str(df_logs_eval_single["id_model"].max()))
+        # fill with leading spaces to have a consistent sorting
+        df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str).str.zfill(digits)
+
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single[composite_model_variant]]
         pipeline_composite_model["id_model"] = "0-pipeline-composite-model"
         df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str)
         df_logs_eval_single = pd.concat([df_logs_eval_single, pipeline_composite_model])
@@ -110,13 +119,24 @@ def gen_figs_1d_eval(
 
 
 def section4_1d_boxplots(
-    page: str, multi_pipeline_mode: bool, df_logs: pd.DataFrame, df_logs_eval_single: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_all: pd.DataFrame,
+    df_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    assert "pipeline_ref" in df_logs.columns.tolist()
-    assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
+    assert "pipeline_ref" in list(df_all.columns)
+    assert "pipeline_ref" in list(df_eval_single.columns)
 
-    _shared_data.df_logs[page] = df_logs
-    _shared_data.df_logs_eval_single[page] = df_logs_eval_single
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_all=df_all,
+            df_eval_single=df_eval_single,
+        )
+    _shared_data[page].composite_model_variant = composite_model_variant
+    _shared_data[page].df_all = df_all
+    _shared_data[page].df_eval_single = df_eval_single
 
     @callback(
         Output(f"{page}-1d-box-plot-metrics", "figure"),
@@ -132,13 +152,18 @@ def section4_1d_boxplots(
         only_active_periods: bool = True,
     ) -> go.Figure:
         return gen_figs_1d_eval(
-            page, multi_pipeline_mode, eval_handler_ref, dataset_id, agg_func_eval_metric, only_active_periods
+            page,
+            multi_pipeline_mode,
+            eval_handler_ref,
+            dataset_id,
+            agg_func_eval_metric,
+            only_active_periods,
         )
 
     # DATA (bring all metrics into columns of one dataframe)
 
-    eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
+    eval_handler_refs = list(df_eval_single["eval_handler"].unique())
+    eval_datasets = list(df_eval_single["dataset_id"].unique())
 
     return html.Div(
         [

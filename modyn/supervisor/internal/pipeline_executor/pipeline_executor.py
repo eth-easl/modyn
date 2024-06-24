@@ -114,8 +114,10 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 if track and stage_log.info:
                     # ensure df exists
                     old_df = state.tracking.get(stage_log.id, None)
-                    if (new_rows := stage_log.df(extended=True)) is not None:
-                        state.tracking[stage_log.id] = pd.concat([old_df, new_rows]) if old_df is not None else new_rows
+                    columns = old_df.columns if old_df is not None else stage_log.df_columns(extended=True)
+                    if (new_row := stage_log.df_row(extended=True)) is not None:
+                        new_df = pd.DataFrame([new_row], columns=columns)
+                        state.tracking[stage_log.id] = pd.concat([old_df, new_df]) if old_df is not None else new_df
 
                 # record logs
                 if log:
