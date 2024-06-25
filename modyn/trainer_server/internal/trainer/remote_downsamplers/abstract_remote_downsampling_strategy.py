@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import torch
+
+FULL_GRAD_APPROXIMATION = ["LastLayer", "LastLayerWithEmbedding"]
 
 
 def get_tensors_subset(
@@ -101,3 +103,51 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     @abstractmethod
     def requires_grad(self) -> bool:
         raise NotImplementedError
+
+    @staticmethod
+    def _compute_last_layer_gradient_wrt_loss_sum(
+        per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute the gradient of the last layer with respect to the sum of the loss.
+        Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
+        divided by the number of samples in the batch.
+        """
+        if isinstance(per_sample_loss_fct, torch.nn.CrossEntropyLoss):
+            # no need to autograd if cross entropy loss is used since closed form solution exists.
+            # Because CrossEntropyLoss includes the softmax, we need to apply the
+            # softmax to the forward output to obtain the probabilities
+            probs = torch.nn.functional.softmax(forward_output, dim=1)
+            num_classes = forward_output.shape[-1]
+
+            # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
+            one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
+                target, num_classes=num_classes
+            )
+            last_layer_gradients = probs - one_hot_targets
+        else:
+            sample_losses = per_sample_loss_fct(forward_output, target)
+            last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
+        return last_layer_gradients
+
+    @staticmethod
+    def _compute_last_two_layers_gradient_wrt_loss_sum(
+        per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Compute the gradient of the last two layers with respect to the sum of the loss.
+        Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
+        divided by the number of samples in the batch.
+        """
+        loss = per_sample_loss_fct(forward_output, target).sum()
+        embedding_dim = embedding.shape[1]
+        num_classes = forward_output.shape[1]
+        batch_num = target.shape[0]
+
+        with torch.no_grad():
+            bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
+            weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
+                1, num_classes, 1
+            ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
+            gradients = torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1)
+        return gradients
