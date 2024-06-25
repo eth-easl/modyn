@@ -72,7 +72,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
         assert self.matrix_content is not None
         if self.matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
             grads_wrt_loss_sum = (
-                self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target).detach().cpu()
+                self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
             )
             grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size
             new_elements = grads_wrt_loss_mean.detach().cpu()

@@ -52,7 +52,12 @@ class BaseDownsamplingConfig(ModynBaseModel):
         return self
 
 
+# These are options to approximate the full gradients used in several selection strategies.
+# LastLayer: The full gradient is approximated by the gradient of the last layer.
+# LastLayerWithEmbedding: The full gradient is approximated by the gradients of the last layer and the embedding layer.
+# They are concatenated and used to represent the full gradient.
 FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
+
 
 
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
