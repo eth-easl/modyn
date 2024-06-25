@@ -57,6 +57,7 @@ message StartTrainingRequest {
   int64 num_samples_to_pass = 23;
   bool shuffle = 24;
   bool enable_accurate_gpu_measurements = 25;
+  int64 record_loss_every = 26;
 }
 
 message StartTrainingResponse {

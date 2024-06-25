@@ -71,6 +71,7 @@ class TrainingInfo:
 
         self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
+        self.record_loss_every = request.record_loss_every
 
         self.storage_address = storage_address
         self.selector_address = selector_address

@@ -89,6 +89,8 @@ def test_prepare_start_training_request(
     # for bool value False is the default value so we don't need to test it
     pipeline_training_config.shuffle = True
     pipeline_training_config.enable_accurate_gpu_measurements = True
+    # for int value 0 is the default value so we don't need to test it
+    pipeline_training_config.record_loss_every = 10
     pipeline_training_config.optimization_criterion.config = {"key": "value"}
     pipeline_training_config.use_previous_model = previous_model_id is not None
 
@@ -136,6 +138,7 @@ def test_prepare_start_training_request(
     assert req.num_samples_to_pass == (num_samples_to_pass if num_samples_to_pass is not None else 0)
     assert req.shuffle
     assert req.enable_accurate_gpu_measurements
+    assert req.record_loss_every == 10
 
 
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
