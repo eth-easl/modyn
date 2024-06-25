@@ -43,9 +43,12 @@ data:
 trigger:
   id: DataDriftTrigger
   detection_interval_data_points: 5000
-  metric: mmd
-  metric_config:
-    bootstrap: False
+  metrics:
+    ev_mmd:
+      id: EvidentlyMmdDriftMetric
+      bootstrap: false
+  aggregation_strategy:
+    id: MajorityVote
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 1000
