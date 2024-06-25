@@ -8,7 +8,6 @@ from torch import nn
 logger = logging.getLogger(__name__)
 
 
-
 class RHOLOSSTwinModel:
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
@@ -26,24 +25,24 @@ class RHOLOSSTwinModelModyn(nn.Module):
         rho_model_config = model_configuration["rho_real_model_config"]
         model_handler = getattr(model_module, rho_model_class)
         # we only need the inner model, not the wrapper
-        self.models = [
-            model_handler(rho_model_config, device, amp).model,
-            model_handler(rho_model_config, device, amp).model
-        ]
-        self.models_seen_ids = [
-            set(),
-            set()
-        ]
-        self.current_model = 0
+        self._models = nn.ModuleList(
+            [
+                model_handler(rho_model_config, device, amp).model,
+                model_handler(rho_model_config, device, amp).model,
+            ]
+        )
+        self._models_seen_ids: list[set[int]] = [set(), set()]
+        self._current_model = 0
 
     def get_extra_state(self) -> Any:
         return {
-            "models_seen_ids": self.models_seen_ids,
+            "models_seen_ids": self._models_seen_ids,
         }
 
     def set_extra_state(self, state: dict) -> None:
-        self.models_seen_ids = state["models_seen_ids"]
-        self.current_model = 1
+        self._models_seen_ids = state["models_seen_ids"]
+        # the second time we train on this model, we should switch to the other model
+        self._current_model = 1
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
@@ -54,13 +53,19 @@ class RHOLOSSTwinModelModyn(nn.Module):
         return output_tensor
 
     def _training_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
-        self.models_seen_ids[self.current_model].update(sample_ids)
-        return self.models[self.current_model](data)
+        self._models_seen_ids[self._current_model].update(sample_ids)
+        return self._models[self._current_model](data)
 
     def _eval_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
-        seen_by_model0 = torch.BoolTensor([sample_id in self.models_seen_ids[0] for sample_id in sample_ids], device=self.device)
-        seen_by_model1 = torch.BoolTensor([sample_id in self.models_seen_ids[1] for sample_id in sample_ids], device=self.device)
+        seen_by_model0 = torch.BoolTensor(
+            [sample_id in self._models_seen_ids[0] for sample_id in sample_ids], device=self.device
+        )
+        seen_by_model1 = torch.BoolTensor(
+            [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], device=self.device
+        )
 
         # assert that a sample is seen by at least one model
         assert (seen_by_model0 | seen_by_model1).all()
-        return torch.where(seen_by_model1, self.models[0](data), self.models[1](data))
+        # when a sample is seen by both models, we route it to model 0
+        # unsqueeze to make seen_by_model1 broadcastable
+        return torch.where(seen_by_model1.unsqueeze(1), self._models[0](data), self._models[1](data))
