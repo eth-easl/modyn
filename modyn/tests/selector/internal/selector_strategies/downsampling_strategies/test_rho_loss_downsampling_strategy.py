@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import List, Optional, Tuple, Literal
+from typing import List, Literal, Optional, Tuple
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
