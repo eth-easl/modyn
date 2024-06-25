@@ -59,7 +59,6 @@ class BaseDownsamplingConfig(ModynBaseModel):
 FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
 
 
-
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 

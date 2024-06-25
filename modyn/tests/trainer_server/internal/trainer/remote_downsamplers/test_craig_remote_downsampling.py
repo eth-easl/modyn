@@ -1,5 +1,6 @@
 # pylint: disable=too-many-locals
 import numpy as np
+import pytest
 import torch
 from modyn.config import ModynConfig
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import (
@@ -10,7 +11,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCrai
 from torch.nn import BCEWithLogitsLoss
 
 
-def get_sampler_config(modyn_config, balance=False):
+def get_sampler_config(modyn_config, balance=False, grad_approx="LastLayerWithEmbedding"):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -20,7 +21,7 @@ def get_sampler_config(modyn_config, balance=False):
         "balance": balance,
         "selection_batch": 64,
         "greedy": "NaiveGreedy",
-        "full_grad_approximation": "LastLayerWithEmbedding",
+        "full_grad_approximation": grad_approx,
         "ratio_max": 100,
     }
     return 0, 0, 0, params_from_selector, modyn_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
@@ -90,8 +91,9 @@ def test_add_to_distance_matrix_large_submatrix(dummy_system_config: ModynConfig
         assert np.array_equal(sampler.distance_matrix, expected_result)
 
 
-def test_inform_end_of_current_label_and_select(dummy_system_config: ModynConfig):
-    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config))
+@pytest.mark.parametrize("grad_approx", ["LastLayerWithEmbedding", "LastLayer"])
+def test_inform_end_of_current_label_and_select(grad_approx: str, dummy_system_config: ModynConfig):
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, grad_approx=grad_approx))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3]
         forward_input = torch.randn(3, 5)  # 3 samples, 5 input features
@@ -130,8 +132,9 @@ def test_inform_end_of_current_label_and_select(dummy_system_config: ModynConfig
         assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
 
 
-def test_inform_end_of_current_label_and_select_balanced(dummy_system_config: ModynConfig):
-    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, True))
+@pytest.mark.parametrize("grad_approx", ["LastLayerWithEmbedding", "LastLayer"])
+def test_inform_end_of_current_label_and_select_balanced(grad_approx: str, dummy_system_config: ModynConfig):
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, True, grad_approx=grad_approx))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3, 4]
         forward_input = torch.randn(4, 5)
@@ -175,8 +178,9 @@ def test_inform_end_of_current_label_and_select_balanced(dummy_system_config: Mo
         assert sum(id in [10, 11, 12, 13, 14, 15] for id in selected_points) == 3
 
 
-def test_bts(dummy_system_config: ModynConfig):
-    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config))
+@pytest.mark.parametrize("grad_approx", ["LastLayerWithEmbedding", "LastLayer"])
+def test_bts(grad_approx: str, dummy_system_config: ModynConfig):
+    sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, grad_approx=grad_approx))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3, 10, 11, 12, 13]
         forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
@@ -201,7 +205,8 @@ def test_bts(dummy_system_config: ModynConfig):
         assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
 
 
-def test_bts_equals_stb(dummy_system_config: ModynConfig):
+@pytest.mark.parametrize("grad_approx", ["LastLayerWithEmbedding", "LastLayer"])
+def test_bts_equals_stb(grad_approx: str, dummy_system_config: ModynConfig):
     # data
     sample_ids = [1, 2, 3, 10, 11, 12, 13]
     forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
@@ -211,7 +216,7 @@ def test_bts_equals_stb(dummy_system_config: ModynConfig):
     embedding = torch.randn(7, 10)  # 7 samples, embedding dimension 10
 
     # BTS, all in one call
-    bts_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config))
+    bts_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, grad_approx=grad_approx))
     with torch.inference_mode(mode=(not bts_sampler.requires_grad)):
         bts_sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
 
@@ -220,7 +225,7 @@ def test_bts_equals_stb(dummy_system_config: ModynConfig):
         # STB, first class 0 and then class 1
         class0 = target == 0
         class1 = target == 1
-        stb_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config))
+        stb_sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config, grad_approx=grad_approx))
         stb_sampler.inform_samples(
             [sample_ids[i] for i, keep in enumerate(class0) if keep],
             forward_input[class0],

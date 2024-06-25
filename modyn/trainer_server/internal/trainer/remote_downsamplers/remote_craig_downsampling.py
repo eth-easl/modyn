@@ -118,7 +118,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
         batch_num = target.shape[0]
         grads_wrt_loss_mean = grads_wrt_loss_sum / batch_num
-        self.current_class_gradients.append(grads_wrt_loss_mean.cpu().numpy())
+        self.current_class_gradients.append(grads_wrt_loss_mean.detach().cpu().numpy())
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 

@@ -1,8 +1,8 @@
 # pylint: disable=abstract-class-instantiated,unused-argument
 from unittest.mock import patch
 
-import pytest
 import numpy as np
+import pytest
 import torch
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
@@ -12,7 +12,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_d
 
 
 def get_sampler_config(
-        dummy_system_config: ModynConfig, balance=False, matrix_content=MatrixContent.LAST_TWO_LAYERS_GRADIENTS
+    dummy_system_config: ModynConfig, balance=False, matrix_content=MatrixContent.LAST_TWO_LAYERS_GRADIENTS
 ):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
