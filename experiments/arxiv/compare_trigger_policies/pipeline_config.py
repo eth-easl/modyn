@@ -92,7 +92,7 @@ def gen_pipeline_config(
                         ),
                     ],
                 )
-                for yb_dataset_name in ["arxiv_kaggle", "arxiv_kaggle_test"]
+                for yb_dataset_name in ["arxiv_kaggle_train", "arxiv_kaggle_test"]
             ],
         ),
     )

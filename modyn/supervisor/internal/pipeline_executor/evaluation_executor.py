@@ -333,7 +333,7 @@ class EvaluationExecutor:
 # ------------------------------------------------------------------------------------ #
 
 if __name__ == "__main__":
-    snapshot_path = Path(input("Enter eval snapshot path to (re)run evaluation executor: "))
+    snapshot_path = Path(input("Enter pipeline log directory path to (re)run evaluation executor: "))
     if not snapshot_path.exists():
         print("Path not found")
         sys.exit(1)

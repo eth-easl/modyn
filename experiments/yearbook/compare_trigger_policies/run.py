@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import os
-from typing import Literal
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
@@ -22,21 +21,21 @@ class Experiment:
     drift_triggers: list[tuple[int, float]]  # interval, threshold
 
 
-_first_timestamp = 0
-_last_timestamp = SECONDS_PER_UNIT["d"] * (2013 - 1930)
+_FIRST_TIMESTAMP = 0
+_LAST_TIMESTAMP = SECONDS_PER_UNIT["d"] * (2014 - 1930)  # 2014: dummy
+
 
 def construct_slicing_eval_handler() -> EvalHandlerConfig:
     return EvalHandlerConfig(
-            name="slice-matrix",
-            execution_time="after_pipeline",
-            models="matrix",
-            strategy=SlicingEvalStrategyConfig(
-                eval_every="1d",
-                eval_start_from=_first_timestamp,
-                eval_end_at=_last_timestamp
-            ),
-            datasets=["yearbook_test"],
-        )
+        name="slice-matrix",
+        execution_time="after_pipeline",
+        models="matrix",
+        strategy=SlicingEvalStrategyConfig(
+            eval_every="1d", eval_start_from=_FIRST_TIMESTAMP, eval_end_at=_LAST_TIMESTAMP
+        ),
+        datasets=["yearbook_test"],
+    )
+
 
 def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[EvalHandlerConfig]:
     """
@@ -51,22 +50,24 @@ def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[E
             strategy=PeriodicEvalStrategyConfig(
                 every="1d",  # every year
                 interval=f"[-{fake_interval}; +{fake_interval}]",
-                start_timestamp=_first_timestamp,
-                end_timestamp=_last_timestamp,
+                start_timestamp=_FIRST_TIMESTAMP,
+                end_timestamp=_LAST_TIMESTAMP,
             ),
             datasets=["yearbook_test"],
         )
-        for (interval, fake_interval) in []
+        for (interval, fake_interval) in intervals
     ]
+
 
 def construct_between_trigger_eval_handler() -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="full",
         execution_time="manual",
-        models="most_recent",
+        models="active",
         strategy=BetweenTwoTriggersEvalStrategyConfig(),
-        datasets=["yearbook", "yearbook_test"],
+        datasets=["yearbook"],  # train and test
     )
+
 
 def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
     pipeline_configs: list[ModynPipelineConfig] = []
@@ -76,7 +77,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{years}y",
-                trigger=TimeTriggerConfig(every=f"{years}d", start_timestamp=_first_timestamp),  # faked timestamps
+                trigger=TimeTriggerConfig(every=f"{years}d", start_timestamp=_FIRST_TIMESTAMP),  # faked timestamps
                 eval_handlers=experiment.eval_handlers,
             )
         )
@@ -107,26 +108,28 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
 
     return pipeline_configs
 
+
 _EXPERIMENT_REFS = {
     0: Experiment(
-        # to verify online composite modle determination logic
+        # to verify online composite model determination logic
         name="timetrigger-smoke-test",
-        eval_handlers=[],
-        time_trigger_schedules=[],
+        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        time_trigger_schedules=[1, 2, 5],
         data_amount_triggers=[],
-        drift_triggers=[]
-
+        drift_triggers=[],
     ),
     1: Experiment(
-        name="training-time-vs-numsamples"
+        name="training-time-vs-numsamples",
         eval_handlers=[],
         time_trigger_schedules=[],
         data_amount_triggers=[],
-        drift_triggers=[]
+        drift_triggers=[],
     ),
     2: Experiment(
         name="full-todo",
-        eval_handlers=[],
+        eval_handlers=[
+            construct_periodic_eval_handlers([("~1y", "300d"), ("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")])
+        ],
         time_trigger_schedules=[1, 2, 3, 5, 15, 25, 40],
         data_amount_triggers=[100, 500, 1000, 2000, 10_000],
         drift_triggers=[
@@ -138,9 +141,10 @@ _EXPERIMENT_REFS = {
             (1_000, 0.9),
             (5_000, 0.7),
             (10_000, 0.7),
-        ]
-    )
+        ],
+    ),
 }
+
 
 def run_experiment() -> None:
     host = os.getenv("MODYN_SUPERVISOR_HOST")
@@ -151,11 +155,11 @@ def run_experiment() -> None:
     if not port:
         port = int(input("Enter the supervisors port: ")) or 50063
 
-    # eval_handlers = construct_periodic_eval_handlers([("~1y", "300d"), ("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")])
+    experiment_id = int(input("Enter the id of the experiment you want to run: "))
 
     run_multiple_pipelines(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
-        pipeline_configs=construct_pipelines(),
+        pipeline_configs=construct_pipelines(_EXPERIMENT_REFS[experiment_id]),
         start_replay_at=0,
         stop_replay_at=None,
         maximum_triggers=None,

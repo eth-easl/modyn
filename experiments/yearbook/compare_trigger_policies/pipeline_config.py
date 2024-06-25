@@ -52,7 +52,7 @@ def gen_pipeline_config(
             maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
-            dataset_id="yearbook",
+            dataset_id="yearbook_train",
             transformations=[],
             bytes_parser_function=(
                 "import warnings\n"
@@ -68,8 +68,8 @@ def gen_pipeline_config(
             handlers=eval_handlers,
             device="cuda:0",
             result_writers=["json"],
-            after_pipeline_evaluation_workers=30,
-            after_training_evaluation_workers=30,
+            after_pipeline_evaluation_workers=20,
+            after_training_evaluation_workers=20,
             datasets=[
                 EvalDataConfig(
                     dataset_id=yb_dataset_name,

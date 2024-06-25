@@ -14,6 +14,7 @@ storage:
   file_watcher_watchdog_sleep_time_s: 5
   datasets:
     [
+      # ------------------------------------ MNIST ----------------------------------- #
       {
         name: "mnist",
         description: "MNIST Dataset",
@@ -30,6 +31,7 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 128,
       },
+      # ----------------------------------- CRITEO ----------------------------------- #
       {
         name: "criteo",
         description: "Criteo Dataset",
@@ -48,8 +50,9 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 2000000,
       },
+      # ---------------------------------- YEARBOOK ---------------------------------- #
       {
-        name: "yearbook",
+        name: "yearbook-train",
         description: "Yearbook Dataset from Wild-Time (training set)",
         version: "0.0.1",
         base_path: "/datasets/yearbook/train",
@@ -67,7 +70,7 @@ storage:
         selector_batch_size: 256,
       },
       {
-        name: "yearbook-test",
+        name: "yearbook_test",
         description: "Yearbook Dataset from Wild-Time (test set)",
         version: "0.0.1",
         base_path: "/datasets/yearbook/test",
@@ -84,6 +87,7 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 256,
       },
+      # ------------------------------------ FMOW ------------------------------------ #
       {
         name: "fmow",
         description: "Functional Map of the World Dataset (from WILDS/Wild-time)",
@@ -100,8 +104,9 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 1024,
       },
+      # ---------------------------------- HUFFPOST ---------------------------------- #
       {
-        name: "huffpost",
+        name: "huffpost_train",
         description: "Huffpost Dataset (from Wild-time)",
         version: "0.0.1",
         base_path: "/datasets/huffpost",
@@ -117,8 +122,9 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 4096,
       },
+      # ------------------------------------ ARXIV ----------------------------------- #
       {
-        name: "arxiv",
+        name: "arxiv_train",
         description: "Arxiv Dataset from Wild-time (training set)",
         version: "0.0.1",
         base_path: "/datasets/arxiv/train",
@@ -135,7 +141,7 @@ storage:
         selector_batch_size: 4096,
       },
       {
-        name: "arxiv-test",
+        name: "arxiv_test",
         description: "Arxiv Dataset from Wild-time (test set)",
         version: "0.0.1",
         base_path: "/datasets/arxiv/test",
@@ -151,6 +157,7 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 4096,
       },
+      # ------------------------------------ CLOC ------------------------------------ #
       {
         name: "cloc",
         description: "CLOC Dataset",

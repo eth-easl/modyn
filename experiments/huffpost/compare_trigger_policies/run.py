@@ -1,5 +1,6 @@
-import datetime
 import os
+
+import pandas as pd
 
 from experiments.huffpost.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
@@ -9,42 +10,30 @@ from modyn.config.schema.pipeline import (
     ModynPipelineConfig,
     TimeTriggerConfig,
 )
-from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
 def construct_pipelines() -> list[ModynPipelineConfig]:
     pipeline_configs: list[ModynPipelineConfig] = []
-    first_timestamp = datetime.datetime(2012, 1, 28).timestamp()
-    last_timestamp = datetime.datetime(2022, 9, 24).timestamp()
+    first_timestamp = pd.to_datetime("2012-01-28").timestamp()
+    last_timestamp = pd.to_datetime("2022-09-24").timestamp()
 
     eval_handlers = [
         EvalHandlerConfig(
-            name=f"scheduled-{interval}",
+            name="slice-matrix",
             execution_time="after_pipeline",
             models="matrix",
-            strategy=PeriodicEvalStrategyConfig(
-                every="183d",
-                interval=f"[-{interval}; +{interval}]",
-                start_timestamp=first_timestamp,
-                end_timestamp=last_timestamp,
+            strategy=SlicingEvalStrategyConfig(
+                eval_every="1y", eval_start_from=first_timestamp, eval_end_at=last_timestamp
             ),
             datasets=["huffpost_kaggle_test"],
         )
-        for interval in ["183d", "1y", "2y"]
-    ] + [
-        EvalHandlerConfig(
-            name="full",
-            execution_time="after_pipeline",
-            models="active",
-            strategy=BetweenTwoTriggersEvalStrategyConfig(),
-            datasets=["huffpost_kaggle", "huffpost_kaggle_test"],
-        ),
+        # for interval in ["1y"] # ["183d", "1y", "2y"]
     ]
 
     # time based triggers: every: 4y, 3y, 2y, 1y, 183d
-    for years in ["4y", "3y", "2y", "1y", "183d"]:
+    for years in ["1y"]:  # ["4y", "3y", "2y", "1y", "183d"]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{years}",
@@ -54,7 +43,7 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
         )
 
     # sample count based triggers: every: 20_000, 10_000, 5_000, 2_500, 1_000, 500, 200
-    for count in [20_000, 10_000, 5_000, 2_500, 1_000, 500, 200]:
+    for count in []:  # [20_000, 10_000, 5_000, 2_500, 1_000, 500, 200]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"dataamounttrigger_{count}",

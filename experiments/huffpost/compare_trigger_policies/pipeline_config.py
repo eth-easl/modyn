@@ -56,7 +56,7 @@ def gen_pipeline_config(
             maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
-            dataset_id="huffpost_kaggle",
+            dataset_id="huffpost_kaggle_train",
             bytes_parser_function=("def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"),
             tokenizer="DistilBertTokenizerTransform",
         ),
