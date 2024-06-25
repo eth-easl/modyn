@@ -46,7 +46,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
-
+        if self.holdout_set_strategy == "Twin":
+            raise NotImplementedError("Twin holdout set strategy is not implemented yet.")
         self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
         self._train_il_model(next_trigger_id)
 
@@ -113,9 +114,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return rho_pipeline_id, DataConfig.model_validate_json(data_config_str)
 
     def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection, data_config_str: str) -> int:
-        # Actually we don't need to store configs in the database as we just need the existence of the rho pipeline.
-        # We fetch configs directly from the object fields.
-        # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
         if self.holdout_set_strategy == "Twin":
             model_class_name = "RHOLOSSTwinModel"
             model_config = {
@@ -141,15 +139,12 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         current_trigger_dataset_size = get_trigger_dataset_size(
             selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
         )
-        if self.holdout_set_strategy == "Twin":
-            holdout_sampling_query_generator = self._get_twin_holdout_sampling_query(self._pipeline_id, next_trigger_id)
-        else:
-            holdout_set_size = max(int(current_trigger_dataset_size * self.holdout_set_ratio / 100), 1)
-            holdout_sampling_query_generator = self._get_simple_holdout_sampling_query(
-                self._pipeline_id, next_trigger_id, holdout_set_size
-            )
 
-        stmt = holdout_sampling_query_generator.execution_options(yield_per=self.maximum_keys_in_memory)
+        holdout_set_size = max(int(current_trigger_dataset_size * self.holdout_set_ratio / 100), 1)
+
+        stmt = self._get_holdout_sampling_query(self._pipeline_id, next_trigger_id, holdout_set_size).execution_options(
+            yield_per=self.maximum_keys_in_memory
+        )
 
         def training_set_producer() -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
             with MetadataDatabaseConnection(self._modyn_config) as database:
@@ -170,7 +165,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         )
 
     @staticmethod
-    def _get_simple_holdout_sampling_query(main_pipeline_id: int, trigger_id: int, target_size: int) -> Select:
+    def _get_holdout_sampling_query(main_pipeline_id: int, trigger_id: int, target_size: int) -> Select:
         return (
             select(SelectorStateMetadata.sample_key)
             .filter(
@@ -179,15 +174,4 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             )
             .order_by(func.random())  # pylint: disable=E1102
             .limit(target_size)
-        )
-
-    @staticmethod
-    def _get_twin_holdout_sampling_query(main_pipeline_id: int, trigger_id: int) -> Select:
-        return (
-            select(SelectorStateMetadata.sample_key)
-            .filter(
-                SelectorStateMetadata.pipeline_id == main_pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id == trigger_id,
-            )
-            .order_by(func.random())  # pylint: disable=E1102
         )
