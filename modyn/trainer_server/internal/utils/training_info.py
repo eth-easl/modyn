@@ -57,6 +57,7 @@ class TrainingInfo:
         self.log_file_path = log_file_path
 
         self.shuffle = request.shuffle
+        self.enable_accurate_gpu_measurements = request.enable_accurate_gpu_measurements
 
         assert (
             self.pretrained_model_path or not self.use_pretrained_model
@@ -70,6 +71,7 @@ class TrainingInfo:
 
         self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
+        self.record_loss_every = request.record_loss_every
 
         self.storage_address = storage_address
         self.selector_address = selector_address

@@ -6,6 +6,7 @@ mypy
 pylint
 pytest-console-scripts
 pillow
+ruff
 autopep8
 isort
 black
@@ -21,4 +22,4 @@ seaborn
 dash
 dash-daq
 dash_cytoscape
-
+dash_bootstrap_components

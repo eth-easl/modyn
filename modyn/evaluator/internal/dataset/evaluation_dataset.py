@@ -16,6 +16,7 @@ from modyn.utils.utils import (
     grpc_connection_established,
     instantiate_class,
 )
+from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -78,6 +79,13 @@ class EvaluationDataset(IterableDataset):
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
 
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_random_exponential(multiplier=1, min=2, max=60),
+        before=before_log(logger, logging.ERROR),
+        after=after_log(logger, logging.ERROR),
+        reraise=True,
+    )
     def _init_grpc(self) -> None:
         storage_channel = grpc.insecure_channel(
             self._storage_address,
@@ -103,22 +111,91 @@ class EvaluationDataset(IterableDataset):
 
     def _get_keys_from_storage(self, worker_id: int, total_workers: int) -> Iterable[list[int]]:
         self._info("Getting keys from storage", worker_id)
-        req_keys = GetDataPerWorkerRequest(
-            dataset_id=self._dataset_id,
-            worker_id=worker_id,
-            total_workers=total_workers,
-            start_timestamp=self._start_timestamp,
-            end_timestamp=self._end_timestamp,
-        )
-        resp_keys: GetDataPerWorkerResponse
-        for resp_keys in self._storagestub.GetDataPerWorker(req_keys):
-            yield resp_keys.keys
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    req_keys = GetDataPerWorkerRequest(
+                        dataset_id=self._dataset_id,
+                        worker_id=worker_id,
+                        total_workers=total_workers,
+                        start_timestamp=self._start_timestamp,
+                        end_timestamp=self._end_timestamp,
+                    )
+                    resp_keys: GetDataPerWorkerResponse
+                    for resp_keys in self._storagestub.GetDataPerWorker(req_keys):
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(resp_keys.keys)
+                            yield resp_keys.keys
+                        else:
+                            assert isinstance(processed_keys, set)
+                            new_keys = [key for key in resp_keys.keys if key not in processed_keys]
+                            processed_keys.update(resp_keys.keys)
+                            yield new_keys
 
-    def _get_data_from_storage(self, keys: list[int]) -> Iterable[list[tuple[int, bytes, int]]]:
-        request = GetRequest(dataset_id=self._dataset_id, keys=keys)
-        response: GetResponse
-        for response in self._storagestub.Get(request):
-            yield list(zip(response.keys, response.samples, response.labels))
+                except grpc.RpcError as e:
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
+
+                    self._info(
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(
+                        f"Error occurred while asking {self._dataset_id} for worker data:\n{worker_id}", worker_id
+                    )
+                    self._init_grpc()
+                    raise e
+
+    def _get_data_from_storage(
+        self, keys: list[int], worker_id: Optional[int] = None
+    ) -> Iterable[list[tuple[int, bytes, int]]]:
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    request = GetRequest(dataset_id=self._dataset_id, keys=keys)
+                    response: GetResponse
+                    for response in self._storagestub.Get(request):
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(response.keys)
+                            yield list(zip(response.keys, response.samples, response.labels))
+                        else:
+                            assert isinstance(processed_keys, set)
+                            new_keys: list[int] = [key for key in response.keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
+                                sample
+                                for key, sample in zip(response.keys, response.samples)
+                                if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(response.keys, response.labels) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            yield list(zip(new_keys, new_samples, new_labels))
+
+                except grpc.RpcError as e:  # We catch and reraise to log and reconnect
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
+                    self._info(
+                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(f"Error occurred while asking {self._dataset_id} for keys:\n{keys}", worker_id)
+                    self._init_grpc()
+                    raise e
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
@@ -144,6 +221,6 @@ class EvaluationDataset(IterableDataset):
 
         # TODO(#175): we might want to do/accelerate prefetching here.
         for keys in self._get_keys_from_storage(worker_id, total_workers):
-            for data in self._get_data_from_storage(keys):
+            for data in self._get_data_from_storage(keys, worker_id):
                 for key, sample, label in data:
                     yield key, self._transform(sample), label

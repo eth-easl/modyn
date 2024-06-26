@@ -104,6 +104,11 @@ class TrainingConfig(ModynBaseModel):
             "Otherwise, the output order is deterministic."
         )
     )
+    enable_accurate_gpu_measurements: bool = Field(
+        default=False,
+        description="If True, we measure the time of individual GPU related operations within a training process more "
+        "accurately by cuda synchronization. Note this can have a significant impact on performance on training.",
+    )
     use_previous_model: bool = Field(
         description=(
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
@@ -126,6 +131,10 @@ class TrainingConfig(ModynBaseModel):
         description="The ID of the model that should be used as the initial model.",
     )
     checkpointing: CheckpointingConfig = Field(description="Configuration of checkpointing during training")
+    record_loss_every: int = Field(
+        default=0,
+        description="Record the training loss in the trainer_log very n-th batch/step. If 0, loss is not recorded.",
+    )
     optimizers: List[OptimizerConfig] = Field(
         description="An array of the optimizers for the training",
         min_length=1,

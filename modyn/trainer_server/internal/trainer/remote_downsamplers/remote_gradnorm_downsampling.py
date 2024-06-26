@@ -35,26 +35,6 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         self.probabilities: list[torch.Tensor] = []
         self.number_of_points_seen = 0
 
-    def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        if isinstance(self.per_sample_loss_fct, torch.nn.CrossEntropyLoss):
-            # no need to autograd if cross entropy loss is used since closed form solution exists.
-            # Because CrossEntropyLoss includes the softmax, we need to apply the
-            # softmax to the forward output to obtain the probabilities
-            probs = torch.nn.functional.softmax(forward_output, dim=1)
-            num_classes = forward_output.shape[-1]
-
-            # Pylint complains torch.nn.functional.one_hot is not callable for whatever reason
-            one_hot_targets = torch.nn.functional.one_hot(  # pylint: disable=not-callable
-                target, num_classes=num_classes
-            )
-            scores = torch.norm(probs - one_hot_targets, dim=-1)
-        else:
-            sample_losses = self.per_sample_loss_fct(forward_output, target)
-            last_layer_gradients = torch.autograd.grad(sample_losses.sum(), forward_output, retain_graph=False)[0]
-            scores = torch.norm(last_layer_gradients, dim=-1)
-
-        return scores.cpu()
-
     def init_downsampler(self) -> None:
         self.probabilities = []
         self.index_sampleid_map: list[int] = []
@@ -68,7 +48,10 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
-        scores = self.get_scores(forward_output, target)
+        last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
+            self.per_sample_loss_fct, forward_output, target
+        )
+        scores = torch.norm(last_layer_gradients, dim=-1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
@@ -79,12 +62,12 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             return [], torch.Tensor([])
 
         # select always at least 1 point
-        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / 100), 1)
+        target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
         probabilities = probabilities / probabilities.sum()
 
-        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=self.replacement)
+        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)
 
         # lower probability, higher weight to reduce the variance
         weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])

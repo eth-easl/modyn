@@ -189,7 +189,7 @@ def test_instantiate_class_existing(dummy_system_config: ModynConfig):
         10,
         11,
         64,
-        {"downsampling_ratio": 67},
+        {"downsampling_ratio": 67, "ratio_max": 100},
         dummy_system_config.model_dump(by_alias=True),
         {},
         "cpu",

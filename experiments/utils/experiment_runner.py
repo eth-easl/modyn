@@ -13,6 +13,7 @@ def run_multiple_pipelines(
     start_replay_at: int = 0,
     stop_replay_at: int | None = None,
     maximum_triggers: int | None = None,
+    show_eval_progress: bool = True,
 ) -> None:
     logger.info("Start running multiple experiments!")
 
@@ -22,8 +23,13 @@ def run_multiple_pipelines(
         )
         logger.info(f"Starting pipeline: {pipeline_config.pipeline.name}")
         started = client.start_pipeline()
+        result = False
         if started:
-            client.poll_pipeline_status()
+            result = client.poll_pipeline_status(show_eval_progress=show_eval_progress)
         logger.info(f"Finished pipeline: {pipeline_config.pipeline.name}")
+
+        if not result:
+            logger.error("Client exited with error, aborting.")
+            return
 
     logger.info("Finished running multiple experiments!")

@@ -1,4 +1,3 @@
-import dataclasses
 from dataclasses import dataclass
 
 import pandas as pd
@@ -9,16 +8,16 @@ from plotly import graph_objects as go
 
 
 @dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs_leaf: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_leaf: pd.DataFrame
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
+
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -43,7 +42,7 @@ def gen_figure(
         histogram: Whether to use histogram over barplot
         nbins: Number of bins; only used in the histogram=True case
     """
-    df_adjusted = _shared_data.df_logs_leaf[page].copy()
+    df_adjusted = _shared_data[page].df_leaf.copy()  # TODO: remove
     if cumulative and not histogram:
         # as bar plots don't support cumulation natively
 
@@ -113,8 +112,10 @@ def gen_figure(
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def section1_stacked_bar(page: str, df_logs_leaf: pd.DataFrame) -> html.Div:
-    _shared_data.df_logs_leaf[page] = df_logs_leaf
+def section_cost_over_time(page: str, df_leaf: pd.DataFrame) -> html.Div:
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(df_leaf=df_leaf)
+    _shared_data[page].df_leaf = df_leaf
 
     @callback(
         Output(f"{page}-costovertime-plot", "figure"),
@@ -124,14 +125,16 @@ def section1_stacked_bar(page: str, df_logs_leaf: pd.DataFrame) -> html.Div:
         Input(f"{page}-costovertime-nbins-slider", "value"),
         Input(f"{page}-costovertime-radio-time-patch-yearbook", "value"),
     )
-    def update_figure(time_metric: str, cumulative: bool, histogram: bool, nbins: int, patch_yearbook: bool):
+    def update_figure(
+        time_metric: str, cumulative: bool, histogram: bool, nbins: int, patch_yearbook: bool
+    ) -> go.Figure:
         return gen_figure(page, time_metric, cumulative, histogram, nbins, patch_yearbook)
 
     @callback(
         Output(f"{page}-costovertime-nbins-slider", "disabled"),
         Input(f"{page}-costovertime-checkbox-histogram", "value"),
     )
-    def hide_bin_slider(histogram: bool):
+    def hide_bin_slider(histogram: bool) -> bool:
         return not histogram
 
     time_metrics = {

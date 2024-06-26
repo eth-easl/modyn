@@ -14,7 +14,7 @@ channels:
   - huggingface
 
 dependencies:
-  - python>=3.11
+  - python=3.11
   - pip
   - tqdm
   - conda-forge::enlighten
@@ -24,6 +24,7 @@ dependencies:
     - types-protobuf==5.26.*
     - evidently==0.4.27
     - alibi-detect==0.12.*
+    - tenacity
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
@@ -46,3 +47,5 @@ dependencies:
 #  - nvidia::cuda-nvcc=12.1.*
 #  - nvidia::cuda-nvtx=12.1.*
 #  - nvidia::cuda-cupti=12.1.*
+#  - nvidia::cuda-cudart-dev=12.1.*
+#  - nvidia::cuda-profiler-api=12.1.*

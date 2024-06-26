@@ -2,6 +2,7 @@ import dataclasses
 
 import pandas as pd
 import plotly.express as px
+from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import df_aggregate_eval_metric
 from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -9,17 +10,18 @@ from plotly import graph_objects as go
 
 
 @dataclasses.dataclass
-class _SharedData:
-    """We use the call by reference features asa the callbacks in the UI are not updated over the lifetime of the app.
-    Therefore the need a reference to the data structure at startup time (even though data is not available yet).
+class _PageState:
+    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
+    global references.
     """
 
-    df_logs_agg: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    df_logs_eval_single: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """page, data"""
+    df_agg: pd.DataFrame
+    df_eval_single: pd.DataFrame
+
+    composite_model_variant: CompositeModelOptions = "currently_active_model"
 
 
-_shared_data = _SharedData()
+_shared_data: dict[str, _PageState] = {}  # page -> _PageState
 
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                        FIGURE                                                        #
@@ -48,37 +50,35 @@ def gen_fig_scatter_num_triggers(
         time_weighted: Whether to weight the aggregation by the evaluation interval length
     """
     # unpack data
-    df_logs_agg = _shared_data.df_logs_agg[page]
-
-    df_logs_eval_single = _shared_data.df_logs_eval_single[page]
-    df_logs_eval_single = df_logs_eval_single[
-        (df_logs_eval_single["dataset_id"] == dataset_id)
-        & (df_logs_eval_single["eval_handler"] == eval_handler)
+    composite_model_variant = _shared_data[page].composite_model_variant
+    df_agg = _shared_data[page].df_agg
+    df_eval_single = _shared_data[page].df_eval_single
+    df_eval_single = df_eval_single[
+        (df_eval_single["dataset_id"] == dataset_id)
+        & (df_eval_single["eval_handler"] == eval_handler)
         # & (df_adjusted["metric"] == metric)
     ]
 
     if multi_pipeline_mode or only_active_periods:
         # we only want the pipeline performance (composed of the models active periods stitched together)
-        df_logs_eval_single = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        df_eval_single = df_eval_single[df_eval_single[composite_model_variant]]
 
     if not multi_pipeline_mode:
-        assert df_logs_eval_single["pipeline_ref"].nunique() == 1
-
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
-        pipeline_composite_model = df_logs_eval_single[df_logs_eval_single["most_recent_model"]]
+        pipeline_composite_model = df_eval_single[df_eval_single[composite_model_variant]]
         pipeline_composite_model["id_model"] = "0-pipeline-composite-model"
-        df_logs_eval_single["id_model"] = df_logs_eval_single["id_model"].astype(str)
-        df_logs_eval_single = pd.concat([df_logs_eval_single, pipeline_composite_model])
+        df_eval_single["id_model"] = df_eval_single["id_model"].astype(str)
+        df_eval_single = pd.concat([df_eval_single, pipeline_composite_model])
 
     col_map = {"value": "metric_value", "count": "num_triggers"}
-    num_triggers = df_logs_agg[df_logs_agg["id"] == PipelineStage.HANDLE_SINGLE_TRIGGER.name][["pipeline_ref", "count"]]
-    accuracies = df_logs_eval_single
+    num_triggers = df_agg[df_agg["id"] == PipelineStage.HANDLE_SINGLE_TRIGGER.name][["pipeline_ref", "count"]]
+    accuracies = df_eval_single
     labels = {
         "pipeline_ref": "Pipeline",
         "metric": "Metric",
         "num_triggers": "#triggers (proxy for cost)",
-        "metric_value": f"Metric value {'(mean)' if aggregate_metric else ''}",
+        "metric_value": f"Metric value {'(aggregated)' if aggregate_metric else ''}",
     }
     category_orders = {
         "pipeline_ref": list(sorted(accuracies["pipeline_ref"].unique())),
@@ -93,6 +93,11 @@ def gen_fig_scatter_num_triggers(
             aggregate_func="time_weighted_avg" if time_weighted else "mean",
         )
         merged = num_triggers.merge(mean_accuracies, on="pipeline_ref").rename(columns=col_map, inplace=False)
+        assert (
+            mean_accuracies.shape[0]
+            == merged.shape[0]
+            == num_triggers.shape[0] * len(mean_accuracies["metric"].unique())
+        )
         fig = px.scatter(
             merged,
             x="num_triggers",
@@ -124,12 +129,23 @@ def gen_fig_scatter_num_triggers(
 
 
 def section3_scatter_num_triggers(
-    page: str, multi_pipeline_mode: bool, df_logs_agg: pd.DataFrame, df_logs_eval_single: pd.DataFrame
+    page: str,
+    multi_pipeline_mode: bool,
+    df_agg: pd.DataFrame,
+    df_eval_single: pd.DataFrame,
+    composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
-    assert "pipeline_ref" in df_logs_agg.columns.tolist()
-    assert "pipeline_ref" in df_logs_eval_single.columns.tolist()
-    _shared_data.df_logs_agg[page] = df_logs_agg
-    _shared_data.df_logs_eval_single[page] = df_logs_eval_single
+    assert "pipeline_ref" in list(df_agg.columns)
+    assert "pipeline_ref" in list(df_eval_single.columns)
+    if page not in _shared_data:
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_agg=df_agg,
+            df_eval_single=df_eval_single,
+        )
+    _shared_data[page].composite_model_variant = composite_model_variant
+    _shared_data[page].df_agg = df_agg
+    _shared_data[page].df_eval_single = df_eval_single
 
     @callback(
         Output(f"{page}-scatter-plot-num-triggers", "figure"),
@@ -137,7 +153,7 @@ def section3_scatter_num_triggers(
         Input(f"{page}-radio-scatter-number-triggers-dataset-id", "value"),
         Input(f"{page}-radio-scatter-number-triggers-metric", "value"),
         Input(f"{page}-radio-scatter-number-triggers-agg-y", "value"),
-        Input(f"{page}-radio-1d-eval-metric-only-active-model-periods", "value"),
+        Input(f"{page}-radio-scatter-number-triggers-agg-time-weighted", "value"),
         Input(f"{page}-radio-scatter-number-triggers-only-active-model-periods", "value"),
     )
     def update_scatter_num_triggers(
@@ -159,9 +175,9 @@ def section3_scatter_num_triggers(
             only_active_periods,
         )
 
-    eval_handler_refs = list(df_logs_eval_single["eval_handler"].unique())
-    eval_datasets = list(df_logs_eval_single["dataset_id"].unique())
-    eval_metrics = list(df_logs_eval_single["metric"].unique())
+    eval_handler_refs = list(df_eval_single["eval_handler"].unique())
+    eval_datasets = list(df_eval_single["dataset_id"].unique())
+    eval_metrics = list(df_eval_single["metric"].unique())
 
     return html.Div(
         [

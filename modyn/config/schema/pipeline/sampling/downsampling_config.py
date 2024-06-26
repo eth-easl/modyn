@@ -20,9 +20,20 @@ class BaseDownsamplingConfig(ModynBaseModel):
         ),
     )
     ratio: int = Field(
-        description="Ratio post_sampling_size/pre_sampling_size. E.g. with 160 records and a ratio of 50 we keep 80.",
+        description=(
+            "Ratio post_sampling_size/pre_sampling_size * ratio_max. "
+            "For the default of ratio_max of 100, this implies percent, "
+            "e.g., with 160 records and a ratio of 50 we keep 80."
+        ),
         min=0,
-        max=100,
+    )
+    ratio_max: int = Field(
+        description=(
+            "Reference maximum ratio value. Defaults to 100, which implies percent."
+            " If you set this to 1000, ratio describes promille instead."
+        ),
+        default=100,
+        min=1,
     )
     period: int = Field(
         1,
@@ -33,6 +44,19 @@ class BaseDownsamplingConfig(ModynBaseModel):
         ),
         min=0,
     )
+
+    @model_validator(mode="after")
+    def validate_ratio(self) -> Self:
+        if self.ratio > self.ratio_max:
+            raise ValueError("ratio cannot be greater than ratio_max.")
+        return self
+
+
+# These are options to approximate the full gradients used in several selection strategies.
+# LastLayer: The full gradient is approximated by the gradient of the last layer.
+# LastLayerWithEmbedding: The full gradient is approximated by the gradients of the last layer and the embedding layer.
+# They are concatenated and used to represent the full gradient.
+FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
 
 
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
@@ -57,6 +81,7 @@ class GradMatchDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["GradMatch"] = "GradMatch"
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class CraigDownsamplingConfig(BaseDownsamplingConfig):
@@ -68,6 +93,7 @@ class CraigDownsamplingConfig(BaseDownsamplingConfig):
     greedy: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
         "NaiveGreedy", description="The greedy strategy to use."
     )
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class LossDownsamplingConfig(BaseDownsamplingConfig):
@@ -86,6 +112,7 @@ class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
     )
     selection_batch: int = Field(64, description="The batch size for the selection.")
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class GradNormDownsamplingConfig(BaseDownsamplingConfig):
@@ -127,7 +154,7 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
     holdout_set_ratio: int = Field(
-        description=("How much of the training set is used as the holdout set."),
+        description="How much of the training set is used as the holdout set.",
         min=0,
         max=100,
     )
@@ -159,6 +186,7 @@ SingleDownsamplingConfig = Annotated[
         GradNormDownsamplingConfig,
         NoDownsamplingConfig,
         RHOLossDownsamplingConfig,
+        RS2DownsamplingConfig,
     ],
     Field(discriminator="strategy"),
 ]

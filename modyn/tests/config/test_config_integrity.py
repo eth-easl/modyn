@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -59,3 +60,20 @@ def test_client_config_integrity(config_path: str) -> None:
     file = PROJECT_ROOT / config_path
     assert file.exists(), f"Client config file {config_path} does not exist."
     read_client_config(file)
+
+
+# As we cannot tests with imports outside of /modyn (e.g. /experiments) via docker,
+# we only test those in non docker mode.
+# we skip the test if the MODYN_DOCKER environment variable is set
+@pytest.mark.skipif("MODYN_DOCKER" in os.environ, reason="Cannot run in docker environment")
+def test_dynamic_arxiv_pipelines() -> None:
+    from experiments.arxiv.compare_trigger_policies.run import construct_pipelines as arxiv_construct_pipelines
+
+    arxiv_construct_pipelines()
+
+
+@pytest.mark.skipif("MODYN_DOCKER" in os.environ, reason="Cannot run in docker environment")
+def test_dynamic_huffpost_pipelines() -> None:
+    from experiments.huffpost.compare_trigger_policies.run import construct_pipelines as huffpost_construct_pipelines
+
+    huffpost_construct_pipelines()

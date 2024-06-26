@@ -70,7 +70,10 @@ class PytorchEvaluator:
         )
         self._debug("Creating DataLoader.")
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=evaluation_info.batch_size, num_workers=evaluation_info.num_dataloaders
+            dataset,
+            batch_size=evaluation_info.batch_size,
+            num_workers=evaluation_info.num_dataloaders,
+            timeout=60 if evaluation_info.num_dataloaders > 0 else 0,
         )
 
         return dataloader

@@ -177,20 +177,16 @@ class TrainerServerGRPCHandlerMixin:
         # TODO(#130): Implement this at trainer server.
         logger.error("The trainer server currently does not support remotely stopping training, ignoring.")
 
-    # pylint: disable=too-many-branches,too-many-locals,too-many-statements
-    def start_training(
-        self,
+    # pylint: disable=too-many-locals, too-many-branches
+    @staticmethod
+    def prepare_start_training_request(
         pipeline_id: int,
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
         previous_model_id: Optional[int],
         num_samples_to_pass: Optional[int] = None,
-    ) -> int:
-        assert self.trainer_server is not None
-        if not self.connected_to_trainer_server:
-            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
-
+    ) -> StartTrainingRequest:
         optimizers_config = {}
         for optimizer in training_config.optimizers:
             optimizer_config: dict[str, Any] = {
@@ -207,15 +203,7 @@ class TrainerServerGRPCHandlerMixin:
             lr_scheduler_configs = training_config.lr_scheduler.model_dump(by_alias=True)
 
         criterion_config = json.dumps(training_config.optimization_criterion.config)
-
-        epochs_per_trigger = training_config.epochs_per_trigger
-        num_prefetched_partitions = training_config.num_prefetched_partitions
-        parallel_prefetch_requests = training_config.parallel_prefetch_requests
-
-        seed = training_config.seed
         tokenizer = data_config.tokenizer
-        transform_list = data_config.transformations
-        label_transformer = data_config.label_transformer_function
 
         if training_config.checkpointing.activated:
             # the None-ility of the two fields are already validated by pydantic
@@ -228,39 +216,60 @@ class TrainerServerGRPCHandlerMixin:
 
         grad_scaler_config = training_config.grad_scaler_config if training_config.grad_scaler_config else {}
 
-        start_training_kwargs = {
-            "pipeline_id": pipeline_id,
-            "trigger_id": trigger_id,
-            "device": training_config.device,
-            "use_pretrained_model": previous_model_id is not None,
-            "pretrained_model_id": previous_model_id or -1,
-            "load_optimizer_state": False,  # TODO(#137): Think about this.
-            "batch_size": training_config.batch_size,
-            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            "torch_criterion": training_config.optimization_criterion.name,
-            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
-            "data_info": Data(
+        return StartTrainingRequest(
+            pipeline_id=pipeline_id,
+            trigger_id=trigger_id,
+            device=training_config.device,
+            use_pretrained_model=previous_model_id is not None,
+            pretrained_model_id=previous_model_id or -1,
+            load_optimizer_state=False,  # TODO(#137): Think about this.
+            batch_size=training_config.batch_size,
+            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            torch_criterion=training_config.optimization_criterion.name,
+            criterion_parameters=TrainerServerJsonString(value=criterion_config),
+            data_info=Data(
                 dataset_id=data_config.dataset_id,
                 num_dataloaders=training_config.dataloader_workers,
             ),
-            "checkpoint_info": checkpoint_info,
-            "transform_list": transform_list,
-            "bytes_parser": PythonString(value=data_config.bytes_parser_function),
-            "label_transformer": PythonString(value=label_transformer),
-            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            "epochs_per_trigger": epochs_per_trigger,
-            "num_prefetched_partitions": num_prefetched_partitions,
-            "parallel_prefetch_requests": parallel_prefetch_requests,
-            "seed": seed,
-            "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
-            "num_samples_to_pass": num_samples_to_pass,
-        }
+            checkpoint_info=checkpoint_info,
+            transform_list=data_config.transformations,
+            bytes_parser=PythonString(value=data_config.bytes_parser_function),
+            label_transformer=PythonString(value=data_config.label_transformer_function),
+            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
+            epochs_per_trigger=training_config.epochs_per_trigger,
+            num_prefetched_partitions=training_config.num_prefetched_partitions,
+            parallel_prefetch_requests=training_config.parallel_prefetch_requests,
+            seed=training_config.seed,  # seed is an optional field which can accept None
+            # tokenizer is an optional field which can accept None
+            tokenizer=PythonString(value=tokenizer) if tokenizer is not None else None,
+            num_samples_to_pass=num_samples_to_pass if num_samples_to_pass is not None else 0,
+            shuffle=training_config.shuffle,
+            enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
+            record_loss_every=training_config.record_loss_every,
+        )
 
-        cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}
+    def start_training(
+        self,
+        pipeline_id: int,
+        trigger_id: int,
+        training_config: TrainingConfig,
+        data_config: DataConfig,
+        previous_model_id: Optional[int],
+        num_samples_to_pass: Optional[int] = None,
+    ) -> int:
+        assert self.trainer_server is not None
+        if not self.connected_to_trainer_server:
+            raise ConnectionError("Tried to start training at trainer server, but not there is no gRPC connection.")
 
-        req = StartTrainingRequest(**cleaned_kwargs)
-
+        req = self.prepare_start_training_request(
+            pipeline_id,
+            trigger_id,
+            training_config,
+            data_config,
+            previous_model_id,
+            num_samples_to_pass,
+        )
         response: StartTrainingResponse = self.trainer_server.start_training(req)
 
         if not response.training_started:

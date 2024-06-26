@@ -4,7 +4,7 @@ from modyn.supervisor.internal.triggers import TimeTrigger
 
 def test_initialization() -> None:
     trigger = TimeTrigger(TimeTriggerConfig(every="2s"))
-    assert trigger.trigger_every_s == 2
+    assert trigger.config.every_seconds == 2
     assert trigger.next_trigger_at is None
 
 

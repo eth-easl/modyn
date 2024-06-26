@@ -1,5 +1,5 @@
 # pylint: disable=unused-argument, no-name-in-module
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import grpc
 import pytest
@@ -10,6 +10,7 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     UsesWeightsResponse,
 )
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
+from tenacity import RetryCallState
 
 
 def test_init():
@@ -138,3 +139,28 @@ def test_unweighted_key_source(test_grp, test_connection):
     keys, weights = keysource.get_keys_and_weights(0, 0)
     assert weights == [-1.0, -2.0, -3.0]
     assert keys == [1, 2, 3]
+
+
+def test_retry_reconnection_callback():
+    pipeline_id = 12
+    trigger_id = 1
+    selector_address = "localhost:1234"
+    keysource = SelectorKeySource(pipeline_id, trigger_id, selector_address)
+
+    # Create a mock RetryCallState
+    mock_retry_state = MagicMock(spec=RetryCallState)
+    mock_retry_state.attempt_number = 3
+    mock_retry_state.outcome = MagicMock()
+    mock_retry_state.outcome.failed = True
+    mock_retry_state.args = [keysource]
+
+    # Mock the _connect_to_selector method to raise an exception
+    with patch.object(
+        keysource, "_connect_to_selector", side_effect=ConnectionError("Connection failed")
+    ) as mock_method:
+        # Call the retry_reconnection_callback with the mock state
+        with pytest.raises(ConnectionError):
+            SelectorKeySource.retry_reconnection_callback(mock_retry_state)
+
+        # Check that the method tried to reconnect
+        mock_method.assert_called()

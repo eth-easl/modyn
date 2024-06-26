@@ -22,6 +22,7 @@ echo "Running auto-formatters"
 $MAMBA_CMD run -n modyn isort . > /dev/null
 $MAMBA_CMD run -n modyn autopep8 modyn integrationtests --recursive --in-place --pep8-passes 2000 > /dev/null
 $MAMBA_CMD run -n modyn black modyn integrationtests --verbose --config black.toml > /dev/null
+$MAMBA_CMD run -n modyn ruff check --fix experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle > /dev/null
 
 echo "Running linters"
 
@@ -43,6 +44,20 @@ if $MAMBA_CMD run -n modyn black --check modyn --config black.toml ; then
     echo "No black errors"
 else
     echo "black errors"
+    exit 1
+fi
+
+if $MAMBA_CMD run -n modyn ruff check experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle ; then
+    echo "No ruff check errors"
+else
+    echo "ruf check errors"
+    exit 1
+fi
+
+if $MAMBA_CMD run -n modyn ruff format experiments benchmark/arxiv_kaggle benchmark/huffpost_kaggle ; then
+    echo "No ruff format errors"
+else
+    echo "ruff format errors"
     exit 1
 fi
 
