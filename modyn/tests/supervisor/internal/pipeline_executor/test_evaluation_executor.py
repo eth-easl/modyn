@@ -132,6 +132,7 @@ def dummy_eval_request() -> EvalRequest:
 def dummy_stage_log() -> StageLog:
     return StageLog(
         id="log",
+        id_seq_num=-1,
         start=datetime.datetime(2021, 1, 1),
         batch_idx=-1,
         sample_idx=-1,
@@ -240,6 +241,7 @@ def test_single_evaluation(
 
     stage_log = StageLog(
         id="log",
+        id_seq_num=-1,
         start=datetime.datetime(2021, 1, 1),
         batch_idx=-1,
         sample_idx=-1,

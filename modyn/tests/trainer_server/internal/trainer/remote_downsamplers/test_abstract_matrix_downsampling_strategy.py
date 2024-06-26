@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 import numpy as np
+import pytest
 import torch
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
@@ -10,7 +11,9 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_d
 )
 
 
-def get_sampler_config(dummy_system_config: ModynConfig, balance=False):
+def get_sampler_config(
+    dummy_system_config: ModynConfig, balance=False, matrix_content=MatrixContent.LAST_TWO_LAYERS_GRADIENTS
+):
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
 
@@ -29,7 +32,7 @@ def get_sampler_config(dummy_system_config: ModynConfig, balance=False):
         dummy_system_config.model_dump(by_alias=True),
         per_sample_loss_fct,
         "cpu",
-        MatrixContent.GRADIENTS,
+        matrix_content,
     )
 
 
@@ -39,7 +42,7 @@ def test_init(dummy_system_config: ModynConfig):
 
     assert amds.requires_coreset_supporting_module
     assert not amds.matrix_elements
-    assert amds.matrix_content == MatrixContent.GRADIENTS
+    assert amds.matrix_content == MatrixContent.LAST_TWO_LAYERS_GRADIENTS
 
 
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
@@ -106,9 +109,12 @@ def test_collect_embedding_balance(test_amds, dummy_system_config: ModynConfig):
         assert amds.already_selected_samples == [1, 3, 1000, 1002]
 
 
+@pytest.mark.parametrize(
+    "matrix_content", [MatrixContent.LAST_LAYER_GRADIENTS, MatrixContent.LAST_TWO_LAYERS_GRADIENTS]
+)
 @patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
-def test_collect_gradients(dummy_system_config: ModynConfig):
-    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config))
+def test_collect_gradients(matrix_content, dummy_system_config: ModynConfig):
+    amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config, matrix_content=matrix_content))
     with torch.inference_mode(mode=(not amds.requires_grad)):
         forward_input = torch.randn((4, 5))
         first_output = torch.randn((4, 2))
@@ -125,9 +131,14 @@ def test_collect_gradients(dummy_system_config: ModynConfig):
 
         assert len(amds.matrix_elements) == 2
 
-        # expected shape = (a,b)
+        # expected shape = (a, gradient_shape)
         # a = 7 (4 samples in the first batch and 3 samples in the second batch)
-        # b = 5 * 2 + 2 where 5 is the input dimension of the last layer and 2 is the output one
-        assert np.concatenate(amds.matrix_elements).shape == (7, 12)
+        if matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
+            # shape same as the last dimension of output
+            gradient_shape = 2
+        else:
+            # 5 is the input dimension of the last layer and 2 is the output one
+            gradient_shape = 5 * 2 + 2
+        assert np.concatenate(amds.matrix_elements).shape == (7, gradient_shape)
 
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]

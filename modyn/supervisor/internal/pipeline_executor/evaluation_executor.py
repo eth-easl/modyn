@@ -205,6 +205,7 @@ class EvaluationExecutor:
             # our current process is in terms of position in the dataset.
             parent_log=StageLog(
                 id=PipelineStage.EVALUATE_SINGLE.name,
+                id_seq_num=-1,
                 start=datetime.datetime.now(),
                 batch_idx=-1,
                 sample_idx=-1,
@@ -240,6 +241,7 @@ class EvaluationExecutor:
         def worker_func(eval_req: EvalRequest) -> StageLog:
             single_log = StageLog(
                 id=PipelineStage.EVALUATE_SINGLE.name,
+                id_seq_num=-1,  # evaluation don't need sequence numbers, their order is not important
                 start=datetime.datetime.now(),
                 batch_idx=parent_log.batch_idx,
                 sample_idx=parent_log.sample_idx,

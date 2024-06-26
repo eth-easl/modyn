@@ -118,6 +118,7 @@ class PytorchTrainer:
         self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
+        self._record_loss_every = training_info.record_loss_every
         self._final_checkpoint_path = training_info.final_checkpoint_path
         self.epochs_per_trigger = training_info.epochs_per_trigger
         self.num_samples_to_pass = training_info.num_samples_to_pass
@@ -211,6 +212,7 @@ class PytorchTrainer:
         self._info("Handled OnBegin Callbacks.")
         self._log["epochs"] = []
 
+        training_loss: list[float] = []
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
         else:
@@ -324,6 +326,9 @@ class PytorchTrainer:
                     self.save_state(checkpoint_file_name, trained_batches)
                     stopw.stop("Checkpoint")
 
+                if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
+                    training_loss.append(loss.item())
+
                 self._num_samples += self._batch_size
 
                 stopw.start("OnBatchEnd", resume=True)
@@ -385,6 +390,7 @@ class PytorchTrainer:
         self._log["num_batches"] = passed_batches
         self._log["num_batches_trained"] = trained_batches
         self._log["total_train"] = total_stopw.measurements.get("TotalTrain", 0)
+        self._log["training_loss"] = training_loss
 
         self._assert_training_size(epoch, trained_batches)
         self._load_dataset_log()

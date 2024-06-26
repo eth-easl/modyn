@@ -216,40 +216,38 @@ class TrainerServerGRPCHandlerMixin:
 
         grad_scaler_config = training_config.grad_scaler_config if training_config.grad_scaler_config else {}
 
-        start_training_kwargs = {
-            "pipeline_id": pipeline_id,
-            "trigger_id": trigger_id,
-            "device": training_config.device,
-            "use_pretrained_model": previous_model_id is not None,
-            "pretrained_model_id": previous_model_id or -1,
-            "load_optimizer_state": False,  # TODO(#137): Think about this.
-            "batch_size": training_config.batch_size,
-            "torch_optimizers_configuration": TrainerServerJsonString(value=json.dumps(optimizers_config)),
-            "torch_criterion": training_config.optimization_criterion.name,
-            "criterion_parameters": TrainerServerJsonString(value=criterion_config),
-            "data_info": Data(
+        return StartTrainingRequest(
+            pipeline_id=pipeline_id,
+            trigger_id=trigger_id,
+            device=training_config.device,
+            use_pretrained_model=previous_model_id is not None,
+            pretrained_model_id=previous_model_id or -1,
+            load_optimizer_state=False,  # TODO(#137): Think about this.
+            batch_size=training_config.batch_size,
+            torch_optimizers_configuration=TrainerServerJsonString(value=json.dumps(optimizers_config)),
+            torch_criterion=training_config.optimization_criterion.name,
+            criterion_parameters=TrainerServerJsonString(value=criterion_config),
+            data_info=Data(
                 dataset_id=data_config.dataset_id,
                 num_dataloaders=training_config.dataloader_workers,
             ),
-            "checkpoint_info": checkpoint_info,
-            "transform_list": data_config.transformations,
-            "bytes_parser": PythonString(value=data_config.bytes_parser_function),
-            "label_transformer": PythonString(value=data_config.label_transformer_function),
-            "lr_scheduler": TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
-            "grad_scaler_configuration": TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            "epochs_per_trigger": training_config.epochs_per_trigger,
-            "num_prefetched_partitions": training_config.num_prefetched_partitions,
-            "parallel_prefetch_requests": training_config.parallel_prefetch_requests,
-            "seed": training_config.seed,
-            "tokenizer": PythonString(value=tokenizer) if tokenizer is not None else None,
-            "num_samples_to_pass": num_samples_to_pass,
-            "shuffle": training_config.shuffle,
-            "enable_accurate_gpu_measurements": training_config.enable_accurate_gpu_measurements,
-        }
-
-        cleaned_kwargs: dict[str, Any] = {k: v for k, v in start_training_kwargs.items() if v is not None}
-
-        return StartTrainingRequest(**cleaned_kwargs)
+            checkpoint_info=checkpoint_info,
+            transform_list=data_config.transformations,
+            bytes_parser=PythonString(value=data_config.bytes_parser_function),
+            label_transformer=PythonString(value=data_config.label_transformer_function),
+            lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
+            grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
+            epochs_per_trigger=training_config.epochs_per_trigger,
+            num_prefetched_partitions=training_config.num_prefetched_partitions,
+            parallel_prefetch_requests=training_config.parallel_prefetch_requests,
+            seed=training_config.seed,  # seed is an optional field which can accept None
+            # tokenizer is an optional field which can accept None
+            tokenizer=PythonString(value=tokenizer) if tokenizer is not None else None,
+            num_samples_to_pass=num_samples_to_pass if num_samples_to_pass is not None else 0,
+            shuffle=training_config.shuffle,
+            enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
+            record_loss_every=training_config.record_loss_every,
+        )
 
     def start_training(
         self,

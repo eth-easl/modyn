@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from pathlib import Path
 
@@ -73,18 +74,31 @@ def aggregate_eval_metrics(df_eval_single: pd.DataFrame, logs: list[PipelineLogs
         ["model_idx", "eval_handler", "dataset_id", "interval_start", "interval_end", "metric"]
     )
 
-    for size in groups.size():
-        assert size == len(logs), "Wrong primary key"
+    sizes = groups.agg(size=("model_idx", "size")).reset_index()
+    if len(sizes["size"].unique()) != 1 or int(sizes[0]) != len(logs):
+        logging.warning(f"\n{sizes[sizes['size'] != len(logs)]}")
+        logging.warning(
+            "The number of records in every group is not equal to the number of logs. "
+            "This might be due to missing records in the logs or a wrong grouping primary key. "
+            "If only a few records show less than the expected number of logs, you might want to "
+            "ignore and continue by pressing any key."
+        )
+        breakpoint()
 
     aggregated_metrics = groups.agg(
         agg_value=("value", "mean"), id_model_list=("id_model", lambda x: list(x))
     ).reset_index()
 
     # sanity check: per aggregated row we find len(logs) unique id_model
-    assert all(
-        len(row[1]["id_model_list"]) == len(logs)
-        for row in aggregated_metrics[["model_idx", "id_model_list"]].iterrows()
-    )
+    agg = aggregated_metrics[["model_idx", "id_model_list"]]
+    agg["num_models"] = agg["id_model_list"].apply(len)
+    breaking_rows = agg[agg["num_models"] != len(logs)]
+    if breaking_rows.shape[0] > 0:
+        logging.warning(f"\n{breaking_rows}")
+        logging.warning(
+            "The number of unique id_model in the aggregated metrics is not equal to the number of logs. Please verify."
+        )
+        breakpoint()
 
     if DEBUGGING_MODE:
         # print(aggregated_metrics[["model_idx", "id_model_list"]])

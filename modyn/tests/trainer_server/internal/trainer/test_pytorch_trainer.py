@@ -737,6 +737,8 @@ def test_train(
     status = status_queue.get()
     assert status["num_batches"] == 0
     assert status["num_samples"] == 0
+    # we didn't enable recording the training loss
+    assert len(trainer._log["training_loss"]) == 0
     status_state = torch.load(io.BytesIO(status_queue.get()))
     checkpointed_state = {
         "model": OrderedDict(
@@ -1065,6 +1067,7 @@ def test_downsample_trigger_training_set_label_by_label(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": True,
+                "full_grad_approximation": "LastLayer",
                 "ratio_max": 100,
             },
         ),
@@ -1126,6 +1129,7 @@ def test_downsample_trigger_training_set(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": False,
+                "full_grad_approximation": "LastLayer",
                 "ratio_max": 100,
             },
         ),
