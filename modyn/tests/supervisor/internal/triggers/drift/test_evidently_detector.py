@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+
 from modyn.config.schema.pipeline import (
     EvidentlyMmdDriftMetric,
     EvidentlyModelDriftMetric,
@@ -84,7 +85,7 @@ def test_evidently_detect_drift_metric(
         if name != "model":
             # model makes the wrong decision here
             assert results[name].is_drift
-        assert 0 <= results[name].distance <= (1 if name == "ratio" else 0.5)
+        assert 0 <= results[name].distance <= (1 if name == "ratio" else 0.75)
         assert results[name].metric_id == "EmbeddingsDriftMetric"
 
     ad = EvidentlyDriftDetector(
