@@ -46,6 +46,8 @@ class RHOLOSSTwinModelModyn(nn.Module):
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
+        # self.training is an internal attribute defined in nn.Module that is updated
+        # whenever .eval() or .train() is called
         if self.training:
             output_tensor = self._training_forward(sample_ids, data)
         else:
@@ -64,8 +66,13 @@ class RHOLOSSTwinModelModyn(nn.Module):
             [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], device=self.device
         )
 
-        # assert that a sample is seen by at least one model
-        assert (seen_by_model0 | seen_by_model1).all()
-        # when a sample is seen by both models, we route it to model 0
+        # if model 0 did not see any sample, we route all samples to model 0
+        if not seen_by_model0.any():
+            return self._models[0](data)
+        # if model 1 did not see any sample, we route all samples to model 1
+        if not seen_by_model1.any():
+            return self._models[1](data)
+
+        # when a sample is not seen by any model, we route it to model 0
         # unsqueeze to make seen_by_model1 broadcastable
-        return torch.where(seen_by_model1.unsqueeze(1), self._models[0](data), self._models[1](data))
+        return torch.where(seen_by_model0.unsqueeze(1), self._models[1](data), self._models[0](data))
