@@ -44,17 +44,18 @@ class EvidentlyDriftDetector(DriftDetector):
         column_mapping = ColumnMapping(embeddings={EVIDENTLY_COLUMN_MAPPING_NAME: embeddings_ref.columns})
 
         # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
-        report = Report(metrics=self.evidently_metrics)
+        report = Report(metrics=[self.evidently_metrics[name] for name in self.evidently_metrics])
         report.run(reference_data=embeddings_ref, current_data=embeddings_cur, column_mapping=column_mapping)
         results_raw = report.as_dict()
 
+        metric_names = list(self.metrics_config)
         results = {
-            metric: MetricResult(
-                metric_id=metric,
+            metric_names[metric_idx]: MetricResult(
+                metric_id=metric_result["metric"],
                 is_drift=metric_result["result"]["drift_detected"],
                 distance=metric_result["result"]["drift_score"],
             )
-            for metric, metric_result in results_raw["metrics"].items()
+            for metric_idx, metric_result in enumerate(results_raw["metrics"])
         }
         return results
 

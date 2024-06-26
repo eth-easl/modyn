@@ -8,6 +8,8 @@ from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 
 
 class DriftDetector(ABC):
+    # to do: multiple strategies to select reference data
+
     def __init__(self, metrics_config: dict[str, DriftMetric]):
         self.metrics_config = metrics_config
 

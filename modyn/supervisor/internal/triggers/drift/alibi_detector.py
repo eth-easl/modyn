@@ -1,13 +1,26 @@
 from __future__ import annotations
 
+from typing import Union
+
+import alibi_detect.utils.pytorch
 import numpy as np
 import pandas as pd
 import torch
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectDriftMetric
-from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
+from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDrift, MMDDrift
+from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
 from typing_extensions import override
 
 from .drift_detector import DriftDetector
+
+_AlibiMetrics = Union[
+    MMDDrift,
+    ChiSquareDrift,
+    KSDrift,
+    CVMDrift,
+    FETDrift,
+    LSDDDrift,
+]
 
 
 class AlibiDriftDetector(DriftDetector):
@@ -18,15 +31,77 @@ class AlibiDriftDetector(DriftDetector):
     def init_detector(self) -> None:
         pass
 
+    # to do: reuse reference data, and the configured metrics (incl. kernels)
+
     @override
     def detect_drift(
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
     ) -> dict[str, MetricResult]:
-        for metric_id, metric_config in self.metrics_config.items():
-            assert metric_id
-            assert metric_config
-            raise NotImplementedError()
-        assert self.metrics_config, "No metrics configured for drift detection"
-        return {}
+        assert isinstance(embeddings_ref, np.ndarray)
+        assert isinstance(embeddings_cur, np.ndarray)
+
+        results: dict[str, MetricResult] = {}
+
+        for metric_ref, config in self.metrics_config.items():
+            metric = _evidently_metric_factory(config, embeddings_ref)
+            result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)
+            _dist = (
+                list(result["data"]["distance"])
+                if isinstance(result["data"]["distance"], np.ndarray)
+                else result["data"]["distance"]
+            )
+            _p_val = (
+                list(result["data"]["p_val"])
+                if isinstance(result["data"]["p_val"], np.ndarray)
+                else result["data"]["p_val"]
+            )
+            results[metric_ref] = MetricResult(
+                metric_id=metric_ref,
+                is_drift=result["data"]["is_drift"],
+                distance=_dist,
+                p_val=_p_val,
+                threshold=result["data"].get("threshold"),
+            )
+
+        return results
+
+
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                                       Internal                                                       #
+# -------------------------------------------------------------------------------------------------------------------- #
+
+
+def _evidently_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:
+    kernel = None
+    if isinstance(config, AlibiDetectMmdDriftMetric):
+        kernel = getattr(alibi_detect.utils.pytorch, config.kernel)
+
+    if isinstance(config, AlibiDetectMmdDriftMetric):
+        assert kernel is not None
+        return MMDDrift(
+            x_ref=embeddings_ref,
+            backend="pytorch",
+            p_val=config.p_val,
+            kernel=kernel,
+            n_permutations=config.num_permutations,
+            device=config.device,
+        )
+
+    if isinstance(config, AlibiDetectKSDriftMetric):
+        return KSDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            alternative=config.alternative_hypothesis,
+            correction=config.correction,
+        )
+
+    if isinstance(config, AlibiDetectCVMDriftMetric):
+        return CVMDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            correction=config.correction,
+        )
+
+    raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")
