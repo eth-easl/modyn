@@ -290,7 +290,7 @@ class PytorchTrainer:
 
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
-                    self._assert_data_size(self._batch_size, data, sample_ids, target)
+                        self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         output = self._model.model(data)
