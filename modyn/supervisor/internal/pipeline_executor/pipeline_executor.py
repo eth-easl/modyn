@@ -500,6 +500,8 @@ class PipelineExecutor:
             s.triggers.append(trigger_index)
             s.current_sample_index += len(trigger_data)
 
+            self.logs.materialize(s.log_directory, mode="increment")
+
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break
 
