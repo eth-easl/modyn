@@ -33,6 +33,8 @@ Note that there are different versions of CGLM you can generate:
 
 The script will tell you at the end how many classes your dataset contains.
 Note that the size of the dataset is not consistent with what is reported in the initial paper on CGLM, but since their code on metadata processing is not open source, we cannot investigate the difference here.
+The script will also generate some statistics over the generated dataset.
+You might find the `analyze_centeredness.py` file helpful to understand how many classes are only prevalent in a single year (how much they are dominated by their mode), and `analyze_samples_per_year_and_class.py` can give for each class a visual intuition of the sample distribution over time.
 
 ## Regenerate the metadata
 This paragraph is only relevant if you are interested in how we generated the `cglm_labels_timestamps_clean.csv` file.

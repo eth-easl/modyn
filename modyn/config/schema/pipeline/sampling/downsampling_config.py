@@ -52,6 +52,13 @@ class BaseDownsamplingConfig(ModynBaseModel):
         return self
 
 
+# These are options to approximate the full gradients used in several selection strategies.
+# LastLayer: The full gradient is approximated by the gradient of the last layer.
+# LastLayerWithEmbedding: The full gradient is approximated by the gradients of the last layer and the embedding layer.
+# They are concatenated and used to represent the full gradient.
+FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
+
+
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 
@@ -74,6 +81,7 @@ class GradMatchDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["GradMatch"] = "GradMatch"
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class CraigDownsamplingConfig(BaseDownsamplingConfig):
@@ -85,6 +93,7 @@ class CraigDownsamplingConfig(BaseDownsamplingConfig):
     greedy: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
         "NaiveGreedy", description="The greedy strategy to use."
     )
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class LossDownsamplingConfig(BaseDownsamplingConfig):
@@ -103,6 +112,7 @@ class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
     )
     selection_batch: int = Field(64, description="The batch size for the selection.")
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class GradNormDownsamplingConfig(BaseDownsamplingConfig):
