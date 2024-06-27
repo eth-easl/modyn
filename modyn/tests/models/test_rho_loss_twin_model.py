@@ -77,17 +77,31 @@ def test_training_forward(mock__eval_forward, current_model, twin_model: RHOLOSS
     mock__eval_forward.assert_not_called()
 
 
-def test_eval_forward_unseen_sample_id(twin_model: RHOLOSSTwinModel):
-    twin_model.model._models_seen_ids = [{1, 2}, {3, 4}]
-    twin_model.model.eval()
-    sample_ids = [4, 5]
-    forward_input = torch.randn(2, 2)
-    with pytest.raises(AssertionError):
-        twin_model.model(forward_input, sample_ids)
-
-
+@pytest.mark.parametrize("exclusive_model", [0, 1])
 @patch.object(RHOLOSSTwinModelModyn, "_training_forward")
-def test_eval_forward(mock__training_forward, twin_model: RHOLOSSTwinModel):
+def test_eval_forward_exclusively_route_to_one_model(
+    mock__training_forward, exclusive_model: int, twin_model: RHOLOSSTwinModel
+):
+    twin_model.model._models[1 - exclusive_model].forward = Mock(return_value=torch.zeros(3, 2))
+    twin_model.model._models[exclusive_model].forward = Mock(return_value=torch.ones(3, 2))
+
+    twin_model.model.eval()
+    sample_ids = [1, 2, 3]
+    forward_input = torch.randn(3, 2)
+
+    twin_model.model._models_seen_ids[1 - exclusive_model] = set(sample_ids)
+    twin_model.model._models_seen_ids[exclusive_model] = set()
+
+    output = twin_model.model(forward_input, sample_ids)
+    assert torch.allclose(output, torch.ones(3, 2))
+
+    twin_model.model._models[1 - exclusive_model].forward.assert_not_called()
+    twin_model.model._models[exclusive_model].forward.assert_called_once()
+    # we never call _training_forward in eval mode
+    assert mock__training_forward.call_count == 0
+
+
+def test_eval_forward_mixed(twin_model: RHOLOSSTwinModel):
 
     def model0_mock_forward(data: torch.Tensor):
         return torch.zeros(data.shape[0], 10)
@@ -97,13 +111,13 @@ def test_eval_forward(mock__training_forward, twin_model: RHOLOSSTwinModel):
 
     twin_model.model._models[0].forward = model0_mock_forward
     twin_model.model._models[1].forward = model1_mock_forward
-    twin_model.model._models_seen_ids = [{1, 2, 3}, {3, 4}]
+    twin_model.model._models_seen_ids = [{1, 2}, {3, 4}]
     twin_model.model.eval()
 
-    sample_ids = [1, 4, 3, 2]
-    forward_input = torch.randn(4, 2)
+    sample_ids = [1, 4, 3, 2, 5]
+    forward_input = torch.randn(len(sample_ids), 2)
     output = twin_model.model(forward_input, sample_ids)
-    assert torch.allclose(output, torch.tensor([[1.0] * 10, [0.0] * 10, [0.0] * 10, [1.0] * 10]))
+    assert torch.allclose(output, torch.tensor([[1.0] * 10, [0.0] * 10, [0.0] * 10, [1.0] * 10, [0.0] * 10]))
 
 
 def test_backup_and_restore_state(twin_model: RHOLOSSTwinModel):
