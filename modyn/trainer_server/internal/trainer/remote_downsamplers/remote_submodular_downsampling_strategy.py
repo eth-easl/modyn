@@ -7,6 +7,9 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_d
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    FULL_GRAD_APPROXIMATION,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import (
     submodular_function,
     submodular_optimizer,
@@ -43,6 +46,8 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         per_sample_loss: Any,
         device: str,
     ):
+        self.full_grad_approximation = params_from_selector["full_grad_approximation"]
+        assert self.full_grad_approximation in FULL_GRAD_APPROXIMATION
         super().__init__(
             pipeline_id,
             trigger_id,
@@ -51,7 +56,11 @@ class RemoteSubmodularDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
             modyn_config,
             per_sample_loss,
             device,
-            MatrixContent.GRADIENTS,
+            (
+                MatrixContent.LAST_LAYER_GRADIENTS
+                if self.full_grad_approximation == "LastLayer"
+                else MatrixContent.LAST_TWO_LAYERS_GRADIENTS
+            ),
         )
 
         self.selection_batch = params_from_selector["selection_batch"]

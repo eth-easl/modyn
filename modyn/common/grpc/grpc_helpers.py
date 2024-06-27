@@ -247,6 +247,7 @@ class TrainerServerGRPCHandlerMixin:
             shuffle=training_config.shuffle,
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
+            drop_last_batch=training_config.drop_last_batch,
         )
 
     def start_training(

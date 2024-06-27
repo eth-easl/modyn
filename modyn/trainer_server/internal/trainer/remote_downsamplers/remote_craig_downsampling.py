@@ -6,6 +6,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    FULL_GRAD_APPROXIMATION,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
@@ -43,13 +46,16 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
 
         self.selection_batch = params_from_selector["selection_batch"]
         self.greedy = params_from_selector["greedy"]
+        self.full_grad_approximation = params_from_selector["full_grad_approximation"]
+        assert self.full_grad_approximation in FULL_GRAD_APPROXIMATION
+
         if self.greedy not in OPTIMIZER_CHOICES:
             raise ValueError(
                 f"The required Greedy optimizer is not available. Pick one of the following: {OPTIMIZER_CHOICES}"
             )
 
-        # This class uses the embedding recorder
-        self.requires_coreset_supporting_module = True
+        self.requires_coreset_supporting_module = self.full_grad_approximation == "LastLayerWithEmbedding"
+        self.requires_data_label_by_label = True
 
         # Samples are supplied label by label (this class is instance of AbstractPerLabelRemoteDownsamplingStrategy).
         # The following list keeps the gradients of the current label. When all the samples belonging to the current
@@ -75,8 +81,6 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         target: torch.Tensor,
         embedding: Optional[torch.Tensor] = None,
     ) -> None:
-        assert embedding is not None
-
         # Slightly different implementation for BTS and STB since in STB points are supplied class by class while in
         # BTS are not. STB will always use the first branch, BTS will typically (might use the first if all the points
         # belong to the same class) use the second one
@@ -92,32 +96,29 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             for current_target in different_targets_in_this_batch:
                 mask = target == current_target
                 this_target_sample_ids = [sample_ids[i] for i, keep in enumerate(mask) if keep]
+                sub_embedding = embedding[mask] if embedding is not None else None
                 self._inform_samples_single_class(
-                    this_target_sample_ids, forward_output[mask], target[mask], embedding[mask]
+                    this_target_sample_ids, forward_output[mask], target[mask], sub_embedding
                 )
                 self.inform_end_of_current_label()
 
     def _inform_samples_single_class(
-        self, sample_ids: list[int], forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
+        self,
+        sample_ids: list[int],
+        forward_output: torch.Tensor,
+        target: torch.Tensor,
+        embedding: Optional[torch.Tensor],
     ) -> None:
-        embedding_dim = embedding.shape[1]
-        num_classes = forward_output.shape[1]
-        batch_num = target.shape[0]
-
-        loss = self.criterion(forward_output, target).mean()
-
-        # compute the gradient for each element provided
-        with torch.no_grad():
-            bias_parameters_grads = torch.autograd.grad(loss, forward_output)[0]
-            weight_parameters_grads = embedding.view(batch_num, 1, embedding_dim).repeat(
-                1, num_classes, 1
-            ) * bias_parameters_grads.view(batch_num, num_classes, 1).repeat(1, 1, embedding_dim)
-
-            # store the computed gradients
-            self.current_class_gradients.append(
-                torch.cat([bias_parameters_grads, weight_parameters_grads.flatten(1)], dim=1).cpu().numpy()
+        if self.full_grad_approximation == "LastLayerWithEmbedding":
+            assert embedding is not None
+            grads_wrt_loss_sum = self._compute_last_two_layers_gradient_wrt_loss_sum(
+                self.criterion, forward_output, target, embedding
             )
-
+        else:
+            grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
+        batch_num = target.shape[0]
+        grads_wrt_loss_mean = grads_wrt_loss_sum / batch_num
+        self.current_class_gradients.append(grads_wrt_loss_mean.detach().cpu().numpy())
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
