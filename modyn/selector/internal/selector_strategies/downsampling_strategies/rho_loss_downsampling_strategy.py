@@ -9,10 +9,10 @@ from modyn.metadata_database.models import Pipeline, SelectorStateMetadata, Trai
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.selector_strategies import AbstractSelectionStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
-from modyn.selector.internal.selector_strategies.utils import get_trigger_dataset_size
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, select, update
+from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,51 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
+
+        probability = self.holdout_set_ratio / 100
+
+        query = self._get_sampling_query(self._pipeline_id, next_trigger_id, probability, selector_storage_backend)
+
+        self._persist_holdout_set(query, next_trigger_id, selector_storage_backend)
+
+        if self.il_training_config.use_previous_model:
+            if self.holdout_set_strategy == "Twin":
+                raise NotImplementedError("Use previous model currently is not supported for Twin strategy")
+            previous_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
+        else:
+            previous_model_id = None
+
+        model_id = self._train_il_model(next_trigger_id, previous_model_id)
         if self.holdout_set_strategy == "Twin":
-            raise NotImplementedError("Twin holdout set strategy is not implemented yet.")
-        self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
-        self._train_il_model(next_trigger_id)
+            second_query = self._get_rest_data_query(self._pipeline_id, next_trigger_id)
+            self._persist_holdout_set(second_query, next_trigger_id, selector_storage_backend)
+            self._train_il_model(next_trigger_id, model_id)
+        self._clean_tmp_version(self._pipeline_id, next_trigger_id, selector_storage_backend)
+
+    @staticmethod
+    def _clean_tmp_version(
+        main_pipeline_id: int, trigger_id: int, selector_storage_backend: AbstractStorageBackend
+    ) -> None:
+        assert isinstance(selector_storage_backend, DatabaseStorageBackend)
+
+        def _session_callback(session: Session) -> None:
+            session.query(SelectorStateMetadata).filter(
+                SelectorStateMetadata.pipeline_id == main_pipeline_id,
+                SelectorStateMetadata.seen_in_trigger_id == trigger_id,
+            ).update({"tmp_version": 0})
+            session.commit()
+
+        selector_storage_backend._execute_on_session(_session_callback)
+
+    @staticmethod
+    def _get_rest_data_query(main_pipeline_id: int, trigger_id: int) -> Select:
+        stmt = select(SelectorStateMetadata.sample_key).filter(
+            SelectorStateMetadata.pipeline_id == main_pipeline_id,
+            SelectorStateMetadata.seen_in_trigger_id == trigger_id,
+            SelectorStateMetadata.tmp_version == 0,
+        )
+
+        return stmt
 
     @property
     def downsampling_params(self) -> dict:
@@ -81,11 +122,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             assert il_model_id is not None
         return il_model_id
 
-    def _train_il_model(self, trigger_id: int) -> int:
-        if self.il_training_config.use_previous_model:
-            previous_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
-        else:
-            previous_model_id = None
+    def _train_il_model(self, trigger_id: int, previous_model_id: Optional[int]) -> int:
         training_id = self.grpc.start_training(
             pipeline_id=self.rho_pipeline_id,
             trigger_id=trigger_id,
@@ -135,16 +172,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         )
         return rho_pipeline_id
 
-    def _prepare_holdout_set(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
-        current_trigger_dataset_size = get_trigger_dataset_size(
-            selector_storage_backend, self._pipeline_id, next_trigger_id, tail_triggers=0
-        )
-
-        holdout_set_size = max(int(current_trigger_dataset_size * self.holdout_set_ratio / 100), 1)
-
-        stmt = self._get_holdout_sampling_query(self._pipeline_id, next_trigger_id, holdout_set_size).execution_options(
-            yield_per=self.maximum_keys_in_memory
-        )
+    def _persist_holdout_set(
+        self, query: Select, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend
+    ) -> None:
+        stmt = query.execution_options(yield_per=self.maximum_keys_in_memory)
 
         def training_set_producer() -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
             with MetadataDatabaseConnection(self._modyn_config) as database:
@@ -165,13 +196,26 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         )
 
     @staticmethod
-    def _get_holdout_sampling_query(main_pipeline_id: int, trigger_id: int, target_size: int) -> Select:
-        return (
-            select(SelectorStateMetadata.sample_key)
-            .filter(
-                SelectorStateMetadata.pipeline_id == main_pipeline_id,
-                SelectorStateMetadata.seen_in_trigger_id == trigger_id,
+    def _get_sampling_query(
+        main_pipeline_id: int, trigger_id: int, probability: float, selector_storage_backend: AbstractStorageBackend
+    ) -> Select:
+        assert isinstance(selector_storage_backend, DatabaseStorageBackend)
+
+        def _session_callback(session: Session) -> None:
+            session.execute(
+                update(SelectorStateMetadata)
+                .values(tmp_version=1)
+                .where(SelectorStateMetadata.pipeline_id == main_pipeline_id)
+                .where(SelectorStateMetadata.seen_in_trigger_id == trigger_id)
+                .where(func.rand() < probability)
             )
-            .order_by(func.random())  # pylint: disable=E1102
-            .limit(target_size)
+
+        selector_storage_backend._execute_on_session(_session_callback)
+
+        stmt = select(SelectorStateMetadata.sample_key).filter(
+            SelectorStateMetadata.pipeline_id == main_pipeline_id,
+            SelectorStateMetadata.seen_in_trigger_id == trigger_id,
+            SelectorStateMetadata.tmp_version == 1,
         )
+
+        return stmt

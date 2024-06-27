@@ -22,6 +22,12 @@ class SelectorStateMetadataMixin:
     sample_key = Column("sample_key", BIGINT, primary_key=True)
     seen_in_trigger_id = Column("seen_in_trigger_id", Integer, primary_key=True)
     used = Column("used", Boolean, default=False)
+    # This is a field to help selection strategies to track the state of the samples during preparing the
+    # post-presampling training set. It should be reset to 0 after the training set is prepared.
+    # For example, the RHOLossDownsamplingStrategy uses this field to split the training set into two halves
+    # by first sampling 50% and setting their `tmp_version` field to 1,
+    # Then it generates the remaining 50% by querying samples with `tmp_version` as 0.
+    tmp_version = Column("tmp_version", Integer, default=0)
     timestamp = Column("timestamp", BigInteger)
     label = Column("label", Integer)
     last_used_in_trigger = Column("last_used_in_trigger", Integer, default=-1)
