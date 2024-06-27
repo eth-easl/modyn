@@ -4,7 +4,7 @@ import pathlib
 import shutil
 import tempfile
 from typing import Any, Callable, List, Literal, Optional, Tuple
-from unittest.mock import ANY, MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import pytest
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
@@ -382,7 +382,7 @@ def test_inform_next_trigger_simple(
     modyn_config = get_minimal_modyn_config()
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
-        holdout_set_ratio=50,
+        holdout_set_ratio=10,
         il_training_config=il_training_config,
         holdout_set_strategy="Simple",
     )
@@ -401,8 +401,62 @@ def test_inform_next_trigger_simple(
         mock_get_latest_il_model_id.assert_not_called()
     mock__train_il_model.assert_called_once_with(next_trigger_id, expected_previous_model_id)
     mock__clean_tmp_version.assert_called_once_with(pipeline_id, next_trigger_id, ANY)
-    mock__get_sampling_query.assert_called_once_with(pipeline_id, next_trigger_id, pytest.approx(0.5), ANY)
+    mock__get_sampling_query.assert_called_once_with(pipeline_id, next_trigger_id, pytest.approx(0.1), ANY)
     mock__persist_holdout_set.assert_called_once_with(mock_query, next_trigger_id, ANY)
+
+
+@patch(
+    "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy.isinstance",
+    return_value=True,
+)
+@patch.object(RHOLossDownsamplingStrategy, "_get_latest_il_model_id")
+@patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=42)
+@patch.object(RHOLossDownsamplingStrategy, "_get_sampling_query")
+@patch.object(RHOLossDownsamplingStrategy, "_persist_holdout_set")
+@patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")
+@patch.object(RHOLossDownsamplingStrategy, "_get_rest_data_query")
+@patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+def test_inform_next_trigger_twin(
+    mock__get_rest_data_query: MagicMock,
+    mock__clean_tmp_version: MagicMock,
+    mock__persist_holdout_set: MagicMock,
+    mock__get_sampling_query: MagicMock,
+    mock__train_il_model: MagicMock,
+    mock_get_latest_il_model_id: MagicMock,
+    mock_is_instance: MagicMock,
+    il_training_config: ILTrainingConfig,
+    data_config: DataConfig,
+):
+    pipeline_id = register_pipeline(None, data_config)
+    il_training_config.use_previous_model = False
+    modyn_config = get_minimal_modyn_config()
+    downsampling_config = RHOLossDownsamplingConfig(
+        ratio=60,
+        holdout_set_ratio=50,
+        il_training_config=il_training_config,
+        holdout_set_strategy="Twin",
+    )
+    maximum_keys_in_memory = 4
+    mock_query = MagicMock()
+    mock__get_sampling_query.return_value = mock_query
+    mock_second_query = MagicMock()
+    mock__get_rest_data_query.return_value = mock_second_query
+    mock__train_il_model.side_effect = [1, 2]
+    strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
+    next_trigger_id = 2
+    storage_backend = MockStorageBackend(pipeline_id, modyn_config, maximum_keys_in_memory)
+    strategy.inform_next_trigger(next_trigger_id, storage_backend)
+
+    mock__get_sampling_query.assert_called_once_with(pipeline_id, next_trigger_id, pytest.approx(0.5), ANY)
+    mock__get_rest_data_query.assert_called_once_with(pipeline_id, next_trigger_id)
+
+    mock_get_latest_il_model_id.assert_not_called()
+
+    mock__train_il_model.assert_has_calls([call(next_trigger_id, None), call(next_trigger_id, 1)])
+    mock__persist_holdout_set.assert_has_calls(
+        [call(mock_query, next_trigger_id, ANY), call(mock_second_query, next_trigger_id, ANY)]
+    )
+    mock__clean_tmp_version.assert_called_once_with(pipeline_id, next_trigger_id, ANY)
 
 
 def test__get_latest_il_model_id():
@@ -445,3 +499,64 @@ def test__clean_tmp_version(mock_is_instance, data_config: DataConfig):
             )
             .count()
         ) == 0
+
+
+def test__get_rest_data_query(data_config: DataConfig):
+    pipeline_id = register_pipeline(None, data_config)
+    trigger_id = 2
+    key_ts_label_tmp_version_tuples = [
+        (1, 1, 0, 0),
+        (2, 2, 0, 1),
+        (3, 3, 0, 0),
+        (4, 4, 0, 1),
+        (5, 5, 0, 1),
+        (6, 6, 0, 0),
+        (7, 7, 0, 1),
+        (8, 8, 0, 0),
+        (9, 9, 0, 0),
+        (10, 10, 0, 1),
+    ]
+    modyn_config = get_minimal_modyn_config()
+    with MetadataDatabaseConnection(modyn_config) as database:
+        for key, timestamp, label, version in key_ts_label_tmp_version_tuples:
+            database.session.add(
+                SelectorStateMetadata(
+                    pipeline_id=pipeline_id,
+                    sample_key=key,
+                    timestamp=timestamp,
+                    label=label,
+                    seen_in_trigger_id=trigger_id,
+                    tmp_version=version,
+                )
+            )
+        database.session.commit()
+
+    query = RHOLossDownsamplingStrategy._get_rest_data_query(pipeline_id, trigger_id)
+    with MetadataDatabaseConnection(modyn_config) as database:
+        samples = database.session.execute(query).fetchall()
+    assert sorted(samples) == [(1,), (3,), (6,), (8,), (9,)]
+
+
+@patch(
+    "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy.isinstance",
+    return_value=True,
+)
+def test__get_sampling_query(mock_is_instance, data_config: DataConfig):
+    modyn_config = get_minimal_modyn_config()
+
+    def mock_storage_backend_execute_on_session_patch(session_callback: Callable) -> Any:
+        with MetadataDatabaseConnection(modyn_config) as database:
+            return session_callback(database.session)
+
+    pipeline_id = register_pipeline(None, data_config)
+    trigger_id = 2
+    full_dataset_size = 1000
+    store_samples(pipeline_id, trigger_id, [(i, i, 0) for i in range(full_dataset_size)])
+    storage_backend = MockStorageBackend(pipeline_id, get_minimal_modyn_config(), 4)
+    storage_backend._execute_on_session = Mock(wraps=mock_storage_backend_execute_on_session_patch)
+    query = RHOLossDownsamplingStrategy._get_sampling_query(pipeline_id, trigger_id, 0.5, storage_backend)
+    with MetadataDatabaseConnection(modyn_config) as database:
+        samples = database.session.execute(query).fetchall()
+    # with a dataset size as large as 1000, let's hope this range would make it not so flaky
+    assert 450 <= len(samples) <= 550
+    assert storage_backend._execute_on_session.call_count == 1

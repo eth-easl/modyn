@@ -11,7 +11,7 @@ from modyn.selector.internal.selector_strategies import AbstractSelectionStrateg
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
@@ -202,13 +202,12 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         assert isinstance(selector_storage_backend, DatabaseStorageBackend)
 
         def _session_callback(session: Session) -> None:
-            session.execute(
-                update(SelectorStateMetadata)
-                .values(tmp_version=1)
-                .where(SelectorStateMetadata.pipeline_id == main_pipeline_id)
-                .where(SelectorStateMetadata.seen_in_trigger_id == trigger_id)
-                .where(func.rand() < probability)
-            )
+            session.query(SelectorStateMetadata).filter(
+                SelectorStateMetadata.pipeline_id == main_pipeline_id,
+                SelectorStateMetadata.seen_in_trigger_id == trigger_id,
+                func.random() < probability,  # pylint: disable=not-callable
+            ).update({"tmp_version": 1})
+            session.commit()
 
         selector_storage_backend._execute_on_session(_session_callback)
 
