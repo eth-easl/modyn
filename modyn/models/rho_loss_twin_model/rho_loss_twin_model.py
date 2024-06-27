@@ -34,7 +34,7 @@ class RHOLOSSTwinModelModyn(nn.Module):
         self._models_seen_ids: list[set[int]] = [set(), set()]
         self._current_model = 0
 
-    def get_extra_state(self) -> Any:
+    def get_extra_state(self) -> dict:
         return {
             "models_seen_ids": self._models_seen_ids,
         }
