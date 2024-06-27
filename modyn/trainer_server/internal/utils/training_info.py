@@ -64,6 +64,7 @@ class TrainingInfo:
         ), "Inconsistent pretrained model configuration"
 
         self.batch_size = request.batch_size
+        self.drop_last_batch = request.drop_last_batch
         self.torch_criterion = request.torch_criterion
         self.amp = amp
 

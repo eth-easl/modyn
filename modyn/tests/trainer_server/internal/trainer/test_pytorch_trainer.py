@@ -156,6 +156,7 @@ def mock_get_dataloaders(
     shuffle,
     tokenizer,
     log_path,
+    drop_last,
     num_batches: int = 100,
 ):
     mock_train_dataloader = MockDataloader(batch_size, num_batches)
