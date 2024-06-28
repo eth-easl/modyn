@@ -351,3 +351,5 @@ if __name__ == "__main__":
 
     logs_.supervisor_logs = ex.run_post_pipeline_evaluations(eval_status_queue=Queue())
     logs_.materialize(snapshot_path, mode="final")
+    logger.info("Done with manual evaluation!")
+    sys.exit(0)

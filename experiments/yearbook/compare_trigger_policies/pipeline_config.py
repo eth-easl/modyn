@@ -22,7 +22,7 @@ from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 
 
 def gen_pipeline_config(
-    name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig]
+    name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig], device: str
 ) -> ModynPipelineConfig:
     num_classes = 2
     return ModynPipelineConfig(
@@ -31,7 +31,7 @@ def gen_pipeline_config(
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
-            device="cuda:0",
+            device=device,
             dataloader_workers=2,
             use_previous_model=True,
             initial_model="random",
@@ -66,7 +66,7 @@ def gen_pipeline_config(
         trigger=trigger,
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
-            device="cuda:0",
+            device=device,
             result_writers=["json"],
             after_pipeline_evaluation_workers=20,
             after_training_evaluation_workers=20,
@@ -100,7 +100,7 @@ def gen_pipeline_config(
                         ),
                     ],
                 )
-                for yb_dataset_name in ["yearbook", "yearbook_test"]
+                for yb_dataset_name in ["yearbook_all", "yearbook_test"]
             ],
         ),
     )

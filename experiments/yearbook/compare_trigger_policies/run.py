@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import os
+from experiments.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
@@ -10,15 +10,6 @@ from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEval
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
-
-
-@dataclass
-class Experiment:
-    name: str
-    eval_handlers: list[EvalHandlerConfig]
-    time_trigger_schedules: list[int]  # in years
-    data_amount_triggers: list[int]  # in num samples
-    drift_triggers: list[tuple[int, float]]  # interval, threshold
 
 
 _FIRST_TIMESTAMP = 0
@@ -37,14 +28,14 @@ def construct_slicing_eval_handler() -> EvalHandlerConfig:
     )
 
 
-def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[EvalHandlerConfig]:
+def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> dict[EvalHandlerConfig]:
     """
     Args:
         intervals: List of (handler_name_suffix, interval string expression)
     """
     return [
         EvalHandlerConfig(
-            name=f"scheduled-{interval}",
+            name=f"scheduled-{interval[0]}",
             execution_time="manual",
             models="matrix",
             strategy=PeriodicEvalStrategyConfig(
@@ -62,40 +53,40 @@ def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[E
 def construct_between_trigger_eval_handler() -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="full",
-        execution_time="manual",
+        execution_time="after_pipeline",
         models="active",
         strategy=BetweenTwoTriggersEvalStrategyConfig(),
-        datasets=["yearbook"],  # train and test
+        datasets=["yearbook_all"],  # train and test
     )
 
 
 def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    # time based triggers: every:
     for years in experiment.time_trigger_schedules:
         pipeline_configs.append(
             gen_pipeline_config(
-                name=f"timetrigger_{years}y",
+                name=f"{experiment.name}_time_{years}y",
                 trigger=TimeTriggerConfig(every=f"{years}d", start_timestamp=_FIRST_TIMESTAMP),  # faked timestamps
                 eval_handlers=experiment.eval_handlers,
+                device=experiment.gpu_device,
             )
         )
 
-    # sample count based triggers: every: 100, 500, 1000, 2000, 10_000
     for count in experiment.data_amount_triggers:
         pipeline_configs.append(
             gen_pipeline_config(
-                name=f"dataamounttrigger_{count}",
+                name=f"{experiment.name}_dataamount{count}",
                 trigger=DataAmountTriggerConfig(num_samples=count),
                 eval_handlers=experiment.eval_handlers,
+                device=experiment.gpu_device,
             )
         )
 
     for interval, threshold in experiment.drift_triggers:
         pipeline_configs.append(
             gen_pipeline_config(
-                name=f"datadrifttrigger_{interval}_{threshold}",
+                name=f"{experiment.name}_drift_{interval}_{threshold}",
                 trigger=DataDriftTriggerConfig(
                     detection_interval_data_points=interval,
                     sample_size=None,
@@ -103,6 +94,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
                     metric_config={"threshold": threshold},
                 ),
                 eval_handlers=experiment.eval_handlers,
+                device=experiment.gpu_device,
             )
         )
 
@@ -110,6 +102,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
 
 
 _EXPERIMENT_REFS = {
+    # done
     0: Experiment(
         # to verify online composite model determination logic
         name="timetrigger-smoke-test",
@@ -117,15 +110,38 @@ _EXPERIMENT_REFS = {
         time_trigger_schedules=[1, 2, 5],
         data_amount_triggers=[],
         drift_triggers=[],
+        gpu_device="cuda:0",
     ),
+    # unfinished
     1: Experiment(
-        name="training-time-vs-numsamples",
-        eval_handlers=[],
+        name="numsamples-training-time",
+        eval_handlers=[construct_between_trigger_eval_handler()],
         time_trigger_schedules=[],
+        data_amount_triggers=[100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000],
+        drift_triggers=[],
+        gpu_device="cuda:1",
+    ),
+    # different time triggcer
+    2: Experiment(
+        name="timetrigger1y-periodic-eval-intervals",
+        eval_handlers=[construct_slicing_eval_handler()]
+        + construct_periodic_eval_handlers(
+            intervals=[
+                ("-delta-current", "23h"),
+                ("-delta+-1y", "1d"),
+                ("-delta+-2y", "2d"),
+                ("-delta+-3y", "3d"),
+                ("-delta+-5y", "5d"),
+                ("-delta+-10y", "10d"),
+                ("-delta+-15y", "15d"),
+            ]
+        ),
+        time_trigger_schedules=[1],
         data_amount_triggers=[],
         drift_triggers=[],
+        gpu_device="cuda:2",
     ),
-    2: Experiment(
+    -2: Experiment(
         name="full-todo",
         eval_handlers=[
             construct_periodic_eval_handlers([("~1y", "300d"), ("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")])
@@ -142,6 +158,7 @@ _EXPERIMENT_REFS = {
             (5_000, 0.7),
             (10_000, 0.7),
         ],
+        gpu_device="cuda:0",
     ),
 }
 
@@ -160,7 +177,7 @@ def run_experiment() -> None:
     run_multiple_pipelines(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
         pipeline_configs=construct_pipelines(_EXPERIMENT_REFS[experiment_id]),
-        start_replay_at=0,
+        start_replay_at=_FIRST_TIMESTAMP,
         stop_replay_at=None,
         maximum_triggers=None,
     )
