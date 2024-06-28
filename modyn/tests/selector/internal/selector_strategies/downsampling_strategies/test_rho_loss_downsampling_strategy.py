@@ -354,31 +354,29 @@ def test__train_il_model(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy.isinstance",
     return_value=True,
 )
-@patch.object(RHOLossDownsamplingStrategy, "_get_latest_il_model_id")
+@patch.object(RHOLossDownsamplingStrategy, "_get_latest_rho_state")
 @patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=42)
 @patch.object(RHOLossDownsamplingStrategy, "_get_sampling_query")
 @patch.object(RHOLossDownsamplingStrategy, "_persist_holdout_set")
 @patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
 @pytest.mark.parametrize("use_previous_model", [True, False])
+@pytest.mark.parametrize("rho_state", [None, (1, 2)])
 def test_inform_next_trigger_simple(
     mock__clean_tmp_version: MagicMock,
     mock__persist_holdout_set: MagicMock,
     mock__get_sampling_query: MagicMock,
     mock__train_il_model: MagicMock,
-    mock_get_latest_il_model_id: MagicMock,
+    mock_get_latest_rho_state: MagicMock,
     mock_is_instance: MagicMock,
+    rho_state: Optional[Tuple[int, int]],
     use_previous_model: bool,
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
 ):
     pipeline_id = register_pipeline(None, data_config)
     il_training_config.use_previous_model = use_previous_model
-    if use_previous_model:
-        expected_previous_model_id = 67
-        mock_get_latest_il_model_id.return_value = expected_previous_model_id
-    else:
-        expected_previous_model_id = None
+    mock_get_latest_rho_state.return_value = rho_state
     modyn_config = get_minimal_modyn_config()
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
@@ -395,35 +393,39 @@ def test_inform_next_trigger_simple(
     storage_backend = MockStorageBackend(pipeline_id, modyn_config, maximum_keys_in_memory)
     strategy.inform_next_trigger(next_trigger_id, storage_backend)
 
+    mock_get_latest_rho_state.assert_called_once_with(strategy.rho_pipeline_id, modyn_config)
     if use_previous_model:
-        mock_get_latest_il_model_id.assert_called_once_with(strategy.rho_pipeline_id, modyn_config)
+        expected_previous_model_id = rho_state[1] if rho_state is not None else None
     else:
-        mock_get_latest_il_model_id.assert_not_called()
-    mock__train_il_model.assert_called_once_with(next_trigger_id, expected_previous_model_id)
+        expected_previous_model_id = None
+    expected_rho_next_trigger_id = rho_state[0] + 1 if rho_state is not None else 0
+    mock__persist_holdout_set.assert_called_once_with(mock_query, expected_rho_next_trigger_id, ANY)
+    mock__train_il_model.assert_called_once_with(expected_rho_next_trigger_id, expected_previous_model_id)
     mock__clean_tmp_version.assert_called_once_with(pipeline_id, next_trigger_id, ANY)
     mock__get_sampling_query.assert_called_once_with(pipeline_id, next_trigger_id, pytest.approx(0.1), ANY)
-    mock__persist_holdout_set.assert_called_once_with(mock_query, next_trigger_id, ANY)
 
 
 @patch(
     "modyn.selector.internal.selector_strategies.downsampling_strategies.rho_loss_downsampling_strategy.isinstance",
     return_value=True,
 )
-@patch.object(RHOLossDownsamplingStrategy, "_get_latest_il_model_id")
+@patch.object(RHOLossDownsamplingStrategy, "_get_latest_rho_state")
 @patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=42)
 @patch.object(RHOLossDownsamplingStrategy, "_get_sampling_query")
 @patch.object(RHOLossDownsamplingStrategy, "_persist_holdout_set")
 @patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")
 @patch.object(RHOLossDownsamplingStrategy, "_get_rest_data_query")
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+@pytest.mark.parametrize("rho_state", [None, (1, 2)])
 def test_inform_next_trigger_twin(
     mock__get_rest_data_query: MagicMock,
     mock__clean_tmp_version: MagicMock,
     mock__persist_holdout_set: MagicMock,
     mock__get_sampling_query: MagicMock,
     mock__train_il_model: MagicMock,
-    mock_get_latest_il_model_id: MagicMock,
+    mock_get_latest_rho_state: MagicMock,
     mock_is_instance: MagicMock,
+    rho_state: Optional[Tuple[int, int]],
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
 ):
@@ -442,6 +444,8 @@ def test_inform_next_trigger_twin(
     mock_second_query = MagicMock()
     mock__get_rest_data_query.return_value = mock_second_query
     mock__train_il_model.side_effect = [1, 2]
+    mock_get_latest_rho_state.return_value = rho_state
+
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
     next_trigger_id = 2
     storage_backend = MockStorageBackend(pipeline_id, modyn_config, maximum_keys_in_memory)
@@ -450,23 +454,23 @@ def test_inform_next_trigger_twin(
     mock__get_sampling_query.assert_called_once_with(pipeline_id, next_trigger_id, pytest.approx(0.5), ANY)
     mock__get_rest_data_query.assert_called_once_with(pipeline_id, next_trigger_id)
 
-    mock_get_latest_il_model_id.assert_not_called()
-
-    mock__train_il_model.assert_has_calls([call(next_trigger_id, None), call(next_trigger_id, 1)])
+    mock_get_latest_rho_state.assert_called_once_with(strategy.rho_pipeline_id, modyn_config)
+    rho_trigger_ids = [0, 1] if rho_state is None else [rho_state[0] + 1, rho_state[0] + 2]
+    mock__train_il_model.assert_has_calls([call(rho_trigger_ids[0], None), call(rho_trigger_ids[1], 1)])
     mock__persist_holdout_set.assert_has_calls(
-        [call(mock_query, next_trigger_id, ANY), call(mock_second_query, next_trigger_id, ANY)]
+        [call(mock_query, rho_trigger_ids[0], ANY), call(mock_second_query, rho_trigger_ids[1], ANY)]
     )
     mock__clean_tmp_version.assert_called_once_with(pipeline_id, next_trigger_id, ANY)
 
 
-def test__get_latest_il_model_id():
+def test__get_latest_rho_state():
     modyn_config = get_minimal_modyn_config()
     rho_pipeline_id = 1
-    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) is None
+    assert RHOLossDownsamplingStrategy._get_latest_rho_state(rho_pipeline_id, modyn_config) is None
     add_trigger_and_model(rho_pipeline_id, 0)
-    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) == 1
+    assert RHOLossDownsamplingStrategy._get_latest_rho_state(rho_pipeline_id, modyn_config) == (0, 1)
     add_trigger_and_model(rho_pipeline_id, 1)
-    assert RHOLossDownsamplingStrategy._get_latest_il_model_id(rho_pipeline_id, modyn_config) == 2
+    assert RHOLossDownsamplingStrategy._get_latest_rho_state(rho_pipeline_id, modyn_config) == (1, 2)
 
 
 @patch(

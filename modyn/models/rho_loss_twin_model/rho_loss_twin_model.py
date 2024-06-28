@@ -43,6 +43,8 @@ class RHOLOSSTwinModelModyn(nn.Module):
         self._models_seen_ids = state["models_seen_ids"]
         # the second time we train on this model, we should switch to the other model
         self._current_model = 1
+        logger.info(f"Switching to model {self._current_model}")
+        logger.info(f"Models seen ids: {self._models_seen_ids}")
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
@@ -59,11 +61,11 @@ class RHOLOSSTwinModelModyn(nn.Module):
         return self._models[self._current_model](data)
 
     def _eval_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
-        seen_by_model0 = torch.BoolTensor(
-            [sample_id in self._models_seen_ids[0] for sample_id in sample_ids], device=self.device
+        seen_by_model0 = torch.tensor(
+            [sample_id in self._models_seen_ids[0] for sample_id in sample_ids], dtype=torch.bool, device=data.device
         )
-        seen_by_model1 = torch.BoolTensor(
-            [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], device=self.device
+        seen_by_model1 = torch.tensor(
+            [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], dtype=torch.bool, device=data.device
         )
 
         # if model 0 did not see any sample, we route all samples to model 0

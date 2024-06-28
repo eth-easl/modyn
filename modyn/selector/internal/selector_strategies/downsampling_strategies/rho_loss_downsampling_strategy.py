@@ -50,21 +50,36 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         probability = self.holdout_set_ratio / 100
 
         query = self._get_sampling_query(self._pipeline_id, next_trigger_id, probability, selector_storage_backend)
-
-        self._persist_holdout_set(query, next_trigger_id, selector_storage_backend)
-
+        rho_state = self._get_latest_rho_state(self.rho_pipeline_id, self._modyn_config)
+        if rho_state is not None:
+            next_rho_trigger_id = rho_state[0] + 1
+            last_model_id = rho_state[1]
+        else:
+            logger.info(f"No previous state found for pipeline {self.rho_pipeline_id}.")
+            next_rho_trigger_id = 0
+            last_model_id = None
+        self._persist_holdout_set(query, next_rho_trigger_id, selector_storage_backend)
         if self.il_training_config.use_previous_model:
             if self.holdout_set_strategy == "Twin":
                 raise NotImplementedError("Use previous model currently is not supported for Twin strategy")
-            previous_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
+            previous_model_id = last_model_id
         else:
             previous_model_id = None
 
-        model_id = self._train_il_model(next_trigger_id, previous_model_id)
+        model_id = self._train_il_model(next_rho_trigger_id, previous_model_id)
+        logger.info(
+            f"Trained IL model {model_id} for trigger {next_rho_trigger_id} in rho pipeline"
+            f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+        )
         if self.holdout_set_strategy == "Twin":
+            second_next_trigger_id = next_rho_trigger_id + 1
             second_query = self._get_rest_data_query(self._pipeline_id, next_trigger_id)
-            self._persist_holdout_set(second_query, next_trigger_id, selector_storage_backend)
-            self._train_il_model(next_trigger_id, model_id)
+            self._persist_holdout_set(second_query, second_next_trigger_id, selector_storage_backend)
+            self._train_il_model(second_next_trigger_id, model_id)
+            logger.info(
+                f"Twin strategy: Trained second IL model for trigger {next_trigger_id} in rho pipeline "
+                f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+            )
         self._clean_tmp_version(self._pipeline_id, next_trigger_id, selector_storage_backend)
 
     @staticmethod
@@ -96,15 +111,15 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def downsampling_params(self) -> dict:
         config = super().downsampling_params
         config["rho_pipeline_id"] = self.rho_pipeline_id
-        il_model_id = self._get_latest_il_model_id(self.rho_pipeline_id, self._modyn_config)
-        assert il_model_id is not None
-        config["il_model_id"] = il_model_id
+        state = self._get_latest_rho_state(self.rho_pipeline_id, self._modyn_config)
+        assert state is not None
+        config["il_model_id"] = state[1]
         return config
 
     @staticmethod
-    def _get_latest_il_model_id(rho_pipeline_id: int, modyn_config: dict) -> Optional[int]:
+    def _get_latest_rho_state(rho_pipeline_id: int, modyn_config: dict) -> Optional[Tuple[int, int]]:
         with MetadataDatabaseConnection(modyn_config) as database:
-            # find the maximal trigger id. This is the current trigger id.
+            # find the maximal trigger id
             max_trigger_id = (
                 database.session.query(func.max(Trigger.trigger_id))
                 .filter(Trigger.pipeline_id == rho_pipeline_id)
@@ -120,7 +135,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
                 .scalar()
             )
             assert il_model_id is not None
-        return il_model_id
+        return max_trigger_id, il_model_id
 
     def _train_il_model(self, trigger_id: int, previous_model_id: Optional[int]) -> int:
         training_id = self.grpc.start_training(
@@ -173,7 +188,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return rho_pipeline_id
 
     def _persist_holdout_set(
-        self, query: Select, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend
+        self, query: Select, target_trigger_id: int, selector_storage_backend: AbstractStorageBackend
     ) -> None:
         stmt = query.execution_options(yield_per=self.maximum_keys_in_memory)
 
@@ -185,13 +200,13 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
 
         total_keys_in_trigger, *_ = AbstractSelectionStrategy.store_training_set(
             self.rho_pipeline_id,
-            next_trigger_id,
+            target_trigger_id,
             self._modyn_config,
             training_set_producer,
             selector_storage_backend.insertion_threads,
         )
         logger.info(
-            f"Stored {total_keys_in_trigger} keys in the holdout set for trigger {next_trigger_id} "
+            f"Stored {total_keys_in_trigger} keys in the holdout set for trigger {target_trigger_id} "
             f"in rho pipeline {self.rho_pipeline_id}"
         )
 

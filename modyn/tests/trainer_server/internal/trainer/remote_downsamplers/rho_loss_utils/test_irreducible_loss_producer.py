@@ -139,7 +139,7 @@ def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
 
     num_classes = 5
 
-    def fake_forward(self, x: Tensor):
+    def fake_forward(self, x: Tensor, sample_ids=None):
         return torch.zeros(x.shape[0], num_classes)
 
     with patch.object(DummyModyn, "forward", fake_forward):
