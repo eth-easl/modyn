@@ -8,7 +8,7 @@ from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers impor
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.evidently import EvidentlyMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -79,10 +79,10 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
                     detection_interval_data_points=interval,
                     sample_size=None,
                     metrics={
-                        "ev_mmd": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_model": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_ratio": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_distance": EvidentlyMmdDriftMetric(threshold=threshold),
+                        "ev_mmd": AlibiDetectMmdDriftMetric(threshold=threshold),
+                        # "ev_model": AlibiDetectMmdDriftMetric(threshold=threshold),
+                        # "ev_ratio": AlibiDetectMmdDriftMetric(threshold=threshold),
+                        # "ev_distance": AlibiDetectMmdDriftMetric(threshold=threshold),
                     },
                     aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
                 ),

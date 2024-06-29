@@ -10,7 +10,6 @@ from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
 from modyn.config.schema.pipeline import EvidentlyDriftMetric, MetricResult
-from typing_extensions import override
 
 from .drift_detector import DriftDetector
 
@@ -21,14 +20,15 @@ EVIDENTLY_COLUMN_MAPPING_NAME = "data"
 
 class EvidentlyDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, EvidentlyDriftMetric]):
-        super().__init__(metrics_config)
-        self.evidently_metrics = _get_evidently_metrics(metrics_config)
+        evidently_metrics_config = {
+            metric_ref: config for metric_ref, config in metrics_config.items() if config.id.startswith("Evidently")
+        }
+        super().__init__(evidently_metrics_config)
+        self.evidently_metrics = _get_evidently_metrics(evidently_metrics_config)
 
-    @override
     def init_detector(self) -> None:
         pass
 
-    @override
     def detect_drift(
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
@@ -82,13 +82,6 @@ def _get_evidently_metrics(metrics_config: dict[str, EvidentlyDriftMetric]) -> d
 
 
 def _evidently_metric_factory(config: EvidentlyDriftMetric) -> EmbeddingsDriftMetric:
-    if config.id == "EvidentlyMmdDriftMetric":
-        return embedding_drift_methods.mmd(
-            threshold=config.threshold,
-            bootstrap=config.bootstrap,
-            quantile_probability=config.quantile_probability,
-            pca_components=config.num_pca_component,
-        )
     if config.id == "EvidentlyModelDriftMetric":
         return embedding_drift_methods.model(
             threshold=config.threshold,

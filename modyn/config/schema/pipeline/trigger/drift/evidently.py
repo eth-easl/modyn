@@ -8,13 +8,6 @@ class _EvidentlyBaseDriftMetric(ModynBaseModel):
     num_pca_component: int | None = Field(None)
 
 
-class EvidentlyMmdDriftMetric(_EvidentlyBaseDriftMetric):
-    id: Literal["EvidentlyMmdDriftMetric"] = Field("EvidentlyMmdDriftMetric")
-    bootstrap: bool = Field(False)
-    quantile_probability: float = 0.05
-    threshold: float = Field(0.15)
-
-
 class EvidentlyModelDriftMetric(_EvidentlyBaseDriftMetric):
     id: Literal["EvidentlyModelDriftMetric"] = Field("EvidentlyModelDriftMetric")
     bootstrap: bool = Field(False)
@@ -39,7 +32,6 @@ class EvidentlySimpleDistanceDriftMetric(_EvidentlyBaseDriftMetric):
 
 EvidentlyDriftMetric = Annotated[
     Union[
-        EvidentlyMmdDriftMetric,
         EvidentlyModelDriftMetric,
         EvidentlyRatioDriftMetric,
         EvidentlySimpleDistanceDriftMetric,

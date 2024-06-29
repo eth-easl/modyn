@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
 from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.evidently import EvidentlyMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
@@ -23,7 +23,7 @@ SAMPLE = (10, 1, 1)
 def drift_trigger_config() -> DataDriftTriggerConfig:
     return DataDriftTriggerConfig(
         detection_interval_data_points=42,
-        metrics={"model": EvidentlyMmdDriftMetric()},
+        metrics={"model": AlibiDetectMmdDriftMetric()},
         aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
     )
 

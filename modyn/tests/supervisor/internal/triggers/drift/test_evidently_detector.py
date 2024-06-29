@@ -1,9 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from modyn.config.schema.pipeline import (
-    EvidentlyMmdDriftMetric,
     EvidentlyModelDriftMetric,
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
@@ -32,11 +30,6 @@ def df_data_cur(data_cur: np.ndarray) -> pd.DataFrame:
 
 
 @pytest.fixture
-def mmd_drift_metric() -> EvidentlyMmdDriftMetric:
-    return EvidentlyMmdDriftMetric(bootstrap=True)
-
-
-@pytest.fixture
 def model_drift_metric() -> EvidentlyModelDriftMetric:
     return EvidentlyModelDriftMetric(bootstrap=True)
 
@@ -55,7 +48,6 @@ def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
 
 
 def test_evidently_detect_drift_metric(
-    mmd_drift_metric: EvidentlyMmdDriftMetric,
     model_drift_metric: EvidentlyModelDriftMetric,
     ratio_drift_metric: EvidentlyRatioDriftMetric,
     simple_distance_drift_metric: EvidentlySimpleDistanceDriftMetric,
@@ -64,7 +56,6 @@ def test_evidently_detect_drift_metric(
     df_data_cur: np.ndarray,
 ) -> None:
     detector = [
-        ("mmd", EvidentlyDriftDetector({"mmd": mmd_drift_metric})),
         ("model", EvidentlyDriftDetector({"model": model_drift_metric})),
         ("ratio", EvidentlyDriftDetector({"ratio": ratio_drift_metric})),
         ("simple_distance", EvidentlyDriftDetector({"simple_distance": simple_distance_drift_metric})),
@@ -74,10 +65,6 @@ def test_evidently_detect_drift_metric(
 
         # on h0
         results = ad.detect_drift(df_data_ref, df_data_h0)
-        # if name == "mmd":
-        #     # bug in evidently, always uses reference data to detect drift
-        #     pass
-        # else:
         assert not results[name].is_drift
 
         # on current data
@@ -90,11 +77,10 @@ def test_evidently_detect_drift_metric(
 
     ad = EvidentlyDriftDetector(
         {
-            "mmd": mmd_drift_metric,
             "model": model_drift_metric,
             "ratio": ratio_drift_metric,
             "simple_distance": simple_distance_drift_metric,
         }
     )
     results = ad.detect_drift(df_data_ref, df_data_cur)
-    assert len(results) == 4
+    assert len(results) == 3

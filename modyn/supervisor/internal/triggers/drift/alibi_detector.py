@@ -9,7 +9,6 @@ import torch
 from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDrift, MMDDrift
 from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
-from typing_extensions import override
 
 from .drift_detector import DriftDetector
 
@@ -25,15 +24,16 @@ _AlibiMetrics = Union[
 
 class AlibiDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, AlibiDetectDriftMetric]):
-        super().__init__(metrics_config)
+        alibi_metrics_config = {
+            metric_ref: config for metric_ref, config in metrics_config.items() if config.id.startswith("AlibiDetect")
+        }
+        super().__init__(alibi_metrics_config)
 
-    @override
     def init_detector(self) -> None:
         pass
 
     # to do: reuse reference data, and the configured metrics (incl. kernels)
 
-    @override
     def detect_drift(
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
@@ -45,7 +45,7 @@ class AlibiDriftDetector(DriftDetector):
         results: dict[str, MetricResult] = {}
 
         for metric_ref, config in self.metrics_config.items():
-            metric = _evidently_metric_factory(config, embeddings_ref)
+            metric = _alibi_detect_metric_factory(config, embeddings_ref)
             result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)
             _dist = (
                 list(result["data"]["distance"])
@@ -73,7 +73,7 @@ class AlibiDriftDetector(DriftDetector):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def _evidently_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:
+def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:
     kernel = None
     if isinstance(config, AlibiDetectMmdDriftMetric):
         kernel = getattr(alibi_detect.utils.pytorch, config.kernel)

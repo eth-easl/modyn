@@ -7,6 +7,7 @@ from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.drift.alibi_detector import AlibiDriftDetector
 from modyn.supervisor.internal.triggers.drift.evidently_detector import EvidentlyDriftDetector
+from modyn.supervisor.internal.triggers.drift.modyn_detector import ModynDriftDetector
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
 
 # pylint: disable-next=no-name-in-module
@@ -44,6 +45,7 @@ class DataDriftTrigger(Trigger):
 
         self.evidently_detector = EvidentlyDriftDetector(config.metrics)
         self.alibi_detector = AlibiDriftDetector(config.metrics)
+        self.modyn_detector = ModynDriftDetector(config.metrics)
 
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context

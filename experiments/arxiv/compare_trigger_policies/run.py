@@ -13,7 +13,7 @@ from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers impor
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.evidently import EvidentlyMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
@@ -66,8 +66,8 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
             )
         )
 
-    for interval, threshold in [
-        (20_000, 0.15),
+    for interval in [
+        20_000,
         # (20_000, 0.5),
         # (100_000, 0.6),
         # (100_000, 0.7),
@@ -79,15 +79,15 @@ def construct_pipelines() -> list[ModynPipelineConfig]:
     ]:
         pipeline_configs.append(
             gen_pipeline_config(
-                name=f"datadrifttrigger_{interval}_{threshold}",
+                name=f"datadrifttrigger_{interval}",
                 trigger=DataDriftTriggerConfig(
                     detection_interval_data_points=interval,
                     sample_size=5000,
                     metrics={
-                        "ev_mmd": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_model": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_ratio": EvidentlyMmdDriftMetric(threshold=threshold),
-                        # "ev_distance": EvidentlyMmdDriftMetric(threshold=threshold),
+                        "ev_mmd": AlibiDetectMmdDriftMetric(),
+                        # "ev_model": AlibiDetectMmdDriftMetric(),
+                        # "ev_ratio": AlibiDetectMmdDriftMetric(),
+                        # "ev_distance": AlibiDetectMmdDriftMetric(),
                     },
                     aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
                 ),
