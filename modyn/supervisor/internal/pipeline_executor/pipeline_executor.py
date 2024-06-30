@@ -720,6 +720,9 @@ class PipelineExecutor:
         last_timestamp: int,
     ) -> None:
         """Evaluate the trained model and store the results."""
+        s.pipeline_status_queue.put(
+            pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
+        )
         logs = self.eval_executor.run_pipeline_evaluations(
             log,
             trigger_id,
@@ -727,8 +730,6 @@ class PipelineExecutor:
             model_id,
             first_timestamp,
             last_timestamp,
-            s.pipeline_status_queue,
-            s.eval_status_queue,
         )
         self.logs.supervisor_logs.merge(logs.stage_runs)
 
@@ -756,7 +757,7 @@ class PipelineExecutor:
         if not s.pipeline_config.evaluation:
             return
 
-        eval_logs = self.eval_executor.run_post_pipeline_evaluations(s.eval_status_queue)
+        eval_logs = self.eval_executor.run_post_pipeline_evaluations()
         self.logs.supervisor_logs.merge(eval_logs.stage_runs)
 
     @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
