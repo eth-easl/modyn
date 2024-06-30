@@ -518,7 +518,7 @@ def test_get_evaluation_result(
 
         while True:
             if not platform.system() == "Darwin":
-                if evaluation_process_info.metric_result_queue.qsize() == 2:
+                if evaluation_process_info.metric_result_queue.qsize() == len(intervals):
                     break
             else:
                 if not evaluation_process_info.metric_result_queue.empty():
