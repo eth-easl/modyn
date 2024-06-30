@@ -5,8 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 # pylint: disable=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
-
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import SingleEvaluationData
 
 class AbstractEvaluationResultWriter(ABC):
     """
@@ -19,7 +18,7 @@ class AbstractEvaluationResultWriter(ABC):
         self.eval_directory = eval_directory
 
     @abstractmethod
-    def add_evaluation_data(self, dataset_id: str, dataset_size: int, evaluation_data: list[EvaluationData]) -> None:
+    def add_evaluation_data(self, dataset_id: str, dataset_size: int, evaluation_data: SingleEvaluationData) -> None:
         """
         Called whenever a metric results are available for a particular dataset.
 

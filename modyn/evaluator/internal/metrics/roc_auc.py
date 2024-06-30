@@ -15,6 +15,9 @@ class RocAuc(AbstractHolisticMetric):
         super().__init__(config)
         self.evaluation_result: Optional[float] = None
 
+    def reset_state(self) -> None:
+        self.evaluation_result = None
+
     # Taken from
     # https://github.com/NVIDIA/DeepLearningExamples/blob/678b470fd78e0fdb84b3173bc25164d766e7821f/PyTorch/Recommendation/DLRM/dlrm/scripts/utils.py#L289
     # pylint: disable=unused-argument

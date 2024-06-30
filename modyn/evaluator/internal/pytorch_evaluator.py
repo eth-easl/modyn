@@ -3,29 +3,21 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
-import queue
 import traceback
-from typing import Union
+from typing import Union, Optional
 
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, AbstractHolisticMetric
-from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
+from modyn.evaluator.internal.utils import EvaluationInfo
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
 class PytorchEvaluator:
     # pylint: disable=too-many-branches
 
-    def __init__(
-        self,
-        evaluation_info: EvaluationInfo,
-        status_query_queue: mp.Queue,
-        status_response_queue: mp.Queue,
-        metric_result_queue: mp.Queue,
-        logger: logging.Logger,
-    ) -> None:
+    def __init__(self, evaluation_info: EvaluationInfo, logger: logging.Logger) -> None:
         self.logger = logger
         self._evaluation_id = evaluation_info.evaluation_id
 
@@ -34,9 +26,7 @@ class PytorchEvaluator:
         )
         self._load_state(evaluation_info.model_path)
 
-        # setup dataloaders
-        self._info("Setting up data loaders.")
-        self._dataloader = self._prepare_dataloader(evaluation_info)
+        self._eval_info = evaluation_info
 
         self._metrics = evaluation_info.metrics
         self._label_transformer_function = deserialize_function(
@@ -47,16 +37,13 @@ class PytorchEvaluator:
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = evaluation_info.amp
 
-        self._status_query_queue = status_query_queue
-        self._status_response_queue = status_response_queue
-        self._metric_result_queue = metric_result_queue
-
-        self._num_samples = 0
         self._contains_holistic_metric = MetricFactory.prepare_metrics(self._metrics)
 
         self._info("Initialized PyTorch evaluator.")
 
-    def _prepare_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
+    def _prepare_dataloader(
+            self, evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+    ) -> torch.utils.data.DataLoader:
         self._debug("Creating EvaluationDataset.")
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
@@ -65,8 +52,8 @@ class PytorchEvaluator:
             evaluation_info.storage_address,
             evaluation_info.evaluation_id,
             evaluation_info.tokenizer,
-            evaluation_info.start_timestamp,
-            evaluation_info.end_timestamp,
+            start_timestamp,
+            end_timestamp,
         )
         self._debug("Creating DataLoader.")
         dataloader = torch.utils.data.DataLoader(
@@ -97,31 +84,16 @@ class PytorchEvaluator:
         # delete trained model from disk
         path.unlink()
 
-    def send_status_to_server(self, batch_number: int) -> None:
-        self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
-
-    def evaluate(self) -> None:
+    def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
 
         y_true = []
         y_score = []
 
         self._model.model.eval()
+        num_samples = 0
         with torch.inference_mode():
-            batch_number = -1
-            for batch_number, batch in enumerate(self._dataloader):
-                # As empty() is unreliable
-                # we try to fetch an element within 10ms. If there is no
-                # element within that timeframe returned, we continue.
-                try:
-                    req = self._status_query_queue.get(timeout=0.01)
-                    if req == EvaluatorMessages.STATUS_QUERY_MESSAGE:
-                        self.send_status_to_server(batch_number)
-                    else:
-                        raise ValueError("Unknown message in the status query queue")
-                except queue.Empty:
-                    pass
-
+            for batch in dataloader:
                 data: Union[torch.Tensor, dict]
                 if isinstance(batch[1], torch.Tensor):
                     data = batch[1].to(self._device)
@@ -150,7 +122,7 @@ class PytorchEvaluator:
                         y_true.append(target.detach().cpu())
                         y_score.append(output.detach().cpu())
 
-                self._num_samples += batch_size
+                num_samples += batch_size
 
         if len(y_true) > 0:
             assert self._contains_holistic_metric  # We only track y_true in case of holistic metrics
@@ -159,21 +131,28 @@ class PytorchEvaluator:
 
             for metric in self._metrics:
                 if isinstance(metric, AbstractHolisticMetric):
-                    metric.evaluate_dataset(y_true, y_score, self._num_samples)
+                    metric.evaluate_dataset(y_true, y_score, num_samples)
 
-        # We do this since we might also have just non-holistic metrics, in which case len(y_true) always is 0
-        for metric in self._metrics:
-            self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+        self._info(f"Finished evaluation: {num_samples} samples")
 
-        self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
+    def evaluate(self, metric_result_queue: mp.Queue) -> None:
+        for interval in self._eval_info.evaluation_intervals:
+            for metric in self._metrics:
+                metric.reset_state()
+            dataloader = self._prepare_dataloader(self._eval_info, interval[0], interval[1])
+            self._single_interval_evaluate(dataloader)
+            metric_result = []
+
+            # We do this since we might also have just non-holistic metrics, in which case len(y_true) always is 0
+            for metric in self._metrics:
+                metric_result.append((metric.get_name(), metric.get_evaluation_result()))
+                metric_result_queue.put(metric_result)
 
 
 def evaluate(
     evaluation_info: EvaluationInfo,
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
-    status_query_queue: mp.Queue,
-    status_response_queue: mp.Queue,
     metric_result_queue: mp.Queue,
 ) -> None:
     logging.basicConfig(
@@ -186,10 +165,8 @@ def evaluate(
     logger.addHandler(file_handler)
 
     try:
-        evaluator = PytorchEvaluator(
-            evaluation_info, status_query_queue, status_response_queue, metric_result_queue, logger
-        )
-        evaluator.evaluate()
+        evaluator = PytorchEvaluator(evaluation_info, logger)
+        evaluator.evaluate(metric_result_queue)
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)

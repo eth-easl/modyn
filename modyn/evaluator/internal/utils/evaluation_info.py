@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
@@ -27,12 +28,12 @@ class EvaluationInfo:
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
-        self.start_timestamp = (
-            request.dataset_info.start_timestamp if request.dataset_info.HasField("start_timestamp") else None
-        )
-        self.end_timestamp = (
-            request.dataset_info.end_timestamp if request.dataset_info.HasField("end_timestamp") else None
-        )
+        self.evaluation_intervals: list[tuple[Optional[int], Optional[int]]] = []
+        for interval in request.dataset_info.evaluation_intervals:
+            self.evaluation_intervals.append((
+                interval.start_timestamp if interval.HasField("start_timestamp") else None,
+                interval.end_timestamp if interval.HasField("end_timestamp") else None
+            ))
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size

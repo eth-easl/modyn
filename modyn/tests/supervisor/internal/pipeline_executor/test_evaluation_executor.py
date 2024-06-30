@@ -249,7 +249,7 @@ def test_single_evaluation(
         trigger_idx=-1,
     )
     evaluation_executor.grpc.evaluator = evaluator_stub_mock
-    evaluation_executor._single_evaluation(
+    evaluation_executor._single_batched_evaluation(
         log=stage_log,
         eval_req=dummy_eval_request(),
         eval_status_queue=Queue(),

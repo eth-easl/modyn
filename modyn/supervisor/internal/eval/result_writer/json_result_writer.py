@@ -3,7 +3,7 @@ import pathlib
 from typing import Any
 
 # pylint: disable=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationData
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import SingleEvaluationData
 from modyn.supervisor.internal.eval.result_writer import AbstractEvaluationResultWriter
 
 
@@ -12,9 +12,9 @@ class _JsonResultWriter(AbstractEvaluationResultWriter):
         super().__init__(pipeline_id, trigger_id, eval_directory)
         self.results: dict = {"datasets": []}
 
-    def add_evaluation_data(self, dataset_id: str, dataset_size: int, evaluation_data: list[EvaluationData]) -> None:
+    def add_evaluation_data(self, dataset_id: str, dataset_size: int, evaluation_data: SingleEvaluationData) -> None:
         dataset_results: dict = {"dataset_size": dataset_size, "metrics": []}
-        for metric in evaluation_data:
+        for metric in evaluation_data.evaluation_data:
             dataset_results["metrics"].append({"name": metric.metric, "result": metric.result})
         self.results["datasets"].append({dataset_id: dataset_results})
 

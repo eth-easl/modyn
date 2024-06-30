@@ -6,7 +6,7 @@ import multiprocessing as mp
 import pathlib
 import queue
 from threading import Lock
-from typing import Any, Optional
+from typing import Optional
 
 import grpc
 from modyn.common.ftp import download_trained_model
@@ -18,17 +18,16 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationAbortedReason,
     EvaluationCleanupRequest,
     EvaluationCleanupResponse,
-    EvaluationData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
-    EvaluationStatusResponse,
+    EvaluationStatusResponse, SingleEvaluationData, SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
-from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo, EvaluatorMessages
+from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
 
@@ -126,30 +125,33 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
 
         dataset_info = request.dataset_info
-        dataset_size_req = GetDatasetSizeRequest(
-            dataset_id=request.dataset_info.dataset_id,
-            start_timestamp=dataset_info.start_timestamp if dataset_info.HasField("start_timestamp") else None,
-            end_timestamp=dataset_info.end_timestamp if dataset_info.HasField("end_timestamp") else None,
-        )
-        dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
+        data_sizes: list[int] = []
+        for interval in request.dataset_info.evaluation_intervals:
+            dataset_size_req = GetDatasetSizeRequest(
+                dataset_id=request.dataset_info.dataset_id,
+                start_timestamp=interval.start_timestamp if dataset_info.HasField("start_timestamp") else None,
+                end_timestamp=interval.end_timestamp if dataset_info.HasField("end_timestamp") else None,
+            )
+            dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 
-        dataset_size = dataset_size_response.num_keys
-        if not dataset_size_response.success:
-            logger.error(
-                f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
-                f"Evaluation cannot be started."
-            )
-            return EvaluateModelResponse(
-                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
-            )
+            dataset_size = dataset_size_response.num_keys
+            if not dataset_size_response.success:
+                logger.error(
+                    f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
+                    f"Evaluation cannot be started."
+                )
+                return EvaluateModelResponse(
+                    evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
+                )
 
-        if dataset_size == 0:
-            logger.info(
-                f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
-            )
-            return EvaluateModelResponse(
-                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-            )
+            if dataset_size == 0:
+                logger.info(
+                    f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
+                )
+                return EvaluateModelResponse(
+                    evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+                )
+            data_sizes.append(dataset_size)
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
@@ -186,7 +188,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_size=dataset_size)
+        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_size=data_sizes)
 
     @staticmethod
     def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
@@ -204,8 +206,6 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
     def _run_evaluation(self, evaluation_id: int) -> None:
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_query_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
-        status_response_queue: mp.Queue[dict[str, Any]] = mp.Queue()  # pylint: disable=unsubscriptable-object
         metric_result_queue: mp.Queue[tuple[str, float]] = mp.Queue()  # pylint: disable=unsubscriptable-object
 
         process = mp.Process(
@@ -214,14 +214,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 self._evaluation_dict[evaluation_id],
                 self._base_dir / f"log-{evaluation_id}.txt",
                 exception_queue,
-                status_query_queue,
-                status_response_queue,
                 metric_result_queue,
             ),
         )
         process.start()
         self._evaluation_process_dict[evaluation_id] = EvaluationProcessInfo(
-            process, exception_queue, status_query_queue, status_response_queue, metric_result_queue
+            process, exception_queue, metric_result_queue
         )
 
     def get_evaluation_status(
@@ -237,42 +235,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Evaluation {evaluation_id} is still running, obtaining info from running process.")
-            num_batches, num_samples = self._get_status(evaluation_id)
-            response_kwargs_running: dict[str, Any] = {
-                "valid": True,
-                "is_running": True,
-                "blocked": num_batches is None,
-                "state_available": num_batches is not None and num_samples is not None,
-                "batches_seen": num_batches,
-                "samples_seen": num_samples,
-            }
-            cleaned_kwargs = {k: v for k, v in response_kwargs_running.items() if v is not None}
-            return EvaluationStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
+            return EvaluationStatusResponse(valid=True, is_running=True)
 
         exception = self._check_for_evaluation_exception(evaluation_id)
         logger.info(
             f"Evaluation {evaluation_id} is no longer running. "
             f"Process finished {'successfully' if not exception else 'with errors'}."
         )
-        response_kwargs_finished: dict[str, Any] = {
-            "valid": True,
-            "is_running": False,
-            "blocked": False,
-            "state_available": False,
-            "exception": exception,
-        }
-        cleaned_kwargs = {k: v for k, v in response_kwargs_finished.items() if v is not None}
-        return EvaluationStatusResponse(**cleaned_kwargs)  # type: ignore[arg-type]
-
-    def _get_status(self, evaluation_id: int) -> tuple[Optional[int], Optional[int]]:
-        status_query_queue = self._evaluation_process_dict[evaluation_id].status_query_queue
-        status_query_queue.put(EvaluatorMessages.STATUS_QUERY_MESSAGE)
-        try:
-            # blocks for 30 seconds
-            response = self._evaluation_process_dict[evaluation_id].status_response_queue.get(timeout=30)
-            return response["num_batches"], response["num_samples"]
-        except queue.Empty:
-            return None, None
+        return EvaluationStatusResponse(valid=True, is_running=False, exception=exception)
 
     def _check_for_evaluation_exception(self, evaluation_id: int) -> Optional[str]:
         exception_queue = self._evaluation_process_dict[evaluation_id].exception_queue
@@ -301,20 +271,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
-        evaluation_data: list[EvaluationData] = []
+        evaluation_data: list[SingleEvaluationData] = []
 
         metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
-        metric_results: list[tuple[str, float]] = []
-        for _ in range(len(self._evaluation_dict[evaluation_id].metrics)):
+        # since each interval corresponds to a non-empty data subset, it must have metric results
+        for _ in range(len(self._evaluation_dict[evaluation_id].evaluation_intervals)):
             try:
-                metric_results.append(metric_result_queue.get(timeout=0.1))
+                metric_result = metric_result_queue.get(timeout=0.1)
             except queue.Empty:
                 logger.error(f"Evaluation with id {evaluation_id} did not return all metric results.")
-                break
+                return EvaluationResultResponse(valid=False)
+            single_eval_data = SingleEvaluationData()
+            for name, result in metric_result:
+                single_eval_data.evaluation_data.append(SingleMetricResult(metric=name, result=result))
 
-        for name, result in metric_results:
-            evaluation_data.append(EvaluationData(metric=name, result=result))
-        return EvaluationResultResponse(valid=True, evaluation_data=evaluation_data)
+            evaluation_data.append(single_eval_data)
+        return EvaluationResultResponse(valid=True, evaluation_results=evaluation_data)
 
     def cleanup_evaluations(
         self, request: EvaluationCleanupRequest, context: grpc.ServicerContext

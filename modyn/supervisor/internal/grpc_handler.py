@@ -18,7 +18,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
-    EvaluationStatusResponse, EvaluationData,
+    EvaluationStatusResponse,
+    EvaluationInterval,
+    SingleEvaluationData,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
@@ -235,8 +237,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataset_config: dict,
         model_id: int,
         device: str,
-        start_timestamp: Optional[int] = None,
-        end_timestamp: Optional[int] = None,
+        intervals: list[tuple[Optional[int], Optional[int]]],
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
         transform_list = dataset_config.get("transformations") or []
@@ -247,13 +248,15 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataloader_workers = dataset_config["dataloader_workers"]
         metrics = [EvaluatorJsonString(value=json.dumps(metric)) for metric in dataset_config["metrics"]]
 
+        eval_intervals: list[EvaluationInterval] = []
+        for start_timestamp, end_timestamp in intervals:
+            eval_intervals.append(EvaluationInterval(start_timestamp=start_timestamp, end_timestamp=end_timestamp))
         start_evaluation_kwargs = {
             "model_id": model_id,
             "dataset_info": DatasetInfo(
                 dataset_id=dataset_id,
                 num_dataloaders=dataloader_workers,
-                start_timestamp=start_timestamp,
-                end_timestamp=end_timestamp,
+                evaluation_intervals=eval_intervals
             ),
             "device": device,
             "batch_size": batch_size,
@@ -302,7 +305,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 break
             sleep(1)
 
-    def get_evaluation_results(self, evaluation_id: int) -> list[EvaluationData]:
+    def get_evaluation_results(self, evaluation_id: int) -> list[SingleEvaluationData]:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")

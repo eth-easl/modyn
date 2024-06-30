@@ -45,31 +45,47 @@ DOWNLOAD_MODEL_FAILURE: EvaluationAbortedReason.ValueType  # 6
 global___EvaluationAbortedReason = EvaluationAbortedReason
 
 @typing.final
-class DatasetInfo(google.protobuf.message.Message):
+class EvaluationInterval(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
-    DATASET_ID_FIELD_NUMBER: builtins.int
-    NUM_DATALOADERS_FIELD_NUMBER: builtins.int
     START_TIMESTAMP_FIELD_NUMBER: builtins.int
     END_TIMESTAMP_FIELD_NUMBER: builtins.int
-    dataset_id: builtins.str
-    num_dataloaders: builtins.int
     start_timestamp: builtins.int
     end_timestamp: builtins.int
     def __init__(
         self,
         *,
-        dataset_id: builtins.str = ...,
-        num_dataloaders: builtins.int = ...,
         start_timestamp: builtins.int | None = ...,
         end_timestamp: builtins.int | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "num_dataloaders", b"num_dataloaders", "start_timestamp", b"start_timestamp"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
+
+global___EvaluationInterval = EvaluationInterval
+
+@typing.final
+class DatasetInfo(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    DATASET_ID_FIELD_NUMBER: builtins.int
+    NUM_DATALOADERS_FIELD_NUMBER: builtins.int
+    EVALUATION_INTERVALS_FIELD_NUMBER: builtins.int
+    dataset_id: builtins.str
+    num_dataloaders: builtins.int
+    @property
+    def evaluation_intervals(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationInterval]: ...
+    def __init__(
+        self,
+        *,
+        dataset_id: builtins.str = ...,
+        num_dataloaders: builtins.int = ...,
+        evaluation_intervals: collections.abc.Iterable[global___EvaluationInterval] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "evaluation_intervals", b"evaluation_intervals", "num_dataloaders", b"num_dataloaders"]) -> None: ...
 
 global___DatasetInfo = DatasetInfo
 
@@ -160,14 +176,15 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVAL_ABORTED_REASON_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
-    dataset_size: builtins.int
     eval_aborted_reason: global___EvaluationAbortedReason.ValueType
+    @property
+    def dataset_size(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
-        dataset_size: builtins.int = ...,
+        dataset_size: collections.abc.Iterable[builtins.int] | None = ...,
         eval_aborted_reason: global___EvaluationAbortedReason.ValueType = ...,
     ) -> None: ...
     def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "eval_aborted_reason", b"eval_aborted_reason", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
@@ -195,42 +212,25 @@ class EvaluationStatusResponse(google.protobuf.message.Message):
 
     VALID_FIELD_NUMBER: builtins.int
     IS_RUNNING_FIELD_NUMBER: builtins.int
-    STATE_AVAILABLE_FIELD_NUMBER: builtins.int
-    BLOCKED_FIELD_NUMBER: builtins.int
     EXCEPTION_FIELD_NUMBER: builtins.int
-    BATCHES_SEEN_FIELD_NUMBER: builtins.int
-    SAMPLES_SEEN_FIELD_NUMBER: builtins.int
     valid: builtins.bool
     is_running: builtins.bool
-    state_available: builtins.bool
-    blocked: builtins.bool
     exception: builtins.str
-    batches_seen: builtins.int
-    samples_seen: builtins.int
     def __init__(
         self,
         *,
         valid: builtins.bool = ...,
         is_running: builtins.bool = ...,
-        state_available: builtins.bool = ...,
-        blocked: builtins.bool = ...,
         exception: builtins.str | None = ...,
-        batches_seen: builtins.int | None = ...,
-        samples_seen: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "exception", b"exception", "samples_seen", b"samples_seen"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_batches_seen", b"_batches_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "blocked", b"blocked", "exception", b"exception", "is_running", b"is_running", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_batches_seen", b"_batches_seen"]) -> typing.Literal["batches_seen"] | None: ...
-    @typing.overload
+    def HasField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "valid", b"valid"]) -> None: ...
     def WhichOneof(self, oneof_group: typing.Literal["_exception", b"_exception"]) -> typing.Literal["exception"] | None: ...
-    @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_samples_seen", b"_samples_seen"]) -> typing.Literal["samples_seen"] | None: ...
 
 global___EvaluationStatusResponse = EvaluationStatusResponse
 
 @typing.final
-class EvaluationData(google.protobuf.message.Message):
+class SingleMetricResult(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     METRIC_FIELD_NUMBER: builtins.int
@@ -245,7 +245,23 @@ class EvaluationData(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(self, field_name: typing.Literal["metric", b"metric", "result", b"result"]) -> None: ...
 
-global___EvaluationData = EvaluationData
+global___SingleMetricResult = SingleMetricResult
+
+@typing.final
+class SingleEvaluationData(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    EVALUATION_DATA_FIELD_NUMBER: builtins.int
+    @property
+    def evaluation_data(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleMetricResult]: ...
+    def __init__(
+        self,
+        *,
+        evaluation_data: collections.abc.Iterable[global___SingleMetricResult] | None = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data"]) -> None: ...
+
+global___SingleEvaluationData = SingleEvaluationData
 
 @typing.final
 class EvaluationResultRequest(google.protobuf.message.Message):
@@ -283,17 +299,17 @@ class EvaluationResultResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     VALID_FIELD_NUMBER: builtins.int
-    EVALUATION_DATA_FIELD_NUMBER: builtins.int
+    EVALUATION_RESULTS_FIELD_NUMBER: builtins.int
     valid: builtins.bool
     @property
-    def evaluation_data(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationData]: ...
+    def evaluation_results(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleEvaluationData]: ...
     def __init__(
         self,
         *,
         valid: builtins.bool = ...,
-        evaluation_data: collections.abc.Iterable[global___EvaluationData] | None = ...,
+        evaluation_results: collections.abc.Iterable[global___SingleEvaluationData] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data", "valid", b"valid"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["evaluation_results", b"evaluation_results", "valid", b"valid"]) -> None: ...
 
 global___EvaluationResultResponse = EvaluationResultResponse
 

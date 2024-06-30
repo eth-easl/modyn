@@ -239,7 +239,7 @@ class EvaluationExecutor:
             )
             epoch_micros_start = current_time_micros()
             single_log.info = SingleEvaluationInfo(eval_request=eval_req)
-            optional_failure_reason, result = self._single_evaluation(
+            optional_failure_reason, result = self._single_batched_evaluation(
                 eval_req.interval_start, eval_req.interval_end, eval_req.id_model, eval_req.dataset_id
             )
             if optional_failure_reason:
@@ -262,7 +262,7 @@ class EvaluationExecutor:
 
         return logs
 
-    def _single_evaluation(
+    def _single_batched_evaluation(
             self, interval_start: int, interval_end: Optional[int], model_id_to_eval: int, dataset_id: str,
     ) -> tuple[Optional[str], dict]:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
@@ -272,12 +272,12 @@ class EvaluationExecutor:
             f"to {interval_end} of dataset {dataset_id}."
         )
         dataset_config = next((d for d in self.pipeline.evaluation.datasets if d.dataset_id == dataset_id))
+
         request = GRPCHandler.prepare_evaluation_request(
             dataset_config.model_dump(by_alias=True),
             model_id_to_eval,
             self.pipeline.evaluation.device,
-            interval_start,
-            interval_end,
+            intervals=[(interval_start, interval_end)],
         )
         for attempt in Retrying(
             stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
@@ -308,9 +308,9 @@ class EvaluationExecutor:
         self.grpc.wait_for_evaluation_completion(response.evaluation_id)
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
-
-        eval_results: dict = {"dataset_size": response.dataset_size, "metrics": []}
-        for metric in eval_data:
+        # here we assume only one interval is evaluated
+        eval_results: dict = {"dataset_size": response.dataset_size[0], "metrics": []}
+        for metric in eval_data[0].evaluation_data:
             eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
         return None, eval_results
 
