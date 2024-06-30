@@ -126,13 +126,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
             )
 
-        dataset_info = request.dataset_info
         data_sizes: list[int] = []
         for interval in request.dataset_info.evaluation_intervals:
             dataset_size_req = GetDatasetSizeRequest(
                 dataset_id=request.dataset_info.dataset_id,
-                start_timestamp=interval.start_timestamp if dataset_info.HasField("start_timestamp") else None,
-                end_timestamp=interval.end_timestamp if dataset_info.HasField("end_timestamp") else None,
+                start_timestamp=interval.start_timestamp if interval.HasField("start_timestamp") else None,
+                end_timestamp=interval.end_timestamp if interval.HasField("end_timestamp") else None,
             )
             dataset_size_response: GetDatasetSizeResponse = self._storage_stub.GetDatasetSize(dataset_size_req)
 
@@ -191,7 +190,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_size=data_sizes)
+        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_sizes=data_sizes)
 
     @staticmethod
     def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:

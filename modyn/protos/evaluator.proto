@@ -49,7 +49,7 @@ message EvaluateModelRequest {
 message EvaluateModelResponse {
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
-  repeated int64 dataset_size = 3;
+  repeated int64 dataset_sizes = 3;
   EvaluationAbortedReason eval_aborted_reason = 4;
 }
 

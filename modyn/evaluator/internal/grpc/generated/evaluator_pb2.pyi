@@ -172,22 +172,22 @@ class EvaluateModelResponse(google.protobuf.message.Message):
 
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
-    DATASET_SIZE_FIELD_NUMBER: builtins.int
+    DATASET_SIZES_FIELD_NUMBER: builtins.int
     EVAL_ABORTED_REASON_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
     evaluation_id: builtins.int
     eval_aborted_reason: global___EvaluationAbortedReason.ValueType
     @property
-    def dataset_size(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def dataset_sizes(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
-        dataset_size: collections.abc.Iterable[builtins.int] | None = ...,
+        dataset_sizes: collections.abc.Iterable[builtins.int] | None = ...,
         eval_aborted_reason: global___EvaluationAbortedReason.ValueType = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "eval_aborted_reason", b"eval_aborted_reason", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_sizes", b"dataset_sizes", "eval_aborted_reason", b"eval_aborted_reason", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 

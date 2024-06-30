@@ -238,13 +238,13 @@ class EvaluationExecutor:
             )
             epoch_micros_start = current_time_micros()
             single_log.info = SingleEvaluationInfo(eval_request=eval_req)
-            optional_failure_reason, result = self._single_batched_evaluation(
+            optional_failure_reason, results = self._single_batched_evaluation(
                 eval_req.interval_start, eval_req.interval_end, eval_req.id_model, eval_req.dataset_id
             )
             if optional_failure_reason:
                 single_log.info.failure_reason = optional_failure_reason
             else:
-                single_log.info.result = result
+                single_log.info.results = results
             single_log.end = datetime.datetime.now()
             single_log.duration = datetime.timedelta(microseconds=current_time_micros() - epoch_micros_start)
             return single_log
@@ -307,7 +307,7 @@ class EvaluationExecutor:
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
         # here we assume only one interval is evaluated
-        eval_results: dict = {"dataset_size": response.dataset_size[0], "metrics": []}
+        eval_results: dict = {"dataset_size": response.dataset_sizes[0], "metrics": []}
         for metric in eval_data[0].evaluation_data:
             eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
         return None, eval_results

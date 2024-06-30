@@ -12,17 +12,12 @@ import pytest
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig, SupervisorConfig
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from modyn.supervisor.internal.eval.result_writer import JsonResultWriter, TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import PipelineStatus
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
 from modyn.supervisor.internal.utils import PipelineInfo
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
-SUPPORTED_EVAL_RESULT_WRITERS: dict = {
-    "json": JsonResultWriter,
-    "tensorboard": TensorboardResultWriter,
-}
 START_TIMESTAMP = 21
 PIPELINE_ID = 42
 

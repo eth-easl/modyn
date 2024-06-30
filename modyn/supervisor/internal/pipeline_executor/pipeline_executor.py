@@ -10,7 +10,6 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import ResultWriterType
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler

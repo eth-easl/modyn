@@ -250,24 +250,28 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         eval_intervals: list[EvaluationInterval] = []
         for start_timestamp, end_timestamp in intervals:
             eval_intervals.append(EvaluationInterval(start_timestamp=start_timestamp, end_timestamp=end_timestamp))
-        start_evaluation_kwargs = {
-            "model_id": model_id,
-            "dataset_info": DatasetInfo(
-                dataset_id=dataset_id, num_dataloaders=dataloader_workers, evaluation_intervals=eval_intervals
-            ),
-            "device": device,
-            "batch_size": batch_size,
-            "metrics": metrics,
-            "transform_list": transform_list,
-            "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
-            "label_transformer": EvaluatorPythonString(value=label_transformer),
-        }
 
         if dataset_config.get("tokenizer"):
             tokenizer = dataset_config["tokenizer"]
-            start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
+            tokenizer_arg = EvaluatorPythonString(value=tokenizer)
+        else:
+            tokenizer_arg = None
 
-        return EvaluateModelRequest(**start_evaluation_kwargs)
+        return EvaluateModelRequest(
+            model_id=model_id,
+            dataset_info=DatasetInfo(
+                dataset_id=dataset_id,
+                num_dataloaders=dataloader_workers,
+                evaluation_intervals=eval_intervals,
+            ),
+            device=device,
+            batch_size=batch_size,
+            metrics=metrics,
+            transform_list=transform_list,
+            bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
+            label_transformer=EvaluatorPythonString(value=label_transformer),
+            tokenizer=tokenizer_arg,
+        )
 
     # pylint: disable=too-many-branches
     def wait_for_evaluation_completion(self, evaluation_id: int) -> None:
@@ -313,7 +317,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         if not res.valid:
             logger.error(f"Cannot get the evaluation result for evaluation {evaluation_id}")
             raise RuntimeError(f"Cannot get the evaluation result for evaluation {evaluation_id}")
-        return res.evaluation_data
+        return res.evaluation_results
 
     def cleanup_evaluations(self, evaluation_ids: list[int]) -> None:
         assert self.evaluator is not None

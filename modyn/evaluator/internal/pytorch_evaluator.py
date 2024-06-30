@@ -41,10 +41,10 @@ class PytorchEvaluator:
 
         self._info("Initialized PyTorch evaluator.")
 
+    @staticmethod
     def _prepare_dataloader(
-        self, evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+        evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
     ) -> torch.utils.data.DataLoader:
-        self._debug("Creating EvaluationDataset.")
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
             evaluation_info.bytes_parser,
@@ -55,7 +55,6 @@ class PytorchEvaluator:
             start_timestamp,
             end_timestamp,
         )
-        self._debug("Creating DataLoader.")
         dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=evaluation_info.batch_size,
@@ -142,8 +141,6 @@ class PytorchEvaluator:
             dataloader = self._prepare_dataloader(self._eval_info, interval[0], interval[1])
             self._single_interval_evaluate(dataloader)
             metric_result = []
-
-            # We do this since we might also have just non-holistic metrics, in which case len(y_true) always is 0
             for metric in self._metrics:
                 metric_result.append((metric.get_name(), metric.get_evaluation_result()))
                 metric_result_queue.put(metric_result)
