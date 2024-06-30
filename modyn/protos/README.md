@@ -1,8 +1,8 @@
-#How to generate the python files from the proto files
+# How to generate the python files from the proto files
 
 This assumes python 3.6+ is installed.
 
-##Generate the python files
+## Generate the python files
 
 First move to the directory where you want to generate the python files.
 
