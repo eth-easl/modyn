@@ -7,6 +7,7 @@ from typing import Any
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import SingleEvaluationData
 
+
 class AbstractEvaluationResultWriter(ABC):
     """
     Abstract class used to write evaluation results to the evaluation directory

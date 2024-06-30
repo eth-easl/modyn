@@ -18,7 +18,6 @@ from modyn.config.schema.system import ModynConfig
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
-
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor.models import (
@@ -263,7 +262,11 @@ class EvaluationExecutor:
         return logs
 
     def _single_batched_evaluation(
-            self, interval_start: int, interval_end: Optional[int], model_id_to_eval: int, dataset_id: str,
+        self,
+        interval_start: int,
+        interval_end: Optional[int],
+        model_id_to_eval: int,
+        dataset_id: str,
     ) -> tuple[Optional[str], dict]:
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.pipeline.evaluation
@@ -292,19 +295,14 @@ class EvaluationExecutor:
                     raise e
 
         if not response.evaluation_started:
-            failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[
-                response.eval_aborted_reason
-            ].name
+            failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
             logger.error(
                 f"Evaluation for model {model_id_to_eval} on split {interval_start} to "
                 f"{interval_end} not started with reason: {failure_reason}."
             )
             return failure_reason, {}
 
-        logger.info(
-            f"Evaluation started for model {model_id_to_eval} on split {interval_start} "
-            f"to {interval_end}."
-        )
+        logger.info(f"Evaluation started for model {model_id_to_eval} on split {interval_start} " f"to {interval_end}.")
         self.grpc.wait_for_evaluation_completion(response.evaluation_id)
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])

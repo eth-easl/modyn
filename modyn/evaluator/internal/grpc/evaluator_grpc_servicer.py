@@ -21,7 +21,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
-    EvaluationStatusResponse, SingleEvaluationData, SingleMetricResult,
+    EvaluationStatusResponse,
+    SingleEvaluationData,
+    SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
 from modyn.evaluator.internal.metric_factory import MetricFactory
@@ -146,7 +148,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             if dataset_size == 0:
                 logger.info(
-                    f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. Evaluation cannot be started."
+                    f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. "
+                    f"Evaluation cannot be started."
                 )
                 return EvaluateModelResponse(
                     evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET

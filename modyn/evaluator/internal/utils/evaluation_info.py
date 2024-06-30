@@ -30,10 +30,12 @@ class EvaluationInfo:
         self.num_dataloaders = request.dataset_info.num_dataloaders
         self.evaluation_intervals: list[tuple[Optional[int], Optional[int]]] = []
         for interval in request.dataset_info.evaluation_intervals:
-            self.evaluation_intervals.append((
-                interval.start_timestamp if interval.HasField("start_timestamp") else None,
-                interval.end_timestamp if interval.HasField("end_timestamp") else None
-            ))
+            self.evaluation_intervals.append(
+                (
+                    interval.start_timestamp if interval.HasField("start_timestamp") else None,
+                    interval.end_timestamp if interval.HasField("end_timestamp") else None,
+                )
+            )
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size

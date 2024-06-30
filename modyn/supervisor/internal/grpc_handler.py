@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import logging
-
 from time import sleep
 from typing import Any, Iterable, Optional
 
@@ -15,15 +14,15 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluationCleanupRequest,
     EvaluationCleanupResponse,
+    EvaluationInterval,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    EvaluationInterval,
-    SingleEvaluationData,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import SingleEvaluationData
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -254,9 +253,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         start_evaluation_kwargs = {
             "model_id": model_id,
             "dataset_info": DatasetInfo(
-                dataset_id=dataset_id,
-                num_dataloaders=dataloader_workers,
-                evaluation_intervals=eval_intervals
+                dataset_id=dataset_id, num_dataloaders=dataloader_workers, evaluation_intervals=eval_intervals
             ),
             "device": device,
             "batch_size": batch_size,

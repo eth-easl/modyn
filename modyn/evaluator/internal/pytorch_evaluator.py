@@ -4,7 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
-from typing import Union, Optional
+from typing import Optional, Union
 
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
@@ -42,7 +42,7 @@ class PytorchEvaluator:
         self._info("Initialized PyTorch evaluator.")
 
     def _prepare_dataloader(
-            self, evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+        self, evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
     ) -> torch.utils.data.DataLoader:
         self._debug("Creating EvaluationDataset.")
         dataset = EvaluationDataset(
