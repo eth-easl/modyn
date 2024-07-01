@@ -34,6 +34,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             maximum_keys_in_memory=maximum_keys_in_memory, tail_triggers=0
         )
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
+        self.holdout_set_ratio_max = downsampling_config.holdout_set_ratio_max
         self.holdout_set_strategy = downsampling_config.holdout_set_strategy
         self.il_training_config = downsampling_config.il_training_config
         self.grpc = TrainerServerGRPCHandlerMixin(modyn_config)
@@ -47,7 +48,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
 
-        probability = self.holdout_set_ratio / 100
+        probability = self.holdout_set_ratio / self.holdout_set_ratio_max
 
         query = self._get_sampling_query(self._pipeline_id, next_trigger_id, probability, selector_storage_backend)
         rho_state = self._get_latest_rho_state(self.rho_pipeline_id, self._modyn_config)

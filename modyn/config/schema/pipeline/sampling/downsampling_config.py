@@ -165,12 +165,20 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
         min=0,
         max=100,
     )
+    holdout_set_ratio_max: int = Field(
+        description="Reference maximum holdout_set_ratio value. Defaults to 100, which implies percent."
+        " If you set this to 1000, holdout_set_ratio describes promille instead.",
+        default=100,
+        min=1,
+    )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
 
     @model_validator(mode="after")
     def validate_holdout_set_ratio(self) -> Self:
         if self.holdout_set_strategy == "Twin" and self.holdout_set_ratio != 50:
             raise ValueError("holdout_set_ratio should be 100 for the Twin strategy.")
+        if self.holdout_set_ratio > self.holdout_set_ratio_max:
+            raise ValueError("holdout_set_ratio cannot be greater than holdout_set_ratio_max.")
         return self
 
 

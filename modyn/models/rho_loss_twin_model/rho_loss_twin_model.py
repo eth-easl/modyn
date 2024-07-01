@@ -19,7 +19,6 @@ class RHOLOSSTwinModelModyn(nn.Module):
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
-        self.device = device
         model_module = dynamic_module_import("modyn.models")
         rho_model_class = model_configuration["rho_real_model_class"]
         rho_model_config = model_configuration["rho_real_model_config"]
