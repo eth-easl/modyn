@@ -30,7 +30,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.dummyyear, args.custom_split)
+    downloader.store_data(args.dummyyear, args.customsplit)
 
 
 class YearbookDownloader(Dataset):
