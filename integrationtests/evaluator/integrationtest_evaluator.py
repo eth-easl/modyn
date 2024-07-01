@@ -162,6 +162,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     split_ts1, split_ts2, split1_size, split2_size, split3_size = prepare_dataset(dataset_helper)
     model_id = prepare_model()
     eval_model_resp = evaluate_model(model_id, evaluator, [(split_ts2, split_ts1)])
+    print(eval_model_resp)
     assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
     assert eval_model_resp.dataset_sizes == [0]
     assert eval_model_resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET

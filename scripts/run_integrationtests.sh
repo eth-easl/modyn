@@ -43,6 +43,8 @@ echo "SELECTOR"
 docker logs $(docker compose ps -q selector)
 echo "TRAINERSERVER"
 docker logs $(docker compose ps -q trainer_server)
+echo "EVALUATOR"
+docker logs $(docker compose ps -q evaluator)
 echo "LOGS END"
 
 # Cleanup
