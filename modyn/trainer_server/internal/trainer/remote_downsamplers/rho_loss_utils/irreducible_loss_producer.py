@@ -50,7 +50,7 @@ class IrreducibleLossProducer:
         with torch.inference_mode():
             # move model to the computing device
             self.model.model.to(self.device)
-            forward_output = self.model.model(forward_input)
+            forward_output = self.model.model(forward_input, sample_ids)
             irreducible_loss = self.per_sample_loss_fct(forward_output, target).detach()
             cached_loss = irreducible_loss.cpu()
             self.model.model.to("cpu")
