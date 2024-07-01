@@ -43,8 +43,6 @@ class RHOLOSSTwinModelModyn(nn.Module):
         self._models_seen_ids = state["models_seen_ids"]
         # the second time we train on this model, we should switch to the other model
         self._current_model = 1
-        logger.info(f"Switching to model {self._current_model}")
-        logger.info(f"Models seen ids: {self._models_seen_ids}")
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
