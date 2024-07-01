@@ -67,6 +67,7 @@ message SingleMetricResult {
 }
 
 message SingleEvaluationData {
+  // multiple metrics are required on on evaluation on one interval
   repeated SingleMetricResult evaluation_data = 1;
 }
 
@@ -76,6 +77,7 @@ message EvaluationCleanupRequest { repeated int32 evaluation_ids = 1; }
 
 message EvaluationResultResponse {
   bool valid = 1;
+  // each element in the list corresponds to the evaluation results on a single interval
   repeated SingleEvaluationData evaluation_results = 2;
 }
 
