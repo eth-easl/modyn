@@ -19,7 +19,6 @@ class RHOLOSSTwinModelModyn(nn.Module):
 
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
-        self.device = device
         model_module = dynamic_module_import("modyn.models")
         rho_model_class = model_configuration["rho_real_model_class"]
         rho_model_config = model_configuration["rho_real_model_config"]
@@ -59,11 +58,11 @@ class RHOLOSSTwinModelModyn(nn.Module):
         return self._models[self._current_model](data)
 
     def _eval_forward(self, sample_ids: list[int], data: torch.Tensor) -> torch.Tensor:
-        seen_by_model0 = torch.BoolTensor(
-            [sample_id in self._models_seen_ids[0] for sample_id in sample_ids], device=self.device
+        seen_by_model0 = torch.tensor(
+            [sample_id in self._models_seen_ids[0] for sample_id in sample_ids], dtype=torch.bool, device=data.device
         )
-        seen_by_model1 = torch.BoolTensor(
-            [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], device=self.device
+        seen_by_model1 = torch.tensor(
+            [sample_id in self._models_seen_ids[1] for sample_id in sample_ids], dtype=torch.bool, device=data.device
         )
 
         # if model 0 did not see any sample, we route all samples to model 0
