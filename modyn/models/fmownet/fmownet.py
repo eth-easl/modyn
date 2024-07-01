@@ -27,8 +27,8 @@ class FmowNetModel(CoresetSupportingModule):
         self.enc = densenet121(pretrained=True).features
         self.classifier = nn.Linear(1024, self.num_classes)
 
-    # pylint: disable-next=unused-argument
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
         features = self.enc(data)
         out = func.relu(features, inplace=True)
         out = func.adaptive_avg_pool2d(out, (1, 1))

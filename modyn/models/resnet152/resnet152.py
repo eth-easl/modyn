@@ -56,8 +56,8 @@ class ResNet152Modyn(ResNet, CoresetSupportingModule):
 
         return x
 
-    # pylint: disable-next=unused-argument
     def forward(self, x: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
         return super().forward(x)
 
     def get_last_layer(self) -> nn.Module:

@@ -111,7 +111,6 @@ class DlrmModel(CoresetSupportingModule):
         order = self._embedding_ordering.expand(dim0, -1)
         return torch.gather(cat_input, 1, order)
 
-    # pylint: disable-next=unused-argument
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         """
         Args:
@@ -119,6 +118,7 @@ class DlrmModel(CoresetSupportingModule):
                 numerical_input (Tensor): with shape [batch_size, num_numerical_features]
                 categorical_inputs (Tensor): with shape [batch_size, num_categorical_features]
         """
+        del sample_ids
         numerical_input = data["numerical_input"]
         categorical_input = data["categorical_input"]
 

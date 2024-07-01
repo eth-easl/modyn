@@ -51,8 +51,8 @@ class ArticleNetwork(CoresetSupportingModule):
         self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
         self.classifier = nn.Linear(self.featurizer.d_out, num_classes)
 
-    # pylint: disable-next=unused-argument
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
         embedding = self.featurizer(data)
         embedding = self.embedding_recorder(embedding)
         return self.classifier(embedding)
