@@ -41,9 +41,12 @@ def test_init(MockDummy):
     MockDummy.assert_has_calls([expected_call, expected_call])
 
 
-def test_training_forward_missing_sample_ids(twin_model: RHOLOSSTwinModel):
+def test_forward_missing_sample_ids(twin_model: RHOLOSSTwinModel):
     with pytest.raises(AssertionError):
         twin_model.model.train()
+        twin_model.model(torch.randn(3, 2))
+    with pytest.raises(AssertionError):
+        twin_model.model.eval()
         twin_model.model(torch.randn(3, 2))
 
 
