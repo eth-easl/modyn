@@ -31,6 +31,10 @@ def setup_argparser_wildtime(dataset: str, all_arg: bool = True) -> argparse.Arg
     parser_.add_argument(
         "--dir", type=pathlib.Path, action="store", help="Path to data directory"
     )
+    
+    parser_.add_argument(
+        "--customsplit", action="store_true", help="Blend train and test splits and generate a new train/test split."
+    )
 
     if all_arg:
         parser_.add_argument(
