@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
-
     IL_MODEL_STORAGE_STRATEGY = ModelStorageStrategyConfig(name="PyTorchFullModel")
 
     def __init__(
@@ -35,6 +34,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             maximum_keys_in_memory=maximum_keys_in_memory, tail_triggers=0
         )
         self.holdout_set_ratio = downsampling_config.holdout_set_ratio
+        self.holdout_set_strategy = downsampling_config.holdout_set_strategy
         self.il_training_config = downsampling_config.il_training_config
         self.grpc = TrainerServerGRPCHandlerMixin(modyn_config)
         self.grpc.init_trainer_server()
@@ -46,7 +46,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
     def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
-
+        if self.holdout_set_strategy == "Twin":
+            raise NotImplementedError("Twin holdout set strategy is not implemented yet.")
         self._prepare_holdout_set(next_trigger_id, selector_storage_backend)
         self._train_il_model(next_trigger_id)
 
@@ -113,13 +114,20 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return rho_pipeline_id, DataConfig.model_validate_json(data_config_str)
 
     def _create_rho_pipeline_id(self, database: MetadataDatabaseConnection, data_config_str: str) -> int:
-        # Actually we don't need to store configs in the database as we just need the existence of the rho pipeline.
-        # We fetch configs directly from the object fields.
-        # But for consistency, it is no harm to store the correct configs instead of dummy value in the database.
+        if self.holdout_set_strategy == "Twin":
+            model_class_name = "RHOLOSSTwinModel"
+            model_config = {
+                "rho_real_model_class": self.il_training_config.il_model_id,
+                "rho_real_model_config": self.il_training_config.il_model_config,
+            }
+        else:
+            model_class_name = self.il_training_config.il_model_id
+            model_config = self.il_training_config.il_model_config
+
         rho_pipeline_id = database.register_pipeline(
             num_workers=self.il_training_config.dataloader_workers,
-            model_class_name=self.il_training_config.il_model_id,
-            model_config=json.dumps(self.il_training_config.il_model_config),
+            model_class_name=model_class_name,
+            model_config=json.dumps(model_config),
             amp=self.il_training_config.amp,
             selection_strategy=self.il_model_dummy_selection_strategy.model_dump_json(by_alias=True),
             data_config=data_config_str,

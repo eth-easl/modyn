@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import List, Optional, Tuple
+from typing import List, Literal, Optional, Tuple
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
@@ -144,6 +144,7 @@ def test__prepare_holdout_set(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
     trigger_id2dataset_size = [13, 24, 5]
@@ -226,6 +227,7 @@ def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
 
     with patch.object(RHOLossDownsamplingStrategy, "_create_rho_pipeline_id") as mock_create_rho_pipeline_id:
@@ -235,8 +237,11 @@ def test__get_or_create_rho_pipeline_id_and_get_data_config_when_present(
         assert strategy.data_config == data_config
 
 
+@pytest.mark.parametrize("holdout_set_strategy", ["Simple", "Twin"])
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
-def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTrainingConfig, data_config: DataConfig):
+def test__get_or_create_rho_pipeline_id_when_absent(
+    il_training_config: ILTrainingConfig, holdout_set_strategy: Literal["Simple", "Twin"], data_config: DataConfig
+):
     pipeline_id = register_pipeline(None, data_config)
 
     modyn_config = get_minimal_modyn_config()
@@ -244,7 +249,9 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy=holdout_set_strategy,
     )
+    assert downsampling_config.holdout_set_strategy == holdout_set_strategy
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, 4)
     assert strategy.data_config == data_config
@@ -256,8 +263,6 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         rho_pipeline = database.session.get(Pipeline, strategy.rho_pipeline_id)
 
         assert rho_pipeline.num_workers == il_training_config.dataloader_workers
-        assert rho_pipeline.model_class_name == il_training_config.il_model_id
-        assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
         assert DataConfig.model_validate_json(rho_pipeline.data_config) == data_config
         assert rho_pipeline.amp == il_training_config.amp
         selection_strategy_config = TypeAdapter(SelectionStrategyModel).validate_json(rho_pipeline.selection_strategy)
@@ -266,6 +271,16 @@ def test__get_or_create_rho_pipeline_id_when_absent(il_training_config: ILTraini
         assert rho_pipeline.full_model_strategy_zip == strategy.IL_MODEL_STORAGE_STRATEGY.zip
         assert rho_pipeline.full_model_strategy_zip_algorithm == strategy.IL_MODEL_STORAGE_STRATEGY.zip_algorithm
         assert rho_pipeline.full_model_strategy_config == strategy.IL_MODEL_STORAGE_STRATEGY.config
+
+        if holdout_set_strategy == "Twin":
+            assert rho_pipeline.model_class_name == "RHOLOSSTwinModel"
+            assert json.loads(rho_pipeline.model_config) == {
+                "rho_real_model_class": il_training_config.il_model_id,
+                "rho_real_model_config": il_training_config.il_model_config,
+            }
+        else:
+            assert rho_pipeline.model_class_name == il_training_config.il_model_id
+            assert json.loads(rho_pipeline.model_config) == il_training_config.il_model_config
 
 
 def add_trigger_and_model(pipeline_id: int, trigger_id: int):
@@ -291,6 +306,7 @@ def test_downsampling_params(il_training_config: ILTrainingConfig, data_config: 
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 
@@ -335,6 +351,7 @@ def test__train_il_model(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 
@@ -377,6 +394,7 @@ def test_inform_next_trigger(
         ratio=60,
         holdout_set_ratio=50,
         il_training_config=il_training_config,
+        holdout_set_strategy="Simple",
     )
     maximum_keys_in_memory = 4
 

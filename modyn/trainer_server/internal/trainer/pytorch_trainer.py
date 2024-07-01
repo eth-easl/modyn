@@ -293,7 +293,7 @@ class PytorchTrainer:
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
-                        output = self._model.model(data)
+                        output = self._model.model(data, sample_ids)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
                         if weighted_optimization:
