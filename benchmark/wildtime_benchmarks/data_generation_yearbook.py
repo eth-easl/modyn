@@ -30,7 +30,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.dummyyear)
+    downloader.store_data(args.dummyyear, args.custom_split)
 
 
 class YearbookDownloader(Dataset):
@@ -77,7 +77,7 @@ class YearbookDownloader(Dataset):
     
     def generate_custom_split(self):
         print("yearbook custom split!")
-        
+
         # Merge train and test datasets
         merged_data = {}
         for year in self.time_steps:
