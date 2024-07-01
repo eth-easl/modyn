@@ -81,14 +81,16 @@ class YearbookDownloader(Dataset):
         # Merge train and test datasets
         merged_data = {}
         for year in self.time_steps:
-            train_data, _ = self._get_year_data(year)['train']
-            test_data, _ = self._get_year_data(year)['test']
+            year_data, _ = self._get_year_data(year)
+            train_data = year_data['train']
+            test_data = year_data['test']
             merged_data[year] = train_data + test_data
             np.random.shuffle(merged_data[year])  # Shuffle the merged dataset
 
         # Generate new train/test split
         for year in self.time_steps:
-            original_test_size = len(self._get_year_data(year)['test'])
+            year_data, _ = self._get_year_data(year)
+            original_test_size = len(year_data['test'])
             self._dataset[year]['test'] = merged_data[year][:original_test_size]
             self._dataset[year]['train'] = merged_data[year][original_test_size:]
 
