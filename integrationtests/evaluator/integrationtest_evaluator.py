@@ -187,6 +187,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     ]
 
     eval_model_resp = evaluate_model(model_id, evaluator, intervals)
+    print(eval_model_resp)
     assert eval_model_resp.evaluation_started
     assert eval_model_resp.dataset_sizes == expected_data_sizes
 
