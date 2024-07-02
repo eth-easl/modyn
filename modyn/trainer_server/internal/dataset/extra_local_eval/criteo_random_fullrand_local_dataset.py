@@ -140,8 +140,10 @@ class CriteoRandomFullLocalDataset(IterableDataset):
             num_samples = fw.get_number_of_samples()
             all_samples.extend([(path_idx, idx) for idx in range(num_samples)])
         
+        self._info(f"Extracted number of samples.", worker_id)
         # Shuffle the list to randomize the order of sample access
         random.shuffle(all_samples)
+        self._info(f"Shuffled.", worker_id)
 
         # Iterate over the shuffled list and read samples
         for path_idx, idx in all_samples:
