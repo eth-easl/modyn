@@ -429,6 +429,58 @@ def test_check_for_evaluation_exception_found(test_connect_to_model_storage, tes
         assert child_exception == exception_msg
 
 
+def fake_evaluate(
+    evaluation_info: EvaluationInfo, log_path: pathlib.Path, exception_queue: mp.Queue, metric_result_queue: mp.Queue
+):
+    num_evals = len(evaluation_info.not_failed_interval_ids)
+    for idx_idx, interval_idx in enumerate(evaluation_info.not_failed_interval_ids):
+        if idx_idx == num_evals - 1:
+            exception_queue.put("A fake exception for dataloader!")
+        else:
+            metric_result_queue.put((interval_idx, [("Accuracy", 0.5), ("F1Score", 0.6)]))
+
+
+def fake_process_start(self):
+    # let the target function execute directly instead of starting a new process
+    self._target(*self._args, **self._kwargs)
+
+
+@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
+@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
+@patch.object(mp.Process, "start", fake_process_start)
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.evaluate", fake_evaluate)
+def test__run_evaluation_retain_metrics_before_real_exception(test_connect_to_storage, test_connect_to_model_storage):
+    evaluation_id = 0
+    modyn_config = get_modyn_config()
+    intervals = [(None, 100), (100, 200)]
+    exception_msg = "A fake exception for dataloader!"
+    evaluation_info = get_evaluation_info(evaluation_id, pathlib.Path("trained.model"), modyn_config, intervals)
+    with tempfile.TemporaryDirectory() as modyn_temp:
+        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        evaluator._evaluation_dict[evaluation_id] = evaluation_info
+        evaluator._run_evaluation(evaluation_id)
+
+    get_status_req = EvaluationStatusRequest(evaluation_id=evaluation_id)
+    get_status_resp = evaluator.get_evaluation_status(get_status_req, None)
+    # since now, it's single-process execution, the evaluation is finished
+    assert not get_status_resp.is_running
+    assert get_status_resp.valid
+    assert get_status_resp.HasField("exception")
+    assert get_status_resp.exception == exception_msg
+
+    get_result_req = EvaluationResultRequest(evaluation_id=evaluation_id)
+    get_result_resp = evaluator.get_evaluation_result(get_result_req, None)
+    assert get_result_resp.valid
+    # evaluation on the last interval was not finished
+    assert len(get_result_resp.evaluation_results) == len(intervals) - 1
+    assert get_result_resp.evaluation_results[0].interval_index == 0
+    assert len(get_result_resp.evaluation_results[0].evaluation_data) == 2
+    assert get_result_resp.evaluation_results[0].evaluation_data[0].metric == "Accuracy"
+    assert get_result_resp.evaluation_results[0].evaluation_data[0].result == pytest.approx(0.5)
+    assert get_result_resp.evaluation_results[0].evaluation_data[1].metric == "F1Score"
+    assert get_result_resp.evaluation_results[0].evaluation_data[1].result == pytest.approx(0.6)
+
+
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 def test_get_evaluation_result_model_not_registered(test_connect_to_model_storage, test_connect_to_storage):
