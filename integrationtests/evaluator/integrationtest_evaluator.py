@@ -13,6 +13,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
+    EvaluationInterval,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
@@ -114,9 +115,9 @@ def prepare_model() -> int:
     return register_response.model_id
 
 
-def evaluate_model(
-    model_id: int, start_timestamp: Optional[int], end_timestamp: Optional[int], evaluator: EvaluatorStub
-) -> EvaluateModelResponse:
+def evaluate_model(model_id: int, evaluator: EvaluatorStub, intervals=None) -> EvaluateModelResponse:
+    if intervals is None:
+        intervals = [(None, None)]
     eval_transform_function = (
         "import torch\n"
         "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n\t"
@@ -135,8 +136,10 @@ def evaluate_model(
         dataset_info=DatasetInfo(
             dataset_id=DATASET_ID,
             num_dataloaders=1,
-            start_timestamp=start_timestamp,
-            end_timestamp=end_timestamp,
+            evaluation_intervals=[
+                EvaluationInterval(start_timestamp=start_timestamp, end_timestamp=end_timestamp)
+                for start_timestamp, end_timestamp in intervals
+            ],
         ),
         device="cpu",
         batch_size=2,
@@ -153,38 +156,52 @@ def evaluate_model(
 
 
 def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
-    def validate_eval_result(eval_result_resp: EvaluationResultResponse):
-        assert eval_result_resp.valid
-        assert len(eval_result_resp.evaluation_data) == 1
-        assert eval_result_resp.evaluation_data[0].metric == "Accuracy"
-
     evaluator_channel = connect_to_server("evaluator")
     evaluator = EvaluatorStub(evaluator_channel)
     split_ts1, split_ts2, split1_size, split2_size, split3_size = prepare_dataset(dataset_helper)
     model_id = prepare_model()
-    eval_model_resp = evaluate_model(model_id, split_ts2, split_ts1, evaluator)
-    assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
-    assert eval_model_resp.dataset_size == 0
-    assert eval_model_resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+    # assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
+    # assert eval_model_resp.eval_aborted_reasons == EvaluationAbortedReason.EMPTY_DATASET
 
-    # (start_timestamp, end_timestamp, expected_dataset_size)
-    test_cases = [
-        (None, split_ts1, split1_size),
-        (None, split_ts2, split1_size + split2_size),
-        (split_ts1, split_ts2, split2_size),
-        (split_ts1, None, split2_size + split3_size),
-        (split_ts2, None, split3_size),
-        (None, None, split1_size + split2_size + split3_size),
-        (0, split_ts1, split1_size),  # verify that 0 has the same effect as None for start_timestamp
+    # (start_timestamp, end_timestamp)
+    intervals = [
+        (None, split_ts1),
+        (None, split_ts2),
+        (split_ts2, split_ts1),
+        (split_ts1, split_ts2),
+        (split_ts1, None),
+        (split_ts2, None),
+        (None, None),
+        (0, split_ts1),  # verify that 0 has the same effect as None for start_timestamp
     ]
-    for start_ts, end_ts, expected_size in test_cases:
-        print(f"Testing model with start_timestamp={start_ts}, end_timestamp={end_ts}")
-        eval_model_resp = evaluate_model(model_id, start_ts, end_ts, evaluator)
-        assert eval_model_resp.evaluation_started
-        assert eval_model_resp.dataset_size == expected_size
+    expected_data_sizes = [
+        split1_size,
+        split1_size + split2_size,
+        None,
+        split2_size,
+        split2_size + split3_size,
+        split3_size,
+        split1_size + split2_size + split3_size,
+        split1_size,
+    ]
 
-        eval_result_resp = wait_for_evaluation(eval_model_resp.evaluation_id, evaluator)
-        validate_eval_result(eval_result_resp)
+    eval_model_resp = evaluate_model(model_id, evaluator, intervals)
+    print(eval_model_resp)
+    assert eval_model_resp.evaluation_started
+    assert len(eval_model_resp.interval_responses) == len(intervals)
+    for interval_resp, expected_size in zip(eval_model_resp.interval_responses, expected_data_sizes):
+        if expected_size is None:
+            assert interval_resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+        else:
+            assert interval_resp.dataset_size == expected_size
+            assert interval_resp.eval_aborted_reason == EvaluationAbortedReason.NOT_ABORTED
+
+    eval_result_resp = wait_for_evaluation(eval_model_resp.evaluation_id, evaluator)
+    assert eval_result_resp.valid
+    assert len(eval_result_resp.evaluation_results) == len(intervals) - 1
+    for single_eval_data in eval_result_resp.evaluation_results:
+        assert len(single_eval_data.evaluation_data) == 1
+        assert single_eval_data.evaluation_data[0].metric == "Accuracy"
 
 
 if __name__ == "__main__":

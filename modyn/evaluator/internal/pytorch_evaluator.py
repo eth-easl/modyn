@@ -3,42 +3,35 @@ import logging
 import multiprocessing as mp
 import os
 import pathlib
-import queue
 import traceback
-from typing import Union
+from typing import Optional, Union
 
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.metric_factory import MetricFactory
-from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, AbstractHolisticMetric
-from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
+from modyn.evaluator.internal.metrics import (
+    AbstractDecomposableMetric,
+    AbstractEvaluationMetric,
+    AbstractHolisticMetric,
+)
+from modyn.evaluator.internal.utils import EvaluationInfo
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
 class PytorchEvaluator:
     # pylint: disable=too-many-branches
 
-    def __init__(
-        self,
-        evaluation_info: EvaluationInfo,
-        status_query_queue: mp.Queue,
-        status_response_queue: mp.Queue,
-        metric_result_queue: mp.Queue,
-        logger: logging.Logger,
-    ) -> None:
+    def __init__(self, evaluation_info: EvaluationInfo, logger: logging.Logger, metric_result_queue: mp.Queue) -> None:
         self.logger = logger
         self._evaluation_id = evaluation_info.evaluation_id
-
+        self._metric_result_queue = metric_result_queue
         self._model = evaluation_info.model_handler(
             evaluation_info.model_configuration_dict, evaluation_info.device, evaluation_info.amp
         )
         self._load_state(evaluation_info.model_path)
 
-        # setup dataloaders
-        self._info("Setting up data loaders.")
-        self._dataloader = self._prepare_dataloader(evaluation_info)
+        self._eval_info = evaluation_info
 
-        self._metrics = evaluation_info.metrics
         self._label_transformer_function = deserialize_function(
             evaluation_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
@@ -47,17 +40,12 @@ class PytorchEvaluator:
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = evaluation_info.amp
 
-        self._status_query_queue = status_query_queue
-        self._status_response_queue = status_response_queue
-        self._metric_result_queue = metric_result_queue
-
-        self._num_samples = 0
-        self._contains_holistic_metric = MetricFactory.prepare_metrics(self._metrics)
-
         self._info("Initialized PyTorch evaluator.")
 
-    def _prepare_dataloader(self, evaluation_info: EvaluationInfo) -> torch.utils.data.DataLoader:
-        self._debug("Creating EvaluationDataset.")
+    @staticmethod
+    def _prepare_dataloader(
+        evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+    ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
             evaluation_info.bytes_parser,
@@ -65,10 +53,9 @@ class PytorchEvaluator:
             evaluation_info.storage_address,
             evaluation_info.evaluation_id,
             evaluation_info.tokenizer,
-            evaluation_info.start_timestamp,
-            evaluation_info.end_timestamp,
+            start_timestamp,
+            end_timestamp,
         )
-        self._debug("Creating DataLoader.")
         dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=evaluation_info.batch_size,
@@ -77,6 +64,18 @@ class PytorchEvaluator:
         )
 
         return dataloader
+
+    @staticmethod
+    def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
+        metrics = []
+        # need to make sure that the metric names are unique as they are used for identification.
+        metric_names = set()
+        for configuration_json in metric_configurations:
+            metric = MetricFactory.get_evaluation_metric(configuration_json)
+            if metric.get_name() not in metric_names:
+                metrics.append(metric)
+                metric_names.add(metric.get_name())
+        return metrics
 
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Evaluation {self._evaluation_id}] {msg}")
@@ -97,31 +96,18 @@ class PytorchEvaluator:
         # delete trained model from disk
         path.unlink()
 
-    def send_status_to_server(self, batch_number: int) -> None:
-        self._status_response_queue.put({"num_batches": batch_number, "num_samples": self._num_samples})
-
-    def evaluate(self) -> None:
+    # pylint: disable-next=too-many-locals
+    def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader, interval_idx: int) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
-
+        metrics = self._setup_metrics(self._eval_info.raw_metrics)
+        contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
         y_true = []
         y_score = []
 
         self._model.model.eval()
+        num_samples = 0
         with torch.inference_mode():
-            batch_number = -1
-            for batch_number, batch in enumerate(self._dataloader):
-                # As empty() is unreliable
-                # we try to fetch an element within 10ms. If there is no
-                # element within that timeframe returned, we continue.
-                try:
-                    req = self._status_query_queue.get(timeout=0.01)
-                    if req == EvaluatorMessages.STATUS_QUERY_MESSAGE:
-                        self.send_status_to_server(batch_number)
-                    else:
-                        raise ValueError("Unknown message in the status query queue")
-                except queue.Empty:
-                    pass
-
+            for batch in dataloader:
                 data: Union[torch.Tensor, dict]
                 if isinstance(batch[1], torch.Tensor):
                     data = batch[1].to(self._device)
@@ -142,38 +128,42 @@ class PytorchEvaluator:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     output = self._model.model(data)
 
-                    for metric in self._metrics:
+                    for metric in metrics:
                         if isinstance(metric, AbstractDecomposableMetric):
                             metric.evaluate_batch(target, output, batch_size)
 
-                    if self._contains_holistic_metric:
+                    if contains_holistic_metric:
                         y_true.append(target.detach().cpu())
                         y_score.append(output.detach().cpu())
 
-                self._num_samples += batch_size
+                num_samples += batch_size
 
         if len(y_true) > 0:
-            assert self._contains_holistic_metric  # We only track y_true in case of holistic metrics
+            assert contains_holistic_metric  # We only track y_true in case of holistic metrics
             y_true = torch.cat(y_true)
             y_score = torch.cat(y_score)
 
-            for metric in self._metrics:
+            for metric in metrics:
                 if isinstance(metric, AbstractHolisticMetric):
-                    metric.evaluate_dataset(y_true, y_score, self._num_samples)
+                    metric.evaluate_dataset(y_true, y_score, num_samples)
 
-        # We do this since we might also have just non-holistic metrics, in which case len(y_true) always is 0
-        for metric in self._metrics:
-            self._metric_result_queue.put((metric.get_name(), metric.get_evaluation_result()))
+        metric_result = []
+        for metric in metrics:
+            metric_result.append((metric.get_name(), metric.get_evaluation_result()))
+        self._metric_result_queue.put((interval_idx, metric_result))
+        self._info(f"Finished evaluation: {num_samples} samples")
 
-        self._info(f"Finished evaluation: {self._num_samples} samples, {batch_number + 1} batches.")
+    def evaluate(self) -> None:
+        for interval_idx in self._eval_info.not_failed_interval_ids:
+            interval = self._eval_info.all_evaluation_intervals[interval_idx]
+            dataloader = self._prepare_dataloader(self._eval_info, interval[0], interval[1])
+            self._single_interval_evaluate(dataloader, interval_idx)
 
 
 def evaluate(
     evaluation_info: EvaluationInfo,
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
-    status_query_queue: mp.Queue,
-    status_response_queue: mp.Queue,
     metric_result_queue: mp.Queue,
 ) -> None:
     logging.basicConfig(
@@ -186,9 +176,7 @@ def evaluate(
     logger.addHandler(file_handler)
 
     try:
-        evaluator = PytorchEvaluator(
-            evaluation_info, status_query_queue, status_response_queue, metric_result_queue, logger
-        )
+        evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue)
         evaluator.evaluate()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
