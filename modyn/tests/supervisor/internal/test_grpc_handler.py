@@ -6,10 +6,10 @@ import grpc
 import pytest
 from modyn.config.schema.pipeline import EvalDataConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluationIntervalData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusResponse,
-    EvaluationIntervalData,
     SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub

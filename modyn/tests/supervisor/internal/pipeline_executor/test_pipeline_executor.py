@@ -16,9 +16,10 @@ from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorCo
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelIntervalResponse,
     EvaluateModelResponse,
     EvaluationAbortedReason,
-    EvaluationIntervalData, EvaluateModelIntervalResponse,
+    EvaluationIntervalData,
 )
 from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
 from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
@@ -717,13 +718,16 @@ def test__start_evaluations(
     dummy_pipeline_args.pipeline_config.evaluation = pipeline_evaluation_config
 
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
-    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, interval_responses=[
-        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
-    ])
+    success_response = EvaluateModelResponse(
+        evaluation_started=True,
+        evaluation_id=42,
+        interval_responses=[
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
+        ],
+    )
     failure_response = EvaluateModelResponse(
-        evaluation_started=False, interval_responses=[
-            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
-        ]
+        evaluation_started=False,
+        interval_responses=[EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)],
     )
     # we let the second evaluation fail; it shouldn't affect the third evaluation
     if test_failure:

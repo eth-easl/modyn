@@ -297,6 +297,7 @@ class EvaluationExecutor:
 
         def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
             return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
+
         if not response.evaluation_started:
             failure_reason = get_failure_reason(response.interval_responses[0].eval_aborted_reason)
             logger.error(

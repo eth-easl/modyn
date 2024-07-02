@@ -15,6 +15,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationCleanupRequest,
     EvaluationCleanupResponse,
     EvaluationInterval,
+    EvaluationIntervalData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
@@ -22,7 +23,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationIntervalData
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,

@@ -9,20 +9,21 @@ import platform
 import tempfile
 from time import sleep
 from unittest import mock
-from unittest.mock import MagicMock, call, patch, ANY
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
+    EvaluateModelIntervalResponse,
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
     EvaluationCleanupRequest,
     EvaluationInterval,
     EvaluationResultRequest,
-    EvaluationStatusRequest, EvaluateModelIntervalResponse,
+    EvaluationStatusRequest,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
@@ -188,9 +189,9 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
-        assert response.interval_responses == [EvaluateModelIntervalResponse(
-            eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
-        )]
+        assert response.interval_responses == [
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE)
+        ]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -203,26 +204,26 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.interval_responses == [EvaluateModelIntervalResponse(
-            eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
-        )]
+        assert resp.interval_responses == [
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA)
+        ]
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
-        assert resp.interval_responses == [EvaluateModelIntervalResponse(
-            eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
-        )]
+        assert resp.interval_responses == [
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND)
+        ]
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.interval_responses == [EvaluateModelIntervalResponse(
-            eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
-        )]
+        assert resp.interval_responses == [
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE)
+        ]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -236,9 +237,9 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-            assert resp.interval_responses == [EvaluateModelIntervalResponse(
-                eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-            )]
+            assert resp.interval_responses == [
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
+            ]
 
 
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
@@ -251,15 +252,15 @@ def test_evaluate_model_download_trained_model(
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert resp.interval_responses == [EvaluateModelIntervalResponse(
-            eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
-        )]
+        assert resp.interval_responses == [
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE)
+        ]
 
 
 @patch.object(EvaluatorGRPCServicer, "_run_evaluation")
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
-    return_value=pathlib.Path("downloaded_model.modyn")
+    return_value=pathlib.Path("downloaded_model.modyn"),
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.EvaluationInfo", wraps=EvaluationInfo)

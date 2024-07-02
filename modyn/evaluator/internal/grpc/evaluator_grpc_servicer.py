@@ -13,18 +13,18 @@ from modyn.common.ftp import download_trained_model
 
 # pylint: disable-next=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelIntervalResponse,
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
     EvaluationCleanupRequest,
     EvaluationCleanupResponse,
+    EvaluationIntervalData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    EvaluateModelIntervalResponse,
     SingleMetricResult,
-    EvaluationIntervalData,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
@@ -104,9 +104,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 logger.error(f"Trained model {request.model_id} does not exist!")
                 return EvaluateModelResponse(
                     evaluation_started=False,
-                    interval_responses=[EvaluateModelIntervalResponse(
-                        eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
-                    )] * num_intervals,
+                    interval_responses=[
+                        EvaluateModelIntervalResponse(
+                            eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+                        )
+                    ]
+                    * num_intervals,
                 )
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
@@ -114,9 +117,10 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Model {model_class_name} not available!")
             return EvaluateModelResponse(
                 evaluation_started=False,
-                interval_responses=[EvaluateModelIntervalResponse(
-                    eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
-                )] * num_intervals,
+                interval_responses=[
+                    EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE)
+                ]
+                * num_intervals,
             )
 
         fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
@@ -129,9 +133,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(
                 evaluation_started=False,
-                interval_responses=[EvaluateModelIntervalResponse(
-                    eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
-                )] * num_intervals,
+                interval_responses=[
+                    EvaluateModelIntervalResponse(
+                        eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+                    )
+                ]
+                * num_intervals,
             )
 
         interval_responses = []
@@ -146,17 +153,19 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             dataset_size = dataset_size_response.num_keys
             if not dataset_size_response.success:
-                interval_responses.append(EvaluateModelIntervalResponse(
-                    eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
-                ))
+                interval_responses.append(
+                    EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND)
+                )
             elif dataset_size == 0:
-                interval_responses.append(EvaluateModelIntervalResponse(
-                    eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-                ))
+                interval_responses.append(
+                    EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
+                )
             else:
-                interval_responses.append(EvaluateModelIntervalResponse(
-                    eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED,dataset_size=dataset_size
-                ))
+                interval_responses.append(
+                    EvaluateModelIntervalResponse(
+                        eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=dataset_size
+                    )
+                )
                 not_failed_interval_ids.append(idx)
 
         if len(not_failed_interval_ids) == 0:
@@ -181,8 +190,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             return EvaluateModelResponse(
                 evaluation_started=False,
                 interval_responses=[
-                   EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE)
-               ] * num_intervals,
+                    EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE)
+                ]
+                * num_intervals,
             )
         evaluation_info = EvaluationInfo(
             request,

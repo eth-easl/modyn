@@ -13,9 +13,10 @@ from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelIntervalResponse,
     EvaluateModelResponse,
     EvaluationAbortedReason,
-    EvaluationIntervalData, EvaluateModelIntervalResponse,
+    EvaluationIntervalData,
 )
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -232,15 +233,18 @@ def test_single_batched_evaluation(
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     if test_failure:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=False, interval_responses=[EvaluateModelIntervalResponse(
-                eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-            )]
+            evaluation_started=False,
+            interval_responses=[
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
+            ],
         )
     else:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=True, evaluation_id=42, interval_responses=[EvaluateModelIntervalResponse(
-                eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10
-            )]
+            evaluation_started=True,
+            evaluation_id=42,
+            interval_responses=[
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
+            ],
         )
 
     evaluation_executor.grpc.evaluator = evaluator_stub_mock
