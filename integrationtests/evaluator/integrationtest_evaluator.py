@@ -198,10 +198,12 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
 
     eval_result_resp = wait_for_evaluation(eval_model_resp.evaluation_id, evaluator)
     assert eval_result_resp.valid
-    assert len(eval_result_resp.evaluation_results) == len(intervals) - 1
-    for single_eval_data in eval_result_resp.evaluation_results:
-        assert len(single_eval_data.evaluation_data) == 1
-        assert single_eval_data.evaluation_data[0].metric == "Accuracy"
+    expected_interval_ids = [0, 1, 3, 4, 5, 6, 7]
+    assert len(eval_result_resp.evaluation_results) == len(expected_interval_ids)
+    for interval_data, expected_interval_id in zip(eval_result_resp.evaluation_results, expected_interval_ids):
+        assert interval_data.interval_index == expected_interval_id
+        assert len(interval_data.evaluation_data) == 1
+        assert interval_data.evaluation_data[0].metric == "Accuracy"
 
 
 if __name__ == "__main__":
