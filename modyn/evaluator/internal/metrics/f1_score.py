@@ -14,9 +14,6 @@ class F1Score(AbstractDecomposableMetric):
 
     def __init__(self, config: F1ScoreMetricConfig) -> None:
         super().__init__(config)
-        self.reset_state()
-
-    def reset_state(self) -> None:
         # store true positives (tp), false positives (fp) and false negatives (fn) in matrix
         self.classification_matrix = np.zeros((3, self.config.num_classes))
 

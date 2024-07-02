@@ -52,13 +52,6 @@ class AbstractEvaluationMetric(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def reset_state(self) -> None:
-        """
-        Reset the state of the metric.
-        """
-        raise NotImplementedError()
-
     def transform_prediction(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_elements: int) -> torch.Tensor:
         """
         Checks whether the label and prediction values match in dimensions and that they contain num_elements elements.

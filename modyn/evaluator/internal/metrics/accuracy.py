@@ -10,9 +10,6 @@ class Accuracy(AbstractDecomposableMetric):
 
     def __init__(self, config: AccuracyMetricConfig) -> None:
         super().__init__(config)
-        self.reset_state()
-
-    def reset_state(self) -> None:
         self.samples_seen = 0
         self.total_correct = 0
 
