@@ -295,7 +295,7 @@ class EvaluationExecutor:
                     raise e
 
         if not response.evaluation_started:
-            failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reason].name
+            failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reasons[0]].name
             logger.error(
                 f"Evaluation for model {model_id_to_eval} on split {interval_start} to "
                 f"{interval_end} not started with reason: {failure_reason}."
@@ -308,9 +308,14 @@ class EvaluationExecutor:
         self.grpc.cleanup_evaluations([response.evaluation_id])
         # here we assume only one interval is evaluated
         eval_results: dict = {"dataset_size": response.dataset_sizes[0], "metrics": []}
-        for metric in eval_data[0].evaluation_data:
-            eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
-        return None, eval_results
+
+        for single_eval_data in eval_data:
+            if single_eval_data.interval_index == 0:
+                for metric in single_eval_data.evaluation_data:
+                    eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
+                return None, eval_results
+        # this shouldn't happen
+        raise RuntimeError("No evaluation data found")
 
 
 # ------------------------------------------------------------------------------------ #

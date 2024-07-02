@@ -26,8 +26,6 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
-from modyn.evaluator.internal.metric_factory import MetricFactory
-from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -97,21 +95,23 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
     def evaluate_model(self, request: EvaluateModelRequest, context: grpc.ServicerContext) -> EvaluateModelResponse:
         logger.info("Received evaluate model request.")
-
+        num_intervals = len(request.dataset_info.evaluation_intervals)
         with MetadataDatabaseConnection(self._config) as database:
             trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, request.model_id)
 
             if not trained_model:
                 logger.error(f"Trained model {request.model_id} does not exist!")
                 return EvaluateModelResponse(
-                    evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+                    evaluation_started=False,
+                    eval_aborted_reasons=[EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA] * num_intervals,
                 )
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
         if not hasattr(dynamic_module_import("modyn.models"), model_class_name):
             logger.error(f"Model {model_class_name} not available!")
             return EvaluateModelResponse(
-                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
+                evaluation_started=False,
+                eval_aborted_reasons=[EvaluationAbortedReason.MODEL_IMPORT_FAILURE] * num_intervals,
             )
 
         fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
@@ -123,11 +123,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 f"Evaluation cannot be started."
             )
             return EvaluateModelResponse(
-                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+                evaluation_started=False,
+                eval_aborted_reasons=[EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE] * num_intervals,
             )
 
         data_sizes: list[int] = []
-        for interval in request.dataset_info.evaluation_intervals:
+        eval_aborted_reasons = []
+        not_failed_interval_ids: list[int] = []
+        for idx, interval in enumerate(request.dataset_info.evaluation_intervals):
             dataset_size_req = GetDatasetSizeRequest(
                 dataset_id=request.dataset_info.dataset_id,
                 start_timestamp=interval.start_timestamp if interval.HasField("start_timestamp") else None,
@@ -137,23 +140,19 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             dataset_size = dataset_size_response.num_keys
             if not dataset_size_response.success:
-                logger.error(
-                    f"Total number of keys for dataset {dataset_size_req.dataset_id} cannot be fetched. "
-                    f"Evaluation cannot be started."
-                )
-                return EvaluateModelResponse(
-                    evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
-                )
+                eval_aborted_reasons.append(EvaluationAbortedReason.DATASET_NOT_FOUND)
+                data_sizes.append(0)
+            elif dataset_size == 0:
+                eval_aborted_reasons.append(EvaluationAbortedReason.EMPTY_DATASET)
+                data_sizes.append(0)
+            else:
+                eval_aborted_reasons.append(EvaluationAbortedReason.UNKNOWN)
+                data_sizes.append(dataset_size)
+                not_failed_interval_ids.append(idx)
 
-            if dataset_size == 0:
-                logger.info(
-                    f"Dataset {dataset_size_req.dataset_id} is empty in given time interval. "
-                    f"Evaluation cannot be started."
-                )
-                return EvaluateModelResponse(
-                    evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
-                )
-            data_sizes.append(dataset_size)
+        if len(not_failed_interval_ids) == 0:
+            logger.error("All evaluations failed. Evaluation cannot be started.")
+            return EvaluateModelResponse(evaluation_started=False, eval_aborted_reasons=eval_aborted_reasons)
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
@@ -171,10 +170,10 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         if not trained_model_path:
             logger.error("Trained model could not be downloaded. Evaluation cannot be started.")
             return EvaluateModelResponse(
-                evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+                evaluation_started=False,
+                eval_aborted_reasons=[EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE] * num_intervals,
             )
 
-        metrics = self._setup_metrics([metric.value for metric in request.metrics])
         evaluation_info = EvaluationInfo(
             request,
             evaluation_id,
@@ -182,29 +181,20 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             model_config,
             amp,
             self._storage_address,
-            metrics,
             trained_model_path,
+            not_failed_interval_ids,
         )
 
         self._evaluation_dict[evaluation_id] = evaluation_info
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
-        return EvaluateModelResponse(evaluation_started=True, evaluation_id=evaluation_id, dataset_sizes=data_sizes)
-
-    @staticmethod
-    def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
-        metrics = []
-        # need to make sure that the metric names are unique as they are used for identification.
-        metric_names = set()
-        for configuration_json in metric_configurations:
-            metric = MetricFactory.get_evaluation_metric(configuration_json)
-            if metric.get_name() not in metric_names:
-                metrics.append(metric)
-                metric_names.add(metric.get_name())
-            else:
-                logger.warning(f"Metric {metric.get_name()} is already registered.")
-        return metrics
+        return EvaluateModelResponse(
+            evaluation_started=True,
+            evaluation_id=evaluation_id,
+            dataset_sizes=data_sizes,
+            eval_aborted_reasons=eval_aborted_reasons,
+        )
 
     def _run_evaluation(self, evaluation_id: int) -> None:
         exception_queue: mp.Queue[str] = mp.Queue()  # pylint: disable=unsubscriptable-object
@@ -276,18 +266,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         evaluation_data: list[SingleEvaluationData] = []
 
         metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
-        # since each interval corresponds to a non-empty data subset, it must have metric results
-        for _ in range(len(self._evaluation_dict[evaluation_id].evaluation_intervals)):
+
+        while True:
             try:
-                metric_result = metric_result_queue.get(timeout=0.1)
+                interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
             except queue.Empty:
-                logger.error(f"Evaluation with id {evaluation_id} did not return all metric results.")
-                return EvaluationResultResponse(valid=False)
-            single_eval_data = SingleEvaluationData()
-            for name, result in metric_result:
-                single_eval_data.evaluation_data.append(SingleMetricResult(metric=name, result=result))
+                break
+            metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+            single_eval_data = SingleEvaluationData(interval_index=interval_idx, evaluation_data=metric_result)
 
             evaluation_data.append(single_eval_data)
+        if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):
+            logger.error(
+                f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
+                f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)}, "
+                f"but got {len(evaluation_data)}."
+            )
         return EvaluationResultResponse(valid=True, evaluation_results=evaluation_data)
 
     def cleanup_evaluations(

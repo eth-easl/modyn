@@ -12,7 +12,7 @@ from unittest import mock
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from modyn.config.schema.pipeline import AccuracyMetricConfig, F1ScoreMetricConfig
+from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
@@ -26,13 +26,11 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
-from modyn.evaluator.internal.metrics import Accuracy, F1Score
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import FetchModelRequest, FetchModelResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
-from pydantic import ValidationError
 
 DATABASE = pathlib.Path(os.path.abspath(__file__)).parent / "test_evaluator.database"
 
@@ -125,7 +123,9 @@ def get_mock_evaluation_transformer():
     )
 
 
-def get_evaluate_model_request(intervals=[(None, None)]):
+def get_evaluate_model_request(intervals=None):
+    if intervals is None:
+        intervals = [(None, None)]
     return EvaluateModelRequest(
         model_id=1,
         dataset_info=DatasetInfo(
@@ -148,7 +148,9 @@ def get_evaluate_model_request(intervals=[(None, None)]):
     )
 
 
-def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict, intervals=[(None, None)]):
+def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict, intervals=None):
+    if intervals is None:
+        intervals = [(None, None)]
     storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
     return EvaluationInfo(
         request=get_evaluate_model_request(intervals),
@@ -157,8 +159,8 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict, i
         amp=False,
         model_config="{}",
         storage_address=storage_address,
-        metrics=[Accuracy(AccuracyMetricConfig()), F1Score(F1ScoreMetricConfig(num_classes=2, average="macro"))],
         model_path=model_path,
+        not_failed_interval_ids=list(range(len(intervals))),
     )
 
 
@@ -186,7 +188,7 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
-        assert response.eval_aborted_reason == EvaluationAbortedReason.MODEL_IMPORT_FAILURE
+        assert response.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_IMPORT_FAILURE]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -199,20 +201,20 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA]
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
-        assert resp.eval_aborted_reason == EvaluationAbortedReason.DATASET_NOT_FOUND
+        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.DATASET_NOT_FOUND]
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reason == EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -226,7 +228,7 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-            assert resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+            assert resp.eval_aborted_reasons == [EvaluationAbortedReason.EMPTY_DATASET]
 
 
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
@@ -239,7 +241,7 @@ def test_evaluate_model_download_trained_model(
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reason == EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE]
 
 
 @patch.object(EvaluatorGRPCServicer, "_run_evaluation")
@@ -311,57 +313,6 @@ def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_sto
         assert resp.evaluation_started
         assert resp.evaluation_id == identifier
         assert str(evaluator._evaluation_dict[resp.evaluation_id].model_path) == "downloaded_model.modyn"
-
-
-@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_setup_metrics(test_connect_to_model_storage, test_connect_to_storage) -> None:
-    with tempfile.TemporaryDirectory() as modyn_temp:
-        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-
-        acc_metric_config = AccuracyMetricConfig().model_dump_json()
-        metrics = evaluator._setup_metrics([acc_metric_config])
-
-        assert len(metrics) == 1
-        assert isinstance(metrics[0], Accuracy)
-
-        unknown_metric_config = '{"name": "UnknownMetric", "config": "", "evaluation_transformer_function": ""}'
-        with pytest.raises(ValidationError):
-            evaluator._setup_metrics([unknown_metric_config])
-
-        metrics = evaluator._setup_metrics([acc_metric_config, acc_metric_config])
-        assert len(metrics) == 1
-        assert isinstance(metrics[0], Accuracy)
-
-
-@patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
-@patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_setup_metrics_multiple_f1(test_connect_to_model_storage, test_connect_to_storage):
-    with tempfile.TemporaryDirectory() as modyn_temp:
-        evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-
-        macro_f1_config = F1ScoreMetricConfig(
-            evaluation_transformer_function="",
-            num_classes=2,
-            average="macro",
-        ).model_dump_json()
-
-        micro_f1_config = F1ScoreMetricConfig(
-            evaluation_transformer_function="",
-            num_classes=2,
-            average="micro",
-        ).model_dump_json()
-
-        # not double macro, but macro and micro work
-        metrics = evaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
-
-        assert len(metrics) == 2
-        assert isinstance(metrics[0], F1Score)
-        assert isinstance(metrics[1], F1Score)
-        assert metrics[0].config.average == "macro"
-        assert metrics[1].config.average == "micro"
-        assert metrics[0].get_name() == "F1-macro"
-        assert metrics[1].get_name() == "F1-micro"
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -470,19 +421,27 @@ def test_get_evaluation_result_still_running(test_is_alive, test_connect_to_mode
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
-def test_get_evaluation_result_missing_metric(test_is_alive, test_connect_to_model_storage, test_connect_to_storage):
+def test_get_evaluation_result_incomplete_metric(test_is_alive, test_connect_to_model_storage, test_connect_to_storage):
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[3] = evaluation_process_info
         config = get_modyn_config()
-        evaluator._evaluation_dict[3] = get_evaluation_info(3, pathlib.Path("trained.model"), config)
+        evaluator._evaluation_dict[3] = get_evaluation_info(
+            3, pathlib.Path("trained.model"), config, intervals=((None, 100), (100, 200))
+        )
+        # though we have two intervals, somehow only one metric result is available
+        metric_result_queue = evaluation_process_info.metric_result_queue
+        metric_result_queue.put((1, [("Accuracy", 0.5)]))
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=3), None)
-        assert not response.valid
+        assert response.valid
+        assert len(response.evaluation_results) == 1
+        assert response.evaluation_results[0].interval_index == 1
+        assert len(response.evaluation_results[0].evaluation_data) == 1
+        assert response.evaluation_results[0].evaluation_data[0].result == pytest.approx(0.5)
+        assert response.evaluation_results[0].evaluation_data[0].metric == "Accuracy"
 
 
-@patch.object(Accuracy, "get_evaluation_result", side_effect=[0.5, 0.72, 0.3])
-@patch.object(F1Score, "get_evaluation_result", side_effect=[0.6, 0.75, 0.4])
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
@@ -490,8 +449,6 @@ def test_get_evaluation_result(
     test_is_alive,
     test_connect_to_model_storage,
     test_connect_to_storage,
-    test_f1: MagicMock,
-    test_acc: MagicMock,
 ):
     intervals = [(4, None), (None, 8), (4, 8)]
     with tempfile.TemporaryDirectory() as temp:
@@ -501,18 +458,11 @@ def test_get_evaluation_result(
             1, pathlib.Path(temp) / "trained_model.modyn", config, intervals=intervals
         )
 
-        assert len(evaluator._evaluation_dict[1].metrics) == 2
-        assert isinstance(evaluator._evaluation_dict[1].metrics[0], Accuracy)
-        assert isinstance(evaluator._evaluation_dict[1].metrics[1], F1Score)
-
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[1] = evaluation_process_info
-        for _ in intervals:
-            metric_res = []
-            for metric in evaluator._evaluation_dict[1].metrics:
-                metric_res.append((metric.get_name(), metric.get_evaluation_result()))
-            evaluation_process_info.metric_result_queue.put(metric_res)
-
+        expected_metric_results = [(0.5, 0.6), (0.72, 0.75), (0.3, 0.4)]
+        for idx, (accuracy, f1score) in enumerate(expected_metric_results):
+            evaluation_process_info.metric_result_queue.put((idx, [("Accuracy", accuracy), ("F1Score", f1score)]))
         timeout = 5
         elapsed = 0
 
@@ -533,21 +483,16 @@ def test_get_evaluation_result(
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=1), None)
         assert response.valid
         assert len(response.evaluation_results) == len(intervals)
-        expected_metric_results = [(0.5, 0.6), (0.72, 0.75), (0.3, 0.4)]
-        for single_eval_data, expected_single_metric_results in zip(
-            response.evaluation_results, expected_metric_results
+
+        for expected_interval_idx, (single_eval_data, expected_single_metric_results) in enumerate(
+            zip(response.evaluation_results, expected_metric_results)
         ):
+            assert single_eval_data.interval_index == expected_interval_idx
             assert len(single_eval_data.evaluation_data) == 2
-            assert single_eval_data.evaluation_data[0].metric == Accuracy(AccuracyMetricConfig()).get_name()
-            assert (
-                single_eval_data.evaluation_data[1].metric
-                == F1Score(F1ScoreMetricConfig(num_classes=2, average="macro")).get_name()
-            )
+            assert single_eval_data.evaluation_data[0].metric == "Accuracy"
+            assert single_eval_data.evaluation_data[1].metric == "F1Score"
             assert single_eval_data.evaluation_data[0].result == pytest.approx(expected_single_metric_results[0])
             assert single_eval_data.evaluation_data[1].result == pytest.approx(expected_single_metric_results[1])
-
-        assert test_acc.call_count == 3
-        assert test_f1.call_count == 3
 
 
 @patch.object(mp.Process, "is_alive", side_effect=[False, True, False, True, True])

@@ -47,10 +47,13 @@ message EvaluateModelRequest {
 }
 
 message EvaluateModelResponse {
+  // only when all interval evaluations failed, this field will be set to false
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
+  // non-empty only when evaluation_started is true; in this case it has the same size as the number of intervals
   repeated int64 dataset_sizes = 3;
-  EvaluationAbortedReason eval_aborted_reason = 4;
+  // always has the same size as the number of intervals
+  repeated EvaluationAbortedReason eval_aborted_reasons = 4;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
@@ -68,7 +71,8 @@ message SingleMetricResult {
 
 message SingleEvaluationData {
   // multiple metrics are required on on evaluation on one interval
-  repeated SingleMetricResult evaluation_data = 1;
+  int32 interval_index = 1;
+  repeated SingleMetricResult evaluation_data = 2;
 }
 
 message EvaluationResultRequest { int32 evaluation_id = 1; }

@@ -381,8 +381,7 @@ def test_wait_for_evaluation_completion(*args):
             EvaluationStatusResponse(valid=True, exception="Some error"),
             EvaluationStatusResponse(valid=True, is_running=False),
         ]
-        with pytest.raises(RuntimeError):
-            handler.wait_for_evaluation_completion(10)
+        assert not handler.wait_for_evaluation_completion(10)
         assert status_method.call_count == 1
 
         status_method.reset_mock()
@@ -390,7 +389,7 @@ def test_wait_for_evaluation_completion(*args):
             EvaluationStatusResponse(valid=True, is_running=True),
             EvaluationStatusResponse(valid=True, is_running=False),
         ]
-        handler.wait_for_evaluation_completion(10)
+        assert handler.wait_for_evaluation_completion(10)
         assert status_method.call_count == 2
 
 

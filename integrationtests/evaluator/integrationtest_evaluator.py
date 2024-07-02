@@ -13,10 +13,11 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluateModelResponse,
     EvaluationAbortedReason,
+    EvaluationInterval,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
-    EvaluationStatusResponse, EvaluationInterval,
+    EvaluationStatusResponse,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
@@ -114,9 +115,7 @@ def prepare_model() -> int:
     return register_response.model_id
 
 
-def evaluate_model(
-    model_id: int, evaluator: EvaluatorStub, intervals=None
-) -> EvaluateModelResponse:
+def evaluate_model(model_id: int, evaluator: EvaluatorStub, intervals=None) -> EvaluateModelResponse:
     if intervals is None:
         intervals = [(None, None)]
     eval_transform_function = (
@@ -164,7 +163,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     eval_model_resp = evaluate_model(model_id, evaluator, [(split_ts2, split_ts1)])
     print(eval_model_resp)
     assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
-    assert eval_model_resp.eval_aborted_reason == EvaluationAbortedReason.EMPTY_DATASET
+    assert eval_model_resp.eval_aborted_reasons == EvaluationAbortedReason.EMPTY_DATASET
 
     # (start_timestamp, end_timestamp)
     intervals = [

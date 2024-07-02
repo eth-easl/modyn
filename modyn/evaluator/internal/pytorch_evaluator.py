@@ -9,7 +9,11 @@ from typing import Optional, Union
 import torch
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.metric_factory import MetricFactory
-from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, AbstractHolisticMetric
+from modyn.evaluator.internal.metrics import (
+    AbstractDecomposableMetric,
+    AbstractEvaluationMetric,
+    AbstractHolisticMetric,
+)
 from modyn.evaluator.internal.utils import EvaluationInfo
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
@@ -17,10 +21,10 @@ from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 class PytorchEvaluator:
     # pylint: disable=too-many-branches
 
-    def __init__(self, evaluation_info: EvaluationInfo, logger: logging.Logger) -> None:
+    def __init__(self, evaluation_info: EvaluationInfo, logger: logging.Logger, metric_result_queue: mp.Queue) -> None:
         self.logger = logger
         self._evaluation_id = evaluation_info.evaluation_id
-
+        self._metric_result_queue = metric_result_queue
         self._model = evaluation_info.model_handler(
             evaluation_info.model_configuration_dict, evaluation_info.device, evaluation_info.amp
         )
@@ -28,7 +32,6 @@ class PytorchEvaluator:
 
         self._eval_info = evaluation_info
 
-        self._metrics = evaluation_info.metrics
         self._label_transformer_function = deserialize_function(
             evaluation_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
@@ -36,8 +39,6 @@ class PytorchEvaluator:
         self._device = evaluation_info.device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = evaluation_info.amp
-
-        self._contains_holistic_metric = MetricFactory.prepare_metrics(self._metrics)
 
         self._info("Initialized PyTorch evaluator.")
 
@@ -64,6 +65,18 @@ class PytorchEvaluator:
 
         return dataloader
 
+    @staticmethod
+    def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
+        metrics = []
+        # need to make sure that the metric names are unique as they are used for identification.
+        metric_names = set()
+        for configuration_json in metric_configurations:
+            metric = MetricFactory.get_evaluation_metric(configuration_json)
+            if metric.get_name() not in metric_names:
+                metrics.append(metric)
+                metric_names.add(metric.get_name())
+        return metrics
+
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Evaluation {self._evaluation_id}] {msg}")
 
@@ -83,9 +96,11 @@ class PytorchEvaluator:
         # delete trained model from disk
         path.unlink()
 
-    def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader) -> None:
+    # pylint: disable-next=too-many-locals
+    def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader, interval_idx: int) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
-
+        metrics = self._setup_metrics(self._eval_info.raw_metrics)
+        contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
         y_true = []
         y_score = []
 
@@ -113,37 +128,36 @@ class PytorchEvaluator:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     output = self._model.model(data)
 
-                    for metric in self._metrics:
+                    for metric in metrics:
                         if isinstance(metric, AbstractDecomposableMetric):
                             metric.evaluate_batch(target, output, batch_size)
 
-                    if self._contains_holistic_metric:
+                    if contains_holistic_metric:
                         y_true.append(target.detach().cpu())
                         y_score.append(output.detach().cpu())
 
                 num_samples += batch_size
 
         if len(y_true) > 0:
-            assert self._contains_holistic_metric  # We only track y_true in case of holistic metrics
+            assert contains_holistic_metric  # We only track y_true in case of holistic metrics
             y_true = torch.cat(y_true)
             y_score = torch.cat(y_score)
 
-            for metric in self._metrics:
+            for metric in metrics:
                 if isinstance(metric, AbstractHolisticMetric):
                     metric.evaluate_dataset(y_true, y_score, num_samples)
 
+        metric_result = []
+        for metric in metrics:
+            metric_result.append((metric.get_name(), metric.get_evaluation_result()))
+        self._metric_result_queue.put((interval_idx, metric_result))
         self._info(f"Finished evaluation: {num_samples} samples")
 
-    def evaluate(self, metric_result_queue: mp.Queue) -> None:
-        for interval in self._eval_info.evaluation_intervals:
-            for metric in self._metrics:
-                metric.reset_state()
+    def evaluate(self) -> None:
+        for interval_idx in self._eval_info.not_failed_interval_ids:
+            interval = self._eval_info.all_evaluation_intervals[interval_idx]
             dataloader = self._prepare_dataloader(self._eval_info, interval[0], interval[1])
-            self._single_interval_evaluate(dataloader)
-            metric_result = []
-            for metric in self._metrics:
-                metric_result.append((metric.get_name(), metric.get_evaluation_result()))
-                metric_result_queue.put(metric_result)
+            self._single_interval_evaluate(dataloader, interval_idx)
 
 
 def evaluate(
@@ -162,8 +176,8 @@ def evaluate(
     logger.addHandler(file_handler)
 
     try:
-        evaluator = PytorchEvaluator(evaluation_info, logger)
-        evaluator.evaluate(metric_result_queue)
+        evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue)
+        evaluator.evaluate()
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
         logger.error(exception_msg)

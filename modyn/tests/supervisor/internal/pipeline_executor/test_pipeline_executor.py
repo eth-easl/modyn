@@ -719,7 +719,7 @@ def test__start_evaluations(
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_sizes=[10])
     failure_response = EvaluateModelResponse(
-        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+        evaluation_started=False, eval_aborted_reasons=[EvaluationAbortedReason.EMPTY_DATASET]
     )
     # we let the second evaluation fail; it shouldn't affect the third evaluation
     if test_failure:

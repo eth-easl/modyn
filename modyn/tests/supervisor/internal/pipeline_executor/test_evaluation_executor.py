@@ -231,9 +231,9 @@ def test_single_batched_evaluation(
 ) -> None:
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     if test_failure:
-        evaluator_stub_mock.evaluate_model.side_effect = [
-            EvaluateModelResponse(evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
-        ]
+        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+            evaluation_started=False, eval_aborted_reasons=[EvaluationAbortedReason.EMPTY_DATASET]
+        )
     else:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
             evaluation_started=True, evaluation_id=42, dataset_sizes=[10]

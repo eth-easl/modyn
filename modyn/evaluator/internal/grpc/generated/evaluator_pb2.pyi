@@ -173,21 +173,27 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_STARTED_FIELD_NUMBER: builtins.int
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     DATASET_SIZES_FIELD_NUMBER: builtins.int
-    EVAL_ABORTED_REASON_FIELD_NUMBER: builtins.int
+    EVAL_ABORTED_REASONS_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
+    """only when all interval evaluations failed, this field will be set to false"""
     evaluation_id: builtins.int
-    eval_aborted_reason: global___EvaluationAbortedReason.ValueType
     @property
-    def dataset_sizes(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def dataset_sizes(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]:
+        """non-empty only when evaluation_started is true; in this case it has the same size as the number of intervals"""
+
+    @property
+    def eval_aborted_reasons(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[global___EvaluationAbortedReason.ValueType]:
+        """always has the same size as the number of intervals"""
+
     def __init__(
         self,
         *,
         evaluation_started: builtins.bool = ...,
         evaluation_id: builtins.int = ...,
         dataset_sizes: collections.abc.Iterable[builtins.int] | None = ...,
-        eval_aborted_reason: global___EvaluationAbortedReason.ValueType = ...,
+        eval_aborted_reasons: collections.abc.Iterable[global___EvaluationAbortedReason.ValueType] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_sizes", b"dataset_sizes", "eval_aborted_reason", b"eval_aborted_reason", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_sizes", b"dataset_sizes", "eval_aborted_reasons", b"eval_aborted_reasons", "evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started"]) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 
@@ -251,15 +257,19 @@ global___SingleMetricResult = SingleMetricResult
 class SingleEvaluationData(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    INTERVAL_INDEX_FIELD_NUMBER: builtins.int
     EVALUATION_DATA_FIELD_NUMBER: builtins.int
+    interval_index: builtins.int
+    """multiple metrics are required on on evaluation on one interval"""
     @property
     def evaluation_data(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleMetricResult]: ...
     def __init__(
         self,
         *,
+        interval_index: builtins.int = ...,
         evaluation_data: collections.abc.Iterable[global___SingleMetricResult] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data", "interval_index", b"interval_index"]) -> None: ...
 
 global___SingleEvaluationData = SingleEvaluationData
 
@@ -302,7 +312,9 @@ class EvaluationResultResponse(google.protobuf.message.Message):
     EVALUATION_RESULTS_FIELD_NUMBER: builtins.int
     valid: builtins.bool
     @property
-    def evaluation_results(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleEvaluationData]: ...
+    def evaluation_results(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleEvaluationData]:
+        """each element in the list corresponds to the evaluation results on a single interval"""
+
     def __init__(
         self,
         *,
