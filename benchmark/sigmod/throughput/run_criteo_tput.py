@@ -36,7 +36,7 @@ def run_experiment() -> None:
     num_dataloader_workers_list = [16, 1, 4, 8]
     partition_size_list = [100000, 2500000, 5000000]
     num_prefetched_partitions_list = [0, 1, 2, 6]
-    parallel_pref_list = [1, 2, 4, 8]
+    parallel_pref_list = [1, 4]
     skip_existing = True
 
     existing_pipelines = []
@@ -82,6 +82,9 @@ def run_experiment() -> None:
                                 continue
 
                             if shuffle and num_dataloader_workers not in [1, 16]:
+                                continue
+
+                            if num_dataloader_workers == 1 and num_prefetched_partitions not in [0,1]:
                                 continue
 
                             pipeline_config = gen_criteo_config(
