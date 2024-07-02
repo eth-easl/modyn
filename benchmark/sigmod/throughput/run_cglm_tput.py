@@ -81,7 +81,7 @@ def run_experiment() -> None:
                             if num_prefetched_partitions > 0 and parallel_pref > num_prefetched_partitions:
                                 continue
 
-                            if shuffle and num_dataloader_workers not in [1, 16]:
+                            if shuffle and num_dataloader_workers not in [16]:
                                 continue
 
                             pipeline_config = gen_cglm_tput_config(
