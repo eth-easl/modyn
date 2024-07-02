@@ -47,7 +47,7 @@ message EvaluateModelRequest {
 }
 
 message EvaluateModelIntervalResponse {
-  // this value is only meaningful when  eval_aborted_reason is NOT_ABORTED
+  // this value is only meaningful when eval_aborted_reason is NOT_ABORTED
   int64 dataset_size = 1;
   EvaluationAbortedReason eval_aborted_reason = 2;
 }

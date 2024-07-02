@@ -160,10 +160,6 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     evaluator = EvaluatorStub(evaluator_channel)
     split_ts1, split_ts2, split1_size, split2_size, split3_size = prepare_dataset(dataset_helper)
     model_id = prepare_model()
-    # assert not eval_model_resp.evaluation_started, "Evaluation should not start if start_timestamp > end_timestamp"
-    # assert eval_model_resp.eval_aborted_reasons == EvaluationAbortedReason.EMPTY_DATASET
-
-    # (start_timestamp, end_timestamp)
     intervals = [
         (None, split_ts1),
         (None, split_ts2),
@@ -186,7 +182,6 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
     ]
 
     eval_model_resp = evaluate_model(model_id, evaluator, intervals)
-    print(eval_model_resp)
     assert eval_model_resp.evaluation_started
     assert len(eval_model_resp.interval_responses) == len(intervals)
     for interval_resp, expected_size in zip(eval_model_resp.interval_responses, expected_data_sizes):

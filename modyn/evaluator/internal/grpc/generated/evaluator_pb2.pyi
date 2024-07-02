@@ -173,7 +173,7 @@ class EvaluateModelIntervalResponse(google.protobuf.message.Message):
     DATASET_SIZE_FIELD_NUMBER: builtins.int
     EVAL_ABORTED_REASON_FIELD_NUMBER: builtins.int
     dataset_size: builtins.int
-    """this value is only meaningful when  eval_aborted_reason is NOT_ABORTED"""
+    """this value is only meaningful when eval_aborted_reason is NOT_ABORTED"""
     eval_aborted_reason: global___EvaluationAbortedReason.ValueType
     def __init__(
         self,
