@@ -18,7 +18,7 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 # Iterate over each sample in each file, but one file after another
-class CriteoRandomFileByFileLocalDataset(IterableDataset):
+class CriteoRandomFullLocalDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
     def __init__(
