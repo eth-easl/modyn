@@ -70,7 +70,7 @@ class CriteoRandomFullLocalDataset(IterableDataset):
         }
 
     def _setup_composed_transform(self) -> None:
-        self._transform_list = [CriteoRandomFileByFileLocalDataset.bytes_parser_function]
+        self._transform_list = [CriteoRandomFullLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
