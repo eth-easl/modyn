@@ -31,6 +31,7 @@ class CglmLocalDataset(IterableDataset):
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
+        shuffle: bool,
         tokenizer: Optional[str],
         log_path: Optional[pathlib.Path],
     ):
