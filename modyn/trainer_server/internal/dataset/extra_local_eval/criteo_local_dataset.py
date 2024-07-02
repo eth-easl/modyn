@@ -10,7 +10,7 @@ from typing import Any, Callable, Generator, Iterator, Optional, Tuple
 
 import torch
 from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
+from modyn.trainer_server.internal.dataset.extra_local_eval.binary_file_wrapper import BinaryFileWrapper
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -154,7 +154,7 @@ class CriteoLocalDataset(IterableDataset):
 
         if self._first_call:
             self._first_call = False
-            self._debug("This is the first run of iter, making gRPC connections.", worker_id)
+            self._debug("This is the first run of iter", worker_id)
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()

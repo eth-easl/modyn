@@ -16,7 +16,7 @@ from torchvision import transforms
 logger = logging.getLogger(__name__)
 
 
-class ClocLocalDataset(IterableDataset):
+class CglmLocalDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
     def __init__(
@@ -52,12 +52,12 @@ class ClocLocalDataset(IterableDataset):
         self._log: dict[str, Any] = {"partitions": {}}
         self._log_lock: Optional[threading.Lock] = None
         self._sw = Stopwatch()
-        self._cloc_path = "/tmp/cloc"
+        self._cloc_path = "/tmp/cglm"
 
         if log_path is None:
-            logger.warning("Did not provide log path for ClocDataset - logging disabled.")
+            logger.warning("Did not provide log path for CglmDataset - logging disabled.")
 
-        logger.debug("Initialized ClocDataset.")
+        logger.debug("Initialized CglmDataset.")
 
     @staticmethod
     def bytes_parser_function(data: memoryview) -> Image:
@@ -65,7 +65,7 @@ class ClocLocalDataset(IterableDataset):
 
     def _setup_composed_transform(self) -> None:
         self._transform_list = [
-            ClocLocalDataset.bytes_parser_function,
+            CglmLocalDataset.bytes_parser_function,
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
