@@ -22,8 +22,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultResponse,
     EvaluationStatusRequest,
     EvaluationStatusResponse,
-    SingleEvaluationData,
+    EvaluateModelIntervalResponse,
     SingleMetricResult,
+    EvaluationIntervalData,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorServicer
 from modyn.evaluator.internal.pytorch_evaluator import evaluate
@@ -103,7 +104,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 logger.error(f"Trained model {request.model_id} does not exist!")
                 return EvaluateModelResponse(
                     evaluation_started=False,
-                    eval_aborted_reasons=[EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA] * num_intervals,
+                    interval_responses=[EvaluateModelIntervalResponse(
+                        eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+                    )] * num_intervals,
                 )
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
@@ -111,7 +114,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Model {model_class_name} not available!")
             return EvaluateModelResponse(
                 evaluation_started=False,
-                eval_aborted_reasons=[EvaluationAbortedReason.MODEL_IMPORT_FAILURE] * num_intervals,
+                interval_responses=[EvaluateModelIntervalResponse(
+                    eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
+                )] * num_intervals,
             )
 
         fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
@@ -124,11 +129,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             )
             return EvaluateModelResponse(
                 evaluation_started=False,
-                eval_aborted_reasons=[EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE] * num_intervals,
+                interval_responses=[EvaluateModelIntervalResponse(
+                    eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+                )] * num_intervals,
             )
 
-        data_sizes: list[int] = []
-        eval_aborted_reasons = []
+        interval_responses = []
         not_failed_interval_ids: list[int] = []
         for idx, interval in enumerate(request.dataset_info.evaluation_intervals):
             dataset_size_req = GetDatasetSizeRequest(
@@ -140,19 +146,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             dataset_size = dataset_size_response.num_keys
             if not dataset_size_response.success:
-                eval_aborted_reasons.append(EvaluationAbortedReason.DATASET_NOT_FOUND)
-                data_sizes.append(0)
+                interval_responses.append(EvaluateModelIntervalResponse(
+                    eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
+                ))
             elif dataset_size == 0:
-                eval_aborted_reasons.append(EvaluationAbortedReason.EMPTY_DATASET)
-                data_sizes.append(0)
+                interval_responses.append(EvaluateModelIntervalResponse(
+                    eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+                ))
             else:
-                eval_aborted_reasons.append(EvaluationAbortedReason.UNKNOWN)
-                data_sizes.append(dataset_size)
+                interval_responses.append(EvaluateModelIntervalResponse(
+                    eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED,dataset_size=dataset_size
+                ))
                 not_failed_interval_ids.append(idx)
 
         if len(not_failed_interval_ids) == 0:
             logger.error("All evaluations failed. Evaluation cannot be started.")
-            return EvaluateModelResponse(evaluation_started=False, eval_aborted_reasons=eval_aborted_reasons)
+            return EvaluateModelResponse(evaluation_started=False, interval_responses=interval_responses)
 
         with self._lock:
             evaluation_id = self._next_evaluation_id
@@ -171,9 +180,10 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error("Trained model could not be downloaded. Evaluation cannot be started.")
             return EvaluateModelResponse(
                 evaluation_started=False,
-                eval_aborted_reasons=[EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE] * num_intervals,
+                interval_responses=[
+                   EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE)
+               ] * num_intervals,
             )
-
         evaluation_info = EvaluationInfo(
             request,
             evaluation_id,
@@ -192,8 +202,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         return EvaluateModelResponse(
             evaluation_started=True,
             evaluation_id=evaluation_id,
-            dataset_sizes=data_sizes,
-            eval_aborted_reasons=eval_aborted_reasons,
+            interval_responses=interval_responses,
         )
 
     def _run_evaluation(self, evaluation_id: int) -> None:
@@ -263,7 +272,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
-        evaluation_data: list[SingleEvaluationData] = []
+        evaluation_data: list[EvaluationIntervalData] = []
 
         metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
 
@@ -273,7 +282,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             except queue.Empty:
                 break
             metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
-            single_eval_data = SingleEvaluationData(interval_index=interval_idx, evaluation_data=metric_result)
+            single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
 
             evaluation_data.append(single_eval_data)
         if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):

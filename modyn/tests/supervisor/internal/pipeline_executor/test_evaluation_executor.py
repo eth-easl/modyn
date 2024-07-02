@@ -15,7 +15,7 @@ from modyn.config.schema.system.config import ModynConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelResponse,
     EvaluationAbortedReason,
-    SingleEvaluationData,
+    EvaluationIntervalData, EvaluateModelIntervalResponse,
 )
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -218,7 +218,7 @@ def test_launch_evaluations_async(
 
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "get_evaluation_results", return_value=[SingleEvaluationData()])
+@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData()])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "prepare_evaluation_request")
 def test_single_batched_evaluation(
@@ -232,11 +232,15 @@ def test_single_batched_evaluation(
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     if test_failure:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=False, eval_aborted_reasons=[EvaluationAbortedReason.EMPTY_DATASET]
+            evaluation_started=False, interval_responses=[EvaluateModelIntervalResponse(
+                eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+            )]
         )
     else:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=True, evaluation_id=42, dataset_sizes=[10]
+            evaluation_started=True, evaluation_id=42, interval_responses=[EvaluateModelIntervalResponse(
+                eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10
+            )]
         )
 
     evaluation_executor.grpc.evaluator = evaluator_stub_mock

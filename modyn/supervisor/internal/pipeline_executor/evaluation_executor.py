@@ -261,6 +261,7 @@ class EvaluationExecutor:
 
         return logs
 
+    # pylint: disable-next=too-many-locals
     def _single_batched_evaluation(
         self,
         interval_start: int,
@@ -294,8 +295,10 @@ class EvaluationExecutor:
                     self.grpc.init_evaluator()
                     raise e
 
+        def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
+            return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
         if not response.evaluation_started:
-            failure_reason = EvaluationAbortedReason.DESCRIPTOR.values_by_number[response.eval_aborted_reasons[0]].name
+            failure_reason = get_failure_reason(response.interval_responses[0].eval_aborted_reason)
             logger.error(
                 f"Evaluation for model {model_id_to_eval} on split {interval_start} to "
                 f"{interval_end} not started with reason: {failure_reason}."
@@ -307,7 +310,7 @@ class EvaluationExecutor:
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
         # here we assume only one interval is evaluated
-        eval_results: dict = {"dataset_size": response.dataset_sizes[0], "metrics": []}
+        eval_results: dict = {"dataset_size": response.interval_responses[0].dataset_size, "metrics": []}
 
         for single_eval_data in eval_data:
             if single_eval_data.interval_index == 0:

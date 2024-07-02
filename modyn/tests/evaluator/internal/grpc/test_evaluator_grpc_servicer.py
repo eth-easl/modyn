@@ -9,7 +9,7 @@ import platform
 import tempfile
 from time import sleep
 from unittest import mock
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, call, patch, ANY
 
 import pytest
 from modyn.config.schema.pipeline import AccuracyMetricConfig
@@ -22,7 +22,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationCleanupRequest,
     EvaluationInterval,
     EvaluationResultRequest,
-    EvaluationStatusRequest,
+    EvaluationStatusRequest, EvaluateModelIntervalResponse,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
@@ -156,7 +156,7 @@ def get_evaluation_info(evaluation_id, model_path: pathlib.Path, config: dict, i
         request=get_evaluate_model_request(intervals),
         evaluation_id=evaluation_id,
         model_class_name="ResNet18",
-        amp=False,
+        amp=True,
         model_config="{}",
         storage_address=storage_address,
         model_path=model_path,
@@ -188,7 +188,9 @@ def test_evaluate_model_dynamic_module_import(
         assert not response.evaluation_started
         assert not evaluator._evaluation_dict
         assert evaluator._next_evaluation_id == 0
-        assert response.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_IMPORT_FAILURE]
+        assert response.interval_responses == [EvaluateModelIntervalResponse(
+            eval_aborted_reason=EvaluationAbortedReason.MODEL_IMPORT_FAILURE
+        )]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -201,20 +203,26 @@ def test_evaluate_model_invalid(test_connect_to_model_storage, test_connect_to_s
         req.model_id = 15
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA]
+        assert resp.interval_responses == [EvaluateModelIntervalResponse(
+            eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_METADATA
+        )]
 
         req = get_evaluate_model_request()
         req.dataset_info.dataset_id = "unknown"
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
         assert evaluator._next_evaluation_id == 0
-        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.DATASET_NOT_FOUND]
+        assert resp.interval_responses == [EvaluateModelIntervalResponse(
+            eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND
+        )]
 
         req = get_evaluate_model_request()
         req.model_id = 2
         resp = evaluator.evaluate_model(req, None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE]
+        assert resp.interval_responses == [EvaluateModelIntervalResponse(
+            eval_aborted_reason=EvaluationAbortedReason.MODEL_NOT_EXIST_IN_STORAGE
+        )]
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
@@ -228,7 +236,9 @@ def test_evaluate_model_empty_dataset(test_connect_to_model_storage):
             resp = evaluator.evaluate_model(req, None)
             assert not resp.evaluation_started
             assert evaluator._next_evaluation_id == 0
-            assert resp.eval_aborted_reasons == [EvaluationAbortedReason.EMPTY_DATASET]
+            assert resp.interval_responses == [EvaluateModelIntervalResponse(
+                eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+            )]
 
 
 @patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model", return_value=None)
@@ -241,24 +251,39 @@ def test_evaluate_model_download_trained_model(
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         resp = evaluator.evaluate_model(get_evaluate_model_request(), None)
         assert not resp.evaluation_started
-        assert resp.eval_aborted_reasons == [EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE]
+        assert resp.interval_responses == [EvaluateModelIntervalResponse(
+            eval_aborted_reason=EvaluationAbortedReason.DOWNLOAD_MODEL_FAILURE
+        )]
 
 
 @patch.object(EvaluatorGRPCServicer, "_run_evaluation")
 @patch(
     "modyn.evaluator.internal.grpc.evaluator_grpc_servicer.download_trained_model",
-    return_value=pathlib.Path("downloaded_model.modyn"),
+    return_value=pathlib.Path("downloaded_model.modyn")
 )
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
-def test_evaluate_model_correct_time_range_used_and_correct_data_sizes_returned(
-    test_connect_to_model_storage, test_download_trained_model, test__run_evaluation
+@patch("modyn.evaluator.internal.grpc.evaluator_grpc_servicer.EvaluationInfo", wraps=EvaluationInfo)
+def test_evaluate_model_mixed(
+    test_evaluation_info, test_connect_to_model_storage, test_download_trained_model, test__run_evaluation
 ) -> None:
-    intervals = [(None, None), (1000, None), (None, 2000), (1000, 2000)]
-    expected_dataset_sizes = [400, 200, 300, 100]
+    intervals = [(None, None), (200, 300), (1000, None), (2000, 1000), (None, 2000), (1000, 2000)]
+    expected_interval_responses = [
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=400),
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND),
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=200),
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=300),
+        EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=100),
+    ]
 
     def fake_get_dataset_size(request: GetDatasetSizeRequest):
         if request.HasField("start_timestamp") and request.HasField("end_timestamp"):
-            resp = GetDatasetSizeResponse(success=True, num_keys=100)
+            if request.start_timestamp == 1000 and request.end_timestamp == 2000:
+                resp = GetDatasetSizeResponse(success=True, num_keys=100)
+            elif request.start_timestamp == 2000 and request.end_timestamp == 1000:
+                resp = GetDatasetSizeResponse(success=True, num_keys=0)
+            else:
+                resp = GetDatasetSizeResponse(success=False)
         elif request.HasField("start_timestamp") and not request.HasField("end_timestamp"):
             resp = GetDatasetSizeResponse(success=True, num_keys=200)
         elif not request.HasField("start_timestamp") and request.HasField("end_timestamp"):
@@ -270,23 +295,28 @@ def test_evaluate_model_correct_time_range_used_and_correct_data_sizes_returned(
     storage_stub_mock = mock.Mock(spec=["GetDatasetSize"])
     storage_stub_mock.GetDatasetSize.side_effect = fake_get_dataset_size
 
+    req = get_evaluate_model_request(intervals)
     with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
         with tempfile.TemporaryDirectory() as modyn_temp:
 
             evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
-            req = get_evaluate_model_request(intervals)
+
             resp = evaluator.evaluate_model(req, None)
             assert resp.evaluation_started
-            assert resp.dataset_sizes == expected_dataset_sizes
+            assert len(resp.interval_responses) == len(intervals)
+            assert resp.interval_responses == expected_interval_responses
 
             storage_stub_mock.GetDatasetSize.assert_has_calls(
                 [
                     call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=None, end_timestamp=None)),
+                    call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=200, end_timestamp=300)),
                     call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=1000, end_timestamp=None)),
+                    call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=2000, end_timestamp=1000)),
                     call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=None, end_timestamp=2000)),
                     call(GetDatasetSizeRequest(dataset_id="MNIST", start_timestamp=1000, end_timestamp=2000)),
                 ]
             )
+    test_evaluation_info.assert_called_with(req, 0, "ResNet18", "{}", True, ANY, ANY, [0, 2, 4, 5])
 
 
 @patch(
@@ -430,7 +460,7 @@ def test_get_evaluation_result_incomplete_metric(test_is_alive, test_connect_to_
         evaluator._evaluation_dict[3] = get_evaluation_info(
             3, pathlib.Path("trained.model"), config, intervals=((None, 100), (100, 200))
         )
-        # though we have two intervals, somehow only one metric result is available
+        # though we have two intervals, one metric result is available because of exception
         metric_result_queue = evaluation_process_info.metric_result_queue
         metric_result_queue.put((1, [("Accuracy", 0.5)]))
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=3), None)

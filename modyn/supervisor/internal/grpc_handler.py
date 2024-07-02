@@ -22,7 +22,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import SingleEvaluationData
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluationIntervalData
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -309,7 +309,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             sleep(1)
         return not has_exception
 
-    def get_evaluation_results(self, evaluation_id: int) -> list[SingleEvaluationData]:
+    def get_evaluation_results(self, evaluation_id: int) -> list[EvaluationIntervalData]:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")

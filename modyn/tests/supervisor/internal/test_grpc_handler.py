@@ -9,7 +9,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusResponse,
-    SingleEvaluationData,
+    EvaluationIntervalData,
     SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
@@ -401,13 +401,13 @@ def test_get_evaluation_results(*args):
     assert handler.evaluator is not None
 
     evaluation_data = [
-        SingleEvaluationData(
+        EvaluationIntervalData(
             evaluation_data=[
                 SingleMetricResult(metric="Accuracy", result=0.42),
                 SingleMetricResult(metric="Loss", result=0.13),
             ]
         ),
-        SingleEvaluationData(
+        EvaluationIntervalData(
             evaluation_data=[
                 SingleMetricResult(metric="Accuracy", result=0.43),
                 SingleMetricResult(metric="Loss", result=0.14),

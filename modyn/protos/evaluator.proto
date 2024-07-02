@@ -21,7 +21,7 @@ message DatasetInfo {
 }
 
 enum EvaluationAbortedReason {
-  UNKNOWN = 0;
+  NOT_ABORTED = 0;
   MODEL_NOT_EXIST_IN_METADATA = 1;
   MODEL_IMPORT_FAILURE = 2;
   MODEL_NOT_EXIST_IN_STORAGE = 3;
@@ -46,14 +46,18 @@ message EvaluateModelRequest {
   optional PythonString tokenizer = 9;
 }
 
+message EvaluateModelIntervalResponse {
+  // this value is only meaningful when  eval_aborted_reason is NOT_ABORTED
+  int64 dataset_size = 1;
+  EvaluationAbortedReason eval_aborted_reason = 2;
+}
+
 message EvaluateModelResponse {
   // only when all interval evaluations failed, this field will be set to false
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
-  // non-empty only when evaluation_started is true; in this case it has the same size as the number of intervals
-  repeated int64 dataset_sizes = 3;
   // always has the same size as the number of intervals
-  repeated EvaluationAbortedReason eval_aborted_reasons = 4;
+  repeated EvaluateModelIntervalResponse interval_responses = 3;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
@@ -69,7 +73,7 @@ message SingleMetricResult {
   float result = 2;
 }
 
-message SingleEvaluationData {
+message EvaluationIntervalData {
   // multiple metrics are required on on evaluation on one interval
   int32 interval_index = 1;
   repeated SingleMetricResult evaluation_data = 2;
@@ -82,7 +86,7 @@ message EvaluationCleanupRequest { repeated int32 evaluation_ids = 1; }
 message EvaluationResultResponse {
   bool valid = 1;
   // each element in the list corresponds to the evaluation results on a single interval
-  repeated SingleEvaluationData evaluation_results = 2;
+  repeated EvaluationIntervalData evaluation_results = 2;
 }
 
 message EvaluationCleanupResponse { repeated int32 succeeded = 1; }
