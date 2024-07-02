@@ -31,7 +31,7 @@ def get_mock_bytes_parser():
 def get_mock_label_transformer():
     return (
         "import torch\ndef label_transformer_function(x: torch.Tensor) -> "
-        "torch.Tensor:\n\treturn x.to(torch.float32)"
+        "torch.Tensor:\n\treturn x"
     )
 
 
@@ -49,7 +49,7 @@ class MockModel(torch.nn.Module):
         self._weight = torch.nn.Parameter(torch.ones(1))
 
     def forward(self, data):
-        return data * 2
+        return torch.zeros_like(data)
 
 
 class MockModelWrapper:
@@ -67,9 +67,9 @@ class MockModule:
 
 class MockEvaluationDataset(IterableDataset):
 
-    def __init__(self, input_to_output_func=lambda x: x * 2):
+    def __init__(self, input_to_output_func=lambda x: 0):
         self.dataset = iter(
-            [(key, torch.tensor((key,)), torch.tensor((input_to_output_func(key),))) for key in range(100)]
+            [(key, torch.tensor((key,)), torch.tensor((input_to_output_func(key),), dtype=torch.int)) for key in range(100)]
         )
 
     def __iter__(self) -> Generator:
@@ -116,16 +116,20 @@ def get_evaluation_info(
 
 
 def get_mock_evaluator(
-    trained_model_path: str, label_transformer: bool, metric_queue: mp.Queue = mp.Queue(), not_failed_interval_ids=None
+    trained_model_path: str, label_transformer: bool,
+    metric_queue: mp.Queue = mp.Queue(), not_failed_interval_ids=None,
+    metric_jsons=None
 ) -> PytorchEvaluator:
     if not_failed_interval_ids is None:
         not_failed_interval_ids = [0, 1, 2, 3]
+    if metric_jsons is None:
+        metric_jsons = [AccuracyMetricConfig(
+            evaluation_transformer_function=get_mock_accuracy_transformer()
+        ).model_dump_json()]
     proto_metrics = [
         EvaluatorJsonString(
-            value=AccuracyMetricConfig(
-                evaluation_transformer_function=get_mock_accuracy_transformer()
-            ).model_dump_json()
-        ),
+            value=metric_json
+        ) for metric_json in metric_jsons
     ]
     evaluation_info = get_evaluation_info(
         1, "storage:5000", proto_metrics, pathlib.Path(trained_model_path), label_transformer, not_failed_interval_ids
@@ -183,18 +187,24 @@ def test_load_model():
         # all samples are correctly labeled
         MockEvaluationDataset(),
         # only the first sample 0 is correctly labeled
-        MockEvaluationDataset(lambda x: x * 3),
+        MockEvaluationDataset(lambda x: 0 if x == 0 else 1),
         # no samples are correctly labeled
-        MockEvaluationDataset(lambda x: x - 1),
+        MockEvaluationDataset(lambda x: 1),
         # half of the samples are correctly labeled
-        MockEvaluationDataset(lambda x: x - 1 if x % 2 == 0 else x * 2),
+        MockEvaluationDataset(lambda x: x % 2),
     ],
 )
 @patch.object(PytorchEvaluator, "_load_state")
 def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMock):
     metric_queue = mp.Queue()
     not_failed_interval_ids = [0, 1, 2, 4]
-    evaluator: PytorchEvaluator = get_mock_evaluator("trained_model.modyn", True, metric_queue, not_failed_interval_ids)
+    metric_jsons = [
+        AccuracyMetricConfig(evaluation_transformer_function=get_mock_accuracy_transformer()).model_dump_json(),
+        F1ScoreMetricConfig(num_classes=2).model_dump_json()
+    ]
+    evaluator: PytorchEvaluator = get_mock_evaluator(
+        "trained_model.modyn", True, metric_queue, not_failed_interval_ids, metric_jsons
+    )
     evaluator.evaluate()
 
     prepare_dataloader_mock.assert_has_calls(
@@ -207,10 +217,11 @@ def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMoc
     )
 
     expected_accuracies = [1.0, 0.01, 0.0, 0.5]
-    for idx, accuracy in zip(not_failed_interval_ids, expected_accuracies):
+    expected_f1scores = [0.5, ANY, 0.0, 1 / 3]
+    for idx, accuracy, f1score in zip(not_failed_interval_ids, expected_accuracies, expected_f1scores):
         # the accuracies are only correctly calculated if we correctly reset the
         res = metric_queue.get()
-        assert res == (idx, [("Accuracy", pytest.approx(accuracy))])
+        assert res == (idx, [("Accuracy", pytest.approx(accuracy)), ("F1-macro", pytest.approx(f1score))])
 
 
 def test__setup_metrics():
