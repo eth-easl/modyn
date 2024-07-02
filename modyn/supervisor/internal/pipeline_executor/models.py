@@ -391,7 +391,7 @@ class StageLog(BaseModel):
     id: str
     """Identifier for the pipeline stage, PipelineStage.name in most cases"""
 
-    id_seq_num: int
+    id_seq_num: int = Field(default=-1)
     """Identifies the log within the group of logs with the same id (given by PipelineStage). Used for aggregation over
     multiple pipeline runs."""
 
