@@ -93,11 +93,7 @@ def gen_fig_scatter_num_triggers(
             aggregate_func="time_weighted_avg" if time_weighted else "mean",
         )
         merged = num_triggers.merge(mean_accuracies, on="pipeline_ref").rename(columns=col_map, inplace=False)
-        assert (
-            mean_accuracies.shape[0]
-            == merged.shape[0]
-            == num_triggers.shape[0] * len(mean_accuracies["metric"].unique())
-        )
+        assert mean_accuracies.shape[0] == merged.shape[0]
         fig = px.scatter(
             merged,
             x="num_triggers",

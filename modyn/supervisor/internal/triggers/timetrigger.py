@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Generator
 
 from modyn.config.schema.pipeline import TimeTriggerConfig
+from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.trigger import Trigger
 
 
@@ -20,7 +21,9 @@ class TimeTrigger(Trigger):
 
         super().__init__()
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
+    def inform(
+        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+    ) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
             if self.config.start_timestamp is not None:
                 self.next_trigger_at = self.config.start_timestamp + self.config.every_seconds

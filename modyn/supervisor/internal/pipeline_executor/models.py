@@ -16,6 +16,7 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
+from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
 from pydantic import BaseModel, Field, model_serializer, model_validator
@@ -201,6 +202,8 @@ class EvaluateTriggerInfo(StageInfo):
     trigger_indexes: list[int] = Field(default_factory=list)
     trigger_eval_times: list[int] = Field(default_factory=list)
     """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
+
+    trigger_evaluation_log: TriggerPolicyEvaluationLog = Field(default_factory=TriggerPolicyEvaluationLog)
 
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the data."""

@@ -3,7 +3,7 @@
 Alongside the simple triggers, Modyn also provides complex triggers that can be used to trigger the training of a model. 
 
 Despite the line being blurry, complex triggers are generally more sophisticated and require more information to be provided to the trigger - they most of the time cannot be pre-determined via a simple configuration entry but require
-reinjested information from the ongoing pipeline run.
+reingested information from the ongoing pipeline run.
 
 Some complex triggers can only make decisions in batched intervals as they are cannot be efficiently computed
 on a per-sample basis. Here we can find the `DataDrift` and `CostBased` (not yet implemented) based triggers.
