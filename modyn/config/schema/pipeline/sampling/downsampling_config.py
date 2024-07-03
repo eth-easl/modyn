@@ -52,6 +52,13 @@ class BaseDownsamplingConfig(ModynBaseModel):
         return self
 
 
+# These are options to approximate the full gradients used in several selection strategies.
+# LastLayer: The full gradient is approximated by the gradient of the last layer.
+# LastLayerWithEmbedding: The full gradient is approximated by the gradients of the last layer and the embedding layer.
+# They are concatenated and used to represent the full gradient.
+FullGradApproximation = Literal["LastLayer", "LastLayerWithEmbedding"]
+
+
 class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the Craig downsampling strategy."""
 
@@ -74,6 +81,7 @@ class GradMatchDownsamplingConfig(BaseDownsamplingConfig):
 
     strategy: Literal["GradMatch"] = "GradMatch"
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class CraigDownsamplingConfig(BaseDownsamplingConfig):
@@ -85,6 +93,7 @@ class CraigDownsamplingConfig(BaseDownsamplingConfig):
     greedy: Literal["NaiveGreedy", "LazyGreedy", "StochasticGreedy", "ApproximateLazyGreedy"] = Field(
         "NaiveGreedy", description="The greedy strategy to use."
     )
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class LossDownsamplingConfig(BaseDownsamplingConfig):
@@ -103,6 +112,7 @@ class SubmodularDownsamplingConfig(BaseDownsamplingConfig):
     )
     selection_batch: int = Field(64, description="The batch size for the selection.")
     balance: bool = Field(False, description="If True, the samples are balanced.")
+    full_grad_approximation: FullGradApproximation = Field(default="LastLayer")
 
 
 class GradNormDownsamplingConfig(BaseDownsamplingConfig):
@@ -143,12 +153,33 @@ class RHOLossDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the RHO Loss downsampling strategy."""
 
     strategy: Literal["RHOLoss"] = "RHOLoss"
+    holdout_set_strategy: Literal["Simple", "Twin"] = Field(
+        description="Simple: holdout set is a subset randomly sampled from the training set based on the"
+        "holdout_set_ratio. The holdout set is used to train the il model and the original training set is"
+        "used to train the main model. Twin: training set is split into two halves. Each half is used to "
+        "train a separate il model. Each il model provides the irreducible loss for the samples that the"
+        "model is not trained on. The original training set is used to train the main model."
+    )
     holdout_set_ratio: int = Field(
-        description=("How much of the training set is used as the holdout set."),
+        description="How much of the training set is used as the holdout set.",
         min=0,
         max=100,
     )
+    holdout_set_ratio_max: int = Field(
+        description="Reference maximum holdout_set_ratio value. Defaults to 100, which implies percent."
+        " If you set this to 1000, holdout_set_ratio describes promille instead.",
+        default=100,
+        min=1,
+    )
     il_training_config: ILTrainingConfig = Field(description="The configuration for the IL training.")
+
+    @model_validator(mode="after")
+    def validate_holdout_set_ratio(self) -> Self:
+        if self.holdout_set_strategy == "Twin" and self.holdout_set_ratio != 50:
+            raise ValueError("holdout_set_ratio should be 100 for the Twin strategy.")
+        if self.holdout_set_ratio > self.holdout_set_ratio_max:
+            raise ValueError("holdout_set_ratio cannot be greater than holdout_set_ratio_max.")
+        return self
 
 
 class RS2DownsamplingConfig(BaseDownsamplingConfig):

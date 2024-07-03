@@ -1,5 +1,4 @@
 import datetime
-from multiprocessing import Queue
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Iterator
@@ -13,7 +12,12 @@ from modyn.config.schema.pipeline.evaluation.config import EvaluationConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.system.config import ModynConfig
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelIntervalResponse,
+    EvaluateModelResponse,
+    EvaluationAbortedReason,
+    EvaluationIntervalData,
+)
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -179,8 +183,6 @@ def test_evaluation_handler_post_training(
         model_id=-1,
         first_timestamp=1,
         last_timestamp=3,
-        pipeline_status_queue=Queue(),
-        eval_status_queue=Queue(),
     )
 
     test_get_eval_requests_after_training.assert_called_once()
@@ -198,70 +200,66 @@ def test_evaluation_handler_post_training(
             PipelineStage.STORE_TRAINED_MODEL.name: tracking_df,
         }
     )
-    evaluation_executor.run_post_pipeline_evaluations(Queue())
+    evaluation_executor.run_post_pipeline_evaluations()
     test_get_eval_requests_after_training.assert_not_called()
     test_get_eval_requests_after_pipeline.assert_called_once()
     test_launch_evaluations_async.assert_called_once()
 
 
-@patch.object(EvaluationExecutor, "_single_evaluation")
+@patch.object(EvaluationExecutor, "_single_batched_evaluation", return_value=("failure", {}))
 def test_launch_evaluations_async(
     test_single_evaluation: Any, evaluation_executor: EvaluationExecutor, dummy_stage_log: StageLog
 ) -> None:
     evaluation_executor._launch_evaluations_async(
         eval_requests=[dummy_eval_request(), dummy_eval_request()],
         parent_log=dummy_stage_log,
-        eval_status_queue=Queue(),
     )
     assert test_single_evaluation.call_count == 2
 
 
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "store_evaluation_results")
+@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData()])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "prepare_evaluation_request")
-def test_single_evaluation(
+def test_single_batched_evaluation(
     test_prepare_evaluation_request: Any,
     test_wait_for_evaluation_completion: Any,
-    test_store_evaluation_results: Any,
+    test_get_evaluation_results: Any,
     test_cleanup_evaluations: Any,
     evaluation_executor: EvaluationExecutor,
     test_failure: bool,
 ) -> None:
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
     if test_failure:
-        evaluator_stub_mock.evaluate_model.side_effect = [
-            EvaluateModelResponse(evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
-        ]
+        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+            evaluation_started=False,
+            interval_responses=[
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
+            ],
+        )
     else:
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=True, evaluation_id=42, dataset_size=10
+            evaluation_started=True,
+            evaluation_id=42,
+            interval_responses=[
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
+            ],
         )
 
-    stage_log = StageLog(
-        id="log",
-        id_seq_num=-1,
-        start=datetime.datetime(2021, 1, 1),
-        batch_idx=-1,
-        sample_idx=-1,
-        sample_time=-1,
-        trigger_idx=-1,
-    )
     evaluation_executor.grpc.evaluator = evaluator_stub_mock
-    evaluation_executor._single_evaluation(
-        log=stage_log,
-        eval_req=dummy_eval_request(),
-        eval_status_queue=Queue(),
+    eval_req = dummy_eval_request()
+    evaluation_executor._single_batched_evaluation(
+        eval_req.interval_start, eval_req.interval_end, eval_req.id_model, eval_req.dataset_id
     )
 
     test_prepare_evaluation_request.assert_called_once()
 
     if test_failure:
         test_wait_for_evaluation_completion.assert_not_called()
-        test_store_evaluation_results.assert_not_called()
+        test_get_evaluation_results.assert_not_called()
         test_cleanup_evaluations.assert_not_called()
     else:
         test_wait_for_evaluation_completion.assert_called_once()
-        test_store_evaluation_results.assert_called_once()
+        test_get_evaluation_results.assert_called_once()
         test_cleanup_evaluations.assert_called_once()

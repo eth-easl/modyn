@@ -47,3 +47,5 @@ dependencies:
 #  - nvidia::cuda-nvcc=12.1.*
 #  - nvidia::cuda-nvtx=12.1.*
 #  - nvidia::cuda-cupti=12.1.*
+#  - nvidia::cuda-cudart-dev=12.1.*
+#  - nvidia::cuda-profiler-api=12.1.*

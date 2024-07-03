@@ -69,7 +69,7 @@ class MockModel(torch.nn.Module):
         super().__init__()
         self._weight = torch.nn.Parameter(torch.ones(1))
 
-    def forward(self, data):
+    def forward(self, data, sample_ids=None):
         return data
 
 
@@ -80,7 +80,7 @@ class MockSuperModel(torch.nn.Module):
         self.modb = MockModel()
         self.modc = MockModel()
 
-    def forward(self, data):
+    def forward(self, data, sample_ids=None):
         return self.moda(self.modb(data))
 
 
@@ -156,6 +156,7 @@ def mock_get_dataloaders(
     shuffle,
     tokenizer,
     log_path,
+    drop_last,
     num_batches: int = 100,
 ):
     mock_train_dataloader = MockDataloader(batch_size, num_batches)
@@ -950,7 +951,7 @@ def test_train_batch_then_sample_accumulation(
     # Mock the model's forward method to check the input data
     forward_calls = []
 
-    def mock_forward(data):
+    def mock_forward(data, sample_ids=None):
         forward_calls.append(data)
         return torch.randn(data.shape[0], 10, requires_grad=True)  # Dummy output
 
@@ -1067,6 +1068,7 @@ def test_downsample_trigger_training_set_label_by_label(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": True,
+                "full_grad_approximation": "LastLayer",
                 "ratio_max": 100,
             },
         ),
@@ -1128,6 +1130,7 @@ def test_downsample_trigger_training_set(
                 "downsampling_period": 1,
                 "sample_then_batch": True,
                 "balance": False,
+                "full_grad_approximation": "LastLayer",
                 "ratio_max": 100,
             },
         ),

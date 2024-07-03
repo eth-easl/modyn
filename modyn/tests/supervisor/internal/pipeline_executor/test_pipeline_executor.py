@@ -15,7 +15,12 @@ from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
 from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorConfig
 
 # pylint: disable=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelIntervalResponse,
+    EvaluateModelResponse,
+    EvaluationAbortedReason,
+    EvaluationIntervalData,
+)
 from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
 from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -701,9 +706,9 @@ def test_run_training_set_num_samples_to_pass(
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion", return_value={"num_batches": 0, "num_samples": 0})
 @patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "store_evaluation_results")
+@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData()])
 def test__start_evaluations(
-    test_store_evaluation_results: MagicMock,
+    test_get_evaluation_results: MagicMock,
     test_cleanup_evaluations: MagicMock,
     test_wait_for_evaluation_completion: MagicMock,
     test_failure: bool,
@@ -714,17 +719,22 @@ def test__start_evaluations(
     dummy_pipeline_args.pipeline_config.evaluation = pipeline_evaluation_config
 
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
-    success_response = EvaluateModelResponse(evaluation_started=True, evaluation_id=42, dataset_size=10)
+    success_response = EvaluateModelResponse(
+        evaluation_started=True,
+        evaluation_id=42,
+        interval_responses=[
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
+        ],
+    )
     failure_response = EvaluateModelResponse(
-        evaluation_started=False, eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET
+        evaluation_started=False,
+        interval_responses=[EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)],
     )
     # we let the second evaluation fail; it shouldn't affect the third evaluation
     if test_failure:
         evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
     else:
-        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=True, evaluation_id=42, dataset_size=10
-        )
+        evaluator_stub_mock.evaluate_model.return_value = success_response
 
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
     pe.grpc.evaluator = evaluator_stub_mock
@@ -752,7 +762,6 @@ def test__start_evaluations(
 
         if test_failure:
             assert evaluator_stub_mock.evaluate_model.call_count == 3
-            assert test_store_evaluation_results.call_count == 2
             assert test_cleanup_evaluations.call_count == 2
             assert test_wait_for_evaluation_completion.call_count == 2
 
@@ -774,8 +783,7 @@ def test__start_evaluations(
                         eval_dataset_config.model_dump(by_alias=True),
                         model_id,
                         pipeline_evaluation_config.device,
-                        start_ts or 0,
-                        end_ts,
+                        [(start_ts, end_ts)],
                     )
                 )
                 for start_ts, end_ts in intervals

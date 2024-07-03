@@ -98,6 +98,9 @@ class TrainingConfig(ModynBaseModel):
         description="The number of data loader workers on the trainer node that fetch data from storage.", ge=1
     )
     batch_size: int = Field(description="The batch size to be used during training.", ge=1)
+    drop_last_batch: bool = Field(
+        default=True, description="Whether to drop the last batch if it is smaller than the batch size."
+    )
     shuffle: bool = Field(
         description=(
             "If True, we shuffle the order of partitions and the data within each partition at each worker."

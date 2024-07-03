@@ -1,5 +1,5 @@
 # pylint: disable=W0223
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
@@ -51,7 +51,8 @@ class ArticleNetwork(CoresetSupportingModule):
         self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
         self.classifier = nn.Linear(self.featurizer.d_out, num_classes)
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
         embedding = self.featurizer(data)
         embedding = self.embedding_recorder(embedding)
         return self.classifier(embedding)

@@ -17,6 +17,7 @@ class CraigDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.selection_batch = downsampling_config.selection_batch
         self.balance = downsampling_config.balance
         self.greedy = downsampling_config.greedy
+        self.full_grad_approximation = downsampling_config.full_grad_approximation
         self.remote_downsampling_strategy_name = "RemoteCraigDownsamplingStrategy"
 
     @cached_property
@@ -25,6 +26,7 @@ class CraigDownsamplingStrategy(AbstractDownsamplingStrategy):
         config["selection_batch"] = self.selection_batch
         config["balance"] = self.balance
         config["greedy"] = self.greedy
+        config["full_grad_approximation"] = self.full_grad_approximation
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
         return config

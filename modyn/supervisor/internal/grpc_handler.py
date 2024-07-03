@@ -3,9 +3,8 @@ from __future__ import annotations
 
 import json
 import logging
-from collections import deque
 from time import sleep
-from typing import Any, Iterable, Optional, Sequence
+from typing import Any, Iterable, Optional
 
 import grpc
 from modyn.common.benchmark import Stopwatch
@@ -15,6 +14,8 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelRequest,
     EvaluationCleanupRequest,
     EvaluationCleanupResponse,
+    EvaluationInterval,
+    EvaluationIntervalData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusRequest,
@@ -44,8 +45,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.eval.result_writer import AbstractEvaluationResultWriter
-from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.utils import grpc_common_config, grpc_connection_established
 from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
@@ -237,8 +236,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataset_config: dict,
         model_id: int,
         device: str,
-        start_timestamp: Optional[int] = None,
-        end_timestamp: Optional[int] = None,
+        intervals: list[tuple[Optional[int], Optional[int]]],
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
         transform_list = dataset_config.get("transformations") or []
@@ -249,52 +247,41 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataloader_workers = dataset_config["dataloader_workers"]
         metrics = [EvaluatorJsonString(value=json.dumps(metric)) for metric in dataset_config["metrics"]]
 
-        start_evaluation_kwargs = {
-            "model_id": model_id,
-            "dataset_info": DatasetInfo(
-                dataset_id=dataset_id,
-                num_dataloaders=dataloader_workers,
-                start_timestamp=start_timestamp,
-                end_timestamp=end_timestamp,
-            ),
-            "device": device,
-            "batch_size": batch_size,
-            "metrics": metrics,
-            "transform_list": transform_list,
-            "bytes_parser": EvaluatorPythonString(value=bytes_parser_function),
-            "label_transformer": EvaluatorPythonString(value=label_transformer),
-        }
+        eval_intervals: list[EvaluationInterval] = []
+        for start_timestamp, end_timestamp in intervals:
+            eval_intervals.append(EvaluationInterval(start_timestamp=start_timestamp, end_timestamp=end_timestamp))
 
         if dataset_config.get("tokenizer"):
             tokenizer = dataset_config["tokenizer"]
-            start_evaluation_kwargs["tokenizer"] = EvaluatorPythonString(value=tokenizer)
+            tokenizer_arg = EvaluatorPythonString(value=tokenizer)
+        else:
+            tokenizer_arg = None
 
-        return EvaluateModelRequest(**start_evaluation_kwargs)
+        return EvaluateModelRequest(
+            model_id=model_id,
+            dataset_info=DatasetInfo(
+                dataset_id=dataset_id,
+                num_dataloaders=dataloader_workers,
+                evaluation_intervals=eval_intervals,
+            ),
+            device=device,
+            batch_size=batch_size,
+            metrics=metrics,
+            transform_list=transform_list,
+            bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
+            label_transformer=EvaluatorPythonString(value=label_transformer),
+            tokenizer=tokenizer_arg,
+        )
 
     # pylint: disable=too-many-branches
-    def wait_for_evaluation_completion(
-        self, training_id: int, evaluations: dict[int, EvaluationStatusReporter]
-    ) -> None:
+    def wait_for_evaluation_completion(self, evaluation_id: int) -> bool:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
-        logger.debug("wait for evaluation completion")
-
-        # We are using a deque here in order to fetch the status of each evaluation
-        # sequentially in a round-robin manner.
-        working_queue: deque[int] = deque()
-        blocked_in_a_row: dict[int, int] = {}
-        for evaluation_id, evaluation_reporter in evaluations.items():
-            evaluation_reporter.create_counter(training_id)
-            working_queue.append(evaluation_id)
-            blocked_in_a_row[evaluation_id] = 0
-
-        while working_queue:
-            current_evaluation_id = working_queue.popleft()
-            current_evaluation_reporter = evaluations[current_evaluation_id]
-            req = EvaluationStatusRequest(evaluation_id=current_evaluation_id)
-
+        req = EvaluationStatusRequest(evaluation_id=evaluation_id)
+        has_exception = False
+        while True:
             for attempt in Retrying(
                 stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
             ):
@@ -303,71 +290,37 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                         res: EvaluationStatusResponse = self.evaluator.get_evaluation_status(req)
                     except grpc.RpcError as e:  # We catch and reraise to easily reconnect
                         logger.error(e)
-                        logger.error(f"[Training {training_id}]: gRPC connection error, trying to reconnect.")
+                        logger.error(f"[Evaluation {evaluation_id}]: gRPC connection error, trying to reconnect.")
                         self.init_evaluator()
                         raise e
 
             if not res.valid:
-                exception_msg = f"Evaluation {current_evaluation_id} is invalid at server:\n{res}\n"
-                logger.warning(exception_msg)
-                current_evaluation_reporter.end_counter(error=True, exception_msg=exception_msg)
-                continue
+                exception_msg = f"Evaluation {evaluation_id} is invalid at server:\n{res}\n"
+                logger.error(exception_msg)
+                raise RuntimeError(exception_msg)
 
-            if res.blocked:
-                blocked_in_a_row[current_evaluation_id] += 1
-                if blocked_in_a_row[current_evaluation_id] >= 3:
-                    logger.warning(
-                        f"Evaluator returned {blocked_in_a_row} blocked responses in a row, cannot update status."
-                    )
-            else:
-                blocked_in_a_row[current_evaluation_id] = 0
-
-                if res.HasField("exception") and res.exception is not None:
-                    exception_msg = f"Exception at evaluator occurred:\n{res.exception}\n\n"
-                    logger.warning(exception_msg)
-                    current_evaluation_reporter.end_counter(error=True, exception_msg=exception_msg)
-                    continue
-                if not res.is_running:
-                    current_evaluation_reporter.end_counter(error=False)
-                    continue
-                if res.state_available:
-                    assert res.HasField("samples_seen") and res.HasField(
-                        "batches_seen"
-                    ), f"Inconsistent server response:\n{res}"
-
-                    current_evaluation_reporter.progress_counter(res.samples_seen)
-                elif res.is_running:
-                    logger.warning("Evaluator is not blocked and is running, but no state is available.")
-
-            working_queue.append(current_evaluation_id)
+            if res.HasField("exception"):
+                exception_msg = f"Exception at evaluator occurred:\n{res.exception}\n\n"
+                logger.error(exception_msg)
+                has_exception = True
+                break
+            if not res.is_running:
+                break
             sleep(1)
+        return not has_exception
 
-        logger.debug("Evaluation completed")
-
-    def store_evaluation_results(
-        self,
-        evaluation_result_writers: Sequence[AbstractEvaluationResultWriter],
-        evaluations: dict[int, EvaluationStatusReporter],
-    ) -> None:
+    def get_evaluation_results(self, evaluation_id: int) -> list[EvaluationIntervalData]:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
-        for evaluation_id in evaluations:
-            req = EvaluationResultRequest(evaluation_id=evaluation_id)
-            res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
+        req = EvaluationResultRequest(evaluation_id=evaluation_id)
+        res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
 
-            if not res.valid:
-                logger.warning(f"Cannot get the evaluation result for evaluation {evaluation_id}")
-                continue
-            dataset_id = evaluations[evaluation_id].dataset_id
-            dataset_size = evaluations[evaluation_id].dataset_size
-
-            for result_writer in evaluation_result_writers:
-                result_writer.add_evaluation_data(dataset_id, dataset_size, res.evaluation_data)
-
-        for result_writer in evaluation_result_writers:
-            result_writer.store_results()
+        if not res.valid:
+            logger.error(f"Cannot get the evaluation result for evaluation {evaluation_id}")
+            raise RuntimeError(f"Cannot get the evaluation result for evaluation {evaluation_id}")
+        return res.evaluation_results
 
     def cleanup_evaluations(self, evaluation_ids: list[int]) -> None:
         assert self.evaluator is not None
