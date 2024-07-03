@@ -410,7 +410,7 @@ def test_inform_next_trigger_simple(
     return_value=True,
 )
 @patch.object(RHOLossDownsamplingStrategy, "_get_latest_rho_state")
-@patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=42)
+@patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=(42, {}))
 @patch.object(RHOLossDownsamplingStrategy, "_get_sampling_query")
 @patch.object(RHOLossDownsamplingStrategy, "_persist_holdout_set")
 @patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")

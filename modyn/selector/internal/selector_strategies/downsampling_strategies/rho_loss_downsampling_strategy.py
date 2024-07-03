@@ -70,12 +70,13 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         else:
             previous_model_id = None
         model_id, trainer_log = self._train_il_model(next_rho_trigger_id, previous_model_id)
+        rho_log["main_trigger_id"] = next_trigger_id
         rho_log["rho_trigger_id"] = next_rho_trigger_id
         rho_log["il_model_id"] = model_id
         rho_log["trainer_log"] = trainer_log
         logger.info(
-            f"Trained IL model {model_id} for trigger {next_rho_trigger_id} in rho pipeline"
-            f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+            f"Trained IL model {model_id} for main trigger {next_trigger_id} in rho pipeline"
+            f"{self.rho_pipeline_id} with rho trigger id {next_rho_trigger_id}."
         )
         if self.holdout_set_strategy == "Twin":
             second_next_trigger_id = next_rho_trigger_id + 1
@@ -86,8 +87,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             rho_log["second_il_model_id"] = second_model_id
             rho_log["second_trainer_log"] = second_trainer_log
             logger.info(
-                f"Twin strategy: Trained second IL model for trigger {next_trigger_id} in rho pipeline "
-                f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+                f"Twin strategy: Trained second IL model for main trigger {next_trigger_id} in rho pipeline "
+                f"{self.rho_pipeline_id} with rho trigger id {second_next_trigger_id}."
             )
         self._clean_tmp_version(self._pipeline_id, next_trigger_id, selector_storage_backend)
         return rho_log

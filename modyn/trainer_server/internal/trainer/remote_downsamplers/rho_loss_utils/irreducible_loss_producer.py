@@ -27,6 +27,7 @@ class IrreducibleLossProducer:
         il_model_id: int,
         device: str,
     ) -> None:
+        logger.info(f"rho pipeline {rho_pipeline_id} loading irreducible loss model {il_model_id}")
         self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id)
         self.model.model.eval()
         # We probably will train the main model for multiple epochs.
