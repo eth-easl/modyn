@@ -4,11 +4,12 @@ import datetime
 import logging
 import pickle
 import sys
+from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import Optional
+from typing import Any, cast
 
 import grpc
 import pandas as pd
@@ -22,6 +23,7 @@ from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor.models import (
     ConfigLogs,
+    MultiEvaluationInfo,
     PipelineLogs,
     SingleEvaluationInfo,
     StageLog,
@@ -186,6 +188,7 @@ class EvaluationExecutor:
 
         if len(eval_requests) == 0:
             return SupervisorLogs()
+
         # self.Eval_handlers is not an empty list if and only if self.pipeline.evaluation is not None
         assert self.pipeline.evaluation is not None
 
@@ -194,7 +197,7 @@ class EvaluationExecutor:
             # as we don't execute this during the training pipeline, we don't have a reference how
             # our current process is in terms of position in the dataset.
             parent_log=StageLog(
-                id=PipelineStage.EVALUATE_SINGLE.name,
+                id=PipelineStage.EVALUATE_MULTI.name,
                 id_seq_num=-1,
                 start=datetime.datetime.now(),
                 batch_idx=-1,
@@ -226,33 +229,61 @@ class EvaluationExecutor:
         tasks: list[Future[StageLog]] = []
         logs = SupervisorLogs()
 
-        def worker_func(eval_req: EvalRequest) -> StageLog:
+        # do batching by (dataset_id, model_id)
+        eval_requests_by_model: dict[tuple[str, int], list[EvalRequest]] = defaultdict(list)
+        for eval_req in eval_requests:
+            key_ = (eval_req.dataset_id, eval_req.id_model)
+            eval_requests_by_model[key_] += [eval_req]
+
+        def worker_func(model_eval_req: tuple[tuple[str, int], list[EvalRequest]]) -> StageLog:
+            """
+            Args:
+                model_eval_req: A tuple of model_id and a list of evaluation requests for that model.
+            """
+            dataset_id = model_eval_req[0][0]
+            model_id = model_eval_req[0][1]
+            eval_requests = model_eval_req[1]
+            intervals = [(eval_req.interval_start, eval_req.interval_end) for eval_req in eval_requests]
+
+            epoch_micros_start = current_time_micros()
+
+            # intervals and results are in the same order
+            results = self._single_batched_evaluation(intervals, model_id, dataset_id)
+
+            interval_result_infos: list[SingleEvaluationInfo] = []
+            intervals_and_results = zip(eval_requests, results)
+            for eval_req, (failure_reason, interval_res) in intervals_and_results:
+                interval_result_infos.append(
+                    SingleEvaluationInfo(
+                        eval_request=eval_req,
+                        failure_reason=failure_reason if failure_reason else None,
+                        results=interval_res if not failure_reason else {},
+                    )
+                )
+
             single_log = StageLog(
-                id=PipelineStage.EVALUATE_SINGLE.name,
+                id=PipelineStage.EVALUATE_MULTI.name,
                 id_seq_num=-1,  # evaluation don't need sequence numbers, their order is not important
                 start=datetime.datetime.now(),
                 batch_idx=parent_log.batch_idx,
                 sample_idx=parent_log.sample_idx,
                 sample_time=parent_log.sample_time,
                 trigger_idx=parent_log.trigger_idx,
+                info=None,
             )
-            epoch_micros_start = current_time_micros()
-            single_log.info = SingleEvaluationInfo(eval_request=eval_req)
-            optional_failure_reason, results = self._single_batched_evaluation(
-                eval_req.interval_start, eval_req.interval_end, eval_req.id_model, eval_req.dataset_id
+            single_log.info = MultiEvaluationInfo(
+                dataset_id=dataset_id,
+                id_model=model_id,
+                interval_results=interval_result_infos,
             )
-            if optional_failure_reason:
-                single_log.info.failure_reason = optional_failure_reason
-            else:
-                single_log.info.results = results
             single_log.end = datetime.datetime.now()
             single_log.duration = datetime.timedelta(microseconds=current_time_micros() - epoch_micros_start)
             return single_log
 
         # As we are io bound by the evaluator server, GIL locking isn't a concern, so we can use multithreading.
         with ThreadPoolExecutor(max_workers=num_workers) as pool:
-            for eval_req in eval_requests:
-                task = partial(worker_func, eval_req)
+            for r in eval_requests_by_model.items():
+                task = partial(worker_func, r)
                 tasks.append(pool.submit(task))
 
             # join threads
@@ -264,16 +295,20 @@ class EvaluationExecutor:
     # pylint: disable-next=too-many-locals
     def _single_batched_evaluation(
         self,
-        interval_start: int,
-        interval_end: Optional[int],
+        intervals: list[tuple[int, int | None]],
         model_id_to_eval: int,
         dataset_id: str,
-    ) -> tuple[Optional[str], dict]:
+    ) -> list[tuple[str | None, dict]]:
+        """Takes a list of intervals to be evaluated for a certain model and dataset.
+
+        Returns:
+            A list of tuples, where the first element is the failure reason (if any) and the second element is the
+            evaluation results. The order of the tuples corresponds to the order of the intervals.
+        """
         assert self.grpc.evaluator is not None, "Evaluator not initialized."
         assert self.pipeline.evaluation
         logger.info(
-            f"Evaluation Starts for model {model_id_to_eval} on split {interval_start} "
-            f"to {interval_end} of dataset {dataset_id}."
+            f"Evaluation Starts for model {model_id_to_eval} and dataset {dataset_id} on intervals:  {intervals}."
         )
         dataset_config = next((d for d in self.pipeline.evaluation.datasets if d.dataset_id == dataset_id))
 
@@ -281,7 +316,7 @@ class EvaluationExecutor:
             dataset_config.model_dump(by_alias=True),
             model_id_to_eval,
             self.pipeline.evaluation.device,
-            intervals=[(interval_start, interval_end)],
+            intervals=cast(list[tuple[int | None, int | None]], intervals),
         )
         for attempt in Retrying(
             stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
@@ -295,30 +330,64 @@ class EvaluationExecutor:
                     self.grpc.init_evaluator()
                     raise e
 
+        assert len(response.interval_responses) == len(
+            intervals
+        ), f"We expected {len(intervals)} intervals, but got {len(response.interval_responses)}."
+
         def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
             return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
 
         if not response.evaluation_started:
-            failure_reason = get_failure_reason(response.interval_responses[0].eval_aborted_reason)
-            logger.error(
-                f"Evaluation for model {model_id_to_eval} on split {interval_start} to "
-                f"{interval_end} not started with reason: {failure_reason}."
-            )
-            return failure_reason, {}
+            failure_reasons: list[tuple[str | None, dict]] = []
+            # note: interval indexes correspond to the intervals in the request
+            for interval_idx, interval_response in enumerate(response.interval_responses):
+                if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
+                    reason = get_failure_reason(interval_response.eval_aborted_reason)
+                    failure_reasons.append((reason, {}))
+                    logger.error(
+                        f"Evaluation for model {model_id_to_eval} on split {intervals[interval_idx]} "
+                        f"not started with reason: {reason}."
+                    )
+            return failure_reasons
 
-        logger.info(f"Evaluation started for model {model_id_to_eval} on split {interval_start} " f"to {interval_end}.")
+        logger.info(f"Evaluation started for model {model_id_to_eval} on intervals {intervals}.")
         self.grpc.wait_for_evaluation_completion(response.evaluation_id)
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
-        # here we assume only one interval is evaluated
-        eval_results: dict = {"dataset_size": response.interval_responses[0].dataset_size, "metrics": []}
 
-        assert len(eval_data) == 1, "The evaluation request only contains one interval so we expect only one result."
-        assert eval_data[0].interval_index == 0
-        for metric in eval_data[0].evaluation_data:
-            eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
+        assert len(eval_data) == len(intervals), f"We expected {len(intervals)} intervals, but got {len(eval_data)}."
+        assert eval_data
 
-        return None, eval_results
+        eval_results: list[tuple[str | None, dict[str, Any]]] = []
+
+        # ---------------------------------------------- Result Builder ---------------------------------------------- #
+        # The `eval_results` list is a list of tuples. Each tuple contains a failure reason (if any) and a dictionary
+        # with the evaluation results. The order of the tuples corresponds to the order of the intervals.
+        #
+        # response.interval_responses contains the evaluation results for each interval in the same order as the
+        # intervals in the request. Failed evaluations are marked with a failure reason.
+
+        # Metric results come from the `EvaluateModelResponse` and are stored in the `evaluation_data` field. This
+        # only contains the metrics for the intervals that were successfully evaluated.
+        #
+        # Therefore we first build a list of results with the same order as the intervals. The metrics will be filled in
+        # the next loop that unwraps `EvaluationResultResponse`.
+        # ----------------------------------------------------- . ---------------------------------------------------- #
+
+        for interval_response in response.interval_responses:
+            if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
+                reason = get_failure_reason(interval_response.eval_aborted_reason)
+                eval_results.append((reason, {}))
+            else:
+                eval_results.append((None, {"dataset_size": interval_response.dataset_size, "metrics": []}))
+
+        for interval_result in eval_data:
+            interval_idx = interval_result.interval_index
+            assert eval_results[interval_idx][0] is None, "Evaluation failed, no metrics should be present."
+            eval_results[interval_idx][1]["metrics"] = [
+                {"name": metric.metric, "result": metric.result} for metric in interval_result.evaluation_data
+            ]
+        return eval_results
 
 
 # ------------------------------------------------------------------------------------ #

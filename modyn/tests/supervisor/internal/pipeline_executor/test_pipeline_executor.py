@@ -29,9 +29,9 @@ from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execut
 from modyn.supervisor.internal.pipeline_executor.models import (
     ConfigLogs,
     ExecutionState,
+    MultiEvaluationInfo,
     PipelineExecutionParams,
     PipelineLogs,
-    SingleEvaluationInfo,
     StageInfo,
     StageLog,
 )
@@ -706,7 +706,7 @@ def test_run_training_set_num_samples_to_pass(
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion", return_value={"num_batches": 0, "num_samples": 0})
 @patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData()])
+@patch.object(GRPCHandler, "get_evaluation_results")
 def test__start_evaluations(
     test_get_evaluation_results: MagicMock,
     test_cleanup_evaluations: MagicMock,
@@ -719,25 +719,13 @@ def test__start_evaluations(
     dummy_pipeline_args.pipeline_config.evaluation = pipeline_evaluation_config
 
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
-    success_response = EvaluateModelResponse(
-        evaluation_started=True,
-        evaluation_id=42,
-        interval_responses=[
-            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
-        ],
+
+    success_interval = EvaluateModelIntervalResponse(
+        eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10
     )
-    failure_response = EvaluateModelResponse(
-        evaluation_started=False,
-        interval_responses=[EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)],
-    )
-    # we let the second evaluation fail; it shouldn't affect the third evaluation
-    if test_failure:
-        evaluator_stub_mock.evaluate_model.side_effect = [success_response, failure_response, success_response]
-    else:
-        evaluator_stub_mock.evaluate_model.return_value = success_response
+    failure_interval = EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
 
     pe = get_non_connecting_pipeline_executor(dummy_pipeline_args)
-    pe.grpc.evaluator = evaluator_stub_mock
 
     if test_failure:
 
@@ -748,11 +736,29 @@ def test__start_evaluations(
                 EvalInterval(start=200, end=300, active_model_trained_before=250),
             ]
 
+        evaluator_stub_mock.evaluate_model.side_effect = [
+            EvaluateModelResponse(
+                evaluation_started=True,
+                evaluation_id=42,
+                interval_responses=[success_interval, failure_interval, success_interval],
+            )
+        ]
+        test_get_evaluation_results.return_value = [EvaluationIntervalData() for _ in range(3)]
+
     else:
         intervals = [(0, 100), (100, 200), (0, None), (0, 200), (0, 0), (200, None), (0, None), (0, 0)]
 
         def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
             yield from [EvalInterval(start=start, end=end, active_model_trained_before=0) for start, end in intervals]
+
+        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+            evaluation_started=True,
+            evaluation_id=42,
+            interval_responses=[success_interval for _ in range(len(intervals))],
+        )
+        test_get_evaluation_results.return_value = [EvaluationIntervalData() for _ in range(len(intervals))]
+
+    pe.grpc.evaluator = evaluator_stub_mock
 
     with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
         model_id = 1
@@ -760,33 +766,41 @@ def test__start_evaluations(
             pe.state, pe.logs, trigger_id=0, training_id=0, model_id=model_id, first_timestamp=20, last_timestamp=70
         )
 
+        assert evaluator_stub_mock.evaluate_model.call_count == 1  # batched
         if test_failure:
-            assert evaluator_stub_mock.evaluate_model.call_count == 3
-            assert test_cleanup_evaluations.call_count == 2
-            assert test_wait_for_evaluation_completion.call_count == 2
+            assert test_cleanup_evaluations.call_count == 1
+            assert test_wait_for_evaluation_completion.call_count == 1
 
             stage_info = [
-                run.info for run in pe.logs.supervisor_logs.stage_runs if isinstance(run.info, SingleEvaluationInfo)
+                run.info for run in pe.logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo)
             ]
-            assert len(stage_info) == 3
-            assert (stage_info[0].eval_request.interval_start, stage_info[0].eval_request.interval_end) == (0, 100)
-            assert (stage_info[1].eval_request.interval_start, stage_info[1].eval_request.interval_end) == (100, 200)
-            assert (stage_info[2].eval_request.interval_start, stage_info[2].eval_request.interval_end) == (200, 300)
-            assert stage_info[0].failure_reason is None
-            assert stage_info[1].failure_reason == "EMPTY_DATASET"
-            assert stage_info[2].failure_reason is None
+            assert len(stage_info) == 1
+            assert len(stage_info[0].interval_results) == 3
+            assert (
+                stage_info[0].interval_results[0].eval_request.interval_start,
+                stage_info[0].interval_results[0].eval_request.interval_end,
+            ) == (0, 100)
+            assert (
+                stage_info[0].interval_results[1].eval_request.interval_start,
+                stage_info[0].interval_results[1].eval_request.interval_end,
+            ) == (100, 200)
+            assert (
+                stage_info[0].interval_results[2].eval_request.interval_start,
+                stage_info[0].interval_results[2].eval_request.interval_end,
+            ) == (200, 300)
+            assert stage_info[0].interval_results[0].failure_reason is None
+            assert stage_info[0].interval_results[1].failure_reason == "EMPTY_DATASET"
+            assert stage_info[0].interval_results[2].failure_reason is None
         else:
-            assert evaluator_stub_mock.evaluate_model.call_count == len(intervals)
             expected_calls = [
                 call(
                     GRPCHandler.prepare_evaluation_request(
                         eval_dataset_config.model_dump(by_alias=True),
                         model_id,
                         pipeline_evaluation_config.device,
-                        [(start_ts, end_ts)],
+                        [(start_ts, end_ts) for start_ts, end_ts in intervals],
                     )
                 )
-                for start_ts, end_ts in intervals
             ]
 
             # because of threadpool, ordering isn't guaranteed

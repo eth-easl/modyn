@@ -63,7 +63,7 @@ class PipelineStage(StrEnum):
 
     # Evaluation
     EVALUATE = "Run evaluation"
-    EVALUATE_SINGLE = "Run single evaluation"
+    EVALUATE_MULTI = "Run multiple interval evaluations for one model"
     WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion"
     POST_EVALUATION_CHECKPOINT = "Save pipeline metadata as checkpoint"
     POST_EVALUATION = "Post pipeline evaluation"
