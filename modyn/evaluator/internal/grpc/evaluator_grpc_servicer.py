@@ -299,7 +299,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
                 f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)}, "
-                f"but got {len(evaluation_data)}. Maybe exception happens during evaluation."
+                f"but got {len(evaluation_data)}. Maybe an exception happened during evaluation."
             )
         return EvaluationResultResponse(valid=True, evaluation_results=evaluation_data)
 
