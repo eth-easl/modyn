@@ -16,7 +16,6 @@ from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
     convert_tensor_to_df,
     get_embeddings,
-    prepare_trigger_dataloader_by_trigger,
     prepare_trigger_dataloader_fixed_keys,
 )
 
@@ -30,108 +29,112 @@ class DataDriftTrigger(Trigger):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self.previous_trigger_id: Optional[int] = None
         self.previous_model_id: Optional[int] = None
-        self.previous_data_points: Optional[int] = None
         self.model_updated: bool = False
 
         self.dataloader_info: Optional[DataLoaderInfo] = None
         self.encoder_downloader: Optional[EmbeddingEncoderDownloader] = None
         self.embedding_encoder: Optional[EmbeddingEncoder] = None
 
-        self.data_cache: list[tuple[int, int, int]] = []
-        self.leftover_data_points = 0
-
         self.evidently_detector = EvidentlyDriftDetector(config.metrics)
         self.alibi_detector = AlibiDriftDetector(config.metrics)
+
+        self._reference_window: list[tuple[int, int]] = []
+        self._current_window: list[tuple[int, int]] = []
+        self._total_items_in_current_window = 0
+        self._triggered_once = False
 
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
         self._init_encoder_downloader()
 
+    def _update_curr_window(self, new_data: list[tuple[int, int]]) -> None:
+        self._current_window.extend(new_data)
+        self._total_items_in_current_window += len(new_data)
+
+        if self.config.windowing_strategy.id == "AmountWindowingStrategy":
+            if len(self._current_window) > self.config.windowing_strategy.amount:
+                self._current_window = self._current_window[self.config.windowing_strategy.amount :]
+        elif self.config.windowing_strategy.id == "TimeWindowingStrategy":
+            highest_timestamp = new_data[-1][1]
+            cutoff = highest_timestamp - self.config.windowing_strategy.limit_seconds
+            self._current_window = [(key, timestamp) for key, timestamp in self._current_window if timestamp >= cutoff]
+        else:
+            raise NotImplementedError(f"{self.config.windowing_strategy.id} is not implemented!")
+
+    def _handle_drift_result(
+        self,
+        triggered: bool,
+        trigger_idx: int,
+        drift_results: dict[str, MetricResult],
+        log: TriggerPolicyEvaluationLog | None = None,
+    ) -> Generator[int, None, None]:
+        drift_eval_log = DriftTriggerEvalLog(
+            detection_idx_start=self._current_window[0],
+            detection_idx_end=self._current_window[-1],
+            triggered=triggered,
+            trigger_index=-1,
+            drift_results=drift_results,
+        )
+
+        if triggered:
+            self._reference_window = self._current_window  # Current assumption: same windowing strategy on both
+            self._current_window = [] if self.config.reset_current_window_on_trigger else self._current_window
+            self._total_items_in_current_window = (
+                0 if self.config.reset_current_window_on_trigger else self._total_items_in_current_window
+            )
+
+            if log:
+                log.evaluations.append(drift_eval_log)
+
+            yield trigger_idx
+
     def inform(
         self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
     ) -> Generator[int, None, None]:
         """Decides whether to trigger retraining on a batch of new data based on data drift.
 
-        New data is stored in data_cache and iterated over via a sliding window of current data for drift detection.
-
-        The sliding window is determined by two pointers: detection_idx_start and detection_idx_end.
-        We hold the start pointer constant and advance the end pointer by detection_interval in every iteration.
-        In every iteration we run data drift detection on the sliding window of current data.
-
-        Note: When having remaining untriggered data from the previous batch of new data,
-        we include all of them in the first drift detection.
-
-        The remaining untriggered data has been processed in the previous new data batch,
-        so there's no need to run detection only on remaining data in this batch.
-        If a retraining is triggered, all data in the sliding window becomes triggering data.
-        Advance the start ptr after traversing the data_cache, we remove all the triggered data from the cache
-        and record the number of remaining untriggered samples.
-
+            We keep a reference and a current window. TODO: write ddocstring
         Args:
             new_data: List of new data (keys, timestamps, labels)
             log: The log to store the trigger policy evaluation results to be able to verify trigger decisions
-
-        Returns:
-            a generator here that waits for the previous trigger to finish and get the model.
         """
-        # add new data to data_cache
-        self.data_cache.extend(new_data)
+        new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
+        detect_interval = self.config.detection_interval_data_points
+        offset = self._total_items_in_current_window % detect_interval
 
-        unvisited_data_points = len(self.data_cache)
-        untriggered_data_points = unvisited_data_points
+        if offset + len(new_key_ts) < detect_interval:
+            # No detection in this trigger
+            self._update_curr_window(new_key_ts)
+            return
 
-        # the sliding window of data points for detection
-        detection_idx_start = 0
-        detection_idx_end = 0
+        # At least one detection, fill up window up to that detection
+        self._update_curr_window(new_key_ts[: detect_interval - offset])
+        new_key_ts = new_key_ts[detect_interval - offset :]
+        trigger_idx = detect_interval - offset - 1  # If we trigger, it will be on this index
 
-        while unvisited_data_points >= self.config.detection_interval_data_points:
-            unvisited_data_points -= self.config.detection_interval_data_points
-            detection_idx_end += self.config.detection_interval_data_points
-            if detection_idx_end <= self.leftover_data_points:
-                continue
+        if not self._triggered_once:
+            # If we've never triggered before, always trigger
+            self._triggered_once = True
+            triggered = True
+            drift_results: dict[str, MetricResult] = {}
+        else:
+            # Run the detection
+            triggered, drift_results = self._run_detection()
 
-            if self.previous_trigger_id is None:
-                triggered = True  # if no previous trigger exists, always trigger retraining
-                drift_results: dict[str, MetricResult] = {}
-            else:
-                # if exist previous trigger, detect drift
-                triggered, drift_results = self._run_detection(detection_idx_start, detection_idx_end)
+        yield from self._handle_drift_result(triggered, trigger_idx, drift_results, log=log)
 
-            drift_eval_log = DriftTriggerEvalLog(
-                detection_idx_start=detection_idx_start,
-                detection_idx_end=detection_idx_end,
-                triggered=triggered,
-                trigger_index=-1,
-                drift_results=drift_results,
-            )
+        # Go through remaining data in new data in batches of `detect_interval`
+        for i in range(0, len(new_key_ts), detect_interval):
+            batch = new_key_ts[i : i + detect_interval]
+            trigger_idx += detect_interval
+            self._update_curr_window(batch)
 
-            if triggered:
-                trigger_data_points = detection_idx_end - detection_idx_start
-                drift_eval_log.data_points = trigger_data_points
-
-                # Index of the last sample of the trigger. Index is relative to the new_data list.
-                trigger_idx = len(new_data) - (untriggered_data_points - trigger_data_points) - 1
-
-                # log
-                drift_eval_log.data_points = trigger_data_points
-                if log:
-                    log.evaluations.append(drift_eval_log)
-
-                # update bookkeeping and sliding window
-                untriggered_data_points -= trigger_data_points
-                detection_idx_start = detection_idx_end
-                yield trigger_idx
-
-        # remove triggered data from cache
-        del self.data_cache[:detection_idx_start]
-        self.leftover_data_points = detection_idx_end - detection_idx_start
-
-    def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
-        self.previous_trigger_id = previous_trigger_id
-        self.previous_data_points = data_points
+            if len(batch) == detect_interval:
+                # Regular batch, in this case run detection
+                triggered, drift_results = self._run_detection()
+                yield from self._handle_drift_result(triggered, trigger_idx, drift_results, log=log)
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
@@ -139,33 +142,26 @@ class DataDriftTrigger(Trigger):
 
     # --------------------------------------------------- INTERNAL --------------------------------------------------- #
 
-    def _run_detection(self, idx_start: int, idx_end: int) -> tuple[bool, dict[str, MetricResult]]:
+    def _run_detection(self) -> tuple[bool, dict[str, MetricResult]]:
         """Compare current data against reference data.
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
         Get the dataloaders, download the embedding encoder model if necessary,
         compute embeddings of current and reference data, then run detection on the embeddings.
         """
-        assert self.previous_trigger_id is not None
-        assert self.previous_data_points is not None and self.previous_data_points > 0
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
         assert self.encoder_downloader is not None
         assert self.context and self.context.pipeline_config is not None
+        assert len(self._reference_window) > 0
+        assert len(self._current_window) > 0
 
-        reference_dataloader = prepare_trigger_dataloader_by_trigger(
-            self.previous_trigger_id,
-            self.dataloader_info,
-            data_points_in_trigger=self.previous_data_points,
-            sample_size=self.config.sample_size,
+        reference_dataloader = prepare_trigger_dataloader_fixed_keys(
+            self.dataloader_info, [key for key, _ in self._reference_window]
         )
 
-        current_keys, _, _ = zip(*self.data_cache[idx_start:idx_end])  # type: ignore
         current_dataloader = prepare_trigger_dataloader_fixed_keys(
-            self.previous_trigger_id + 1,
-            self.dataloader_info,
-            current_keys,  # type: ignore
-            sample_size=self.config.sample_size,
+            self.dataloader_info, [key for key, _ in self._current_window]
         )
 
         # Download previous model as embedding encoder
@@ -187,10 +183,7 @@ class DataDriftTrigger(Trigger):
             **self.evidently_detector.detect_drift(reference_embeddings_df, current_embeddings_df),
             **self.alibi_detector.detect_drift(reference_embeddings, current_embeddings),
         }
-        logger.info(
-            f"[DataDriftDetector][Prev Trigger {self.previous_trigger_id}][Dataset {self.dataloader_info.dataset_id}]"
-            + f"[Result] {drift_results}"
-        )
+        logger.info(f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}")
 
         # aggregate the different drift detection results
         drift_detected = self.config.aggregation_strategy.aggregate_decision_func(drift_results)
