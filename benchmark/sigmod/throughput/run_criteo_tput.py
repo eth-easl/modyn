@@ -34,7 +34,7 @@ def run_experiment() -> None:
     train_gpu = "cuda:0"
     seeds = [42]
     num_dataloader_workers_list = [16, 1, 4, 8]
-    partition_size_list = [100000, 2500000, 5000000]
+    partition_size_list = [100000, 2500000]
     num_prefetched_partitions_list = [0, 1, 2, 6]
     parallel_pref_list = [1, 4]
     skip_existing = True
