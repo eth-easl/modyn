@@ -72,12 +72,14 @@ class DownsamplingScheduler:
     def training_status_bar_scale(self) -> int:
         return self.current_downsampler.status_bar_scale
 
-    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+    def inform_next_trigger(
+        self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend
+    ) -> dict[str, object]:
         if self.next_threshold is not None and next_trigger_id - self._warmup_triggers >= self.next_threshold:
             self.downsampler_index += 1
             self.current_downsampler, self.next_threshold = self._get_next_downsampler_and_threshold()
 
-        self.current_downsampler.inform_next_trigger(next_trigger_id, selector_storage_backend)
+        return self.current_downsampler.inform_next_trigger(next_trigger_id, selector_storage_backend)
 
 
 def instantiate_scheduler(config: CoresetStrategyConfig, modyn_config: dict, pipeline_id: int) -> DownsamplingScheduler:

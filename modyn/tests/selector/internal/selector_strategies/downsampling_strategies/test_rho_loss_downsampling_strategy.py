@@ -337,7 +337,7 @@ def test__train_il_model(
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
     trigger_id = 1
-    model_id = strategy._train_il_model(trigger_id, previous_model_id)
+    model_id, _ = strategy._train_il_model(trigger_id, previous_model_id)
     mock_start_training.assert_called_once_with(
         pipeline_id=strategy.rho_pipeline_id,
         trigger_id=trigger_id,
