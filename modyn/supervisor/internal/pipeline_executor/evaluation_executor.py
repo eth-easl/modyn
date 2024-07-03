@@ -350,3 +350,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     rerun_evaluations_from_path(snapshot_path)
+    logger.info("Done with manual evaluation!")
+    sys.exit(0)

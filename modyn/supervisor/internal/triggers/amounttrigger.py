@@ -1,6 +1,7 @@
 from typing import Generator
 
 from modyn.config.schema.pipeline import DataAmountTriggerConfig
+from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.trigger import Trigger
 
 
@@ -15,7 +16,9 @@ class DataAmountTrigger(Trigger):
 
         super().__init__()
 
-    def inform(self, new_data: list[tuple[int, int, int]]) -> Generator[int, None, None]:
+    def inform(
+        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+    ) -> Generator[int, None, None]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
 
         first_idx = self.data_points_for_trigger - self.remaining_data_points - 1

@@ -38,11 +38,11 @@ def gen_pipeline_config(
             optimizers=[
                 OptimizerConfig(
                     name="default",
-                    algorithm="SGD",
+                    algorithm="AdamW",
                     source="PyTorch",
                     param_groups=[
                         OptimizerParamGroup(
-                            module="model", config={"lr": 0.00002, "momentum": 0.9, "weight_decay": 0.01}
+                            module="model", config={"lr": 0.00005, "momentum": 0.9, "weight_decay": 0.01}
                         )
                     ],
                 )
@@ -50,13 +50,13 @@ def gen_pipeline_config(
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
             seed=42,
-            epochs_per_trigger=1,
+            epochs_per_trigger=5,
         ),
         selection_strategy=NewDataStrategyConfig(
-            maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
+            maximum_keys_in_memory=100000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
-            dataset_id="huffpost",
+            dataset_id="huffpost_kaggle_train",
             bytes_parser_function=("def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"),
             tokenizer="DistilBertTokenizerTransform",
         ),
@@ -65,6 +65,8 @@ def gen_pipeline_config(
             handlers=eval_handlers,
             device="cuda:0",
             result_writers=["json"],
+            after_training_evaluation_workers=10,
+            after_pipeline_evaluation_workers=10,
             datasets=[
                 EvalDataConfig(
                     dataset_id=hp_dataset_name,
