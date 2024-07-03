@@ -36,6 +36,7 @@ def main(
     for group_name, group_pipelines in pipeline_groups.items():
         if pipeline_name is not None and group_name != pipeline_name:
             continue
+        print(f"merging {group_name} with pipelines {group_pipelines}")
         merge_files_for_equivalence_group(group_pipelines, output_directory=aggregated_log_dir)
 
 

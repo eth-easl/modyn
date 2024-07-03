@@ -3,6 +3,11 @@ from pathlib import Path
 
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 
+def process_name(name: str) -> str:
+    if name[-4] == 'r':
+        return name
+    
+    return f"{name}_r500"
 
 def group_pipelines_by_name(pipeline_logs_directory: Path) -> dict[str, list[Path]]:
     # find the groups of equivalent pipelines via the .name file
@@ -12,7 +17,7 @@ def group_pipelines_by_name(pipeline_logs_directory: Path) -> dict[str, list[Pat
     ]
 
     pipeline_names: list[tuple[Path, str]] = [
-        (d, (d / ".name").read_text()) for d in pipeline_directories if (d / "pipeline.log").exists()
+        (d, process_name((d / ".name").read_text())) for d in pipeline_directories if (d / "pipeline.log").exists()
     ]
 
     pipeline_groups = {name: [d for d, n in pipeline_names if n == name] for name in set(n for _, n in pipeline_names)}
