@@ -355,13 +355,14 @@ def test__process_new_data_batch_no_triggers(
 
     with patch.object(pe.trigger, "inform") as inform_mock:
 
-        def fake(self):
+        def fake(self, *args, **kwargs):
             yield from []
 
         inform_mock.side_effect = fake
         assert len(pe._process_new_data_batch(pe.state, pe.logs, batch)) == 0
 
-        inform_mock.assert_called_once_with(batch)
+        inform_mock.assert_called_once()
+        inform_mock.call_args_list == [call(batch, ANY)]
         test_inform_selector.assert_called_once_with(42, batch)
 
 

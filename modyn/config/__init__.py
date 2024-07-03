@@ -12,7 +12,7 @@ def read_modyn_config(path: Path) -> ModynConfig:
     Args:
         path: Path to the configuration file.
 
-    Returns:
+    Returns: e
         The validated Modyn config as a pydantic model.
     """
     with open(path, "r", encoding="utf-8") as config_file:

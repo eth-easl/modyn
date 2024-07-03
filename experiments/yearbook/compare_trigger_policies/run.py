@@ -8,6 +8,8 @@ from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers impor
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -36,7 +38,7 @@ def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> dict[E
     return [
         EvalHandlerConfig(
             name=f"scheduled-{interval[0]}",
-            execution_time="manual",
+            execution_time="after_pipeline",
             models="matrix",
             strategy=PeriodicEvalStrategyConfig(
                 every="1d",  # every year
@@ -83,20 +85,21 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
             )
         )
 
-    for interval, threshold in experiment.drift_triggers:
-        pipeline_configs.append(
-            gen_pipeline_config(
-                name=f"{experiment.name}_drift_{interval}_{threshold}",
-                trigger=DataDriftTriggerConfig(
-                    detection_interval_data_points=interval,
-                    sample_size=None,
-                    metric="model",
-                    metric_config={"threshold": threshold},
-                ),
-                eval_handlers=experiment.eval_handlers,
-                device=experiment.gpu_device,
+    for interval in experiment.drift_detection_intervals:
+        for drift_metrics in experiment.drift_trigger_metrics:
+            pipeline_configs.append(
+                gen_pipeline_config(
+                    name=f"{experiment.name}_drift_{interval}",
+                    trigger=DataDriftTriggerConfig(
+                        detection_interval_data_points=interval,
+                        sample_size=None,
+                        metrics=drift_metrics,
+                        aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
+                    ),
+                    eval_handlers=experiment.eval_handlers,
+                    device=experiment.gpu_device,
+                )
             )
-        )
 
     return pipeline_configs
 
@@ -105,25 +108,27 @@ _EXPERIMENT_REFS = {
     # done
     0: Experiment(
         # to verify online composite model determination logic
-        name="timetrigger-smoke-test",
+        name="yb-timetrigger-smoke-test",
         eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
         time_trigger_schedules=[1, 2, 5],
         data_amount_triggers=[],
-        drift_triggers=[],
+        drift_detection_intervals=[],
+        drift_trigger_metrics=[],
         gpu_device="cuda:0",
     ),
-    # unfinished
     1: Experiment(
-        name="numsamples-training-time",
+        name="yb-numsamples-training-time",
         eval_handlers=[construct_between_trigger_eval_handler()],
         time_trigger_schedules=[],
         data_amount_triggers=[100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000],
-        drift_triggers=[],
+        drift_detection_intervals=[],
+        drift_trigger_metrics=[],
         gpu_device="cuda:1",
     ),
+    # unfinished
     # different time triggcer
     2: Experiment(
-        name="timetrigger1y-periodic-eval-intervals",
+        name="yb-timetrigger1y-periodic-eval-intervals",
         eval_handlers=[construct_slicing_eval_handler()]
         + construct_periodic_eval_handlers(
             intervals=[
@@ -138,27 +143,57 @@ _EXPERIMENT_REFS = {
         ),
         time_trigger_schedules=[1],
         data_amount_triggers=[],
-        drift_triggers=[],
+        drift_detection_intervals=[],
+        drift_trigger_metrics=[],
         gpu_device="cuda:2",
     ),
-    -2: Experiment(
-        name="full-todo",
-        eval_handlers=[
-            construct_periodic_eval_handlers([("~1y", "300d"), ("1y", "1d"), ("2y", "2d"), ("3y", "3d"), ("5y", "5d")])
+    3: Experiment(
+        name="yb-drift-smoke-test",
+        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        time_trigger_schedules=[],
+        data_amount_triggers=[],
+        drift_detection_intervals=[500],
+        drift_trigger_metrics=[
+            {
+                "ev_mmd": AlibiDetectMmdDriftMetric(
+                    device="cuda:3",
+                    p_val=0.05,
+                )
+            }
         ],
-        time_trigger_schedules=[1, 2, 3, 5, 15, 25, 40],
-        data_amount_triggers=[100, 500, 1000, 2000, 10_000],
-        drift_triggers=[
-            (500, 0.7),
-            (1_000, 0.5),
-            (1_000, 0.6),
-            (1_000, 0.7),
-            (1_000, 0.8),
-            (1_000, 0.9),
-            (5_000, 0.7),
-            (10_000, 0.7),
+        gpu_device="cuda:2",
+    ),
+    4: Experiment(
+        name="yb-drift-p-val",
+        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        time_trigger_schedules=[],
+        data_amount_triggers=[],
+        drift_detection_intervals=[100],
+        drift_trigger_metrics=[
+            {
+                "ev_mmd": AlibiDetectMmdDriftMetric(
+                    device="cuda:2",
+                    p_val=0.05,
+                )
+            }
         ],
-        gpu_device="cuda:0",
+        gpu_device="cuda:2",
+    ),
+    5: Experiment(
+        name="yb-drift-interval-cost",
+        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        time_trigger_schedules=[],
+        data_amount_triggers=[],
+        drift_detection_intervals=[100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000],
+        drift_trigger_metrics=[
+            {
+                "ev_mmd": AlibiDetectMmdDriftMetric(
+                    device="cuda:1",
+                    p_val=0.05,
+                )
+            }
+        ],
+        gpu_device="cuda:1",
     ),
 }
 

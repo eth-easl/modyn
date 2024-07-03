@@ -15,6 +15,7 @@ from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers impor
 from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 
@@ -42,7 +43,7 @@ def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[E
     return [
         EvalHandlerConfig(
             name=f"scheduled-{interval}",
-            execution_time="manual",
+            execution_time="after_pipeline",
             models="matrix",
             strategy=PeriodicEvalStrategyConfig(
                 every="30d",  # TODO:
@@ -59,7 +60,7 @@ def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[E
 def construct_between_trigger_eval_handler() -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="full",
-        execution_time="manual",
+        execution_time="after_pipeline",
         models="active",
         strategy=BetweenTwoTriggersEvalStrategyConfig(),
         datasets=["huffpost_kaggle_all"],  # train and test
@@ -87,15 +88,15 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
             )
         )
 
-    for interval, threshold in experiment.drift_triggers:
+    for interval in experiment.drift_detection_intervals:
         pipeline_configs.append(
             gen_pipeline_config(
-                name=f"{experiment.name}_drift_{interval}_{threshold}",
+                name=f"{experiment.name}_drift_{interval}",
                 trigger=DataDriftTriggerConfig(
                     detection_interval_data_points=interval,
                     sample_size=None,
-                    metric="model",
-                    metric_config={"threshold": threshold},
+                    metrics=experiment.drift_trigger_metrics,
+                    aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
                 ),
                 eval_handlers=experiment.eval_handlers,
             )
@@ -108,13 +109,25 @@ _EXPERIMENT_REFS = {
     # done
     0: Experiment(
         # to verify online composite model determination logic
-        name="timetrigger-smoke-test",
+        name="huff-timetrigger-smoke-test",
         eval_handlers=[construct_slicing_eval_handler("90d")],
         time_trigger_schedules=["90d"],
         data_amount_triggers=[],
-        drift_triggers=[],
+        drift_detection_intervals=[],
+        drift_trigger_metrics=[],
         gpu_device="cuda:0",
     ),
+    1: Experiment(
+        name="hp-numsamples-training-time",
+        eval_handlers=[construct_between_trigger_eval_handler()],
+        time_trigger_schedules=[],
+        data_amount_triggers=[100_000, 50_000, 25_000, 10_000, 5_000, 2_000, 1_000, 500],
+        drift_detection_intervals=[],
+        drift_trigger_metrics=[],
+        gpu_device="cuda:1",
+    ),
+    # TODO: huff-timetrigger1y-periodic-eval-intervals
+    # TODO: huff-drift
 }
 
 

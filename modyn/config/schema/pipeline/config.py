@@ -30,7 +30,7 @@ class ModynPipelineConfig(ModynBaseModel):
 
     training: TrainingConfig
     data: DataConfig
-    trigger: TriggerConfig
+    trigger: TriggerConfig  # type: ignore[valid-type]
     selection_strategy: SelectionStrategy
     evaluation: EvaluationConfig | None = Field(None)
 
