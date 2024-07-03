@@ -76,7 +76,13 @@ message SingleMetricResult {
 }
 
 message EvaluationIntervalData {
-  // multiple metrics are required on on evaluation on one interval
+  // Since not every interval evaluation from EvaluateModelRequest may be successful,
+  // the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+  // evaluation data corresponds to. The interval_index is the index of the interval in the list
+  // Datainfo.evaluation_intervals in the EvaluateModelRequest.
+  // For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+  // and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+  // 0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
   int32 interval_index = 1;
   repeated SingleMetricResult evaluation_data = 2;
 }
