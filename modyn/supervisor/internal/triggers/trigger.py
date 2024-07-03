@@ -42,12 +42,6 @@ class Trigger(ABC):
         """
 
     # pylint: disable=unnecessary-pass
-    def inform_previous_trigger_and_data_points(self, previous_trigger_id: int, data_points: int) -> None:
-        """The supervisor informs the Trigger about the previous trigger_id
-        and data points in the previous trigger."""
-        pass
-
-    # pylint: disable=unnecessary-pass
     def inform_previous_model(self, previous_model_id: int) -> None:
         """The supervisor informs the Trigger about the model_id of the previous trigger"""
         pass
