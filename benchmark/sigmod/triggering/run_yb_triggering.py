@@ -45,7 +45,7 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
     # DriftTriggers
-    for detection_interval_data_points in [500, 250, 100]:
+    for detection_interval_data_points in [250, 500, 100]:
         for threshold in [0.05, 0.07, 0.09]:
             for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
                 conf = DataDriftTriggerConfig(
