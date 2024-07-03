@@ -445,7 +445,7 @@ class PipelineExecutor:
             log.info = EvaluateTriggerInfo(batch_size=len(batch))
 
             # Evaluate trigger policy
-            for trigger_index, t_micros in timed_generator(self.trigger.inform(batch)):
+            for trigger_index, t_micros in timed_generator(self.trigger.inform(batch, log.info.trigger_evaluation_log)):
                 log.info.trigger_indexes.append(trigger_index)
                 log.info.trigger_eval_times.append(int(t_micros))
                 yield trigger_index

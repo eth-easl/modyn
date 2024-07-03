@@ -39,11 +39,16 @@ data:
     def bytes_parser_function(data: bytes) -> str:
       return str(data, "utf8")
   tokenizer: DistilBertTokenizerTransform
-
 trigger:
   id: DataDriftTrigger
   detection_interval_data_points: 100000
   sample_size: 5000
+  metrics:
+    ev_mmd:
+      id: EvidentlyModelDriftMetric
+      threshold: 0.7
+  aggregation_strategy:
+    id: MajorityVote
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 10000
