@@ -29,7 +29,7 @@ class EmbeddingEncoderDownloader:
         base_dir: pathlib.Path,
         model_storage_address: str,
     ):
-        self.modyn_config = modyn_config
+        self.modyn_config = modyn_config.model_dump() # todo use actual model
         self.pipeline_id = pipeline_id
         self.base_dir = base_dir
         assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
@@ -46,7 +46,7 @@ class EmbeddingEncoderDownloader:
         return ModelStorageStub(model_storage_channel)
 
     def configure(self, model_id: int, device: str) -> Optional[EmbeddingEncoder]:
-        with MetadataDatabaseConnection(self.modyn_config.model_dump()) as database: # TODO: FIX TYPING
+        with MetadataDatabaseConnection(self.modyn_config) as database:
             trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
