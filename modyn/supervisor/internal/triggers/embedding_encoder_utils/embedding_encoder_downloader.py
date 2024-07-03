@@ -29,7 +29,7 @@ class EmbeddingEncoderDownloader:
         base_dir: pathlib.Path,
         model_storage_address: str,
     ):
-        self.modyn_config = modyn_config.model_dump() # todo use actual model
+        self.modyn_config = modyn_config.model_dump(by_alias=True) # todo use actual model
         self.pipeline_id = pipeline_id
         self.base_dir = base_dir
         assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
