@@ -118,7 +118,7 @@ class DataDriftTrigger(Trigger):
 
         Note: The method is a generator and must be iterated over to execute its logic.
         Args:
-            new_data: A list of new data points, 
+            new_data: A list of new data points,
                 where each data point is a tuple containing a key, a timestamp, and a label.
             log: An optional log object to store the results of the trigger policy evaluation.
 
