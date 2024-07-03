@@ -10,13 +10,6 @@ from time import sleep
 from typing import Callable, Generator, TypeVar, cast
 
 import pandas as pd
-from modyn.config.schema.pipeline import ResultWriterType
-from modyn.supervisor.internal.eval.result_writer import JsonResultWriter
-from modyn.supervisor.internal.eval.result_writer.abstract_evaluation_result_writer import (
-    AbstractEvaluationResultWriter,
-)
-from modyn.supervisor.internal.eval.result_writer.json_result_writer import DedicatedJsonResultWriter
-from modyn.supervisor.internal.eval.result_writer.tensorboard_result_writer import TensorboardResultWriter
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -47,11 +40,6 @@ from typing_extensions import Concatenate, ParamSpec
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
 
-EVAL_RESULT_WRITER_CLASSES: dict[ResultWriterType, type[AbstractEvaluationResultWriter]] = {
-    "json": JsonResultWriter,
-    "json_dedicated": DedicatedJsonResultWriter,
-    "tensorboard": TensorboardResultWriter,
-}
 
 P = ParamSpec("P")  # parameters of pipeline stage
 R = TypeVar("R")  # result of pipeline stage
@@ -722,6 +710,9 @@ class PipelineExecutor:
         last_timestamp: int,
     ) -> None:
         """Evaluate the trained model and store the results."""
+        s.pipeline_status_queue.put(
+            pipeline_stage_msg(PipelineStage.EVALUATE, MsgType.ID, id_submsg(IdType.TRIGGER, trigger_id))
+        )
         logs = self.eval_executor.run_pipeline_evaluations(
             log,
             trigger_id,
@@ -729,8 +720,6 @@ class PipelineExecutor:
             model_id,
             first_timestamp,
             last_timestamp,
-            s.pipeline_status_queue,
-            s.eval_status_queue,
         )
         self.logs.supervisor_logs.merge(logs.stage_runs)
 
@@ -758,7 +747,7 @@ class PipelineExecutor:
         if not s.pipeline_config.evaluation:
             return
 
-        eval_logs = self.eval_executor.run_post_pipeline_evaluations(s.eval_status_queue)
+        eval_logs = self.eval_executor.run_post_pipeline_evaluations()
         self.logs.supervisor_logs.merge(eval_logs.stage_runs)
 
     @pipeline_stage(PipelineStage.EXIT, parent=PipelineStage.MAIN)
@@ -815,9 +804,6 @@ class PipelineExecutor:
             last_timestamp = trigger_data[-1][1]
 
         return first_timestamp, last_timestamp
-
-    def _init_evaluation_writer(self, pipeline_id: int, name: str, trigger_id: int) -> AbstractEvaluationResultWriter:
-        return EVAL_RESULT_WRITER_CLASSES[name](pipeline_id, trigger_id, self.state.eval_directory)  # type: ignore
 
     def _shutdown_trainer(self) -> None:
         if self.state.current_training_id is not None:

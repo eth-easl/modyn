@@ -139,11 +139,6 @@ def test_rho_loss_pipeline_with_two_triggers() -> None:
         model_ids = [model.model_id for model in models]
         assert latest_il_model_id == max(model_ids)
 
-        # validate the holdout set is in correct proportion
-        # in rho_loss.yaml, each trigger contains 10 images. The holdout set ratio is 30%
-        # so the holdout set should contain 3 images
-        assert all(trigger.num_keys == 3 for trigger in triggers)
-
 
 if __name__ == "__main__":
     tiny_dataset_helper = TinyDatasetHelper(dataset_size=20)

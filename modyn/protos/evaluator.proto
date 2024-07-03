@@ -9,15 +9,19 @@ service Evaluator {
   rpc cleanup_evaluations(EvaluationCleanupRequest) returns (EvaluationCleanupResponse) {}
 }
 
+message EvaluationInterval {
+  optional int64 start_timestamp = 1;
+  optional int64 end_timestamp = 2;
+}
+
 message DatasetInfo {
   string dataset_id = 1;
   int32 num_dataloaders = 2;
-  optional int64 start_timestamp = 3;
-  optional int64 end_timestamp = 4;
+  repeated EvaluationInterval evaluation_intervals = 3;
 }
 
 enum EvaluationAbortedReason {
-  UNKNOWN = 0;
+  NOT_ABORTED = 0;
   MODEL_NOT_EXIST_IN_METADATA = 1;
   MODEL_IMPORT_FAILURE = 2;
   MODEL_NOT_EXIST_IN_STORAGE = 3;
@@ -42,11 +46,20 @@ message EvaluateModelRequest {
   optional PythonString tokenizer = 9;
 }
 
+message EvaluateModelIntervalResponse {
+  // this value is only meaningful when eval_aborted_reason is NOT_ABORTED
+  int64 dataset_size = 1;
+  EvaluationAbortedReason eval_aborted_reason = 2;
+}
+
 message EvaluateModelResponse {
+  // only when all interval evaluations failed, this field will be set to false
+  // it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+  // the client can always check the interval_responses
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
-  int64 dataset_size = 3;
-  EvaluationAbortedReason eval_aborted_reason = 4;
+  // always has the same size as the number of intervals
+  repeated EvaluateModelIntervalResponse interval_responses = 3;
 }
 
 message EvaluationStatusRequest { int32 evaluation_id = 1; }
@@ -54,16 +67,24 @@ message EvaluationStatusRequest { int32 evaluation_id = 1; }
 message EvaluationStatusResponse {
   bool valid = 1;
   bool is_running = 2;
-  bool state_available = 3;
-  bool blocked = 4;
-  optional string exception = 5;
-  optional int64 batches_seen = 6;
-  optional int64 samples_seen = 7;
+  optional string exception = 3;
 }
 
-message EvaluationData {
+message SingleMetricResult {
   string metric = 1;
   float result = 2;
+}
+
+message EvaluationIntervalData {
+  // Since not every interval evaluation from EvaluateModelRequest may be successful,
+  // the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+  // evaluation data corresponds to. The interval_index is the index of the interval in the list
+  // Datainfo.evaluation_intervals in the EvaluateModelRequest.
+  // For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+  // and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+  // 0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
+  int32 interval_index = 1;
+  repeated SingleMetricResult evaluation_data = 2;
 }
 
 message EvaluationResultRequest { int32 evaluation_id = 1; }
@@ -72,7 +93,8 @@ message EvaluationCleanupRequest { repeated int32 evaluation_ids = 1; }
 
 message EvaluationResultResponse {
   bool valid = 1;
-  repeated EvaluationData evaluation_data = 2;
+  // each element in the list corresponds to the evaluation results on a single interval
+  repeated EvaluationIntervalData evaluation_results = 2;
 }
 
 message EvaluationCleanupResponse { repeated int32 succeeded = 1; }

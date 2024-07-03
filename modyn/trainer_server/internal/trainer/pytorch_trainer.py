@@ -123,6 +123,7 @@ class PytorchTrainer:
         self.epochs_per_trigger = training_info.epochs_per_trigger
         self.num_samples_to_pass = training_info.num_samples_to_pass
         self._log_file_path = training_info.log_file_path
+        self._drop_last_batch = training_info.drop_last_batch
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
 
         if not self._checkpoint_path.is_dir():
@@ -184,6 +185,7 @@ class PytorchTrainer:
             training_info.shuffle,
             training_info.tokenizer,
             self._dataset_log_path,
+            drop_last=self._drop_last_batch,
         )
 
         # Create callbacks
@@ -288,10 +290,10 @@ class PytorchTrainer:
 
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
-                    self._assert_data_size(self._batch_size, data, sample_ids, target)
+                        self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
-                        output = self._model.model(data)
+                        output = self._model.model(data, sample_ids)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
                         if weighted_optimization:
@@ -450,7 +452,11 @@ class PytorchTrainer:
             for label in available_labels:
                 if first_label:
                     per_class_dataloader = prepare_per_class_dataloader_from_online_dataset(
-                        self._train_dataloader.dataset, self._batch_size, self._num_dataloaders, label
+                        self._train_dataloader.dataset,
+                        self._batch_size,
+                        self._num_dataloaders,
+                        label,
+                        drop_last=self._drop_last_batch,
                     )
                     first_label = False
                 else:

@@ -9,7 +9,7 @@ from analytics.tools.aggregate_runs.pipeline_equivalence import assert_pipeline_
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo
 
-DEBUGGING_MODE = True
+DEBUGGING_MODE = False
 """if True, the the process will halt on breakpoints to allow for manual verification"""
 
 
@@ -75,7 +75,7 @@ def aggregate_eval_metrics(df_eval_single: pd.DataFrame, logs: list[PipelineLogs
     )
 
     sizes = groups.agg(size=("model_idx", "size")).reset_index()
-    if len(sizes["size"].unique()) != 1 or int(sizes[0]) != len(logs):
+    if len(sizes["size"].unique()) != 1 or int(sizes["size"].unique()[0]) != len(logs):
         logging.warning(f"\n{sizes[sizes['size'] != len(logs)]}")
         logging.warning(
             "The number of records in every group is not equal to the number of logs. "
