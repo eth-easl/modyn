@@ -24,7 +24,7 @@ SAMPLE = (10, 1, 1)
 def drift_trigger_config() -> DataDriftTriggerConfig:
     return DataDriftTriggerConfig(
         detection_interval_data_points=42,
-        metrics={"model": AlibiDetectMmdDriftMetric()},
+        metrics={"model": AlibiDetectMmdDriftMetric(num_permutations=1000)},
         aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
     )
 

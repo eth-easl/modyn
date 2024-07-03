@@ -59,9 +59,15 @@ class AlibiDriftDetector(DriftDetector):
                 if isinstance(result["data"]["p_val"], np.ndarray)
                 else result["data"]["p_val"]
             )
+
+            is_drift = result["data"]["is_drift"]
+
+            if isinstance(config, AlibiDetectMmdDriftMetric) and config.threshold is not None:
+                is_drift = _dist > config.threshold
+
             results[metric_ref] = MetricResult(
                 metric_id=metric_ref,
-                is_drift=result["data"]["is_drift"],
+                is_drift=is_drift,
                 distance=_dist,
                 p_val=_p_val,
                 threshold=result["data"].get("threshold"),
