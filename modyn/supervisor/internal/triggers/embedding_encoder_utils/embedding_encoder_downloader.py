@@ -46,7 +46,7 @@ class EmbeddingEncoderDownloader:
         return ModelStorageStub(model_storage_channel)
 
     def configure(self, model_id: int, device: str) -> Optional[EmbeddingEncoder]:
-        with MetadataDatabaseConnection(self.modyn_config) as database:
+        with MetadataDatabaseConnection(self.modyn_config.model_dump()) as database: # TODO: FIX TYPING
             trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
