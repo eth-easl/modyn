@@ -108,7 +108,7 @@ def aggregate_eval_metrics(df_eval_single: pd.DataFrame, logs: list[PipelineLogs
 
     aggregated_logs = deepcopy(logs[0])
     for log in aggregated_logs.supervisor_logs.stage_runs:
-        if log.id == PipelineStage.EVALUATE_SINGLE.name:
+        if log.id == PipelineStage.EVALUATE_MULTI.name:
             assert isinstance(log.info, SingleEvaluationInfo)
             if not log.info.results:
                 continue

@@ -362,6 +362,12 @@ class SingleEvaluationInfo(StageInfo):
         )
 
 
+class MultiEvaluationInfo(StageInfo):
+    dataset_id: str
+    id_model: int
+    interval_results: list[SingleEvaluationInfo] = []
+
+
 class SelectorInformInfo(StageInfo):
     selector_log: dict[str, Any] | None
     remaining_data: bool
