@@ -186,6 +186,33 @@ def test_time_windowing_strategy_update(drift_trigger_config: DataDriftTriggerCo
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
+def test_update_current_window_amount_strategy_cross_inform(drift_trigger_config: DataDriftTriggerConfig) -> None:
+    drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount=5)
+    drift_trigger_config.detection_interval_data_points = 3
+    # TODO(MaxiBoether/robinholzi: If this is not set,
+    # it seems to use True, despite the default in the config being False
+    # Why could this happen?
+    drift_trigger_config.reset_current_window_on_trigger = False
+    trigger = DataDriftTrigger(drift_trigger_config)
+
+    assert list(
+        trigger.inform([(1, 100, 1), (2, 100, 1), (3, 100, 1), (4, 100, 1), (5, 100, 1), (6, 100, 1), (7, 100, 1)])
+    ) == [2, 5]
+    assert len(trigger._current_window) == 5
+    assert trigger._total_items_in_current_window == 7
+
+    assert len(list(trigger.inform([(8, 100, 1)]))) == 0
+    assert len(trigger._current_window) == 5
+    assert trigger._total_items_in_current_window == 8
+    assert trigger._current_window[0][0] == 4
+
+    assert list(trigger.inform([(9, 100, 1)])) == [0]
+    assert len(trigger._current_window) == 5
+    assert trigger._total_items_in_current_window == 9
+    assert trigger._current_window[0][0] == 5
+
+
+@patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
 def test_leftover_data_handling_with_reset(mock_run_detection, drift_trigger_config: DataDriftTriggerConfig) -> None:
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount=50)
     drift_trigger_config.detection_interval_data_points = 2
