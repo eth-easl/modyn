@@ -12,9 +12,6 @@ from typing import Any, cast
 
 import grpc
 import pandas as pd
-from pydantic import BaseModel
-from tenacity import Retrying, stop_after_attempt, wait_random_exponential
-
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
 
@@ -32,6 +29,8 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     SupervisorLogs,
 )
 from modyn.utils.utils import current_time_micros, dynamic_module_import
+from pydantic import BaseModel
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
