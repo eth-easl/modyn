@@ -28,6 +28,8 @@ from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import RegisterModelRequest, RegisterModelResponse
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import ModelStorageStub
 from modyn.models import ResNet18
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetDatasetSizeRequest, GetDatasetSizeResponse
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import calculate_checksum
 
 TEST_MODELS_PATH = MODYN_MODELS_PATH / "test_models"
@@ -64,6 +66,21 @@ def prepare_dataset(dataset_helper: ImageDatasetHelper) -> Tuple[int, int, int, 
     split_ts2 = int(time.time()) + 1
     time.sleep(2)
     dataset_helper.add_images_to_dataset(start_number=12, end_number=22)
+    # we need to wait a bit for the server to process the images
+
+    storage_channel = connect_to_server("storage")
+    storage = StorageStub(storage_channel)
+    timeout = 60
+    start_time = time.time()
+    request = GetDatasetSizeRequest(dataset_id=DATASET_ID)
+    resp: GetDatasetSizeResponse = storage.GetDatasetSize(request)
+    assert resp.success
+    while resp.num_keys != 22:
+        time.sleep(2)
+        if time.time() - start_time > timeout:
+            raise TimeoutError("Could not get the dataset size in time")
+        resp = storage.GetDatasetSize(request)
+        assert resp.success
     return split_ts1, split_ts2, 5, 7, 10
 
 
@@ -193,7 +210,7 @@ def test_evaluator(dataset_helper: ImageDatasetHelper) -> None:
 
     eval_result_resp = wait_for_evaluation(eval_model_resp.evaluation_id, evaluator)
     assert eval_result_resp.valid
-    expected_interval_ids = [0, 1, 3, 4, 5, 6, 7]
+    expected_interval_ids = [idx for idx, data_size in enumerate(expected_data_sizes) if data_size is not None]
     assert len(eval_result_resp.evaluation_results) == len(expected_interval_ids)
     for interval_data, expected_interval_id in zip(eval_result_resp.evaluation_results, expected_interval_ids):
         assert interval_data.interval_index == expected_interval_id
