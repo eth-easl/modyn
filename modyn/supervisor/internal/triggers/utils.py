@@ -42,7 +42,6 @@ def prepare_trigger_dataloader_by_trigger(
 
 
 def prepare_trigger_dataloader_fixed_keys(
-    trigger_id: int,
     dataloader_info: DataLoaderInfo,
     keys: list[int],
     sample_size: Optional[int] = None,
@@ -55,7 +54,6 @@ def prepare_trigger_dataloader_fixed_keys(
         dataloader_info.bytes_parser,
         dataloader_info.transform_list,
         dataloader_info.storage_address,
-        trigger_id,
         keys,
         dataloader_info.tokenizer,
     )

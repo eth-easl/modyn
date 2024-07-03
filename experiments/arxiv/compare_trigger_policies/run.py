@@ -95,7 +95,6 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
                 name=f"datadrifttrigger_{interval}",
                 trigger=DataDriftTriggerConfig(
                     detection_interval_data_points=interval,
-                    sample_size=None,
                     metrics=experiment.drift_trigger_metrics,
                     aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
                 ),

@@ -206,7 +206,7 @@ def test_evaluation_handler_post_training(
     test_launch_evaluations_async.assert_called_once()
 
 
-@patch.object(EvaluationExecutor, "_single_batched_evaluation", return_value=("failure", {}))
+@patch.object(EvaluationExecutor, "_single_batched_evaluation", return_value=[("failure", {}), ("failure", {})])
 def test_launch_evaluations_async(
     test_single_evaluation: Any, evaluation_executor: EvaluationExecutor, dummy_stage_log: StageLog
 ) -> None:
@@ -214,12 +214,12 @@ def test_launch_evaluations_async(
         eval_requests=[dummy_eval_request(), dummy_eval_request()],
         parent_log=dummy_stage_log,
     )
-    assert test_single_evaluation.call_count == 2
+    assert test_single_evaluation.call_count == 1  # batched
 
 
 @pytest.mark.parametrize("test_failure", [False, True])
 @patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData()])
+@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData(), EvaluationIntervalData()])
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "prepare_evaluation_request")
 def test_single_batched_evaluation(
@@ -235,7 +235,8 @@ def test_single_batched_evaluation(
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
             evaluation_started=False,
             interval_responses=[
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
             ],
         )
     else:
@@ -243,15 +244,25 @@ def test_single_batched_evaluation(
             evaluation_started=True,
             evaluation_id=42,
             interval_responses=[
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10)
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10),
+                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=21),
             ],
         )
 
     evaluation_executor.grpc.evaluator = evaluator_stub_mock
     eval_req = dummy_eval_request()
-    evaluation_executor._single_batched_evaluation(
-        eval_req.interval_start, eval_req.interval_end, eval_req.id_model, eval_req.dataset_id
+    eval_req2 = dummy_eval_request()
+    eval_req2.interval_end = 63
+    eval_req2.interval_start = 14
+    results = evaluation_executor._single_batched_evaluation(
+        [
+            (eval_req.interval_start, eval_req.interval_end),
+            (eval_req2.interval_start, eval_req2.interval_end),
+        ],
+        eval_req.id_model,
+        eval_req.dataset_id,
     )
+    assert len(results) == 2
 
     test_prepare_evaluation_request.assert_called_once()
 

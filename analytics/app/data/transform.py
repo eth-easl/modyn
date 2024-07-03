@@ -134,7 +134,7 @@ def dfs_models_and_evals(
             run
             for run in logs.supervisor_logs.stage_runs
             if (
-                run.id == PipelineStage.EVALUATE_SINGLE.name
+                run.id == PipelineStage.EVALUATE_MULTI.name
                 and run.info.failure_reason is None
                 and run.info.eval_request
             )
@@ -146,9 +146,7 @@ def dfs_models_and_evals(
         (
             cast(SingleEvaluationInfo, run.info)
             for run in logs.supervisor_logs.stage_runs
-            if run.id == PipelineStage.EVALUATE_SINGLE.name
-            and run.info.failure_reason is None
-            and run.info.eval_request
+            if run.id == PipelineStage.EVALUATE_MULTI.name and run.info.failure_reason is None and run.info.eval_request
         )
     )
 

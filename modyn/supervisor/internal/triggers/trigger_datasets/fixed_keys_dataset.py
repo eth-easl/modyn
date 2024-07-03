@@ -38,11 +38,9 @@ class FixedKeysDataset(IterableDataset):
         bytes_parser: str,
         serialized_transforms: list[str],
         storage_address: str,
-        trigger_id: int,
         keys: list[int],
         tokenizer: Optional[str] = None,
     ):
-        self._trigger_id = trigger_id
         self._dataset_id = dataset_id
         self._first_call = True
 
@@ -96,10 +94,10 @@ class FixedKeysDataset(IterableDataset):
         self._storagestub = StorageStub(storage_channel)
 
     def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
-        logger.info(f"[Trigger {self._trigger_id}][Worker {worker_id}] {msg}")
+        logger.info(f"[Worker {worker_id}] {msg}")
 
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
-        logger.debug(f"[Trigger {self._trigger_id}][Worker {worker_id}] {msg}")
+        logger.debug(f"[Worker {worker_id}] {msg}")
 
     @staticmethod
     def _silence_pil() -> None:  # pragma: no cover
