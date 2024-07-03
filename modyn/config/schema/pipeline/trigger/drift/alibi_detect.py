@@ -38,7 +38,7 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         "GaussianRBF", description="The kernel used for distance calculation imported from alibi_detect.utils.pytorch"
     )
     configure_kernel_from_x_ref: bool = Field(True)
-    threshold: bool | None = Field(
+    threshold: float | None = Field(
         None,
         description=(
             "When given, we compare the raw distance metric to this threshold to make a triggering decision instead of "

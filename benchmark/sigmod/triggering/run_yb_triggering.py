@@ -13,6 +13,9 @@ from modyn.config.schema.pipeline import (
 )
 from modyn.config.schema.pipeline.trigger import TriggerConfig
 from modyn.config.schema.pipeline.trigger.data_amount import DataAmountTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.config import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.time import TimeTriggerConfig
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 from modyn.utils.utils import current_time_millis
@@ -41,7 +44,20 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
     for count in [100, 500, 1000, 2000, 10000]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
-    # DriftTriggers are still TODO
+    # DriftTriggers
+    for detection_interval_data_points in [500, 250, 100]:
+        for threshold in [0.05, 0.07, 0.09]:
+            for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
+                conf = DataDriftTriggerConfig(
+                    detection_interval_data_points=detection_interval_data_points,
+                    windowing_strategy=TimeWindowingStrategy(limit=window_size),
+                    reset_current_window_on_trigger=False,
+                    metrics={
+                        "mmd_alibi": AlibiDetectMmdDriftMetric(device="cpu", num_permutations=None, threshold=threshold)
+                    },
+                )
+                name = f"mmdalibi_{detection_interval_data_points}_{threshold}_{window_size}"
+                strategies.append((name, conf))
 
     return strategies
 
