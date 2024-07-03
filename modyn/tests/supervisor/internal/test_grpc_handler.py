@@ -1,18 +1,16 @@
 # pylint: disable=unused-argument,no-value-for-parameter,no-name-in-module
 import json
-import multiprocessing as mp
-import pathlib
-import tempfile
 from unittest.mock import patch
 
 import grpc
 import pytest
 from modyn.config.schema.pipeline import EvalDataConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    EvaluationData,
+    EvaluationIntervalData,
     EvaluationResultRequest,
     EvaluationResultResponse,
     EvaluationStatusResponse,
+    SingleMetricResult,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -32,9 +30,7 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetNewDataSinceResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.supervisor.internal.eval.result_writer import DedicatedJsonResultWriter
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.utils import EvaluationStatusReporter
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 
 
@@ -325,12 +321,17 @@ def test_stop_training_at_trainer_server():
     handler.stop_training_at_trainer_server(training_id)
 
 
-def test_prepare_evaluation_request():
+@pytest.mark.parametrize("tokenizer", [None, "DistilBertTokenizerTransform"])
+def test_prepare_evaluation_request(tokenizer: str):
     dataset_config = get_minimal_dataset_config()
-    dataset_config.tokenizer = "DistilBertTokenizerTransform"
-    request = GRPCHandler.prepare_evaluation_request(
-        dataset_config.model_dump(by_alias=True), 23, "cpu", start_timestamp=42, end_timestamp=43
-    )
+    dataset_config.tokenizer = tokenizer
+    intervals = [
+        (None, None),
+        (None, 42),
+        (42, None),
+        (42, 43),
+    ]
+    request = GRPCHandler.prepare_evaluation_request(dataset_config.model_dump(by_alias=True), 23, "cpu", intervals)
 
     assert request.model_id == 23
     assert request.device == "cpu"
@@ -338,9 +339,24 @@ def test_prepare_evaluation_request():
     assert request.dataset_info.dataset_id == "MNIST_eval"
     assert request.dataset_info.num_dataloaders == 2
     assert json.loads(str(request.metrics[0].value))["name"] == "Accuracy"
-    assert request.tokenizer.value == "DistilBertTokenizerTransform"
-    assert request.dataset_info.start_timestamp == 42
-    assert request.dataset_info.end_timestamp == 43
+    if tokenizer:
+        assert request.HasField("tokenizer")
+        assert request.tokenizer.value == "DistilBertTokenizerTransform"
+    else:
+        assert not request.HasField("tokenizer")
+    assert len(request.dataset_info.evaluation_intervals) == len(intervals)
+    for expected_interval, interval in zip(intervals, request.dataset_info.evaluation_intervals):
+        expected_start_ts = expected_interval[0]
+        expected_end_ts = expected_interval[1]
+        if expected_start_ts:
+            assert interval.start_timestamp == expected_start_ts
+        else:
+            assert not interval.HasField("start_timestamp")
+
+        if expected_end_ts:
+            assert interval.end_timestamp == expected_end_ts
+        else:
+            assert not interval.HasField("end_timestamp")
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
@@ -349,135 +365,66 @@ def test_wait_for_evaluation_completion(*args):
     handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
     assert handler.evaluator is not None
-    eval_status_queue = mp.Queue()
-    evaluations = {
-        1: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=1, eval_status_queue=eval_status_queue
-        ),
-        2: EvaluationStatusReporter(
-            dataset_id="MNIST_big", dataset_size=5000, evaluation_id=2, eval_status_queue=eval_status_queue
-        ),
-        3: EvaluationStatusReporter(
-            dataset_id="MNIST_large", dataset_size=10000, evaluation_id=3, eval_status_queue=eval_status_queue
-        ),
-    }
 
     with patch.object(handler.evaluator, "get_evaluation_status") as status_method:
         status_method.side_effect = [
+            EvaluationStatusResponse(valid=True, is_running=True),
             EvaluationStatusResponse(valid=False),
-            EvaluationStatusResponse(valid=True, blocked=True),
-            EvaluationStatusResponse(
-                valid=True, blocked=False, is_running=True, state_available=True, batches_seen=10, samples_seen=5000
-            ),
-            EvaluationStatusResponse(valid=True, blocked=False, exception="Error"),
-            EvaluationStatusResponse(valid=True, blocked=False, is_running=False, state_available=False),
+            EvaluationStatusResponse(valid=True, is_running=False),
         ]
-        handler.wait_for_evaluation_completion(10, evaluations)
-        assert status_method.call_count == 5
+        with pytest.raises(RuntimeError):
+            handler.wait_for_evaluation_completion(10)
+        assert status_method.call_count == 2
 
-        # from call get args (call[0]) then get first argument
-        called_ids = [call[0][0].evaluation_id for call in status_method.call_args_list]
-        assert called_ids == [1, 2, 3, 2, 3]
+        status_method.reset_mock()
+        status_method.side_effect = [
+            EvaluationStatusResponse(valid=True, exception="Some error"),
+            EvaluationStatusResponse(valid=True, is_running=False),
+        ]
+        assert not handler.wait_for_evaluation_completion(10)
+        assert status_method.call_count == 1
 
-
-@patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
-@patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
-def test_store_evaluation_results(*args):
-    handler = GRPCHandler(get_simple_config())
-    handler.init_cluster_connection()
-    assert handler.evaluator is not None
-
-    res = EvaluationResultResponse(
-        valid=True,
-        evaluation_data=[EvaluationData(metric="Accuracy", result=0.5), EvaluationData(metric="F1-score", result=0.75)],
-    )
-    eval_status_queue = mp.Queue()
-    evaluations = {
-        10: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=eval_status_queue
-        ),
-        15: EvaluationStatusReporter(
-            dataset_id="MNIST_large", dataset_size=5000, evaluation_id=15, eval_status_queue=eval_status_queue
-        ),
-    }
-
-    with tempfile.TemporaryDirectory() as path:
-        with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
-            eval_dir = pathlib.Path(path)
-            handler.store_evaluation_results([DedicatedJsonResultWriter(5, 3, eval_dir)], evaluations)
-            assert get_method.call_count == 2
-
-            called_ids = [call[0][0].evaluation_id for call in get_method.call_args_list]
-            assert called_ids == [10, 15]
-
-            file_path = eval_dir / f"{5}_{3}.eval"
-            assert file_path.exists() and file_path.is_file()
-
-            with open(file_path, "r", encoding="utf-8") as eval_file:
-                evaluation_results = json.load(eval_file)
-                assert evaluation_results == json.loads(
-                    """{
-                    "datasets": [
-                        {
-                            "MNIST_small": {
-                                "dataset_size": 1000,
-                                "metrics": [
-                                    {
-                                        "name": "Accuracy",
-                                        "result": 0.5
-                                    },
-                                    {
-                                        "name": "F1-score",
-                                        "result": 0.75
-                                    }
-                                ]
-                            }
-                        },
-                        {
-                            "MNIST_large": {
-                                "dataset_size": 5000,
-                                "metrics": [
-                                    {
-                                        "name": "Accuracy",
-                                        "result": 0.5
-                                    },
-                                    {
-                                        "name": "F1-score",
-                                        "result": 0.75
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-                }"""
-                )
+        status_method.reset_mock()
+        status_method.side_effect = [
+            EvaluationStatusResponse(valid=True, is_running=True),
+            EvaluationStatusResponse(valid=True, is_running=False),
+        ]
+        assert handler.wait_for_evaluation_completion(10)
+        assert status_method.call_count == 2
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)
 @patch("modyn.common.grpc.grpc_helpers.grpc_connection_established", return_value=True)
-def test_store_evaluation_results_invalid(*args):
+def test_get_evaluation_results(*args):
     handler = GRPCHandler(get_simple_config())
     handler.init_cluster_connection()
     assert handler.evaluator is not None
 
-    res = EvaluationResultResponse(valid=False)
-
-    evaluations = {
-        10: EvaluationStatusReporter(
-            dataset_id="MNIST_small", dataset_size=1000, evaluation_id=10, eval_status_queue=mp.Queue()
+    evaluation_data = [
+        EvaluationIntervalData(
+            evaluation_data=[
+                SingleMetricResult(metric="Accuracy", result=0.42),
+                SingleMetricResult(metric="Loss", result=0.13),
+            ]
+        ),
+        EvaluationIntervalData(
+            evaluation_data=[
+                SingleMetricResult(metric="Accuracy", result=0.43),
+                SingleMetricResult(metric="Loss", result=0.14),
+            ]
+        ),
+    ]
+    with patch.object(handler.evaluator, "get_evaluation_result") as result_method:
+        result_method.return_value = EvaluationResultResponse(
+            evaluation_results=evaluation_data,
+            valid=True,
         )
-    }
-
-    with tempfile.TemporaryDirectory() as path:
-        with patch.object(handler.evaluator, "get_evaluation_result", return_value=res) as get_method:
-            eval_dir = pathlib.Path(path)
-
-            handler.store_evaluation_results([DedicatedJsonResultWriter(5, 3, eval_dir)], evaluations)
-            get_method.assert_called_with(EvaluationResultRequest(evaluation_id=10))
-
-            file_path = eval_dir / f"{5}_{3}.eval"
-            assert file_path.exists() and file_path.is_file()
-
-            with open(file_path, "r", encoding="utf-8") as eval_file:
-                evaluation_results = json.load(eval_file)
-                assert evaluation_results["datasets"] == []
+        res = handler.get_evaluation_results(10)
+        result_method.assert_called_once_with(EvaluationResultRequest(evaluation_id=10))
+        assert res == evaluation_data
+        result_method.reset_mock()
+        result_method.return_value = EvaluationResultResponse(
+            valid=False,
+        )
+        with pytest.raises(RuntimeError):
+            handler.get_evaluation_results(15)
