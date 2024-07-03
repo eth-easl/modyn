@@ -55,7 +55,8 @@ class DataDriftTrigger(Trigger):
 
         if self.config.windowing_strategy.id == "AmountWindowingStrategy":
             if len(self._current_window) > self.config.windowing_strategy.amount:
-                self._current_window = self._current_window[self.config.windowing_strategy.amount :]
+                items_to_remove = len(self._current_window) - self.config.windowing_strategy.amount
+                self._current_window = self._current_window[items_to_remove:]
         elif self.config.windowing_strategy.id == "TimeWindowingStrategy":
             highest_timestamp = new_data[-1][1]
             cutoff = highest_timestamp - self.config.windowing_strategy.limit_seconds
@@ -71,8 +72,8 @@ class DataDriftTrigger(Trigger):
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         drift_eval_log = DriftTriggerEvalLog(
-            detection_idx_start=self._current_window[0],
-            detection_idx_end=self._current_window[-1],
+            detection_idx_start=self._current_window[0][1],
+            detection_idx_end=self._current_window[-1][1],
             triggered=triggered,
             trigger_index=-1,
             drift_results=drift_results,
@@ -93,13 +94,38 @@ class DataDriftTrigger(Trigger):
     def inform(
         self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
     ) -> Generator[int, None, None]:
-        """Decides whether to trigger retraining on a batch of new data based on data drift.
+        """Analyzes a batch of new data to determine if data drift has occurred and triggers retraining if necessary.
 
-            We keep a reference and a current window. TODO: write ddocstring
+        This method maintains a reference window and a current window of data points. The reference window contains
+        data points from the period before the last detected drift, while the current window accumulates incoming data
+        points until a detection interval is reached. When the number of data points in the current window reaches the
+        detection interval threshold, drift detection is performed. If drift is detected, the reference window is
+        updated with the current window's data, and depending on the configuration, the current window is either reset
+        or extended for the next round of detection.
+
+        The method works as follows:
+        1. Extract keys and timestamps from the incoming data points.
+        2. Determine the offset, which is the number of data points in the current window that have not yet contributed
+        to a drift detection.
+        3. If the sum of the offset and the length of the new data is less than the detection interval, update the
+        current window with the new data and return without performing drift detection.
+        4. If the detection interval is reached, update the current window up to the point of detection and perform
+        drift detection.
+        5. If drift is detected or if it's the first run (and thus always triggers), handle the drift result by
+        updating the reference window and possibly resetting or extending the current window.
+        6. Continue processing any remaining new data in batches according to the detection interval, performing
+        drift detection on each batch.
+
+        Note: The method is a generator and must be iterated over to execute its logic.
         Args:
-            new_data: List of new data (keys, timestamps, labels)
-            log: The log to store the trigger policy evaluation results to be able to verify trigger decisions
-        """
+            new_data: A list of new data points, 
+                where each data point is a tuple containing a key, a timestamp, and a label.
+            log: An optional log object to store the results of the trigger policy evaluation.
+
+        Yields:
+            The index of the data point that triggered the drift detection. This is used to identify the point in the
+            data stream where the model's performance may have started to degrade due to drift."""
+
         new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
         detect_interval = self.config.detection_interval_data_points
         offset = self._total_items_in_current_window % detect_interval

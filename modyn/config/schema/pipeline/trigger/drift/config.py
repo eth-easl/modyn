@@ -62,7 +62,7 @@ class DataDriftTriggerConfig(ModynBaseModel):
         1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
     )
     windowing_strategy: DriftWindowingStrategy = Field(
-        AmountWindowingStrategy, description="Which windowing strategy to use for current and reference data"
+        AmountWindowingStrategy(), description="Which windowing strategy to use for current and reference data"
     )
 
     reset_current_window_on_trigger: bool = Field(
