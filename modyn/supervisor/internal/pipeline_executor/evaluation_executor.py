@@ -4,6 +4,7 @@ import datetime
 import logging
 import pickle
 import sys
+from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import partial
@@ -229,10 +230,10 @@ class EvaluationExecutor:
         logs = SupervisorLogs()
 
         # do batching by (dataset_id, model_id)
-        eval_requests_by_model: dict[tuple[str, int], list[EvalRequest]] = {}
+        eval_requests_by_model: dict[tuple[str, int], list[EvalRequest]] = defaultdict(list)
         for eval_req in eval_requests:
             key_ = (eval_req.dataset_id, eval_req.id_model)
-            eval_requests_by_model[key_] = eval_requests_by_model.get(key_, []) + [eval_req]
+            eval_requests_by_model[key_] += [eval_req]
 
         def worker_func(model_eval_req: tuple[tuple[str, int], list[EvalRequest]]) -> StageLog:
             """
@@ -354,13 +355,25 @@ class EvaluationExecutor:
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
 
-        eval_results: list[tuple[str | None, dict[str, Any]]] = []
         assert len(eval_data) == len(intervals), f"We expected {len(intervals)} intervals, but got {len(eval_data)}."
         assert eval_data
 
-        # as the dataset_size comes from the `EvaluateModelResponse` and response is a dense list (no intervals are
-        # skipped), we build a list of results with the same order as the intervals.
-        # the metrics will be filled in the next loop that unwraps `EvaluationResultResponse`.
+        eval_results: list[tuple[str | None, dict[str, Any]]] = []
+
+        # ---------------------------------------------- Result Builder ---------------------------------------------- #
+        # The `eval_results` list is a list of tuples. Each tuple contains a failure reason (if any) and a dictionary
+        # with the evaluation results. The order of the tuples corresponds to the order of the intervals.
+        #
+        # response.interval_responses contains the evaluation results for each interval in the same order as the
+        # intervals in the request. Failed evaluations are marked with a failure reason.
+
+        # Metric results come from the `EvaluateModelResponse` and are stored in the `evaluation_data` field. This
+        # only contains the metrics for the intervals that were successfully evaluated.
+        #
+        # Therefore we first build a list of results with the same order as the intervals. The metrics will be filled in
+        # the next loop that unwraps `EvaluationResultResponse`.
+        # ----------------------------------------------------- . ---------------------------------------------------- #
+
         for interval_response in response.interval_responses:
             if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
                 reason = get_failure_reason(interval_response.eval_aborted_reason)
