@@ -87,8 +87,10 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             backend="pytorch",
             p_val=config.p_val,
             kernel=kernel,
-            n_permutations=config.num_permutations,
+            n_permutations=config.num_permutations or 1,
             device=config.device,
+            configure_kernel_from_x_ref=config.configure_kernel_from_x_ref,
+            x_ref_preprocessed=config.x_ref_preprocessed,
         )
 
     if isinstance(config, AlibiDetectKSDriftMetric):
@@ -97,6 +99,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             alternative=config.alternative_hypothesis,
             correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
         )
 
     if isinstance(config, AlibiDetectCVMDriftMetric):
@@ -104,6 +107,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             x_ref=embeddings_ref,
             p_val=config.p_val,
             correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
         )
 
     raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")

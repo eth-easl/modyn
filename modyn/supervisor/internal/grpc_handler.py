@@ -163,7 +163,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
-        # pylint: disable=c-extension-no-member
         response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(
             storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()  # type: ignore
         )

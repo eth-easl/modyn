@@ -6,12 +6,7 @@ from pydantic import Field
 
 class _AlibiDetectBaseDriftMetric(ModynBaseModel):
     p_val: float = Field(0.05, description="The p-value threshold for the drift detection.")
-
-    # to be added in the future:
-
-    # x_ref_preprocessed
-    # preprocess_at_init
-    # configure_kernel_from_x_ref
+    x_ref_preprocessed: bool = Field(False)
 
 
 class AlibiDetectDeviceMixin(ModynBaseModel):
@@ -32,15 +27,17 @@ class _AlibiDetectAlternativeMixin(ModynBaseModel):
 
 class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin):
     id: Literal["AlibiDetectMmdDriftMetric"] = Field("AlibiDetectMmdDriftMetric")
-    num_permutations: int = Field(
-        100,
+    num_permutations: int | None = Field(
+        None,
         description=(
-            "The number of permutations used in the MMD hypothesis permutation test. 100 is the alibi-detect default."
+            "The number of permutations used in the MMD hypothesis permutation test. 100 is the alibi-detect default. "
+            "None disables hypothesis testing"
         ),
     )
     kernel: str = Field(
         "GaussianRBF", description="The kernel used for distance calculation imported from alibi_detect.utils.pytorch"
     )
+    configure_kernel_from_x_ref: bool = Field(True)
 
 
 class AlibiDetectKSDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectAlternativeMixin, _AlibiDetectCorrectionMixin):

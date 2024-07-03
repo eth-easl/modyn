@@ -52,7 +52,7 @@ storage:
       },
       # ---------------------------------- YEARBOOK ---------------------------------- #
       {
-        name: "yearbook-train",
+        name: "yearbook_train",
         description: "Yearbook Dataset from Wild-Time (training set)",
         version: "0.0.1",
         base_path: "/datasets/yearbook/train",
