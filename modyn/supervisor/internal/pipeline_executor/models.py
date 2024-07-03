@@ -401,6 +401,7 @@ StageInfoUnion = Union[
     TriggerExecutionInfo,
     TrainingInfo,
     StoreModelInfo,
+    MultiEvaluationInfo,
     SingleEvaluationInfo,
     SelectorInformInfo,
 ]

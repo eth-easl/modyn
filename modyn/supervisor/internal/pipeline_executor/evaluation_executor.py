@@ -268,11 +268,12 @@ class EvaluationExecutor:
                 sample_idx=parent_log.sample_idx,
                 sample_time=parent_log.sample_time,
                 trigger_idx=parent_log.trigger_idx,
-                info=MultiEvaluationInfo(
-                    dataset_id=dataset_id,
-                    model_id=model_id,
-                    interval_results=interval_result_infos,
-                ),
+                info=None,
+            )
+            single_log.info = MultiEvaluationInfo(
+                dataset_id=dataset_id,
+                id_model=model_id,
+                interval_results=interval_result_infos,
             )
             single_log.end = datetime.datetime.now()
             single_log.duration = datetime.timedelta(microseconds=current_time_micros() - epoch_micros_start)
