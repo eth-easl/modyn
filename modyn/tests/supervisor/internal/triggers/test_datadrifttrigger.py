@@ -176,13 +176,13 @@ def test_time_windowing_strategy_update(drift_trigger_config: DataDriftTriggerCo
 
     # Inform with initial data points
     list(trigger.inform([(1, 100, 1), (2, 104, 1), (3, 105, 1)]))
-    assert len(trigger._current_window) == 2, "Current window should contain 2 data points."
+    assert len(trigger._current_window) == 3, "Current window should contain 3 data points."
 
     # Inform with additional data points outside the time window
     list(trigger.inform([(4, 111, 1), (5, 115, 1)]))
-    assert len(trigger._current_window) == 2, "Current window should contain only recent data within 10 seconds."
+    assert len(trigger._current_window) == 3, "Current window should contain only recent data within 10 seconds."
     # Since the window is inclusive, we have 105 in there!
-    assert trigger._current_window[0][0] == 4, "Data points outside the time window should be dropped."
+    assert trigger._current_window[0][0] == 3, "Data points outside the time window should be dropped."
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
