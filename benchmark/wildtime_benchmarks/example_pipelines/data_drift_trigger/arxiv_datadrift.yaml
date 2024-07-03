@@ -42,7 +42,6 @@ data:
 trigger:
   id: DataDriftTrigger
   detection_interval_data_points: 100000
-  sample_size: 5000
   metrics:
     ev_mmd:
       id: EvidentlyModelDriftMetric
