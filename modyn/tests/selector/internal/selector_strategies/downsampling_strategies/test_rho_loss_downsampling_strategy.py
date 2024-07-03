@@ -410,7 +410,7 @@ def test_inform_next_trigger_simple(
     return_value=True,
 )
 @patch.object(RHOLossDownsamplingStrategy, "_get_latest_rho_state")
-@patch.object(RHOLossDownsamplingStrategy, "_train_il_model", return_value=(42, {}))
+@patch.object(RHOLossDownsamplingStrategy, "_train_il_model")
 @patch.object(RHOLossDownsamplingStrategy, "_get_sampling_query")
 @patch.object(RHOLossDownsamplingStrategy, "_persist_holdout_set")
 @patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")
@@ -443,7 +443,7 @@ def test_inform_next_trigger_twin(
     mock__get_sampling_query.return_value = mock_query
     mock_second_query = MagicMock()
     mock__get_rest_data_query.return_value = mock_second_query
-    mock__train_il_model.side_effect = [1, 2]
+    mock__train_il_model.side_effect = [(1, {}), (2, {})]
     mock_get_latest_rho_state.return_value = rho_state
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
