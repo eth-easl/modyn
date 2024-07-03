@@ -54,6 +54,8 @@ message EvaluateModelIntervalResponse {
 
 message EvaluateModelResponse {
   // only when all interval evaluations failed, this field will be set to false
+  // it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+  // the client can always check the interval_responses
   bool evaluation_started = 1;
   int32 evaluation_id = 2;
   // always has the same size as the number of intervals

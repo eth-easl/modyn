@@ -313,13 +313,12 @@ class EvaluationExecutor:
         # here we assume only one interval is evaluated
         eval_results: dict = {"dataset_size": response.interval_responses[0].dataset_size, "metrics": []}
 
-        for single_eval_data in eval_data:
-            if single_eval_data.interval_index == 0:
-                for metric in single_eval_data.evaluation_data:
-                    eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
-                return None, eval_results
-        # this shouldn't happen
-        raise RuntimeError("No evaluation data found")
+        assert len(eval_data) == 1, "The evaluation request only contains one interval so we expect only one result."
+        assert eval_data[0].interval_index == 0
+        for metric in eval_data[0].evaluation_data:
+            eval_results["metrics"].append({"name": metric.metric, "result": metric.result})
+
+        return None, eval_results
 
 
 # ------------------------------------------------------------------------------------ #
