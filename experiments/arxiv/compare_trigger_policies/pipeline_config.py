@@ -55,7 +55,7 @@ def gen_pipeline_config(
             maximum_keys_in_memory=10000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
-            dataset_id="arxiv_kaggle",
+            dataset_id="arxiv_kaggle_train",
             bytes_parser_function=("def bytes_parser_function(data: bytes) -> str:\n" "    return str(data, 'utf8')"),
             tokenizer="DistilBertTokenizerTransform",
         ),
@@ -92,7 +92,7 @@ def gen_pipeline_config(
                         ),
                     ],
                 )
-                for yb_dataset_name in ["arxiv_kaggle", "arxiv_kaggle_test"]
+                for yb_dataset_name in ["arxiv_kaggle_all", "arxiv_kaggle_train", "arxiv_kaggle_test"]
             ],
         ),
     )

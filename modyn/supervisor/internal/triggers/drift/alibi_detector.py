@@ -39,8 +39,10 @@ class AlibiDriftDetector(DriftDetector):
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
     ) -> dict[str, MetricResult]:
-        assert isinstance(embeddings_ref, np.ndarray)
-        assert isinstance(embeddings_cur, np.ndarray)
+        assert isinstance(embeddings_ref, (np.ndarray, torch.Tensor))
+        assert isinstance(embeddings_cur, (np.ndarray, torch.Tensor))
+        embeddings_ref = embeddings_ref.numpy() if isinstance(embeddings_ref, torch.Tensor) else embeddings_ref
+        embeddings_cur = embeddings_cur.numpy() if isinstance(embeddings_cur, torch.Tensor) else embeddings_cur
 
         results: dict[str, MetricResult] = {}
 
