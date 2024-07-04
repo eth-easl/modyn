@@ -104,7 +104,7 @@ def run_experiment() -> None:
     run_id = 0
     for seed in seeds:
         for triggering_strategy_id, triggering_strategy in gen_triggering_strategies():
-            if isinstance(triggering_strategy, DataDriftTriggerConfig) and seed != seed[0]:
+            if isinstance(triggering_strategy, DataDriftTriggerConfig) and seed != seeds[0]:
                 continue # only execute drift triggers once
 
             pipeline_config = gen_yearbook_triggering_config(
