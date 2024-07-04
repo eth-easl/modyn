@@ -123,9 +123,11 @@ def test_eval_forward_mixed(twin_model: RHOLOSSTwinModel):
     assert torch.allclose(output, torch.tensor([[1.0] * 10, [0.0] * 10, [0.0] * 10, [1.0] * 10, [0.0] * 10]))
 
 
-def test_backup_and_restore_state(twin_model: RHOLOSSTwinModel):
-    twin_model.model._models_seen_ids = [{1, 2, 3}, {}]
-    assert twin_model.model._current_model == 0
+@pytest.mark.parametrize("current_model", [0, 1])
+def test_backup_and_restore_state(current_model: int, twin_model: RHOLOSSTwinModel):
+    model_seen_ids = [{1, 2, 3}, {4, 5}]
+    twin_model.model._models_seen_ids = model_seen_ids
+    twin_model.model._current_model = current_model
     twin_model.model._models[0].output.weight = torch.nn.Parameter(torch.zeros(2, 2))
     twin_model.model._models[0].output.bias = torch.nn.Parameter(torch.zeros(2))
     twin_model.model._models[1].output.weight = torch.nn.Parameter(torch.ones(2, 2))
@@ -149,8 +151,8 @@ def test_backup_and_restore_state(twin_model: RHOLOSSTwinModel):
             checkpoint = torch.load(io.BytesIO(f.read()), map_location="cpu")
             new_twin_model.model.load_state_dict(checkpoint["model"])
 
-        assert new_twin_model.model._models_seen_ids == [{1, 2, 3}, {}]
-        assert new_twin_model.model._current_model == 1
+        assert new_twin_model.model._models_seen_ids == model_seen_ids
+        assert new_twin_model.model._current_model == 1 - current_model
         assert torch.allclose(new_twin_model.model._models[0].output.weight, torch.zeros(2, 2))
         assert torch.allclose(new_twin_model.model._models[0].output.bias, torch.zeros(2))
         assert torch.allclose(new_twin_model.model._models[1].output.weight, torch.ones(2, 2))

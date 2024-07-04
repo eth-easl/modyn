@@ -416,6 +416,7 @@ def test_inform_next_trigger_simple(
 @patch.object(RHOLossDownsamplingStrategy, "_clean_tmp_version")
 @patch.object(RHOLossDownsamplingStrategy, "_get_rest_data_query")
 @patch.object(TrainerServerGRPCHandlerMixin, "init_trainer_server", noop_init_trainer_server)
+@pytest.mark.parametrize("use_previous_model", [True, False])
 @pytest.mark.parametrize("rho_state", [None, (1, 2)])
 def test_inform_next_trigger_twin(
     mock__get_rest_data_query: MagicMock,
@@ -425,12 +426,13 @@ def test_inform_next_trigger_twin(
     mock__train_il_model: MagicMock,
     mock_get_latest_rho_state: MagicMock,
     mock_is_instance: MagicMock,
+    use_previous_model: bool,
     rho_state: Optional[Tuple[int, int]],
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
 ):
     pipeline_id = register_pipeline(None, data_config)
-    il_training_config.use_previous_model = False
+    il_training_config.use_previous_model = use_previous_model
     modyn_config = get_minimal_modyn_config()
     downsampling_config = RHOLossDownsamplingConfig(
         ratio=60,
@@ -443,7 +445,7 @@ def test_inform_next_trigger_twin(
     mock__get_sampling_query.return_value = mock_query
     mock_second_query = MagicMock()
     mock__get_rest_data_query.return_value = mock_second_query
-    mock__train_il_model.side_effect = [(1, {}), (2, {})]
+    mock__train_il_model.side_effect = [(3, {}), (4, {})]
     mock_get_latest_rho_state.return_value = rho_state
 
     strategy = RHOLossDownsamplingStrategy(downsampling_config, modyn_config, pipeline_id, maximum_keys_in_memory)
@@ -456,7 +458,18 @@ def test_inform_next_trigger_twin(
 
     mock_get_latest_rho_state.assert_called_once_with(strategy.rho_pipeline_id, modyn_config)
     rho_trigger_ids = [0, 1] if rho_state is None else [rho_state[0] + 1, rho_state[0] + 2]
-    mock__train_il_model.assert_has_calls([call(rho_trigger_ids[0], None), call(rho_trigger_ids[1], 1)])
+
+    if use_previous_model:
+        expected_first_prev_model_id = rho_state[1] if rho_state is not None else None
+    else:
+        expected_first_prev_model_id = None
+    expected_second_prev_model_id = 3  # 3 is the first returned value from mock__train_il_model
+    mock__train_il_model.assert_has_calls(
+        [
+            call(rho_trigger_ids[0], expected_first_prev_model_id),
+            call(rho_trigger_ids[1], expected_second_prev_model_id),
+        ]
+    )
     mock__persist_holdout_set.assert_has_calls(
         [call(mock_query, rho_trigger_ids[0], ANY), call(mock_second_query, rho_trigger_ids[1], ANY)]
     )

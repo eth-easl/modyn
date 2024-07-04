@@ -36,12 +36,27 @@ class RHOLOSSTwinModelModyn(nn.Module):
     def get_extra_state(self) -> dict:
         return {
             "models_seen_ids": self._models_seen_ids,
+            "current_model": self._current_model,
         }
 
     def set_extra_state(self, state: dict) -> None:
         self._models_seen_ids = state["models_seen_ids"]
-        # the second time we train on this model, we should switch to the other model
-        self._current_model = 1
+        previous_model = state["current_model"]
+        # the lifecycle of a twin model:
+        # 1. initialized with random state or the previous twin model state depending
+        # on whether `use_previous_model` is set. If the former, set_extra_state is not called so
+        # self._current_model is 0. If the latter, set_extra_state is called with the state of the previous model
+        # where "current_model" is 1. In the end self._current_model is also 1 - 1 = 0.
+        #
+        # 2. When the model is trained for the first time, self._current_model is 0. The first half is trained.
+        # After the first training, it's state is stored with "current_model" = 0 (with a new model id).
+        #
+        # 3. When the model is trained for the second time, the state is loaded with "current_model" = 0.
+        # So self._current_model = 1 - 0 = 1. The second half is trained.
+        #
+        # 4. The model is loaded again in the irreducible loss producer.
+        # The value of self._current_model does not matter as we do not re-store it.
+        self._current_model = 1 - previous_model
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None
