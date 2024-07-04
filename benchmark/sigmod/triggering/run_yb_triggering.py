@@ -41,7 +41,7 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
         strategies.append((f"timetrigger_{years}y", TimeTriggerConfig(every=f"{years}d")))
 
     # DataAmountTriggers
-    for count in [100, 500, 1000, 2000, 10000]:
+    for count in [500, 1000, 2000, 10000]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
     # DriftTriggers
