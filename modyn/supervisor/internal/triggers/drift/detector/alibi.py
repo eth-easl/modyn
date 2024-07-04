@@ -10,7 +10,7 @@ from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDri
 from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
 
-from .drift_detector import DriftDetector
+from .drift import DriftDetector
 
 _AlibiMetrics = Union[
     MMDDrift,
@@ -38,6 +38,7 @@ class AlibiDriftDetector(DriftDetector):
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         assert isinstance(embeddings_ref, (np.ndarray, torch.Tensor))
         assert isinstance(embeddings_cur, (np.ndarray, torch.Tensor))
@@ -47,6 +48,9 @@ class AlibiDriftDetector(DriftDetector):
         results: dict[str, MetricResult] = {}
 
         for metric_ref, config in self.metrics_config.items():
+            if is_warmup and not config.decision_criterion.needs_calibration:
+                continue
+
             metric = _alibi_detect_metric_factory(config, embeddings_ref)
             result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)
             _dist = (

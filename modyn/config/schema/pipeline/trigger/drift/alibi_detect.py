@@ -3,8 +3,10 @@ from typing import Annotated, Literal, Union
 from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field, model_validator
 
+from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
 
-class _AlibiDetectBaseDriftMetric(ModynBaseModel):
+
+class _AlibiDetectBaseDriftMetric(BaseMetric):
     p_val: float = Field(0.05, description="The p-value threshold for the drift detection.")
     x_ref_preprocessed: bool = Field(False)
 
@@ -51,7 +53,7 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         if self.threshold is not None and self.num_permutations is not None:
             raise ValueError(
                 "threshold and num_permutations are mutually exclusive."
-                + "Please specify whether you want to use hypothosis testing "
+                + "Please specify whether you want to use hypothesis testing "
                 + "or threshold comparison for making drift decisions."
             )
 

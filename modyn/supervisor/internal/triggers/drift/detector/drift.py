@@ -3,6 +3,7 @@ from abc import ABC
 import numpy as np
 import pandas as pd
 import torch
+
 from modyn.config.schema.pipeline.trigger.drift.config import DriftMetric
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 
@@ -20,5 +21,6 @@ class DriftDetector(ABC):
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         raise NotImplementedError()

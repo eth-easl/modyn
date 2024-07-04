@@ -11,7 +11,7 @@ from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
 from modyn.config.schema.pipeline import EvidentlyDriftMetric, MetricResult
 
-from .drift_detector import DriftDetector
+from .drift import DriftDetector
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ class EvidentlyDriftDetector(DriftDetector):
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         assert isinstance(embeddings_ref, pd.DataFrame)
         assert isinstance(embeddings_cur, pd.DataFrame)
@@ -44,7 +45,13 @@ class EvidentlyDriftDetector(DriftDetector):
         column_mapping = ColumnMapping(embeddings={EVIDENTLY_COLUMN_MAPPING_NAME: embeddings_ref.columns})
 
         # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
-        report = Report(metrics=[self.evidently_metrics[name] for name in self.evidently_metrics])
+        report = Report(
+            metrics=[
+                self.evidently_metrics[name][1]
+                for name in self.evidently_metrics
+                if not is_warmup or self.evidently_metrics[name][0].decision_criterion.needs_calibration
+            ]
+        )
         report.run(reference_data=embeddings_ref, current_data=embeddings_cur, column_mapping=column_mapping)
         results_raw = report.as_dict()
 
@@ -65,7 +72,9 @@ class EvidentlyDriftDetector(DriftDetector):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def _get_evidently_metrics(metrics_config: dict[str, EvidentlyDriftMetric]) -> dict[str, EmbeddingsDriftMetric]:
+def _get_evidently_metrics(
+    metrics_config: dict[str, EvidentlyDriftMetric]
+) -> dict[str, tuple[EvidentlyDriftMetric, EmbeddingsDriftMetric]]:
     """This function instantiates an Evidently metric given metric configuration.
     If we want to support multiple metrics in the future, we can loop through the configurations.
 
@@ -75,7 +84,7 @@ def _get_evidently_metrics(metrics_config: dict[str, EvidentlyDriftMetric]) -> d
     Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
     """
     metrics = {
-        metric_ref: EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config))
+        metric_ref: (config, EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config)))
         for metric_ref, config in metrics_config.items()
     }
     return metrics

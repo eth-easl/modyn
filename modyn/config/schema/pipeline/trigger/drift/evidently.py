@@ -1,10 +1,11 @@
 from typing import Annotated, Literal, Union
 
-from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field
 
+from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
 
-class _EvidentlyBaseDriftMetric(ModynBaseModel):
+
+class _EvidentlyBaseDriftMetric(BaseMetric):
     num_pca_component: int | None = Field(None)
 
 
