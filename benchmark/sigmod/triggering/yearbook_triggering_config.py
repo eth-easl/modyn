@@ -68,7 +68,7 @@ def gen_yearbook_triggering_config(
         selection_strategy=NewDataStrategyConfig(
             maximum_keys_in_memory=100000, storage_backend="database", tail_triggers=0, limit=-1
         ),
-        data=DataConfig(dataset_id="yearbook", bytes_parser_function=bytes_parser_func),
+        data=DataConfig(dataset_id="yearbook_train", bytes_parser_function=bytes_parser_func),
         trigger=trigger_config,
         evaluation=EvaluationConfig(
             handlers=[
@@ -76,7 +76,7 @@ def gen_yearbook_triggering_config(
                     name="slidingmatrix",
                     execution_time="after_pipeline",
                     models="matrix",
-                    datasets=["yearbook-test"],
+                    datasets=["yearbook_test"],
                     strategy=PeriodicEvalStrategyConfig(
                         every="1d", interval="[-25h; +25h]", start_timestamp=0, end_timestamp=7258000
                     ),
@@ -130,7 +130,7 @@ def gen_yearbook_triggering_config(
                         ),
                     ],
                 )
-                for dataset in ["yearbook", "yearbook-test"]
+                for dataset in ["yearbook_train", "yearbook_test"]
             ],
         ),
     )

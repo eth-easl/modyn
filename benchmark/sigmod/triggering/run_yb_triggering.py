@@ -37,7 +37,7 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
     strategies = []
 
     # TimeTriggers
-    for years in [1, 3, 5, 15, 25, 40]:
+    for years in [3, 5, 15, 25, 40]:
         strategies.append((f"timetrigger_{years}y", TimeTriggerConfig(every=f"{years}d")))
 
     # DataAmountTriggers
@@ -104,6 +104,9 @@ def run_experiment() -> None:
     run_id = 0
     for seed in seeds:
         for triggering_strategy_id, triggering_strategy in gen_triggering_strategies():
+            if isinstance(triggering_strategy, DataDriftTriggerConfig) and seed != seed[0]:
+                continue # only execute drift triggers once
+
             pipeline_config = gen_yearbook_triggering_config(
                 triggering_strategy_id, train_gpu, triggering_strategy, seed
             )
