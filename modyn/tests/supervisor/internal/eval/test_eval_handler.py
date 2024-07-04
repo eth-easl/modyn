@@ -1,6 +1,7 @@
 from typing import Iterable
 
 import pandas as pd
+
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.static import StaticEvalStrategyConfig
@@ -74,6 +75,8 @@ def test_get_eval_requests_after_pipeline() -> None:
         EvalInterval(start=23, end=27, active_model_trained_before=25),
         EvalInterval(start=24, end=28, active_model_trained_before=26),
         EvalInterval(start=25, end=29, active_model_trained_before=27),
+        EvalInterval(start=30, end=32, active_model_trained_before=31),
+        EvalInterval(start=33, end=35, active_model_trained_before=34),
     ]
 
     eval_handler = EvalHandler(
@@ -127,7 +130,24 @@ def test_get_eval_requests_after_pipeline() -> None:
         (23, False, False, 25, 29),
         (26, False, False, 25, 29),
         (27, False, False, 25, 29),
-        (28, True, False, 25, 29),
+        # note that there's no next model for the last interval, so we define the currently active model to serve as
+        # the currently trained model so that the evaluation plot is not empty at the end for the currently
+        # trained model
+        (28, True, True, 25, 29),
+        # interval 6: for models/triggers 1-8
+        (21, False, False, 30, 32),
+        (22, False, False, 30, 32),
+        (23, False, False, 30, 32),
+        (26, False, False, 30, 32),
+        (27, False, False, 30, 32),
+        (28, True, True, 30, 32),
+        # interval 7: for models/triggers 1-8
+        (21, False, False, 33, 35),
+        (22, False, False, 33, 35),
+        (23, False, False, 33, 35),
+        (26, False, False, 33, 35),
+        (27, False, False, 33, 35),
+        (28, True, True, 33, 35),
     ]
 
     assert [
