@@ -147,6 +147,9 @@ class ILTrainingConfig(TrainingConfig):
     initial_model: Literal["random"] = "random"
     initial_model_id: Literal[None] = None
     checkpointing: NoCheckpointingConfig = Field(default=NoCheckpointingConfig())
+    drop_last_batch: bool = Field(
+        default=False, description="Whether to drop the last batch if it is smaller than the batch size."
+    )
 
 
 class RHOLossDownsamplingConfig(BaseDownsamplingConfig):

@@ -70,8 +70,9 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # self._next_trigger_id after the call to super().trigger() because later the remote downsampler on trainer
         # server needs to fetch configuration for the current trigger
 
-        self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
-        trigger_id, total_keys_in_trigger, num_partitions, log = super().trigger()
+        downsampler_log = self.downsampling_scheduler.inform_next_trigger(self._next_trigger_id, self._storage_backend)
+        trigger_id, total_keys_in_trigger, num_partitions, tss_log = super().trigger()
+        log: dict[str, object] = {"downsampler_log": downsampler_log, "trigger_sample_storage_log": tss_log}
         return trigger_id, total_keys_in_trigger, num_partitions, log
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:

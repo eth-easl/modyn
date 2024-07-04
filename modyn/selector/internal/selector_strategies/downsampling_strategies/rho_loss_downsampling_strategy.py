@@ -44,10 +44,13 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         self.rho_pipeline_id: int = rho_pipeline_id
         self.data_config = data_config
 
-    def inform_next_trigger(self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend) -> None:
+    # pylint: disable-next=too-many-locals
+    def inform_next_trigger(
+        self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend
+    ) -> dict[str, object]:
         if not isinstance(selector_storage_backend, DatabaseStorageBackend):
             raise ValueError("RHOLossDownsamplingStrategy requires a DatabaseStorageBackend")
-
+        rho_log: dict[str, object] = {}
         probability = self.holdout_set_ratio / self.holdout_set_ratio_max
 
         query = self._get_sampling_query(self._pipeline_id, next_trigger_id, probability, selector_storage_backend)
@@ -66,22 +69,29 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             previous_model_id = last_model_id
         else:
             previous_model_id = None
-
-        model_id = self._train_il_model(next_rho_trigger_id, previous_model_id)
+        model_id, trainer_log = self._train_il_model(next_rho_trigger_id, previous_model_id)
+        rho_log["main_trigger_id"] = next_trigger_id
+        rho_log["rho_trigger_id"] = next_rho_trigger_id
+        rho_log["il_model_id"] = model_id
+        rho_log["trainer_log"] = trainer_log
         logger.info(
-            f"Trained IL model {model_id} for trigger {next_rho_trigger_id} in rho pipeline"
-            f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+            f"Trained IL model {model_id} for main trigger {next_trigger_id} in rho pipeline"
+            f"{self.rho_pipeline_id} with rho trigger id {next_rho_trigger_id}."
         )
         if self.holdout_set_strategy == "Twin":
             second_next_trigger_id = next_rho_trigger_id + 1
             second_query = self._get_rest_data_query(self._pipeline_id, next_trigger_id)
             self._persist_holdout_set(second_query, second_next_trigger_id, selector_storage_backend)
-            self._train_il_model(second_next_trigger_id, model_id)
+            second_model_id, second_trainer_log = self._train_il_model(second_next_trigger_id, model_id)
+            rho_log["second_rho_trigger_id"] = second_next_trigger_id
+            rho_log["second_il_model_id"] = second_model_id
+            rho_log["second_trainer_log"] = second_trainer_log
             logger.info(
-                f"Twin strategy: Trained second IL model for trigger {next_trigger_id} in rho pipeline "
-                f"{self.rho_pipeline_id} with rho trigger id {next_trigger_id}."
+                f"Twin strategy: Trained second IL model for main trigger {next_trigger_id} in rho pipeline "
+                f"{self.rho_pipeline_id} with rho trigger id {second_next_trigger_id}."
             )
         self._clean_tmp_version(self._pipeline_id, next_trigger_id, selector_storage_backend)
+        return rho_log
 
     @staticmethod
     def _clean_tmp_version(
@@ -138,7 +148,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             assert il_model_id is not None
         return max_trigger_id, il_model_id
 
-    def _train_il_model(self, trigger_id: int, previous_model_id: Optional[int]) -> int:
+    def _train_il_model(self, trigger_id: int, previous_model_id: Optional[int]) -> Tuple[int, dict[str, object]]:
         training_id = self.grpc.start_training(
             pipeline_id=self.rho_pipeline_id,
             trigger_id=trigger_id,
@@ -146,10 +156,10 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             data_config=self.data_config,
             previous_model_id=previous_model_id,
         )
-        self.grpc.wait_for_training_completion(training_id)
+        trainer_log = self.grpc.wait_for_training_completion(training_id)
         model_id = self.grpc.store_trained_model(training_id)
         logger.info(f"Stored trained model {model_id} for trigger {trigger_id} in rho pipeline {self.rho_pipeline_id}")
-        return model_id
+        return model_id, trainer_log
 
     def _get_or_create_rho_pipeline_id_and_get_data_config(self) -> Tuple[int, DataConfig]:
 
