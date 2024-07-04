@@ -2,7 +2,7 @@ import json
 import pathlib
 import shutil
 import time
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 from integrationtests.utils import MODYN_MODELS_PATH, ImageDatasetHelper, connect_to_server, get_modyn_config

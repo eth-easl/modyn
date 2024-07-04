@@ -124,7 +124,10 @@ class EvalHandler:
         # most recent model.
         # For that we first build a model -> successor model mapping:
         model_successor_relation = df_active_models[["id_model"]].drop_duplicates().sort_values(by="id_model")
-        model_successor_relation["next_id_model"] = model_successor_relation["id_model"].shift(-1, fill_value=-1)
+        last_model_id = model_successor_relation["id_model"].max()
+        model_successor_relation["next_id_model"] = model_successor_relation["id_model"].shift(
+            -1, fill_value=last_model_id
+        )
 
         # if there's no active model for the first interval(s), we still need to define the next model as the
         # trained model

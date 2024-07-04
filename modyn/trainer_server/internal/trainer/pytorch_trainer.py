@@ -331,7 +331,7 @@ class PytorchTrainer:
                 if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
                     training_loss.append(loss.item())
 
-                self._num_samples += self._batch_size
+                self._num_samples += len(sample_ids)
 
                 stopw.start("OnBatchEnd", resume=True)
                 for _, callback in self._callbacks.items():

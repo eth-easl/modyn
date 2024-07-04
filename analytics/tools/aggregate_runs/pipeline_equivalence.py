@@ -18,9 +18,13 @@ def assert_pipeline_equivalence(logs: list[PipelineLogs]) -> None:
         candidate.config.pipeline.training.seed = candidates[0].config.pipeline.training.seed
         candidate.config.pipeline.training.device = candidates[0].config.pipeline.training.device
         candidate.config.pipeline.evaluation.device = candidates[0].config.pipeline.evaluation.device
-        candidate.config.pipeline.evaluation.after_pipeline_evaluation_workers = candidates[0].config.pipeline.evaluation.after_pipeline_evaluation_workers
-        candidate.config.pipeline.evaluation.after_training_evaluation_workers = candidates[0].config.pipeline.evaluation.after_training_evaluation_workers
-        
+        candidate.config.pipeline.evaluation.after_pipeline_evaluation_workers = candidates[
+            0
+        ].config.pipeline.evaluation.after_pipeline_evaluation_workers
+        candidate.config.pipeline.evaluation.after_training_evaluation_workers = candidates[
+            0
+        ].config.pipeline.evaluation.after_training_evaluation_workers
+
         if isinstance(candidate.config.pipeline.selection_strategy, CoresetStrategyConfig) and isinstance(
             candidate.config.pipeline.selection_strategy.downsampling_config, RHOLossDownsamplingConfig
         ):

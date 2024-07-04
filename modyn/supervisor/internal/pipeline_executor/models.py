@@ -321,28 +321,44 @@ class SingleEvaluationInfo(StageInfo):
             self.results.get("dataset_size", 0),
         )
 
+
+class MultiEvaluationInfo(StageInfo):
+    dataset_id: str
+    id_model: int
+    interval_results: list[SingleEvaluationInfo] = []
+
+    def df_columns(self) -> list[str]:
+        """Provide the column names of the DataFrame representation of the data."""
+        return ["id_model", "dataset_id", "num_intervals"]
+
+    @override
+    @property
+    def df_row(self) -> tuple:
+        return (self.id_model, self.dataset_id, len(self.interval_results))
+
     @classmethod
-    def results_df(cls, infos: list[SingleEvaluationInfo]) -> pd.DataFrame:
+    def results_df(cls, infos: list[MultiEvaluationInfo]) -> pd.DataFrame:
         """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
         return pd.DataFrame(
             [
                 (
                     # per request
-                    info.eval_request.trigger_id,
-                    info.eval_request.training_id,
-                    info.eval_request.id_model,
-                    info.eval_request.currently_active_model,
-                    info.eval_request.currently_trained_model,
-                    info.eval_request.eval_handler,
-                    info.eval_request.dataset_id,
-                    info.eval_request.interval_start,
-                    info.eval_request.interval_end,
-                    info.results.get("dataset_size", 0),
+                    single_info.eval_request.trigger_id,
+                    single_info.eval_request.training_id,
+                    single_info.eval_request.id_model,
+                    single_info.eval_request.currently_active_model,
+                    single_info.eval_request.currently_trained_model,
+                    single_info.eval_request.eval_handler,
+                    single_info.eval_request.dataset_id,
+                    single_info.eval_request.interval_start,
+                    single_info.eval_request.interval_end,
+                    single_info.results.get("dataset_size", 0),
                     # per metric
                     metric["name"],
                     metric["result"],
                 )
-                for info in infos
+                for single_info in infos
+                for info in single_info
                 for metric in info.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
@@ -385,6 +401,7 @@ StageInfoUnion = Union[
     TriggerExecutionInfo,
     TrainingInfo,
     StoreModelInfo,
+    MultiEvaluationInfo,
     SingleEvaluationInfo,
     SelectorInformInfo,
 ]
