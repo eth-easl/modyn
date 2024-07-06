@@ -28,7 +28,7 @@ class IrreducibleLossProducer:
         device: str,
     ) -> None:
         logger.info(f"rho pipeline {rho_pipeline_id} loading irreducible loss model {il_model_id}")
-        self.model = IrreducibleLossProducer._load_il_model(modyn_config, rho_pipeline_id, il_model_id)
+        self.model = IrreducibleLossProducer._load_il_eval_model(modyn_config, rho_pipeline_id, il_model_id)
         self.model.model.eval()
         # We probably will train the main model for multiple epochs.
         # The first time we consume a sample, we compute the irreducible loss from the il model.
@@ -73,9 +73,12 @@ class IrreducibleLossProducer:
         return model
 
     @staticmethod
-    def _load_il_model(modyn_config: dict, rho_pipeline_id: int, il_model_id: int) -> Any:
+    def _load_il_eval_model(modyn_config: dict, rho_pipeline_id: int, il_model_id: int) -> Any:
         # load the model architecture
         model = IrreducibleLossProducer._load_il_model_architecture(modyn_config, rho_pipeline_id)
+        # we need to set the model to eval mode before loading the weights
+        # as RHOLossTwinModel has different load_state_dict logic for training and eval mode
+        model.model.eval()
         # load the weights
         model_storage_stub = IrreducibleLossProducer.connect_to_model_storage(
             f"{modyn_config['model_storage']['hostname']}:{modyn_config['model_storage']['port']}"

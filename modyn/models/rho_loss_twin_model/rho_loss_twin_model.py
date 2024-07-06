@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, Mapping
 
 import torch
 from modyn.utils import dynamic_module_import
@@ -57,6 +57,10 @@ class RHOLOSSTwinModelModyn(nn.Module):
         # 4. The model is loaded again in the irreducible loss producer.
         # The value of self._current_model does not matter as we do not re-store it.
         self._current_model = 1 - previous_model
+
+        if previous_model == 1 and self.training:
+            logger.info("Finetune on a model that has been trained before. Resetting seen ids.")
+            self._models_seen_ids = [set(), set()]
 
     def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
         assert sample_ids is not None

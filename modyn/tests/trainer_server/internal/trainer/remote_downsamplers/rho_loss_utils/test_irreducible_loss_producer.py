@@ -63,8 +63,16 @@ def test__load_il_model_architecture(MockDummy, minimal_modyn_config):
     MockDummy.assert_called_once_with(model_config, "cpu", True)
 
 
+def fake_load_state_dict(self, state_dict, strict=True, assign=False):
+    # to verify that we did first set the model to eval mode before loading the state dict
+    if self.training:
+        raise RuntimeError("Cannot load state dict in training mode")
+    super(DummyModyn, self).load_state_dict(state_dict, strict, assign)
+
+
 @patch.object(IrreducibleLossProducer, "_load_il_model_architecture", return_value=get_dummy_model())
-def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
+@patch.object(DummyModyn, "load_state_dict", fake_load_state_dict)
+def test__load_il_eval_model(mock__load_il_model_architecture, minimal_modyn_config):
     expected_weight = torch.tensor([[-1231.0, 2.0], [3.0, 4.0]])
     expected_bias = torch.tensor([5.0, 667.0])
     with tempfile.NamedTemporaryFile() as model_weights_file:
@@ -93,11 +101,11 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
         ):
             rho_pipeline_id = 12
             il_model_id = 43
-            model = IrreducibleLossProducer._load_il_model(minimal_modyn_config, rho_pipeline_id, il_model_id)
+            model = IrreducibleLossProducer._load_il_eval_model(minimal_modyn_config, rho_pipeline_id, il_model_id)
             assert isinstance(model, Dummy)
             assert torch.allclose(model.model.output.weight, expected_weight)
             assert torch.allclose(model.model.output.bias, expected_bias)
-
+            assert not model.model.training
             mock_model_storage_stub.FetchModel.assert_called_once_with(
                 FetchModelRequest(model_id=il_model_id, load_metadata=True)
             )
@@ -112,7 +120,7 @@ def test__load_il_model(mock__load_il_model_architecture, minimal_modyn_config):
             )
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=get_dummy_model())
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=get_dummy_model())
 def test_get_irreducible_loss_cached(minimal_modyn_config):
     def fake_per_sample_loss(forward_output, target):
         return 27 * torch.ones(forward_output.shape[0])
@@ -130,7 +138,7 @@ def test_get_irreducible_loss_cached(minimal_modyn_config):
     assert torch.allclose(il_loss, torch.tensor([-2.0, -1.0, -3.0]))
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=get_dummy_model())
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=get_dummy_model())
 def test_get_irreducible_loss_uncached(minimal_modyn_config: dict):
     def fake_per_sample_loss(forward_output, target):
         return 27 * torch.ones(forward_output.shape[0])
