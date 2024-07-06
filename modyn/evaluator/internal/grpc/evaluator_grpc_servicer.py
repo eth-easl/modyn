@@ -245,7 +245,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
-            logger.info(f"Evaluation {evaluation_id} is still running, obtaining info from running process.")
+            logger.info(f"Evaluation {evaluation_id} is still running.")
             return EvaluationStatusResponse(valid=True, is_running=True)
 
         exception = self._check_for_evaluation_exception(evaluation_id)
