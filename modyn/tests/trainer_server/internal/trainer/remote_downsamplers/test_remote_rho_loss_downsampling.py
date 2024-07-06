@@ -45,13 +45,13 @@ def dummy_init_params(dummy_system_config: ModynConfig):
     }
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=dummy_model())
 @patch.object(AbstractRemoteDownsamplingStrategy, "__init__")
 @patch(
     "modyn.trainer_server.internal.trainer.remote_downsamplers.remote_rho_loss_downsampling.IrreducibleLossProducer",
     wraps=IrreducibleLossProducer,
 )
-def test__init__(MockIRLossProducer, mock_abstract_sampler_init__, mock__load_il_model, dummy_init_params):
+def test__init__(MockIRLossProducer, mock_abstract_sampler_init__, mock__load_il_eval_model, dummy_init_params):
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
     assert sampler.per_sample_loss_fct == dummy_init_params["per_sample_loss"]
     assert not sampler.requires_grad
@@ -72,8 +72,8 @@ def test__init__(MockIRLossProducer, mock_abstract_sampler_init__, mock__load_il
     )
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
-def test_inform_samples(mock__load_il_model, dummy_init_params):
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=dummy_model())
+def test_inform_samples(mock__load_il_eval_model, dummy_init_params):
     batch_size = 3
 
     def fake_per_sample_loss(forward_output, target):
@@ -111,8 +111,8 @@ def test_inform_samples(mock__load_il_model, dummy_init_params):
         assert torch.allclose(mock_per_sample_loss.call_args[0][1], target)
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
-def test_select_points(mock__load_il_model, dummy_init_params):
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=dummy_model())
+def test_select_points(mock__load_il_eval_model, dummy_init_params):
     dummy_init_params["batch_size"] = 5
     dummy_init_params["params_from_selector"]["downsampling_ratio"] = 60
     sampler = RemoteRHOLossDownsampling(**dummy_init_params)
@@ -124,8 +124,8 @@ def test_select_points(mock__load_il_model, dummy_init_params):
     assert torch.allclose(weights, torch.tensor([1.0, 1.0, 1.0]))
 
 
-@patch.object(IrreducibleLossProducer, "_load_il_model", return_value=dummy_model())
-def test_sample_then_batch(mock__load_il_model, dummy_init_params):
+@patch.object(IrreducibleLossProducer, "_load_il_eval_model", return_value=dummy_model())
+def test_sample_then_batch(mock__load_il_eval_model, dummy_init_params):
     batch_size = 3
     num_batches = 5
     data_size = num_batches * batch_size

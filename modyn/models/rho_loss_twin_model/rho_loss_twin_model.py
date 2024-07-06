@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional, Mapping
+from typing import Any, Optional
 
 import torch
 from modyn.utils import dynamic_module_import
