@@ -7,6 +7,7 @@ import multiprocessing as mp
 import pathlib
 import queue
 from threading import Lock
+import threading
 from typing import Optional
 
 import grpc
@@ -70,7 +71,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._evaluation_process_dict: dict[int, EvaluationProcessInfo] = {}
         # Note: This only works because the evaluator currently only uses threads, not processes!
         self._evaluation_data_dict: defaultdict[int, defaultdict[int, list[SingleMetricResult]]] = defaultdict(lambda: defaultdict(list))
-
+        self._evaluation_data_dict_locks: dict[int, threading.Lock] = {}
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._storage_stub = EvaluatorGRPCServicer.connect_to_storage(self._storage_address)
 
@@ -209,6 +210,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
 
         self._evaluation_dict[evaluation_id] = evaluation_info
+        self._evaluation_data_dict_locks[evaluation_id] = threading.Lock()
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
@@ -273,15 +275,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             return None
 
     def _drain_result_queue(self, evaluation_id: int) -> None:
-        metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
-        while True:
-            try:
-                interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
-            except queue.Empty:
-                break
-            metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
-            logger.info(f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})")
-            self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
+        with self._evaluation_data_dict_locks[evaluation_id]:
+            metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
+            while True:
+                try:
+                    interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
+                except queue.Empty:
+                    break
+                metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+                logger.info(f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})")
+                self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
 
         logger.info(f"Drained results queue for evaluation {evaluation_id}")
 
@@ -342,6 +345,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             self._evaluation_process_dict.pop(evaluation_id)
             self._evaluation_data_dict.pop(evaluation_id)
+            self._evaluation_data_dict_locks.pop(evaluation_id)
 
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
