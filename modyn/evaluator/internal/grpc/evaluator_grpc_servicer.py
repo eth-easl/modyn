@@ -248,7 +248,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Evaluation with id {evaluation_id} has not been registered")
             return EvaluationStatusResponse(valid=False)
         
-        self._drain_result_queue()
+        self._drain_result_queue(evaluation_id)
 
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
