@@ -245,11 +245,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered")
             return EvaluationStatusResponse(valid=False)
+        
+        self._drain_result_queue()
 
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Evaluation {evaluation_id} is still running.")
-            self._drain_result_queue()
             return EvaluationStatusResponse(valid=True, is_running=True)
 
         exception = self._check_for_evaluation_exception(evaluation_id)
@@ -294,14 +295,14 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
         
-        self._drain_result_queue(evaluation_id)
+        self._drain_result_queue(evaluation_id) # Should already be drained, but just make sure
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
-        self._drain_result_queue(evaluation_id)
+        self._drain_result_queue(evaluation_id) # Should not do anything, but let's make sure
 
         evaluation_data: list[EvaluationIntervalData] = []
 
