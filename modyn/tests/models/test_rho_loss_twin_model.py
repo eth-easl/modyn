@@ -162,3 +162,4 @@ def test_backup_and_restore_state(current_model: int, training_mode: bool, twin_
         assert torch.allclose(new_twin_model.model._models[0].output.bias, torch.zeros(2))
         assert torch.allclose(new_twin_model.model._models[1].output.weight, torch.ones(2, 2))
         assert torch.allclose(new_twin_model.model._models[1].output.bias, torch.ones(2))
+        assert new_twin_model.model.training == training_mode
