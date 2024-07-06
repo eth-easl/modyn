@@ -1,5 +1,6 @@
 """Evaluator GRPC servicer."""
 
+from collections import defaultdict
 import gc
 import logging
 import multiprocessing as mp
@@ -67,6 +68,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._next_evaluation_id = 0
         self._evaluation_dict: dict[int, EvaluationInfo] = {}
         self._evaluation_process_dict: dict[int, EvaluationProcessInfo] = {}
+        # Note: This only works because the evaluator currently only uses threads, not processes!
+        self._evaluation_data_dict: defaultdict[int, defaultdict[int, list[SingleMetricResult]]] = defaultdict(lambda: defaultdict(list))
 
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._storage_stub = EvaluatorGRPCServicer.connect_to_storage(self._storage_address)
@@ -246,6 +249,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
             logger.info(f"Evaluation {evaluation_id} is still running.")
+            self._drain_result_queue()
             return EvaluationStatusResponse(valid=True, is_running=True)
 
         exception = self._check_for_evaluation_exception(evaluation_id)
@@ -267,6 +271,19 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         except queue.Empty:
             return None
 
+    def _drain_result_queue(self, evaluation_id: int) -> None:
+        metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
+        while True:
+            try:
+                interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
+            except queue.Empty:
+                break
+            metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+            logger.info(f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})")
+            self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
+
+        logger.info(f"Drained results queue for evaluation {evaluation_id}")
+
     def get_evaluation_result(
         self, request: EvaluationResultRequest, context: grpc.ServicerContext
     ) -> EvaluationResultResponse:
@@ -276,25 +293,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
+        
+        self._drain_result_queue(evaluation_id)
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
+        self._drain_result_queue(evaluation_id)
+
         evaluation_data: list[EvaluationIntervalData] = []
 
-        metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
-
-        while True:
-            try:
-                interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
-            except queue.Empty:
-                break
-            metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+        for interval_idx, metric_result in self._evaluation_data_dict[evaluation_id].items():
             single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
-
             evaluation_data.append(single_eval_data)
+
         if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
@@ -326,6 +340,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                     process_handler.kill()
 
             self._evaluation_process_dict.pop(evaluation_id)
+            self._evaluation_data_dict.pop(evaluation_id)
 
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
