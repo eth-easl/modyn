@@ -25,6 +25,8 @@ class TimeTrigger(Trigger):
         self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
     ) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
+            yield -1 # We want an empty trigger at the beginning such that we have a random model to start with
+            
             if self.config.start_timestamp is not None:
                 self.next_trigger_at = self.config.start_timestamp + self.config.every_seconds
             else:
