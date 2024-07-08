@@ -348,11 +348,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                     process_handler.kill()
 
             self._evaluation_process_dict.pop(evaluation_id)
-            self._evaluation_data_dict.pop(evaluation_id)
-            self._evaluation_data_dict_locks.pop(evaluation_id)
 
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
+            self._evaluation_data_dict.pop(e_id)
+            self._evaluation_data_dict_locks.pop(e_id)
 
         gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))
