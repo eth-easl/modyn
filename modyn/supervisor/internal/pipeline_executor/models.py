@@ -357,9 +357,10 @@ class MultiEvaluationInfo(StageInfo):
                     metric["name"],
                     metric["result"],
                 )
-                for single_info in infos
-                for info in single_info
-                for metric in info.results["metrics"]  # pylint: disable=unsubscriptable-object
+                for multi_info in infos
+                for single_info in multi_info.interval_results
+                if single_info.failure_reason is None and single_info.eval_request
+                for metric in single_info.results["metrics"]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",
@@ -375,6 +376,50 @@ class MultiEvaluationInfo(StageInfo):
                 "metric",
                 "value",
             ],
+        )
+
+    @classmethod
+    def requests_df(cls, stage_logs: list[StageLog]) -> pd.DataFrame:
+        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        parent_columns: list[str] = []
+        if stage_logs:
+            parent_columns = stage_logs[0].df_columns(False)
+        return pd.DataFrame(
+            [
+                stage_log.df_row(False)
+                + (
+                    # per request
+                    single_info.eval_request.trigger_id,
+                    single_info.eval_request.training_id,
+                    single_info.eval_request.id_model,
+                    single_info.eval_request.currently_active_model,
+                    single_info.eval_request.currently_trained_model,
+                    single_info.eval_request.eval_handler,
+                    single_info.eval_request.dataset_id,
+                    single_info.eval_request.interval_start,
+                    single_info.eval_request.interval_end,
+                    single_info.results.get("dataset_size", 0),
+                )
+                for stage_log in stage_logs
+                if isinstance(stage_log.info, MultiEvaluationInfo)
+                for single_info in stage_log.info.interval_results
+                if single_info.failure_reason is None and single_info.eval_request
+            ],
+            columns=(
+                parent_columns
+                + [
+                    "trigger_id",
+                    "training_id",
+                    "id_model",
+                    "currently_active_model",
+                    "currently_trained_model",
+                    "eval_handler",
+                    "dataset_id",
+                    "interval_start",
+                    "interval_end",
+                    "dataset_size",
+                ]
+            ),
         )
 
 

@@ -1,7 +1,6 @@
 from typing import Iterable
 
 import pandas as pd
-
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.static import StaticEvalStrategyConfig
