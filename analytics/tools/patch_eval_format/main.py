@@ -29,6 +29,7 @@ def main(
         patched = patch_logfile(logfile)
         (patched_log_dir / pipeline_path).mkdir(parents=True, exist_ok=True)
         (patched_log_dir / pipeline_path / (logfile.stem + ".log")).write_text(patched.model_dump_json(by_alias=True))
+        (patched_log_dir / pipeline_path / ".name").write_text((logs_directory / pipeline_path / ".name").read_text())
 
 
 if __name__ == "__main__":
