@@ -3,13 +3,14 @@ from copy import deepcopy
 from pathlib import Path
 
 import pandas as pd
+
 from analytics.app.data.transform import dfs_models_and_evals, logs_dataframe
 from analytics.tools.aggregate_runs.dir_utils import load_multiple_logfiles
 from analytics.tools.aggregate_runs.pipeline_equivalence import assert_pipeline_equivalence
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo
+from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs
 
-DEBUGGING_MODE = False
+DEBUGGING_MODE = True
 """if True, the the process will halt on breakpoints to allow for manual verification"""
 
 
@@ -109,25 +110,27 @@ def aggregate_eval_metrics(df_eval_single: pd.DataFrame, logs: list[PipelineLogs
     aggregated_logs = deepcopy(logs[0])
     for log in aggregated_logs.supervisor_logs.stage_runs:
         if log.id == PipelineStage.EVALUATE_MULTI.name:
-            assert isinstance(log.info, SingleEvaluationInfo)
-            if not log.info.results:
-                continue
+            assert isinstance(log.info, MultiEvaluationInfo)
 
-            eval_req = log.info.eval_request
+            for single_eval in log.info.interval_results:
+                if not single_eval.results:
+                    continue
 
-            # will yield multiple rows (one per each metric)
-            request_lookup = aggregated_metrics[
-                (aggregated_metrics["id_model_list"].apply(lambda x: eval_req.id_model in x))
-                & (aggregated_metrics["eval_handler"] == eval_req.eval_handler)
-                & (aggregated_metrics["dataset_id"] == eval_req.dataset_id)
-                & (aggregated_metrics["interval_start"] == pd.to_datetime(eval_req.interval_start, unit="s"))
-                & (aggregated_metrics["interval_end"] == pd.to_datetime(eval_req.interval_end, unit="s"))
-            ]
+                eval_req = single_eval.eval_request
 
-            # find aggregated value
-            for metric in log.info.results["metrics"]:
-                lookup = request_lookup[request_lookup["metric"] == metric["name"]]
-                assert len(lookup) == 1, f"Primary key not unique: {metric['name']}"
-                metric["result"] = float(lookup["agg_value"].iloc[0])
+                # will yield multiple rows (one per each metric)
+                request_lookup = aggregated_metrics[
+                    (aggregated_metrics["id_model_list"].apply(lambda x: eval_req.id_model in x))
+                    & (aggregated_metrics["eval_handler"] == eval_req.eval_handler)
+                    & (aggregated_metrics["dataset_id"] == eval_req.dataset_id)
+                    & (aggregated_metrics["interval_start"] == pd.to_datetime(eval_req.interval_start, unit="s"))
+                    & (aggregated_metrics["interval_end"] == pd.to_datetime(eval_req.interval_end, unit="s"))
+                ]
+
+                # find aggregated value
+                for metric in single_eval.results["metrics"]:
+                    lookup = request_lookup[request_lookup["metric"] == metric["name"]]
+                    assert len(lookup) == 1, f"Primary key not unique: {metric['name']}"
+                    metric["result"] = float(lookup["agg_value"].iloc[0])
 
     return aggregated_logs
