@@ -51,7 +51,7 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         if self.threshold is not None and self.num_permutations is not None:
             raise ValueError(
                 "threshold and num_permutations are mutually exclusive."
-                + "Please specify whether you want to use hypothosis testing "
+                + "Please specify whether you want to use hypothesis testing "
                 + "or threshold comparison for making drift decisions."
             )
 
