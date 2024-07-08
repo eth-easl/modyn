@@ -285,8 +285,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                     break
                 metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
                 logger.info(
-                    f"Got {len(metric_result)} new results for evaluation {
-                            evaluation_id} (interval {interval_idx})"
+                    f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})"
                 )
                 self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
 
