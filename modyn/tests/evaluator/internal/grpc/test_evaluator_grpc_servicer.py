@@ -7,6 +7,8 @@ import os
 import pathlib
 import platform
 import tempfile
+import threading
+from collections import defaultdict
 from time import sleep
 from unittest import mock
 from unittest.mock import ANY, MagicMock, call, patch
@@ -329,8 +331,15 @@ def test_evaluate_model_mixed(
 def test_evaluate_model_valid(test_connect_to_model_storage, test_connect_to_storage, download_model_mock) -> None:
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
+        all_eval_dicts = [
+            evaluator._evaluation_process_dict,
+            evaluator._evaluation_dict,
+            evaluator._evaluation_data_dict,
+            evaluator._evaluation_data_dict_locks,
+        ]
+        assert all([0 not in eval_dict for eval_dict in all_eval_dicts])
         resp: EvaluateModelResponse = evaluator.evaluate_model(get_evaluate_model_request(), None)
-        assert 0 in evaluator._evaluation_process_dict
+        assert all([0 in eval_dict for eval_dict in all_eval_dicts])
         assert evaluator._next_evaluation_id == 1
         download_model_mock.assert_called_once()
         kwargs = download_model_mock.call_args.kwargs
@@ -359,7 +368,9 @@ def test_get_evaluation_status_not_registered(test_connect_to_model_storage, tes
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=True)
 @patch.object(EvaluatorGRPCServicer, "_check_for_evaluation_exception")
+@patch.object(EvaluatorGRPCServicer, "_drain_result_queue")
 def test_get_evaluation_status_alive(
+    test__drain_result_queue,
     test_check_for_evaluation_exception,
     test_is_alive,
     test_connect_to_model_storage,
@@ -380,8 +391,10 @@ def test_get_evaluation_status_alive(
 @patch.object(EvaluatorGRPCServicer, "connect_to_model_storage", return_value=DummyModelStorageStub())
 @patch.object(mp.Process, "is_alive", return_value=False)
 @patch.object(EvaluatorGRPCServicer, "_check_for_evaluation_exception")
+@patch.object(EvaluatorGRPCServicer, "_drain_result_queue")
 @pytest.mark.parametrize("exception", [None, "exception"])
 def test_get_evaluation_status_finished(
+    test__drain_result_queue,
     test_check_for_evaluation_exception,
     test_is_alive,
     test_connect_to_model_storage,
@@ -458,6 +471,8 @@ def test__run_evaluation_retain_metrics_before_real_exception(test_connect_to_st
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluator._evaluation_dict[evaluation_id] = evaluation_info
+        evaluator._evaluation_data_dict_locks[evaluation_id] = threading.Lock()
+        evaluator._evaluation_data_dict[evaluation_id] = defaultdict(list)
         evaluator._run_evaluation(evaluation_id)
 
     get_status_req = EvaluationStatusRequest(evaluation_id=evaluation_id)
@@ -508,10 +523,13 @@ def test_get_evaluation_result_incomplete_metric(test_is_alive, test_connect_to_
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluation_process_info = get_evaluation_process_info()
-        evaluator._evaluation_process_dict[3] = evaluation_process_info
+        evaluation_id = 3
+        evaluator._evaluation_data_dict_locks[evaluation_id] = threading.Lock()
+        evaluator._evaluation_data_dict[evaluation_id] = defaultdict(list)
+        evaluator._evaluation_process_dict[evaluation_id] = evaluation_process_info
         config = get_modyn_config()
-        evaluator._evaluation_dict[3] = get_evaluation_info(
-            3, pathlib.Path("trained.model"), config, intervals=((None, 100), (100, 200))
+        evaluator._evaluation_dict[evaluation_id] = get_evaluation_info(
+            evaluation_id, pathlib.Path("trained.model"), config, intervals=((None, 100), (100, 200))
         )
         # though we have two intervals, one metric result is available because of exception
         metric_result_queue = evaluation_process_info.metric_result_queue
@@ -540,6 +558,8 @@ def test_get_evaluation_result(
         evaluator._evaluation_dict[1] = get_evaluation_info(
             1, pathlib.Path(temp) / "trained_model.modyn", config, intervals=intervals
         )
+        evaluator._evaluation_data_dict_locks[1] = threading.Lock()
+        evaluator._evaluation_data_dict[1] = defaultdict(list)
 
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[1] = evaluation_process_info
@@ -592,16 +612,17 @@ def test_cleanup_evaluations(
     test_terminate: MagicMock,
     test_is_alive: MagicMock,
 ) -> None:
+    all_ids = [1, 2, 3, 5]
     with tempfile.TemporaryDirectory() as modyn_temp:
         evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
         evaluation_process_info = get_evaluation_process_info()
         evaluator._evaluation_process_dict[2] = evaluation_process_info
         evaluator._evaluation_process_dict[3] = evaluation_process_info
         evaluator._evaluation_process_dict[5] = evaluation_process_info
-        evaluator._evaluation_dict[1] = None
-        evaluator._evaluation_dict[2] = None
-        evaluator._evaluation_dict[3] = None
-        evaluator._evaluation_dict[5] = None
+        for idx in all_ids:
+            evaluator._evaluation_dict[idx] = None
+            evaluator._evaluation_data_dict_locks[idx] = threading.Lock()
+            evaluator._evaluation_data_dict[idx] = defaultdict(list)
         response = evaluator.cleanup_evaluations(EvaluationCleanupRequest(evaluation_ids=[1, 2, 3, 5]), None)
         assert response.succeeded == [
             1,  # already clean
