@@ -152,10 +152,13 @@ class PytorchEvaluator:
             metric_result.append((metric.get_name(), metric.get_evaluation_result()))
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
         self._metric_result_queue.put((interval_idx, metric_result), timeout=30)
-        self._info(f"Finished evaluation of {interval_idx}: {num_samples} samples. Queue size = {self._metric_result_queue.qsize()}")
+        self._info(
+            f"Finished evaluation of {interval_idx}: {num_samples} samples. "
+            f"Queue size = {self._metric_result_queue.qsize()}"
+        )
 
     def evaluate(self) -> None:
-        for idx,interval_idx in enumerate(self._eval_info.not_failed_interval_ids):
+        for idx, interval_idx in enumerate(self._eval_info.not_failed_interval_ids):
             self._info(f"Evaluating interval {idx + 1}/{len(self._eval_info.not_failed_interval_ids)} ({interval_idx})")
             interval = self._eval_info.all_evaluation_intervals[interval_idx]
             dataloader = self._prepare_dataloader(self._eval_info, interval[0], interval[1])
@@ -163,6 +166,7 @@ class PytorchEvaluator:
             self._info(f"interval {idx + 1}/{len(self._eval_info.not_failed_interval_ids)} done")
 
         self._info("All intervals done!")
+
 
 def evaluate(
     evaluation_info: EvaluationInfo,

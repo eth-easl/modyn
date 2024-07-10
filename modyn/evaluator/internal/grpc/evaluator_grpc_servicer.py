@@ -1,13 +1,13 @@
 """Evaluator GRPC servicer."""
 
-from collections import defaultdict
 import gc
 import logging
 import multiprocessing as mp
 import pathlib
 import queue
-from threading import Lock
 import threading
+from collections import defaultdict
+from threading import Lock
 from typing import Optional
 
 import grpc
@@ -70,7 +70,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._evaluation_dict: dict[int, EvaluationInfo] = {}
         self._evaluation_process_dict: dict[int, EvaluationProcessInfo] = {}
         # Note: This only works because the evaluator currently only uses threads, not processes!
-        self._evaluation_data_dict: defaultdict[int, defaultdict[int, list[SingleMetricResult]]] = defaultdict(lambda: defaultdict(list))
+        self._evaluation_data_dict: dict[int, defaultdict[int, list[SingleMetricResult]]] = {}
         self._evaluation_data_dict_locks: dict[int, threading.Lock] = {}
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._storage_stub = EvaluatorGRPCServicer.connect_to_storage(self._storage_address)
@@ -211,6 +211,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         self._evaluation_dict[evaluation_id] = evaluation_info
         self._evaluation_data_dict_locks[evaluation_id] = threading.Lock()
+        self._evaluation_data_dict[evaluation_id] = defaultdict(list)
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
@@ -247,7 +248,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered")
             return EvaluationStatusResponse(valid=False)
-        
+
         self._drain_result_queue(evaluation_id)
 
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
@@ -283,7 +284,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 except queue.Empty:
                     break
                 metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
-                logger.info(f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})")
+                logger.info(
+                    f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})"
+                )
                 self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
 
         logger.info(f"Drained results queue for evaluation {evaluation_id}")
@@ -297,15 +300,15 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         if evaluation_id not in self._evaluation_dict:
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
-        
-        self._drain_result_queue(evaluation_id) # Should already be drained, but just make sure
+
+        self._drain_result_queue(evaluation_id)  # Should already be drained, but just make sure
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
-        self._drain_result_queue(evaluation_id) # Should not do anything, but let's make sure
+        self._drain_result_queue(evaluation_id)  # Should not do anything, but let's make sure
 
         evaluation_data: list[EvaluationIntervalData] = []
 
@@ -344,11 +347,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                     process_handler.kill()
 
             self._evaluation_process_dict.pop(evaluation_id)
-            self._evaluation_data_dict.pop(evaluation_id)
-            self._evaluation_data_dict_locks.pop(evaluation_id)
 
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
+            self._evaluation_data_dict.pop(e_id)
+            self._evaluation_data_dict_locks.pop(e_id)
 
         gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))
