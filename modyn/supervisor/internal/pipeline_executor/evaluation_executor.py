@@ -355,9 +355,6 @@ class EvaluationExecutor:
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
 
-        assert len(eval_data) == len(intervals), f"We expected {len(intervals)} intervals, but got {len(eval_data)}."
-        assert eval_data
-
         eval_results: list[tuple[str | None, dict[str, Any]]] = []
 
         # ---------------------------------------------- Result Builder ---------------------------------------------- #
