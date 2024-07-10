@@ -40,7 +40,6 @@ class DataDriftTrigger(Trigger):
         self._current_window: list[tuple[int, int]] = []
         self._total_items_in_current_window = 0
         self._triggered_once = False
-        self._empty_trigger_fired = False
 
         self.evidently_detector = EvidentlyDriftDetector(config.metrics)
         self.alibi_detector = AlibiDriftDetector(config.metrics)
@@ -126,10 +125,6 @@ class DataDriftTrigger(Trigger):
         Yields:
             The index of the data point that triggered the drift detection. This is used to identify the point in the
             data stream where the model's performance may have started to degrade due to drift."""
-
-        if not self._empty_trigger_fired:
-            yield -1
-            self._empty_trigger_fired = True
 
         new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
         detect_interval = self.config.detection_interval_data_points
