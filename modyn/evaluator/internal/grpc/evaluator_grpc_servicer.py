@@ -157,10 +157,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             dataset_size = dataset_size_response.num_keys
             if not dataset_size_response.success:
+                logger.error(f"The interval {interval} in dataset {request.dataset_info.dataset_id} does not exist.")
                 interval_responses.append(
                     EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND)
                 )
             elif dataset_size == 0:
+                logger.error(f"The interval {interval} in dataset {request.dataset_info.dataset_id} is empty.")
                 interval_responses.append(
                     EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
                 )
