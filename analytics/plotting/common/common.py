@@ -20,7 +20,7 @@ DOUBLE_FIG_WIDTH = 10
 DOUBLE_FIG_HEIGHT = 3.5
 DOUBLE_FIG_SIZE = (DOUBLE_FIG_WIDTH, DOUBLE_FIG_HEIGHT)
 PLOT_PATHS = []
-IMG_TYPES = [".png"]  # add .svg here to generate svg
+IMG_TYPES = [".png", ".svg"]  # add .svg here to generate svg
 
 PIPELINE_COLOR = {
     "models_exp0_finetune": "#a1dab4",
@@ -77,7 +77,12 @@ def PRINT_PLOT_PATHS():
 
 
 def BAR(system):
-    return {"color": "white", "edgecolor": PIPELINE_COLOR[system], "hatch": PIPELINE_HATCH[system], "lw": 3}
+    return {
+        "color": "white",
+        "edgecolor": PIPELINE_COLOR[system],
+        "hatch": PIPELINE_HATCH[system],
+        "lw": 3,
+    }
 
 
 def LINE(system):
@@ -92,7 +97,9 @@ def LINE(system):
 
 
 def BAR_X_TICKS_POS(bar_width, num_bars, num_xticks):
-    return [i - (bar_width / 2) + ((num_bars * bar_width) / 2) for i in range(num_xticks)]
+    return [
+        i - (bar_width / 2) + ((num_bars * bar_width) / 2) for i in range(num_xticks)
+    ]
 
 
 def RESIZE_TICKS(ax, x=FS, y=FS):
@@ -125,7 +132,7 @@ def FIG_LEGEND(fig):
         ncol=6,
         frameon=False,
         columnspacing=1,
-        handletextpad=0.3,
+        handletextpad=0.3
         # , borderpad=0.1, labelspacing=0.1, handlelength=1.8
     )
     fig.tight_layout()
@@ -148,12 +155,13 @@ def SAVE_PLOT(plot_path, img_types=None):
     plt.figure()
 
 
-def INIT(args):
-    if len(args) != 3:
-        sys.exit("Need /path/to/results /path/to/plots")
-
-    result_path = args[1]
-    plot_dir = args[2]
+def INIT(args=None):
+    if len(args) > 2:
+        result_path = args[1]
+        plot_dir = args[2]
+    else:
+        result_path = "data/"
+        plot_dir = "plot/"
 
     os.makedirs(plot_dir, exist_ok=True)
     INIT_PLOT()
