@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Iterator
 from unittest import mock
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -17,6 +17,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelResponse,
     EvaluationAbortedReason,
     EvaluationIntervalData,
+    SingleMetricResult,
 )
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
@@ -217,43 +218,29 @@ def test_launch_evaluations_async(
     assert test_single_evaluation.call_count == 1  # batched
 
 
-@pytest.mark.parametrize("test_failure", [False, True])
-@patch.object(GRPCHandler, "cleanup_evaluations")
-@patch.object(GRPCHandler, "get_evaluation_results", return_value=[EvaluationIntervalData(), EvaluationIntervalData()])
+@patch.object(GRPCHandler, "get_evaluation_results")
 @patch.object(GRPCHandler, "wait_for_evaluation_completion")
 @patch.object(GRPCHandler, "prepare_evaluation_request")
-def test_single_batched_evaluation(
+def test_single_batched_evaluation_all_failed(
     test_prepare_evaluation_request: Any,
     test_wait_for_evaluation_completion: Any,
     test_get_evaluation_results: Any,
-    test_cleanup_evaluations: Any,
     evaluation_executor: EvaluationExecutor,
-    test_failure: bool,
 ) -> None:
     evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
-    if test_failure:
-        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=False,
-            interval_responses=[
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
-            ],
-        )
-    else:
-        evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
-            evaluation_started=True,
-            evaluation_id=42,
-            interval_responses=[
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=10),
-                EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=21),
-            ],
-        )
+    evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+        evaluation_started=False,
+        interval_responses=[
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND),
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
+        ],
+    )
 
     evaluation_executor.grpc.evaluator = evaluator_stub_mock
     eval_req = dummy_eval_request()
     eval_req2 = dummy_eval_request()
-    eval_req2.interval_end = 63
-    eval_req2.interval_start = 14
+    eval_req2.interval_start = 63
+    eval_req2.interval_end = 14
     results = evaluation_executor._single_batched_evaluation(
         [
             (eval_req.interval_start, eval_req.interval_end),
@@ -262,15 +249,67 @@ def test_single_batched_evaluation(
         eval_req.id_model,
         eval_req.dataset_id,
     )
-    assert len(results) == 2
+    assert results == [("DATASET_NOT_FOUND", {}), ("EMPTY_DATASET", {})]
 
-    test_prepare_evaluation_request.assert_called_once()
+    test_prepare_evaluation_request.assert_called_once_with(
+        ANY, eval_req.id_model, ANY, intervals=[(0, None), (63, 14)]
+    )
+    test_wait_for_evaluation_completion.assert_not_called()
+    test_get_evaluation_results.assert_not_called()
 
-    if test_failure:
-        test_wait_for_evaluation_completion.assert_not_called()
-        test_get_evaluation_results.assert_not_called()
-        test_cleanup_evaluations.assert_not_called()
-    else:
-        test_wait_for_evaluation_completion.assert_called_once()
-        test_get_evaluation_results.assert_called_once()
-        test_cleanup_evaluations.assert_called_once()
+
+@patch.object(GRPCHandler, "cleanup_evaluations")
+@patch.object(
+    GRPCHandler,
+    "get_evaluation_results",
+    return_value=[
+        EvaluationIntervalData(
+            interval_index=1,
+            evaluation_data=[SingleMetricResult(metric="accuracy", result=0.5)],
+        )
+    ],
+)
+@patch.object(GRPCHandler, "wait_for_evaluation_completion")
+@patch.object(GRPCHandler, "prepare_evaluation_request")
+def test_single_batched_evaluation_mixed(
+    test_prepare_evaluation_request: Any,
+    test_wait_for_evaluation_completion: Any,
+    test_get_evaluation_results: Any,
+    test_cleanup_evaluations: Any,
+    evaluation_executor: EvaluationExecutor,
+) -> None:
+    evaluator_stub_mock = mock.Mock(spec=["evaluate_model"])
+
+    evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
+        evaluation_started=True,
+        evaluation_id=42,
+        interval_responses=[
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET),
+            EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.NOT_ABORTED, dataset_size=21),
+        ],
+    )
+
+    evaluation_executor.grpc.evaluator = evaluator_stub_mock
+    eval_req = dummy_eval_request()
+    eval_req2 = dummy_eval_request()
+    eval_req.interval_start = 64
+    eval_req.interval_end = 14
+    results = evaluation_executor._single_batched_evaluation(
+        [
+            (eval_req.interval_start, eval_req.interval_end),
+            (eval_req2.interval_start, eval_req2.interval_end),
+        ],
+        eval_req.id_model,
+        eval_req.dataset_id,
+    )
+    assert results == [
+        ("EMPTY_DATASET", {}),
+        (None, {"dataset_size": 21, "metrics": [{"name": "accuracy", "result": pytest.approx(0.5)}]}),
+    ]
+
+    test_prepare_evaluation_request.assert_called_once_with(
+        ANY, eval_req.id_model, ANY, intervals=[(64, 14), (0, None)]
+    )
+    test_wait_for_evaluation_completion.assert_called_once()
+    test_get_evaluation_results.assert_called_once()
+    test_cleanup_evaluations.assert_called_once()
