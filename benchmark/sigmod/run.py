@@ -375,7 +375,6 @@ def config_str_fn(
 
 def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     logger.info("Grüeziwohl!")
-    pipeline_configs: list[ModynPipelineConfig] = []
 
     # Pick the line you want.
     pipeline_gen_func = gen_yearbook_config
@@ -385,6 +384,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = f"cuda:{gpu_id}"
     num_gpus = 4  # to parallelize across gpus
+    maximal_collocation = 4  # maximal number of pipelines to run in parallel on one GPU
 
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
@@ -462,6 +462,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
 
     existing_pipelines = set(existing_pipelines)
     run_id = 0
+    pipeline_configs: list[ModynPipelineConfig] = []
     for seed in seeds:
         for ratio in ratios:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
@@ -507,7 +508,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
                         pipeline_configs.append(pipeline_config)
 
                     run_id += 1
-    # logger.info(f"Overview of configurations: {pipeline_configs}")
+
     host = "localhost" #os.getenv("MODYN_SUPERVISOR_HOST")
     port = 3069 #os.getenv("MODYN_SUPERVISOR_PORT")
 
@@ -516,6 +517,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     # if not port:
     #     port = int(input("Enter the supervisors port: ") or "3000")
 
+
     run_multiple_pipelines_parallel(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
         pipeline_configs=pipeline_configs,
@@ -523,6 +525,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         stop_replay_at=None,
         maximum_triggers=maximum_triggers,
         show_eval_progress=False,
+        maximal_collocation=maximal_collocation,
     )
 
 

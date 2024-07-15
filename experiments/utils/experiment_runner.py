@@ -39,22 +39,23 @@ def run_multiple_pipelines(
 def run_multiple_pipelines_parallel(
     client_config: ModynClientConfig,
     pipeline_configs: list[ModynPipelineConfig],
-    start_replay_at: int = 0,
-    stop_replay_at: int | None = None,
-    maximum_triggers: int | None = None,
-    show_eval_progress=True,
+    start_replay_at: int,
+    stop_replay_at: int | None,
+    maximum_triggers: int | None,
+    show_eval_progress: bool,
+    maximal_collocation: int,
 ) -> None:
     logger.info("Start running multiple experiments in parallel!")
-    with ThreadPoolExecutor(max_workers=len(pipeline_configs)) as executor:
-        for pipeline_config in pipeline_configs:
+    # each time we take maximal_collocation pipelines and run them in parallel
+    for i in range(0, len(pipeline_configs), maximal_collocation):
+        with ThreadPoolExecutor(max_workers=maximal_collocation) as executor:
             executor.submit(
                 run_multiple_pipelines,
                 client_config,
-                [pipeline_config],
+                pipeline_configs[i : i + maximal_collocation],
                 start_replay_at,
                 stop_replay_at,
                 maximum_triggers,
                 show_eval_progress,
             )
-
     logger.info("Finished running multiple experiments in parallel!")
