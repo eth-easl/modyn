@@ -57,6 +57,7 @@ def gen_cglm_training_conf(
         shuffle=True,
         amp=False,
         seed=seed,
+        record_loss_every=1,
     )
 
 
@@ -100,7 +101,7 @@ def gen_cglm_config(
         training=gen_cglm_training_conf("SGD", 0.42, gpu_device, lr_scheduler, num_epochs, seed),
         selection_strategy=selection_strategy,
         data=DataConfig(dataset_id=dataset, transformations=transformations, bytes_parser_function=bytes_parser_func),
-        trigger=TimeTriggerConfig(every="1y", start_timestamp=0),
+        trigger=TimeTriggerConfig(every="1y"),
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(

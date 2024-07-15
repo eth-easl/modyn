@@ -16,9 +16,9 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 24gb
+    shm_size: 24gb
     volumes:
-      - ./metadata-postgres-data:/var/lib/postgresql/data
+      - /scratch/xianma/sigmod/modyntmp/metadatadb5:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -36,9 +36,9 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 8gb
+    shm_size: 8gb
     volumes:
-      - ./storage-postgres-data:/var/lib/postgresql/data
+      - /scratch/xianma/sigmod/modyntmp/storagedb2:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
@@ -56,9 +56,8 @@ services:
       context: .
       dockerfile: docker/Storage/Dockerfile
     volumes:
-      - storage-data:/app/storage
-#      - /mnt/datasets:/datasets
-#      - .:/modyn_host
+      - /scratch/xianma/modyn/datasets:/datasets
+      - .:/modyn_host
   metadata_processor:
     restart: on-failure
     depends_on:
@@ -76,7 +75,15 @@ services:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
     volumes:
-      - model_storage-data:/tmp/models
+      - /scratch/xianma/sigmod/modyntmp/modelstorage:/tmp/models
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu, utility, compute]
   evaluator:
     restart: on-failure
     depends_on:
@@ -85,6 +92,15 @@ services:
     build:
       context: .
       dockerfile: docker/Evaluator/Dockerfile
+    shm_size: 8gb
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu, utility, compute]
   trainer_server:
     restart: on-failure
     depends_on:
@@ -96,19 +112,18 @@ services:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
-    - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
-#      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
-#      - .:/modyn_host
-#    shm_size: 4gb
+      - /scratch/xianma/sigmod/modyntmp/offline_dataset:/tmp/offline_dataset
+      - .:/modyn_host
+    shm_size: 32gb
 # CUDASTART (ignore/delete if enabling cuda manually)
-#    runtime: nvidia
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [gpu, utility, compute]
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu, utility, compute]
 # CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
@@ -119,12 +134,10 @@ services:
       context: .
       dockerfile: docker/Selector/Dockerfile
     volumes:
-       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
-#      - /mnt/ssd/local_storage:/tmp/local_storage
-#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
-#      - .:/modyn_host
-#    shm_size: 4gb
+      - /scratch/xianma/sigmod/modyntmp/local_storage:/tmp/local_storage
+      - /scratch/xianma/sigmod/modyntmp/trigger_samples:/tmp/trigger_samples
+      - .:/modyn_host
+    shm_size: 8gb
   supervisor:
     restart: on-failure
     depends_on:
@@ -139,11 +152,11 @@ services:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
     volumes:
-      - supervisor-evaluation-data:/tmp/evaluation_results
-#      - .:/modyn_host
+      - /scratch/xianma/sigmod/modyntmp/logs:/tmp/evaluation_results
+      - .:/modyn_host
     container_name: supervisor
     ports:
-      - "3000:50063"
+      - "3069:50063"
   tests:
     depends_on:
       supervisor:

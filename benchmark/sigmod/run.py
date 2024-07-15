@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 import sys
+from typing import Annotated
+
+import typer
 
 from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
 from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
 from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
-from experiments.utils.experiment_runner import run_multiple_pipelines
+from experiments.utils.experiment_runner import run_multiple_pipelines, run_multiple_pipelines_parallel
 from modyn.config import (
     GradNormDownsamplingConfig,
     LossDownsamplingConfig,
@@ -185,33 +187,44 @@ def gen_selection_strategies(
         )
     )
 
-    # RHOLossDownsamplingConfig
-    il_config_options = {
-        "il_model_id": "ResNet18",
-        "il_model_config": {"use_pretrained": True, "num_classes": num_classes},
-        "use_previous_model": False,
-    }
-    training_config_dict = training_config.model_dump()
-    training_config_dict.update(il_config_options)
-    strategies.append(
-        (
-            "rho_loss_bts_10il",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=RHOLossDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max, 
-                    sample_then_batch=False,
-                    period=1,
-                    holdout_set_ratio=10,
-                    il_training_config=ILTrainingConfig(**training_config_dict),
-                ),
-            ),
-        )
-    )
+    # # RHOLossDownsamplingConfig
+    # for use_previous_model in [True]:
+    #     for use_pretrained in [False, True]:
+    #         il_config_options = {
+    #             "il_model_id": "ResNet18",
+    #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
+    #             "use_previous_model": use_previous_model,
+    #             "drop_last_batch": False,
+    #         }
+    #         if not use_pretrained:
+    #             # delete the key
+    #             del il_config_options["il_model_config"]["use_pretrained"]
+    #         training_config_dict = training_config.model_dump()
+    #         training_config_dict.update(il_config_options)
+    #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
+    #         use_prev_suffix = "_use_prev" if use_previous_model else ""
+    #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
+    #         rho_name = f"rho_loss_bts_twin_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
+    #         strategies.append(
+    #             (
+    #                 rho_name,
+    #                 CoresetStrategyConfig(
+    #                     maximum_keys_in_memory=100000,
+    #                     storage_backend="database",
+    #                     tail_triggers=0,
+    #                     limit=-1,
+    #                     warmup_triggers=warmup_triggers,
+    #                     downsampling_config=RHOLossDownsamplingConfig(
+    #                         ratio=ratio, ratio_max=ratio_max,
+    #                         sample_then_batch=False,
+    #                         period=1,
+    #                         holdout_set_ratio=50,
+    #                         holdout_set_strategy="Twin",
+    #                         il_training_config=ILTrainingConfig(**training_config_dict),
+    #                     ),
+    #                 ),
+    #             )
+    #         )
 
     if not small_run:
         # Margin StB every epoch
@@ -349,27 +362,27 @@ def gen_lr_scheduler_configs(min_lr: float, disable: bool) -> list[tuple[str, No
     return configs
 
 
-def run_experiment() -> None:
+def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
 
     # Pick the line you want.
     pipeline_gen_func = gen_yearbook_config
-    pipeline_gen_func = gen_arxiv_config
-    pipeline_gen_func = gen_cglm_config
+    # pipeline_gen_func = gen_arxiv_config
+    # pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
-    train_gpu = "cuda:0"
+    train_gpu = f"cuda:{gpu_id}"
+    num_gpus = 4  # to parallelize across gpus
+
     num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
     warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [125, 500, 250] # 12.5%, 50%, 25% due to ratio max scaling
+    seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
+    ratios = [500, 250] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
-    num_gpus = 1  # to parallelize across gpus
-    gpu_id = 0
     small_run = True
-    skip_existing = True
+    skip_existing = False
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
     optimizer = None  # ignored for non arxiv
@@ -505,20 +518,20 @@ def run_experiment() -> None:
                     )
 
                     if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
-                        logger.info(f"Running {config_id} with seed {seed} and ratio {ratio} on this GPU.")
+                        logger.info(f"Running {config_id} with seed {seed} and ratio {ratio} on GPU {train_gpu}.")
                         pipeline_configs.append(pipeline_config)
 
                     run_id += 1
     # logger.info(f"Overview of configurations: {pipeline_configs}")
-    host = os.getenv("MODYN_SUPERVISOR_HOST")
-    port = os.getenv("MODYN_SUPERVISOR_PORT")
+    host = "localhost" #os.getenv("MODYN_SUPERVISOR_HOST")
+    port = 3069 #os.getenv("MODYN_SUPERVISOR_PORT")
 
-    if not host:
-        host = input("Enter the supervisors host address: ") or "localhost"
-    if not port:
-        port = int(input("Enter the supervisors port: ") or "3000")
+    # if not host:
+    #     host = input("Enter the supervisors host address: ") or "localhost"
+    # if not port:
+    #     port = int(input("Enter the supervisors port: ") or "3000")
 
-    run_multiple_pipelines(
+    run_multiple_pipelines_parallel(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
         pipeline_configs=pipeline_configs,
         start_replay_at=0,
@@ -529,4 +542,4 @@ def run_experiment() -> None:
 
 
 if __name__ == "__main__":
-    run_experiment()
+    typer.run(run_experiment)

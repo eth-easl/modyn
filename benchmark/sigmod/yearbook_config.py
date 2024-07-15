@@ -54,6 +54,7 @@ def gen_yearbook_training_conf(
         shuffle=True,
         amp=False,
         seed=seed,
+        record_loss_every=1,
     )
 
 
@@ -114,7 +115,7 @@ def gen_yearbook_config(
         training=gen_yearbook_training_conf("SGD", 0.42, gpu_device, lr_scheduler, num_epochs, seed),
         selection_strategy=selection_strategy,
         data=DataConfig(
-            dataset_id="yearbook", transformations=transformations, bytes_parser_function=bytes_parser_func
+            dataset_id="yearbook_train", transformations=transformations, bytes_parser_function=bytes_parser_func
         ),
         trigger=TimeTriggerConfig(every="1d"),
         evaluation=EvaluationConfig(
@@ -130,7 +131,7 @@ def gen_yearbook_config(
                     name="slidingmatrix",
                     execution_time="after_pipeline",
                     models="matrix",
-                    datasets=["yearbook-test"],
+                    datasets=["yearbook_test"],
                     strategy=PeriodicEvalStrategyConfig(
                         every="1d", interval="[-25h; +25h]", start_timestamp=0, end_timestamp=7258000
                     ),
@@ -185,7 +186,7 @@ def gen_yearbook_config(
                         ),
                     ],
                 )
-                for dataset in ["yearbook", "yearbook-test"]
+                for dataset in ["yearbook_train", "yearbook_test"]
             ],
         ),
     )

@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modynclient.client.client import Client
@@ -33,3 +34,27 @@ def run_multiple_pipelines(
             return
 
     logger.info("Finished running multiple experiments!")
+
+
+def run_multiple_pipelines_parallel(
+    client_config: ModynClientConfig,
+    pipeline_configs: list[ModynPipelineConfig],
+    start_replay_at: int = 0,
+    stop_replay_at: int | None = None,
+    maximum_triggers: int | None = None,
+    show_eval_progress=True,
+) -> None:
+    logger.info("Start running multiple experiments in parallel!")
+    with ThreadPoolExecutor(max_workers=len(pipeline_configs)) as executor:
+        for pipeline_config in pipeline_configs:
+            executor.submit(
+                run_multiple_pipelines,
+                client_config,
+                [pipeline_config],
+                start_replay_at,
+                stop_replay_at,
+                maximum_triggers,
+                show_eval_progress,
+            )
+
+    logger.info("Finished running multiple experiments in parallel!")

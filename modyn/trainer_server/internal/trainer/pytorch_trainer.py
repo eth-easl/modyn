@@ -708,6 +708,7 @@ class PytorchTrainer:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
+        self._model.model.train()
         self._model.model.load_state_dict(checkpoint["model"])
         if load_optimizer_state:
             for optimizer_name, optimizer in self._optimizers.items():
