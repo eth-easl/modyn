@@ -50,6 +50,7 @@ def gen_selection_strategies(
     warmup_triggers: int,
     num_classes: int,
     training_config: TrainingConfig,
+    period: int,
     small_run: bool = False,
     include_full=True,
 ) -> list[tuple[str, SelectionStrategy]]:
@@ -136,7 +137,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1),
+                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
                 ),
             )
         )
@@ -167,7 +168,7 @@ def gen_selection_strategies(
                     tail_triggers=0,
                     limit=-1,
                     warmup_triggers=warmup_triggers,
-                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1),
+                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
                 ),
             )
         )
@@ -217,7 +218,7 @@ def gen_selection_strategies(
     #                     downsampling_config=RHOLossDownsamplingConfig(
     #                         ratio=ratio, ratio_max=ratio_max,
     #                         sample_then_batch=False,
-    #                         period=1,
+    #                         period=period,
     #                         holdout_set_ratio=50,
     #                         holdout_set_strategy="Twin",
     #                         il_training_config=ILTrainingConfig(**training_config_dict),
@@ -238,7 +239,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="Margin"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Margin"
                     ),
                 ),
             )
@@ -255,7 +256,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="Margin"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Margin"
                 ),
             ),
         )
@@ -273,7 +274,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="LeastConfidence"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="LeastConfidence"
                     ),
                 ),
             )
@@ -290,7 +291,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="LeastConfidence"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="LeastConfidence"
                 ),
             ),
         )
@@ -308,7 +309,7 @@ def gen_selection_strategies(
                     limit=-1,
                     warmup_triggers=warmup_triggers,
                     downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=1, score_metric="Entropy"
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Entropy"
                     ),
                 ),
             )
@@ -325,7 +326,7 @@ def gen_selection_strategies(
                 limit=-1,
                 warmup_triggers=warmup_triggers,
                 downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, period=1, score_metric="Entropy"
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Entropy"
                 ),
             ),
         )
@@ -375,8 +376,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     train_gpu = f"cuda:{gpu_id}"
     num_gpus = 4  # to parallelize across gpus
 
-    num_epochs = 5  # default value, for CGLM/arxiv/yearbook see below
-    warmup_triggers = 1  # default value, for CGLM/arxiv/yearbook see below
+    period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
     ratios = [500, 250] # 12.5%, 50%, 25% due to ratio max scaling
@@ -387,10 +387,10 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     model = "yearbooknet"  # necessary for yearbook, ignored for others
     optimizer = None  # ignored for non arxiv
     lr = None  # ignored for non arxiv
-    num_classes = 6404  # necessary for CGLM, ignored for others
     train_conf_func = None
     maximum_triggers = None
     if pipeline_gen_func == gen_yearbook_config:
+        num_classes = 2
         min_lr = 1e-4
         warmup_triggers = 2
         num_epochs = 5
@@ -409,6 +409,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         min_lr = 0.00001
         warmup_triggers = 1
         num_epochs = 5
+        num_classes = 172
         optimizer = "AdamW"
         lr = 0.00002
         config_str_fn = (
@@ -440,6 +441,8 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         num_classes = ds_class_map[dataset]
         train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
+    else:
+        raise RuntimeError("Unknown pipeline generator function.")
 
     existing_pipelines = []
     if skip_existing:
@@ -486,6 +489,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
                     warmup_triggers,
                     num_classes,
                     train_conf,
+                    period,
                     small_run=small_run,
                     include_full=(ratio == ratios[0]),
                 ):
