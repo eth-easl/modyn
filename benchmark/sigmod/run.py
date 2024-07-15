@@ -126,21 +126,6 @@ def gen_selection_strategies(
             ),
         )
     )
-    if not small_run:
-        # Loss StB every epoch
-        strategies.append(
-            (
-                f"loss_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
-                ),
-            )
-        )
 
     # Loss BtS
     strategies.append(
@@ -156,22 +141,6 @@ def gen_selection_strategies(
             ),
         )
     )
-
-    if not small_run:
-        # Gradnorm StB every epoch
-        strategies.append(
-            (
-                f"grad_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
-                ),
-            )
-        )
 
     # Gradnorm BtS
     strategies.append(
@@ -227,23 +196,6 @@ def gen_selection_strategies(
     #             )
     #         )
 
-    if not small_run:
-        # Margin StB every epoch
-        strategies.append(
-            (
-                f"margin_stb_{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Margin"
-                    ),
-                ),
-            )
-        )
 
     # Margin BtS
     strategies.append(
@@ -262,23 +214,6 @@ def gen_selection_strategies(
         )
     )
 
-    if not small_run:
-        # LeastConf StB every epoch
-        strategies.append(
-            (
-                f"lc_stb_{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="LeastConfidence"
-                    ),
-                ),
-            )
-        )
 
     # LeastConf BtS
     strategies.append(
@@ -297,24 +232,6 @@ def gen_selection_strategies(
         )
     )
 
-    if not small_run:
-        # Entropy StB every epoch
-        strategies.append(
-            (
-                f"entropy_stb_{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Entropy"
-                    ),
-                ),
-            )
-        )
-
     # Entropy BtS
     strategies.append(
         (
@@ -331,6 +248,84 @@ def gen_selection_strategies(
             ),
         )
     )
+
+    if not small_run:
+        # Gradnorm StB
+        strategies.append(
+            (
+                f"grad_stb_period{period}",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
+                ),
+            )
+        )
+        # Loss StB
+        strategies.append(
+            (
+                f"loss_stb_period{period}",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
+                ),
+            )
+        )
+        # Margin StB
+        strategies.append(
+            (
+                f"margin_stb_{period}",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Margin"
+                    ),
+                ),
+            )
+        )
+        # LeastConf StB
+        strategies.append(
+            (
+                f"lc_stb_{period}",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="LeastConfidence"
+                    ),
+                ),
+            )
+        )
+        # Entropy StB
+        strategies.append(
+            (
+                f"entropy_stb_{period}",
+                CoresetStrategyConfig(
+                    maximum_keys_in_memory=100000,
+                    storage_backend="database",
+                    tail_triggers=0,
+                    limit=-1,
+                    warmup_triggers=warmup_triggers,
+                    downsampling_config=UncertaintyDownsamplingConfig(
+                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Entropy"
+                    ),
+                ),
+            )
+        )
 
     return strategies
 
