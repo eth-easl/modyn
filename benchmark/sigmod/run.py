@@ -130,7 +130,7 @@ def gen_selection_strategies(
         # Loss StB every epoch
         strategies.append(
             (
-                "loss_stb",
+                f"loss_stb_period{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -161,7 +161,7 @@ def gen_selection_strategies(
         # Gradnorm StB every epoch
         strategies.append(
             (
-                "grad_stb",
+                f"grad_stb_period{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -231,7 +231,7 @@ def gen_selection_strategies(
         # Margin StB every epoch
         strategies.append(
             (
-                "margin_stb",
+                f"margin_stb_{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -266,7 +266,7 @@ def gen_selection_strategies(
         # LeastConf StB every epoch
         strategies.append(
             (
-                "lc_stb",
+                f"lc_stb_{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -301,7 +301,7 @@ def gen_selection_strategies(
         # Entropy StB every epoch
         strategies.append(
             (
-                "entropy_stb",
+                f"entropy_stb_{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -363,6 +363,16 @@ def gen_lr_scheduler_configs(min_lr: float, disable: bool) -> list[tuple[str, No
     return configs
 
 
+def config_str_fn(
+    selection_strategy_id: str,
+    lr_sched_id: str,
+    num_epochs: int,
+    warmup_triggers: int,
+    ratio: int,
+) -> str:
+    return f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
+
+
 def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     logger.info("Grüeziwohl!")
     pipeline_configs: list[ModynPipelineConfig] = []
@@ -395,15 +405,6 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         warmup_triggers = 2
         num_epochs = 5
         optimizer = "SGD"
-        config_str_fn = (
-            lambda model,
-            selection_strategy_id,
-            lr_sched_id,
-            num_epochs,
-            warmup_triggers,
-            ratio,
-            dataset: f"{model}_{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
-        )
         train_conf_func = gen_yearbook_training_conf
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
@@ -412,15 +413,6 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         num_classes = 172
         optimizer = "AdamW"
         lr = 0.00002
-        config_str_fn = (
-            lambda model,
-            selection_strategy_id,
-            lr_sched_id,
-            num_epochs,
-            warmup_triggers,
-            ratio,
-            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
-        )
         train_conf_func = gen_arxiv_training_conf
 
     elif pipeline_gen_func == gen_cglm_config:
@@ -428,15 +420,6 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         warmup_triggers = 5
         num_epochs = 5
         optimizer = "SGD"
-        config_str_fn = (
-            lambda model,
-            selection_strategy_id,
-            lr_sched_id,
-            num_epochs,
-            warmup_triggers,
-            ratio,
-            dataset: f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_ds{dataset}_r{ratio}"
-        )
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
         train_conf_func = gen_cglm_training_conf
@@ -503,9 +486,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
                     if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
                         continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
-                    config_id = config_str_fn(
-                        model, selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, dataset
-                    )
+                    config_id = config_str_fn(selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio)
 
                     pipeline_config = pipeline_gen_func(
                         config_id,
