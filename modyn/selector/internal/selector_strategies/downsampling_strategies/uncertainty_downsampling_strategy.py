@@ -23,7 +23,6 @@ class UncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
 
         config["score_metric"] = self.downsampling_config.score_metric
         config["balance"] = self.balance
-
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
             raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
 
