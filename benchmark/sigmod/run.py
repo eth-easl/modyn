@@ -386,7 +386,7 @@ def run_experiment(
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [500,]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
+    ratios = [500]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
     small_run = False
     include_full = False
@@ -487,7 +487,9 @@ def run_experiment(
                     if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
                         continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
-                    config_id = config_str_fn(selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio)
+                    config_id = config_str_fn(
+                        selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, trigger_period
+                    )
 
                     pipeline_config = pipeline_gen_func(
                         config_id,
