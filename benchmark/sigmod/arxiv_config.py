@@ -78,6 +78,7 @@ def gen_arxiv_config(
     seed: int,
     optimizer: str,
     lr: float,
+    trigger_period: str,
 ) -> ModynPipelineConfig:
     del model  # ignored for now
     del dataset
@@ -99,7 +100,7 @@ def gen_arxiv_config(
             ),
             tokenizer="DistilBertTokenizerTransform",
         ),
-        trigger=TimeTriggerConfig(every="1d", start_timestamp=0),
+        trigger=TimeTriggerConfig(every=trigger_period, start_timestamp=0),
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(

@@ -38,7 +38,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d:%H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(f"client_{current_time_millis()}.log", mode="w"),
+        # logging.FileHandler(f"client_{current_time_millis()}.log", mode="w"),
     ],
 )
 logger = logging.getLogger(__name__)
@@ -281,7 +281,7 @@ def gen_selection_strategies(
         # Margin StB
         strategies.append(
             (
-                f"margin_stb_{period}",
+                f"margin_stb_period{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -297,7 +297,7 @@ def gen_selection_strategies(
         # LeastConf StB
         strategies.append(
             (
-                f"lc_stb_{period}",
+                f"lc_stb_period{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -313,7 +313,7 @@ def gen_selection_strategies(
         # Entropy StB
         strategies.append(
             (
-                f"entropy_stb_{period}",
+                f"entropy_stb_period{period}",
                 CoresetStrategyConfig(
                     maximum_keys_in_memory=100000,
                     storage_backend="database",
@@ -362,11 +362,15 @@ def config_str_fn(
     num_epochs: int,
     warmup_triggers: int,
     ratio: int,
+    trigger_period: str,
 ) -> str:
-    return f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_r{ratio}"
+    return f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_trigger{trigger_period}_r{ratio}"
 
 
-def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
+def run_experiment(
+        gpu_id: Annotated[int, typer.Argument(help="The GPU ID to run the experiment on")],
+        disable_run: Annotated[bool, typer.Option(help="If set, will only print the pipelines to run")] = False,
+) -> None:
     logger.info("Grüeziwohl!")
 
     # Pick the line you want.
@@ -382,9 +386,10 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
     seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [500, 250] # 12.5%, 50%, 25% due to ratio max scaling
+    ratios = [500,]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
-    small_run = True
+    small_run = False
+    include_full = False
     skip_existing = False
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
@@ -399,6 +404,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         num_epochs = 5
         optimizer = "SGD"
         train_conf_func = gen_yearbook_training_conf
+        trigger_period = "1d"
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
         warmup_triggers = 1
@@ -407,7 +413,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         optimizer = "AdamW"
         lr = 0.00002
         train_conf_func = gen_arxiv_training_conf
-
+        trigger_period = "1d"
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 5
@@ -417,6 +423,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
         num_classes = ds_class_map[dataset]
         train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
+        trigger_period = "1y"
     else:
         raise RuntimeError("Unknown pipeline generator function.")
 
@@ -468,7 +475,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
                     train_conf,
                     period,
                     small_run=small_run,
-                    include_full=(ratio == ratios[0]),
+                    include_full=include_full,
                 ):
                     if (
                         dataset == "cglm_landmark_min25"
@@ -494,6 +501,7 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
                         seed,
                         optimizer,
                         lr,
+                        trigger_period
                     )
 
                     if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
@@ -502,6 +510,12 @@ def run_experiment(gpu_id: Annotated[int, typer.Argument()]) -> None:
 
                     run_id += 1
 
+    logger.info(f"There are {run_id} pipelines to run.")
+    pipeline_ids = [p.pipeline.name for p in pipeline_configs]
+    logger.info(f"The current process will run: {', '.join(pipeline_ids)}")
+    if disable_run:
+        logger.info("Exiting without running.")
+        return
     host = "localhost" #os.getenv("MODYN_SUPERVISOR_HOST")
     port = 3069 #os.getenv("MODYN_SUPERVISOR_PORT")
 

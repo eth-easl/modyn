@@ -48,14 +48,18 @@ def run_multiple_pipelines_parallel(
     logger.info("Start running multiple experiments in parallel!")
     # each time we take maximal_collocation pipelines and run them in parallel
     for i in range(0, len(pipeline_configs), maximal_collocation):
+        sub_pipeline_configs = pipeline_configs[i : i + maximal_collocation]
+
         with ThreadPoolExecutor(max_workers=maximal_collocation) as executor:
-            executor.submit(
-                run_multiple_pipelines,
-                client_config,
-                pipeline_configs[i : i + maximal_collocation],
-                start_replay_at,
-                stop_replay_at,
-                maximum_triggers,
-                show_eval_progress,
-            )
+            for sub_pipeline_config in sub_pipeline_configs:
+                logger.info(f"Starting pipeline: {sub_pipeline_config.pipeline.name}")
+                executor.submit(
+                    run_multiple_pipelines,
+                    client_config,
+                    [sub_pipeline_config],
+                    start_replay_at,
+                    stop_replay_at,
+                    maximum_triggers,
+                    show_eval_progress,
+                )
     logger.info("Finished running multiple experiments in parallel!")

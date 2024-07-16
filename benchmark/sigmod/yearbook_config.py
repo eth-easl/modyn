@@ -102,6 +102,7 @@ def gen_yearbook_config(
     seed: int,
     optimizer: str,
     lr: float,
+    trigger_period: str,
 ) -> ModynPipelineConfig:
     del dataset
     del num_classes
@@ -117,14 +118,14 @@ def gen_yearbook_config(
         data=DataConfig(
             dataset_id="yearbook_train", transformations=transformations, bytes_parser_function=bytes_parser_func
         ),
-        trigger=TimeTriggerConfig(every="1d"),
+        trigger=TimeTriggerConfig(every=trigger_period),
         evaluation=EvaluationConfig(
             handlers=[
                 EvalHandlerConfig(
                     name="exactmatrix",
                     execution_time="after_pipeline",
                     models="matrix",
-                    datasets=["yearbook-test"],
+                    datasets=["yearbook_test"],
                     strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=7258000),
                 ),
                 EvalHandlerConfig(
