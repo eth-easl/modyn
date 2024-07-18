@@ -363,8 +363,9 @@ def config_str_fn(
     warmup_triggers: int,
     ratio: int,
     trigger_period: str,
+    seed: int,
 ) -> str:
-    return f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_trigger{trigger_period}_r{ratio}"
+    return f"{selection_strategy_id}_{lr_sched_id}_epoch{num_epochs}_warm{warmup_triggers}_trigger{trigger_period}_seed{seed}_r{ratio}"
 
 
 def run_experiment(
@@ -427,41 +428,6 @@ def run_experiment(
     else:
         raise RuntimeError("Unknown pipeline generator function.")
 
-    existing_pipelines = []
-    if skip_existing:
-        log_directory = Path(input("Please enter the directory in which to search for existing pipelines: ")) or Path(
-            "/raid/modyn/maxi/sigmod/logs"
-        )
-        if not log_directory.exists():
-            raise RuntimeError(f"{log_directory} does not exist.")
-
-        names = list(log_directory.glob("**/.name"))
-
-        for name_file in names:
-            name = name_file.read_text()
-            pipeline_file = name_file.parent / "pipeline.log"
-
-            if not pipeline_file.exists():
-                logger.info(f"{name_file} exists, but {pipeline_file} does not")
-                continue
-
-            try:
-                parsed_log = PipelineLogs.model_validate_json(pipeline_file.read_text())
-            except:
-                print(f"Skipping file {pipeline_file} due to invalid format")
-                continue
-
-            seed = parsed_log.config.pipeline.training.seed
-            # patch legacy names
-            if name[-4] != "r":
-                name = f"{name}_r500"  # we only did 50% runs before
-
-            existing_pipelines.append((name, seed))
-
-        logger.info(f"Found these existing pipelines: {existing_pipelines}")
-
-    existing_pipelines = set(existing_pipelines)
-    run_id = 0
     pipeline_configs: list[ModynPipelineConfig] = []
     for seed in seeds:
         for ratio in ratios:
@@ -488,7 +454,7 @@ def run_experiment(
                         continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
                     config_id = config_str_fn(
-                        selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, trigger_period
+                        selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, trigger_period, seed
                     )
 
                     pipeline_config = pipeline_gen_func(
@@ -506,15 +472,19 @@ def run_experiment(
                         trigger_period
                     )
 
-                    if run_id % num_gpus == gpu_id and (pipeline_config.pipeline.name, seed) not in existing_pipelines:
-                        logger.info(f"Running {config_id} with seed {seed} and ratio {ratio} on GPU {train_gpu}.")
-                        pipeline_configs.append(pipeline_config)
+                    pipeline_configs.append(pipeline_config)
 
-                    run_id += 1
+    all_pipeline_ids = [p.pipeline.name for p in pipeline_configs]
+    logger.info(f"There are {len(all_pipeline_ids)} pipelines in total")
+    logger.info(f"All pipelines: \n {'\n'.join(all_pipeline_ids)}")
 
-    logger.info(f"There are {run_id} pipelines to run.")
-    pipeline_ids = [p.pipeline.name for p in pipeline_configs]
-    logger.info(f"The current process will run: {', '.join(pipeline_ids)}")
+    current_pipeline_configs = []
+    # share the pipeline_configs across all gpus
+    for i in range(gpu_id, len(pipeline_configs), num_gpus):
+        current_pipeline_configs.append(pipeline_configs[i])
+
+    logger.info(f"the current process will run {len(current_pipeline_configs)} pipelines on GPU {train_gpu}")
+    logger.info(f"Running pipelines: \n{'\n'.join([p.pipeline.name for p in current_pipeline_configs])}")
     if disable_run:
         logger.info("Exiting without running.")
         return
@@ -525,7 +495,6 @@ def run_experiment(
     #     host = input("Enter the supervisors host address: ") or "localhost"
     # if not port:
     #     port = int(input("Enter the supervisors port: ") or "3000")
-
 
     run_multiple_pipelines_parallel(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),

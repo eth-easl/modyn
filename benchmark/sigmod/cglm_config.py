@@ -79,7 +79,6 @@ def gen_cglm_config(
     del lr
     del optimizer
     model_config = ModelConfig(id="ResNet50", config={"use_pretrained": True, "num_classes": num_classes})
-    logger.debug("This is a test.")
 
     bytes_parser_func = (
         "from PIL import Image\n"

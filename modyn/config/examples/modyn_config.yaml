@@ -178,7 +178,7 @@ storage:
         name: "cglm_landmark_min25",
         description: "cglm_landmark_min25 Dataset",
         version: "0.0.1",
-        base_path: "/datasets/cglmgen/cglm_landmark_min25/train",
+        base_path: "/datasets/cglm_gen/cglm_landmark_min25/train",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
@@ -194,7 +194,7 @@ storage:
         name: "cglm_landmark_min25-test",
         description: "cglm_landmark_min25 test Dataset",
         version: "0.0.1",
-        base_path: "/datasets/cglmgen/cglm_landmark_min25/eval",
+        base_path: "/datasets/cglm_gen/cglm_landmark_min25/eval",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
@@ -210,7 +210,7 @@ storage:
         name: "cglm_hierarchical_min25",
         description: "cglm_hierarchical_min25 Dataset",
         version: "0.0.1",
-        base_path: "/datasets/cglmgen/cglm_hierarchical_min25/train",
+        base_path: "/datasets/cglm_gen/cglm_hierarchical_min25/train",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
@@ -226,7 +226,7 @@ storage:
         name: "cglm_hierarchical_min25-test",
         description: "cglm_hierarchical_min25 test Dataset",
         version: "0.0.1",
-        base_path: "/datasets/cglmgen/cglm_hierarchical_min25/eval",
+        base_path: "/datasets/cglm_gen/cglm_hierarchical_min25/eval",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
