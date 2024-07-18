@@ -31,6 +31,39 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 128,
       },
+      # ------------------------------------ CIFAR10 ----------------------------------- #
+      {
+        name: "cifar10-train",
+        description: "CIFAR10 Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/cifar10/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".png",
+            label_file_extension: ".label"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 999999999,
+        selector_batch_size: 100000,
+      },
+      {
+        name: "cifar10-test",
+        description: "CIFAR10 Dataset",
+        version: "0.0.1",
+        base_path: "/datasets/cifar10/test",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "SingleSampleFileWrapper",
+        file_wrapper_config:
+          {
+            file_extension: ".png",
+            label_file_extension: ".label"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 999999999,
+        selector_batch_size: 100000,
+      },
       # ----------------------------------- CRITEO ----------------------------------- #
       {
         name: "criteo",

@@ -10,6 +10,7 @@ import typer
 
 from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
 from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
+from benchmark.sigmod.cifar10 import gen_cifar10_config, gen_cifar10_training_conf
 from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
 from experiments.utils.experiment_runner import run_multiple_pipelines, run_multiple_pipelines_parallel
 from modyn.config import (
@@ -384,7 +385,8 @@ def run_experiment(
     # Pick the line you want.
     # pipeline_gen_func = gen_yearbook_config
     # pipeline_gen_func = gen_arxiv_config
-    pipeline_gen_func = gen_cglm_config
+    # pipeline_gen_func = gen_cglm_config
+    pipeline_gen_func = gen_cifar10_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = f"cuda:{gpu_id}"
@@ -431,6 +433,13 @@ def run_experiment(
         train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
         trigger_period = "1y"
+    elif pipeline_gen_func == gen_cifar10_config:
+        min_lr = 0.0001
+        warmup_triggers = 0
+        num_epochs = 20
+        num_classes = 10
+        train_conf_func = gen_cifar10_training_conf
+        trigger_period = "1d"
     else:
         raise RuntimeError("Unknown pipeline generator function.")
 

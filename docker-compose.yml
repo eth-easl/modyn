@@ -56,7 +56,7 @@ services:
       context: .
       dockerfile: docker/Storage/Dockerfile
     volumes:
-      - /scratch/mboether/datasets:/datasets
+      - /scratch/xianma/modyn/datasets:/datasets
       - .:/modyn_host
   metadata_processor:
     restart: on-failure
