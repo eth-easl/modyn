@@ -45,7 +45,7 @@ def run_multiple_pipelines_parallel(
     show_eval_progress: bool,
     maximal_collocation: int,
 ) -> None:
-    logger.info("Start running multiple experiments in parallel!")
+    logger.info(f"Start running {len(pipeline_configs)} experiments in parallel!")
     # each time we take maximal_collocation pipelines and run them in parallel
     for i in range(0, len(pipeline_configs), maximal_collocation):
         sub_pipeline_configs = pipeline_configs[i : i + maximal_collocation]

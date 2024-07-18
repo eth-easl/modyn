@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 import sys
-from typing import Annotated
+from typing import Annotated, Optional
 
 import typer
 
@@ -371,27 +372,32 @@ def config_str_fn(
 def run_experiment(
         gpu_id: Annotated[int, typer.Argument(help="The GPU ID to run the experiment on")],
         disable_run: Annotated[bool, typer.Option(help="If set, will only print the pipelines to run")] = False,
+        existing_pipeline_file: Annotated[Optional[str], typer.Option(help="If set, will skip pipelines inside")] = None
 ) -> None:
     logger.info("Grüeziwohl!")
-
+    if existing_pipeline_file is not None:
+        with open(existing_pipeline_file, "r") as f:
+            existing_pipeline_names = json.load(f)
+    else:
+        existing_pipeline_names = []
+    logger.info(f"Existing pipelines: {existing_pipeline_names}")
     # Pick the line you want.
-    pipeline_gen_func = gen_yearbook_config
+    # pipeline_gen_func = gen_yearbook_config
     # pipeline_gen_func = gen_arxiv_config
-    # pipeline_gen_func = gen_cglm_config
+    pipeline_gen_func = gen_cglm_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = f"cuda:{gpu_id}"
     num_gpus = 4  # to parallelize across gpus
-    maximal_collocation = 4  # maximal number of pipelines to run in parallel on one GPU
+    maximal_collocation = 1  # maximal number of pipelines to run in parallel on one GPU
 
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
+    seeds = [42, 99]#, 99, 12]  # set to [None] to disable, should be 0-100
     ratios = [500]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
-    small_run = False
+    small_run = True
     include_full = False
-    skip_existing = False
     ## only touch if sure you wanna touch
     model = "yearbooknet"  # necessary for yearbook, ignored for others
     optimizer = None  # ignored for non arxiv
@@ -472,7 +478,8 @@ def run_experiment(
                         trigger_period
                     )
 
-                    pipeline_configs.append(pipeline_config)
+                    if pipeline_config.pipeline.name not in existing_pipeline_names:
+                        pipeline_configs.append(pipeline_config)
 
     all_pipeline_ids = [p.pipeline.name for p in pipeline_configs]
     logger.info(f"There are {len(all_pipeline_ids)} pipelines in total")
@@ -498,7 +505,7 @@ def run_experiment(
 
     run_multiple_pipelines_parallel(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
-        pipeline_configs=pipeline_configs,
+        pipeline_configs=current_pipeline_configs,
         start_replay_at=0,
         stop_replay_at=None,
         maximum_triggers=maximum_triggers,
