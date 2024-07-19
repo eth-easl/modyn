@@ -15,7 +15,7 @@ def gen_cifar10_training_conf(
         dataloader_workers=1,
         use_previous_model=True,
         initial_model="random",
-        batch_size=320,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
+        batch_size=32,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
         optimizers=[
             OptimizerConfig(
                 name="default",
@@ -31,7 +31,7 @@ def gen_cifar10_training_conf(
         shuffle=True,
         amp=False,
         seed=seed,
-        record_loss_every=1,
+        record_loss_every=10,
     )
 
 

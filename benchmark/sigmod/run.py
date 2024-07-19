@@ -436,8 +436,9 @@ def run_experiment(
     elif pipeline_gen_func == gen_cifar10_config:
         min_lr = 0.0001
         warmup_triggers = 0
-        num_epochs = 20
+        num_epochs = 60
         num_classes = 10
+        optimizer = "AdamW"
         train_conf_func = gen_cifar10_training_conf
         trigger_period = "1d"
     else:

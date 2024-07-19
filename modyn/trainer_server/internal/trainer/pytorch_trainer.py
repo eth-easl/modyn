@@ -215,6 +215,7 @@ class PytorchTrainer:
         self._log["epochs"] = []
 
         training_loss: list[float] = []
+        actual_loss: list[float] = []
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
         else:
@@ -328,8 +329,12 @@ class PytorchTrainer:
                     self.save_state(checkpoint_file_name, trained_batches)
                     stopw.stop("Checkpoint")
 
-                if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
-                    training_loss.append(loss.item())
+                if self._record_loss_every > 0:
+                    actual_loss.append(loss.item())
+                    if trained_batches % self._record_loss_every == self._record_loss_every - 1:
+                        # calculate the average loss over the last record_loss_every batches
+                        training_loss.append(np.mean(actual_loss))
+                        actual_loss = []
 
                 self._num_samples += len(sample_ids)
 
