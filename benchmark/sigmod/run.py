@@ -371,9 +371,11 @@ def config_str_fn(
 
 
 def run_experiment(
-        gpu_id: Annotated[int, typer.Argument(help="The GPU ID to run the experiment on")],
+        physical_gpu_id: Annotated[int, typer.Argument(help="The GPU ID to run the experiment on")],
+        logical_gpu_id: Annotated[Optional[int], typer.Argument(help="The logical GPU ID to run the experiment on")] = None,
         disable_run: Annotated[bool, typer.Option(help="If set, will only print the pipelines to run")] = False,
-        existing_pipeline_file: Annotated[Optional[str], typer.Option(help="If set, will skip pipelines inside")] = None
+        existing_pipeline_file: Annotated[Optional[str], typer.Option(help="If set, will skip pipelines inside")] = None,
+        only_run_pipeline: Annotated[Optional[str], typer.Option(help="If set, will only run the pipeline with this name")] = None,
 ) -> None:
     logger.info("Grüeziwohl!")
     if existing_pipeline_file is not None:
@@ -384,18 +386,20 @@ def run_experiment(
     logger.info(f"Existing pipelines: {existing_pipeline_names}")
     # Pick the line you want.
     # pipeline_gen_func = gen_yearbook_config
-    # pipeline_gen_func = gen_arxiv_config
+    pipeline_gen_func = gen_arxiv_config
     # pipeline_gen_func = gen_cglm_config
-    pipeline_gen_func = gen_cifar10_config
+    # pipeline_gen_func = gen_cifar10_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
-    train_gpu = f"cuda:{gpu_id}"
+    train_gpu = f"cuda:{physical_gpu_id}"
+    if logical_gpu_id is None:
+        logical_gpu_id = physical_gpu_id
     num_gpus = 4  # to parallelize across gpus
     maximal_collocation = 1  # maximal number of pipelines to run in parallel on one GPU
 
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seeds = [42, 99]#, 99, 12]  # set to [None] to disable, should be 0-100
+    seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
     ratios = [500]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
     small_run = True
@@ -422,7 +426,7 @@ def run_experiment(
         optimizer = "AdamW"
         lr = 0.00002
         train_conf_func = gen_arxiv_training_conf
-        trigger_period = "1d"
+        trigger_period = "9d"
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 5
@@ -466,6 +470,9 @@ def run_experiment(
                     ):
                         continue  # classb on landmark does not work
 
+                    if pipeline_gen_func == gen_arxiv_config and selection_strategy_id == "classb":
+                        continue # classb on arxiv does not work
+
                     if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
                         continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
@@ -493,15 +500,25 @@ def run_experiment(
 
     all_pipeline_ids = [p.pipeline.name for p in pipeline_configs]
     logger.info(f"There are {len(all_pipeline_ids)} pipelines in total")
-    logger.info(f"All pipelines: \n {'\n'.join(all_pipeline_ids)}")
+    logger.info("All pipelines: \n {pipelines}".format(pipelines="\n".join(all_pipeline_ids)))
 
     current_pipeline_configs = []
-    # share the pipeline_configs across all gpus
-    for i in range(gpu_id, len(pipeline_configs), num_gpus):
-        current_pipeline_configs.append(pipeline_configs[i])
+    if only_run_pipeline is not None:
+        for p in pipeline_configs:
+            if p.pipeline.name == only_run_pipeline:
+                current_pipeline_configs.append(p)
+                break
+
+        if len(current_pipeline_configs) == 0:
+            logger.error(f"Could not find pipeline with name {only_run_pipeline}; exit without running.")
+            return
+    else:
+        # share the pipeline_configs across all gpus
+        for i in range(logical_gpu_id, len(pipeline_configs), num_gpus):
+            current_pipeline_configs.append(pipeline_configs[i])
 
     logger.info(f"the current process will run {len(current_pipeline_configs)} pipelines on GPU {train_gpu}")
-    logger.info(f"Running pipelines: \n{'\n'.join([p.pipeline.name for p in current_pipeline_configs])}")
+    logger.info("Running pipelines: \n{pipelines}".format(pipelines='\n'.join([p.pipeline.name for p in current_pipeline_configs])))
     if disable_run:
         logger.info("Exiting without running.")
         return

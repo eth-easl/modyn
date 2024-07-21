@@ -91,7 +91,7 @@ def gen_arxiv_config(
         training=gen_arxiv_training_conf(optimizer, lr, gpu_device, lr_scheduler, num_epochs, seed),
         selection_strategy=selection_strategy,
         data=DataConfig(
-            dataset_id="arxiv",
+            dataset_id="arxiv_train",
             transformations=[],
             bytes_parser_function=(
                 "import torch\n"
@@ -107,8 +107,8 @@ def gen_arxiv_config(
                     name="exactmatrix",
                     execution_time="after_pipeline",
                     models="matrix",
-                    datasets=["arxiv-test"],
-                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=1400000),
+                    datasets=["arxiv_test"],
+                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=3024000),
                 )
             ],
             after_pipeline_evaluation_workers=2,
@@ -117,7 +117,7 @@ def gen_arxiv_config(
             result_writers=["json"],
             datasets=[
                 EvalDataConfig(
-                    dataset_id=dataset,
+                    dataset_id="arxiv_test",
                     bytes_parser_function=(
                         "import torch\n"
                         "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
@@ -166,7 +166,6 @@ def gen_arxiv_config(
                         ),
                     ],
                 )
-                for dataset in ["arxiv", "arxiv-test"]
             ],
         ),
     )
