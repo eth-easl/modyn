@@ -5,6 +5,8 @@ import logging
 import multiprocessing as mp
 import pathlib
 import queue
+import threading
+from collections import defaultdict
 from threading import Lock
 from typing import Optional
 
@@ -67,7 +69,9 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         self._next_evaluation_id = 0
         self._evaluation_dict: dict[int, EvaluationInfo] = {}
         self._evaluation_process_dict: dict[int, EvaluationProcessInfo] = {}
-
+        # Note: This only works because the evaluator currently only uses threads, not processes!
+        self._evaluation_data_dict: dict[int, defaultdict[int, list[SingleMetricResult]]] = {}
+        self._evaluation_data_dict_locks: dict[int, threading.Lock] = {}
         self._storage_address = f"{config['storage']['hostname']}:{config['storage']['port']}"
         self._storage_stub = EvaluatorGRPCServicer.connect_to_storage(self._storage_address)
 
@@ -153,10 +157,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
             dataset_size = dataset_size_response.num_keys
             if not dataset_size_response.success:
+                logger.error(f"The interval {interval} in dataset {request.dataset_info.dataset_id} does not exist.")
                 interval_responses.append(
                     EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.DATASET_NOT_FOUND)
                 )
             elif dataset_size == 0:
+                logger.error(f"The interval {interval} in dataset {request.dataset_info.dataset_id} is empty.")
                 interval_responses.append(
                     EvaluateModelIntervalResponse(eval_aborted_reason=EvaluationAbortedReason.EMPTY_DATASET)
                 )
@@ -206,6 +212,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
 
         self._evaluation_dict[evaluation_id] = evaluation_info
+        self._evaluation_data_dict_locks[evaluation_id] = threading.Lock()
+        self._evaluation_data_dict[evaluation_id] = defaultdict(list)
         self._run_evaluation(evaluation_id)
 
         logger.info(f"Started evaluation {evaluation_id}.")
@@ -243,9 +251,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Evaluation with id {evaluation_id} has not been registered")
             return EvaluationStatusResponse(valid=False)
 
+        self._drain_result_queue(evaluation_id)
+
         process_handler = self._evaluation_process_dict[evaluation_id].process_handler
         if process_handler.is_alive():
-            logger.info(f"Evaluation {evaluation_id} is still running, obtaining info from running process.")
+            logger.info(f"Evaluation {evaluation_id} is still running.")
             return EvaluationStatusResponse(valid=True, is_running=True)
 
         exception = self._check_for_evaluation_exception(evaluation_id)
@@ -267,6 +277,22 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         except queue.Empty:
             return None
 
+    def _drain_result_queue(self, evaluation_id: int) -> None:
+        with self._evaluation_data_dict_locks[evaluation_id]:
+            metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
+            while True:
+                try:
+                    interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
+                except queue.Empty:
+                    break
+                metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+                logger.info(
+                    f"Got {len(metric_result)} new results for evaluation {evaluation_id} (interval {interval_idx})"
+                )
+                self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
+
+        logger.info(f"Drained results queue for evaluation {evaluation_id}")
+
     def get_evaluation_result(
         self, request: EvaluationResultRequest, context: grpc.ServicerContext
     ) -> EvaluationResultResponse:
@@ -277,24 +303,21 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
 
+        self._drain_result_queue(evaluation_id)  # Should already be drained, but just make sure
+
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
             logger.error(f"Evaluation with id {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
         logger.info("Returning results of all metrics.")
+        self._drain_result_queue(evaluation_id)  # Should not do anything, but let's make sure
+
         evaluation_data: list[EvaluationIntervalData] = []
 
-        metric_result_queue = self._evaluation_process_dict[evaluation_id].metric_result_queue
-
-        while True:
-            try:
-                interval_idx, metric_result = metric_result_queue.get(timeout=0.1)
-            except queue.Empty:
-                break
-            metric_result = [SingleMetricResult(metric=name, result=result) for name, result in metric_result]
+        for interval_idx, metric_result in self._evaluation_data_dict[evaluation_id].items():
             single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
-
             evaluation_data.append(single_eval_data)
+
         if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
@@ -329,6 +352,8 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
 
         for e_id in evaluation_ids:
             self._evaluation_dict.pop(e_id)
+            self._evaluation_data_dict.pop(e_id)
+            self._evaluation_data_dict_locks.pop(e_id)
 
         gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))

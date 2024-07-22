@@ -1,9 +1,9 @@
 import datetime
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import pandas as pd
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs, SingleEvaluationInfo, StageLog
+from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs, StageLog
 from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
 from modyn.utils.utils import SECONDS_PER_UNIT
 
@@ -129,25 +129,9 @@ def dfs_models_and_evals(
 
     # -------------------------------------------------- EVALUATIONS ------------------------------------------------- #
 
-    dfs_requests = StageLog.df(
-        (
-            run
-            for run in logs.supervisor_logs.stage_runs
-            if (
-                run.id == PipelineStage.EVALUATE_MULTI.name
-                and run.info.failure_reason is None
-                and run.info.eval_request
-            )
-        ),
-        extended=True,
-    )
-
-    dfs_metrics = SingleEvaluationInfo.results_df(
-        (
-            cast(SingleEvaluationInfo, run.info)
-            for run in logs.supervisor_logs.stage_runs
-            if run.id == PipelineStage.EVALUATE_MULTI.name and run.info.failure_reason is None and run.info.eval_request
-        )
+    dfs_requests = MultiEvaluationInfo.requests_df(logs.supervisor_logs.stage_runs)
+    dfs_metrics = MultiEvaluationInfo.results_df(
+        (run.info for run in logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo))
     )
 
     if dfs_requests.shape[0] == 0 or dfs_metrics.shape[0] == 0:

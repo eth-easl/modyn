@@ -64,8 +64,6 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             last_model_id = None
         self._persist_holdout_set(query, next_rho_trigger_id, selector_storage_backend)
         if self.il_training_config.use_previous_model:
-            if self.holdout_set_strategy == "Twin":
-                raise NotImplementedError("Use previous model currently is not supported for Twin strategy")
             previous_model_id = last_model_id
         else:
             previous_model_id = None
@@ -82,6 +80,8 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             second_next_trigger_id = next_rho_trigger_id + 1
             second_query = self._get_rest_data_query(self._pipeline_id, next_trigger_id)
             self._persist_holdout_set(second_query, second_next_trigger_id, selector_storage_backend)
+            # the second training continues from the first training, that's why we finetune from
+            # the first training's model id
             second_model_id, second_trainer_log = self._train_il_model(second_next_trigger_id, model_id)
             rho_log["second_rho_trigger_id"] = second_next_trigger_id
             rho_log["second_il_model_id"] = second_model_id
