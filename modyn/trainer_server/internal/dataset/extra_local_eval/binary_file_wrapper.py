@@ -85,3 +85,14 @@ class BinaryFileWrapper:
 
         samples = [data[(idx * self.record_size) + self.label_size : (idx + 1) * self.record_size] for idx in indices]
         return samples
+
+    def persist_sub_file(self, indices: list, sub_file_path: str) -> None:
+        with open(self.file_path, "rb") as file:
+            data = file.read()
+
+        with open(sub_file_path, "wb") as sub_file:
+            for idx in indices:
+                sub_file.write(
+                    data[(idx * self.record_size) : (idx * self.record_size) + self.record_size]
+                )
+

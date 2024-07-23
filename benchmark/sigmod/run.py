@@ -55,8 +55,9 @@ def gen_selection_strategies(
     ratio_max: int,
     warmup_triggers: int,
     num_classes: int,
-    training_config: TrainingConfig,
+    # training_config: TrainingConfig,
     period: int,
+    maximum_keys_in_memory: int,
     small_run: bool = False,
     include_full=True,
 ) -> list[tuple[str, SelectionStrategy]]:
@@ -71,7 +72,7 @@ def gen_selection_strategies(
             (
                 "full",
                 NewDataStrategyConfig(
-                    maximum_keys_in_memory=100000, storage_backend="database", tail_triggers=0, limit=-1
+                    maximum_keys_in_memory=maximum_keys_in_memory, storage_backend="database", tail_triggers=0, limit=-1
                 ),
             )
         )
@@ -81,7 +82,7 @@ def gen_selection_strategies(
         (
             "uniform",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -96,7 +97,7 @@ def gen_selection_strategies(
         (
             "classb",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -111,7 +112,7 @@ def gen_selection_strategies(
         (
             "rs2w",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -126,7 +127,7 @@ def gen_selection_strategies(
         (
             "rs2wo",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -142,7 +143,7 @@ def gen_selection_strategies(
         (
             "gradmatch_ll",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -159,7 +160,7 @@ def gen_selection_strategies(
         (
             "gradmatch_llem",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -176,7 +177,7 @@ def gen_selection_strategies(
         (
             "craig_ll",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -193,7 +194,7 @@ def gen_selection_strategies(
         (
             "craig_llem",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -211,7 +212,7 @@ def gen_selection_strategies(
         (
             "loss_bts",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -226,7 +227,7 @@ def gen_selection_strategies(
         (
             "grad_bts",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -241,7 +242,7 @@ def gen_selection_strategies(
         (
             "margin_bts",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -259,7 +260,7 @@ def gen_selection_strategies(
         (
             "lc_bts",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -276,7 +277,7 @@ def gen_selection_strategies(
         (
             "entropy_bts",
             CoresetStrategyConfig(
-                maximum_keys_in_memory=100000,
+                maximum_keys_in_memory=maximum_keys_in_memory,
                 storage_backend="database",
                 tail_triggers=0,
                 limit=-1,
@@ -294,7 +295,7 @@ def gen_selection_strategies(
             (
                 f"gradmatch_ll_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -311,7 +312,7 @@ def gen_selection_strategies(
             (
                 f"gradmatch_llem_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -328,7 +329,7 @@ def gen_selection_strategies(
             (
                 f"craig_ll_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -345,7 +346,7 @@ def gen_selection_strategies(
             (
                 f"craig_llem_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -362,7 +363,7 @@ def gen_selection_strategies(
             (
                 f"grad_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -376,7 +377,7 @@ def gen_selection_strategies(
             (
                 f"loss_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -390,7 +391,7 @@ def gen_selection_strategies(
             (
                 f"margin_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -406,7 +407,7 @@ def gen_selection_strategies(
             (
                 f"lc_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -422,7 +423,7 @@ def gen_selection_strategies(
             (
                 f"entropy_stb_period{period}",
                 CoresetStrategyConfig(
-                    maximum_keys_in_memory=100000,
+                    maximum_keys_in_memory=maximum_keys_in_memory,
                     storage_backend="database",
                     tail_triggers=0,
                     limit=-1,
@@ -553,13 +554,14 @@ def run_experiment(
     lr = None  # ignored for non arxiv
     train_conf_func = None
     maximum_triggers = None
+    maximum_keys_in_memory = 100000
     if pipeline_gen_func == gen_yearbook_config:
         num_classes = 2
         min_lr = 1e-4
         warmup_triggers = 2
         num_epochs = 5
         optimizer = "SGD"
-        train_conf_func = gen_yearbook_training_conf
+        # train_conf_func = gen_yearbook_training_conf
         trigger_period = "1d"
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
@@ -568,7 +570,7 @@ def run_experiment(
         num_classes = 172
         optimizer = "AdamW"
         lr = 0.00002
-        train_conf_func = gen_arxiv_training_conf
+        # train_conf_func = gen_arxiv_training_conf
         trigger_period = "9d"
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
@@ -577,7 +579,7 @@ def run_experiment(
         optimizer = "SGD"
         ds_class_map = {"cglm_landmark_min25": 6404, "cglm_hierarchical_min25": 79}
         num_classes = ds_class_map[dataset]
-        train_conf_func = gen_cglm_training_conf
+        # train_conf_func = gen_cglm_training_conf
         maximum_triggers = 17  # last triggers are meaningless and cost time
         trigger_period = "1y"
     elif pipeline_gen_func == gen_cifar10_config:
@@ -586,7 +588,7 @@ def run_experiment(
         num_epochs = 60
         num_classes = 10
         optimizer = "AdamW"
-        train_conf_func = gen_cifar10_training_conf
+        # train_conf_func = gen_cifar10_training_conf
         trigger_period = "1d"
     else:
         raise RuntimeError("Unknown pipeline generator function.")
@@ -595,14 +597,15 @@ def run_experiment(
     for seed in seeds:
         for ratio in ratios:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-                train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
+                # train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
                     ratio,
                     ratio_max,
                     warmup_triggers,
                     num_classes,
-                    train_conf,
+                    # train_conf,
                     period,
+                    maximum_keys_in_memory,
                     small_run=small_run,
                     include_full=include_full,
                 ):
