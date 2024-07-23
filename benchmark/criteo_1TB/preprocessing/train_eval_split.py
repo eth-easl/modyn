@@ -1,13 +1,12 @@
+import concurrent.futures
 import logging
 import logging.handlers
-import concurrent.futures
 import pathlib
+import random
 import sys
 from typing import Annotated, Optional
-import random
-import multiprocessing
-import typer
 
+import typer
 from modyn.trainer_server.internal.dataset.extra_local_eval.binary_file_wrapper import BinaryFileWrapper
 
 logging.basicConfig(

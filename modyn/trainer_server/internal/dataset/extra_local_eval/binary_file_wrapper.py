@@ -92,7 +92,4 @@ class BinaryFileWrapper:
 
         with open(sub_file_path, "wb") as sub_file:
             for idx in indices:
-                sub_file.write(
-                    data[(idx * self.record_size) : (idx * self.record_size) + self.record_size]
-                )
-
+                sub_file.write(data[(idx * self.record_size) : (idx * self.record_size) + self.record_size])
