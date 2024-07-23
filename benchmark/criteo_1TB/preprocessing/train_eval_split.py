@@ -66,7 +66,7 @@ def main(
     seed: Annotated[int, typer.Argument(help="The seed to use for the random number generator")],
     percentage: Annotated[int, typer.Option(help="The percentage of the dataset to use for evaluation")] = 1,
     days_up_to: Annotated[Optional[int], typer.Option(help="Only split the dataset up to this day")] = None,
-    num_workers: Annotated[int, typer.Option(help="The number of workers to use for the split")] = 12,
+    num_workers: Annotated[int, typer.Option(help="The number of workers to use for the split")] = 32,
 ):
     logger = logging.getLogger(__name__)
     logger.info(f"Original Criteo path: {original_criteo_path}")
