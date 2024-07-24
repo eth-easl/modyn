@@ -5,7 +5,10 @@ from typing import Annotated, ForwardRef, Literal, Optional, Union
 from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
-from modyn.config.schema.pipeline.trigger.drift.detection_window import AmountWindowingStrategy, DriftWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    AmountWindowingStrategy,
+    DriftWindowingStrategy,
+)
 
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
@@ -44,9 +47,6 @@ class DataDriftTriggerConfig(ModynBaseModel):
         ),
     )
 
-    reset_current_window_on_trigger: bool = Field(
-        False, description="Whether the current window should be reset on trigger or rather be extended."
-    )
     metrics: dict[str, DriftMetric] = Field(
         min_length=1, description="The metrics used for drift detection keyed by a reference."
     )

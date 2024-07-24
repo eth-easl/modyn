@@ -7,7 +7,6 @@ In this directory, you can find the files necessary to run experiments using the
 The goal is to predict the tag of news given headlines.
 The dataset contains more than 60k samples collected from 2012 to 2018.
 Titles belonging to the same year are grouped into the same CSV file and stored together.
-Each year is mapped to a year starting from 1/1/1970.
 There is a total of 42 categories/classes.
 
 > Note: The wild-time variant of the huffpost dataset has only 11 classes. This is due to the fact that

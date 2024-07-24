@@ -23,11 +23,9 @@ from modyn.supervisor.internal.triggers.drift.decision_engine import (
     HypothesisTestDecisionEngine,
     ThresholdDecisionEngine,
 )
-from modyn.supervisor.internal.triggers.drift.detection_window import (
-    AmountDetectionWindowManager,
-    DetectionWindowManager,
-    TimeDetectionWindowManager,
-)
+from modyn.supervisor.internal.triggers.drift.detection_window.amount import AmountDetectionWindowManager
+from modyn.supervisor.internal.triggers.drift.detection_window.timestamp import TimeDetectionWindowManager
+from modyn.supervisor.internal.triggers.drift.detection_window.window import DetectionWindowManager
 from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
 from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
@@ -86,7 +84,11 @@ class DataDriftTrigger(Trigger):
     ) -> Generator[int, None, None]:
         drift_eval_log = DriftTriggerEvalLog(
             detection_interval=(self._windows.current_[0][1], self._windows.current_[-1][1]),
-            reference_interval=(self._windows.reference_[0][1], self._windows.reference_[-1][1]),
+            reference_interval=(
+                (self._windows.reference_[0][1], self._windows.reference_[-1][1])
+                if self._windows.reference_
+                else (-1, -1)
+            ),
             triggered=triggered,
             trigger_index=-1,
             drift_results=drift_results,

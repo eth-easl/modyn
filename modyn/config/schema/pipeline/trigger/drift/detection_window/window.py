@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Annotated, Literal, Union
+from typing import Literal
 
 from pydantic import Field
 
@@ -12,22 +12,26 @@ from modyn.utils.utils import SECONDS_PER_UNIT
 
 class _BaseWindowingStrategy(ModynBaseModel):
     allow_overlap: bool = Field(
-        False, description="Whether the windows are allowed to overlap. This is useful for time-based windows."
+        False,
+        description=(
+            "Whether the windows are allowed to overlap. This is useful for time-based windows."
+            "If set to False, the current window will be reset after each trigger."
+        ),
     )
 
 
 class AmountWindowingStrategy(_BaseWindowingStrategy):
     id: Literal["AmountWindowingStrategy"] = Field("AmountWindowingStrategy")
-    amount_ref: int = Field(1000, description="How many data points should fit in the reference window")
-    amount_cur: int = Field(1000, description="How many data points should fit in the current window")
+    amount_ref: int = Field(1000, description="How many data points should fit in the reference window", ge=1)
+    amount_cur: int = Field(1000, description="How many data points should fit in the current window", ge=1)
 
     @property
     def current_buffer_size(self) -> int | None:
-        return self.amount_ref
+        return self.amount_cur
 
     @property
     def reference_buffer_size(self) -> int | None:
-        return self.amount_cur
+        return self.amount_ref
 
 
 class TimeWindowingStrategy(_BaseWindowingStrategy):
@@ -60,12 +64,3 @@ class TimeWindowingStrategy(_BaseWindowingStrategy):
     @property
     def reference_buffer_size(self) -> int | None:
         return None
-
-
-DriftWindowingStrategy = Annotated[
-    Union[
-        AmountWindowingStrategy,
-        TimeWindowingStrategy,
-    ],
-    Field(discriminator="id"),
-]

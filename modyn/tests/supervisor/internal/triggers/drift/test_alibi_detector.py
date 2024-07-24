@@ -2,8 +2,10 @@ import statistics
 
 import numpy as np
 import pytest
+
 from modyn.config.schema.pipeline import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric, AlibiDetectMmdDriftMetric
-from modyn.supervisor.internal.triggers.drift.alibi_detector import AlibiDriftDetector
+from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
+from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
 
 
 @pytest.fixture
@@ -13,6 +15,7 @@ def mmd_drift_metric() -> AlibiDetectMmdDriftMetric:
         device=None,
         num_permutations=100,
         kernel="GaussianRBF",
+        decision_criterion=ThresholdDecisionCriterion(threshold=0.2),
     )
 
 
@@ -22,6 +25,7 @@ def ks_drift_metric() -> AlibiDetectKSDriftMetric:
         p_val=0.05,
         correction="bonferroni",
         alternative_hypothesis="two-sided",
+        decision_criterion=ThresholdDecisionCriterion(threshold=0.2),
     )
 
 
@@ -30,6 +34,7 @@ def cvm_drift_metric() -> AlibiDetectCVMDriftMetric:
     return AlibiDetectCVMDriftMetric(
         p_val=0.05,
         correction="bonferroni",
+        decision_criterion=ThresholdDecisionCriterion(threshold=0.2),
     )
 
 
@@ -50,11 +55,11 @@ def test_alibi_detect_drift_metric(
         assert isinstance(ad, AlibiDriftDetector)
 
         # on h0
-        results = ad.detect_drift(data_ref, data_h0)
+        results = ad.detect_drift(data_ref, data_h0, False)
         assert not results[name].is_drift
 
         # on current data
-        results = ad.detect_drift(data_ref, data_cur)
+        results = ad.detect_drift(data_ref, data_cur, False)
         assert results[name].is_drift
         assert (
             0
@@ -80,5 +85,5 @@ def test_alibi_detect_drift_metric(
             "cvm": cvm_drift_metric,
         }
     )
-    results = ad.detect_drift(data_ref, data_cur)
+    results = ad.detect_drift(data_ref, data_cur, False)
     assert len(results) == 3
