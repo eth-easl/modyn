@@ -3,7 +3,6 @@ Key sources
 """
 
 import os
-from enum import Enum
 
 from .abstract_key_source import AbstractKeySource  # noqa: F401
 from .local_key_source import LocalKeySource  # noqa: F401
