@@ -600,8 +600,6 @@ def run_experiment(
         optimizer = "AdamW"  # actually not used
         trigger_period = "1d"
         maximum_keys_in_memory = 2500000
-        # TODO: change it to 10 days
-        maximum_triggers = 1
     else:
         raise RuntimeError("Unknown pipeline generator function.")
 

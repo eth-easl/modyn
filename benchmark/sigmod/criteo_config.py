@@ -171,7 +171,7 @@ def gen_criteo_config(
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(
-            dataset_id="criteo_test",  # TODO: change it back to criteo_train
+            dataset_id="criteo_train",
             label_transformer_function=label_transformer_function,
             bytes_parser_function=bytes_parser_func,
         ),
@@ -183,11 +183,10 @@ def gen_criteo_config(
                     execution_time="after_pipeline",
                     models="matrix",
                     datasets=["criteo_test"],
-                    # TODO: check what the correct values are
-                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=86400),
+                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=86400 * 10),
                 )
             ],
-            after_pipeline_evaluation_workers=2,
+            after_pipeline_evaluation_workers=1,
             device=gpu_device,
             datasets=[
                 EvalDataConfig(
