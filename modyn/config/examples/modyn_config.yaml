@@ -66,10 +66,28 @@ storage:
       },
       # ----------------------------------- CRITEO ----------------------------------- #
       {
-        name: "criteo",
-        description: "Criteo Dataset",
+        name: "criteo_train",
+        description: "Criteo Dataset (training set)",
         version: "0.0.1",
-        base_path: "/datasets/criteo",
+        base_path: "/datasets/criteo/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "little",
+            record_size: 160,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2000000,
+      },
+      {
+        name: "criteo_test",
+        description: "Criteo Dataset (test set)",
+        version: "0.0.1",
+        base_path: "/datasets/criteo/test",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "BinaryFileWrapper",
         file_wrapper_config:

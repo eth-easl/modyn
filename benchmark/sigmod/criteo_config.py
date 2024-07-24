@@ -114,7 +114,7 @@ def gen_criteo_config(
 
     return ModynPipelineConfig(
         pipeline=Pipeline(
-            name=f"arxiv_{config_id}",
+            name=f"criteo_{config_id}",
             description="Criteo throughput test",
             version="0.0.1",
         ),
@@ -171,7 +171,7 @@ def gen_criteo_config(
         ),
         selection_strategy=selection_strategy,
         data=DataConfig(
-            dataset_id="criteo",
+            dataset_id="criteo_test",  # TODO: change it back to criteo_train
             label_transformer_function=label_transformer_function,
             bytes_parser_function=bytes_parser_func,
         ),
@@ -184,8 +184,7 @@ def gen_criteo_config(
                     models="matrix",
                     datasets=["criteo_test"],
                     # TODO: check what the correct values are
-                    # TODO: split the dataset into test and train
-                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=3024000),
+                    strategy=SlicingEvalStrategyConfig(eval_every="1d", eval_start_from=0, eval_end_at=86400),
                 )
             ],
             after_pipeline_evaluation_workers=2,
@@ -205,8 +204,6 @@ def gen_criteo_config(
                             ),
                             topn=1,
                         ),
-                        # AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
-                        # AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
                         RocAucMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"

@@ -43,7 +43,7 @@ def fix_timestamps(path: pathlib.Path):
 
 def fix_day(path: pathlib.Path, day: int):
     assert day >= 0 and day < 24
-    timestamp = (day * DAY_LENGTH_SECONDS) + 1  # avoid off by ones in storage by adding + 1
+    timestamp = (day * DAY_LENGTH_SECONDS)
 
     filelist = path.glob("**/*.bin")
     for file in filelist:

@@ -11,6 +11,7 @@ import typer
 from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
 from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
 from benchmark.sigmod.cifar10 import gen_cifar10_config, gen_cifar10_training_conf
+from benchmark.sigmod.criteo_config import gen_criteo_config
 from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
 from experiments.utils.experiment_runner import run_multiple_pipelines, run_multiple_pipelines_parallel
 from modyn.config import (
@@ -92,387 +93,387 @@ def gen_selection_strategies(
         )
     )
 
-    # Class balanced sampling
-    strategies.append(
-        (
-            "classb",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=ratio, ratio_max=ratio_max),
-            ),
-        )
-    )
-
-    # RS2 with replacement
-    strategies.append(
-        (
-            "rs2w",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=True),
-            ),
-        )
-    )
-
-    # RS2 without replacement
-    strategies.append(
-        (
-            "rs2wo",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=False),
-            ),
-        )
-    )
-
-
-    # Grad-Match BtS last layer
-    strategies.append(
-        (
-            "gradmatch_ll",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=GradMatchDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayer"
-                )
-            ),
-        )
-    )
-
-    # Grad-Match BtS last layer with embedding
-    strategies.append(
-        (
-            "gradmatch_llem",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=GradMatchDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayerWithEmbedding"
-                )
-            ),
-        )
-    )
-
-    # Craig BtS last layer
-    strategies.append(
-        (
-            "craig_ll",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=CraigDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayer"
-                )
-            ),
-        )
-    )
-
-    # Craig BtS last layer with embedding
-    strategies.append(
-        (
-            "craig_llem",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=CraigDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayerWithEmbedding"
-                )
-            ),
-        )
-    )
-
-
-    # Loss BtS
-    strategies.append(
-        (
-            "loss_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
-            ),
-        )
-    )
-
-    # Gradnorm BtS
-    strategies.append(
-        (
-            "grad_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
-            ),
-        )
-    )
-
-    # Margin BtS
-    strategies.append(
-        (
-            "margin_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Margin"
-                ),
-            ),
-        )
-    )
-
-
-    # LeastConf BtS
-    strategies.append(
-        (
-            "lc_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="LeastConfidence"
-                ),
-            ),
-        )
-    )
-
-    # Entropy BtS
-    strategies.append(
-        (
-            "entropy_bts",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                downsampling_config=UncertaintyDownsamplingConfig(
-                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Entropy"
-                ),
-            ),
-        )
-    )
-
-    if not small_run:
-        # Grad-Match StB last layer
-        strategies.append(
-            (
-                f"gradmatch_ll_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=GradMatchDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayer", period=period
-                    )
-                ),
-            )
-        )
-
-        # Grad-Match StB last layer with embedding
-        strategies.append(
-            (
-                f"gradmatch_llem_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=GradMatchDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayerWithEmbedding", period=period
-                    )
-                ),
-            )
-        )
-
-        # Craig StB last layer
-        strategies.append(
-            (
-                f"craig_ll_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=CraigDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayer", period=period
-                    )
-                ),
-            )
-        )
-
-        # Craig StB last layer with embedding
-        strategies.append(
-            (
-                f"craig_llem_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=CraigDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayerWithEmbedding", period=period
-                    )
-                ),
-            )
-        )
-
-        # Gradnorm StB
-        strategies.append(
-            (
-                f"grad_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
-                ),
-            )
-        )
-        # Loss StB
-        strategies.append(
-            (
-                f"loss_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
-                ),
-            )
-        )
-        # Margin StB
-        strategies.append(
-            (
-                f"margin_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Margin"
-                    ),
-                ),
-            )
-        )
-        # LeastConf StB
-        strategies.append(
-            (
-                f"lc_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="LeastConfidence"
-                    ),
-                ),
-            )
-        )
-        # Entropy StB
-        strategies.append(
-            (
-                f"entropy_stb_period{period}",
-                CoresetStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory,
-                    storage_backend="database",
-                    tail_triggers=0,
-                    limit=-1,
-                    warmup_triggers=warmup_triggers,
-                    downsampling_config=UncertaintyDownsamplingConfig(
-                        ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Entropy"
-                    ),
-                ),
-            )
-        )
-
-    # # RHOLossDownsamplingConfig
-    # for use_previous_model in [True]:
-    #     for use_pretrained in [False, True]:
-    #         il_config_options = {
-    #             "il_model_id": "ResNet18",
-    #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
-    #             "use_previous_model": use_previous_model,
-    #             "drop_last_batch": False,
-    #         }
-    #         if not use_pretrained:
-    #             # delete the key
-    #             del il_config_options["il_model_config"]["use_pretrained"]
-    #         training_config_dict = training_config.model_dump()
-    #         training_config_dict.update(il_config_options)
-    #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
-    #         use_prev_suffix = "_use_prev" if use_previous_model else ""
-    #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
-    #         rho_name = f"rho_loss_bts_twin_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
-    #         strategies.append(
-    #             (
-    #                 rho_name,
-    #                 CoresetStrategyConfig(
-    #                     maximum_keys_in_memory=100000,
-    #                     storage_backend="database",
-    #                     tail_triggers=0,
-    #                     limit=-1,
-    #                     warmup_triggers=warmup_triggers,
-    #                     downsampling_config=RHOLossDownsamplingConfig(
-    #                         ratio=ratio, ratio_max=ratio_max,
-    #                         sample_then_batch=False,
-    #                         period=period,
-    #                         holdout_set_ratio=50,
-    #                         holdout_set_strategy="Twin",
-    #                         il_training_config=ILTrainingConfig(**training_config_dict),
-    #                     ),
-    #                 ),
+    # # Class balanced sampling
+    # strategies.append(
+    #     (
+    #         "classb",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             presampling_config=PresamplingConfig(strategy="LabelBalanced", ratio=ratio, ratio_max=ratio_max),
+    #         ),
+    #     )
+    # )
+    #
+    # # RS2 with replacement
+    # strategies.append(
+    #     (
+    #         "rs2w",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=True),
+    #         ),
+    #     )
+    # )
+    #
+    # # RS2 without replacement
+    # strategies.append(
+    #     (
+    #         "rs2wo",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=RS2DownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  with_replacement=False),
+    #         ),
+    #     )
+    # )
+    #
+    #
+    # # Grad-Match BtS last layer
+    # strategies.append(
+    #     (
+    #         "gradmatch_ll",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=GradMatchDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayer"
     #             )
+    #         ),
+    #     )
+    # )
+    #
+    # # Grad-Match BtS last layer with embedding
+    # strategies.append(
+    #     (
+    #         "gradmatch_llem",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=GradMatchDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayerWithEmbedding"
+    #             )
+    #         ),
+    #     )
+    # )
+    #
+    # # Craig BtS last layer
+    # strategies.append(
+    #     (
+    #         "craig_ll",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=CraigDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayer"
+    #             )
+    #         ),
+    #     )
+    # )
+    #
+    # # Craig BtS last layer with embedding
+    # strategies.append(
+    #     (
+    #         "craig_llem",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=CraigDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, full_grad_approximation="LastLayerWithEmbedding"
+    #             )
+    #         ),
+    #     )
+    # )
+    #
+    #
+    # # Loss BtS
+    # strategies.append(
+    #     (
+    #         "loss_bts",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
+    #         ),
+    #     )
+    # )
+    #
+    # # Gradnorm BtS
+    # strategies.append(
+    #     (
+    #         "grad_bts",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False),
+    #         ),
+    #     )
+    # )
+    #
+    # # Margin BtS
+    # strategies.append(
+    #     (
+    #         "margin_bts",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=UncertaintyDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Margin"
+    #             ),
+    #         ),
+    #     )
+    # )
+    #
+    #
+    # # LeastConf BtS
+    # strategies.append(
+    #     (
+    #         "lc_bts",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=UncertaintyDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="LeastConfidence"
+    #             ),
+    #         ),
+    #     )
+    # )
+    #
+    # # Entropy BtS
+    # strategies.append(
+    #     (
+    #         "entropy_bts",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             downsampling_config=UncertaintyDownsamplingConfig(
+    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Entropy"
+    #             ),
+    #         ),
+    #     )
+    # )
+    #
+    # if not small_run:
+    #     # Grad-Match StB last layer
+    #     strategies.append(
+    #         (
+    #             f"gradmatch_ll_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=GradMatchDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayer", period=period
+    #                 )
+    #             ),
     #         )
+    #     )
+    #
+    #     # Grad-Match StB last layer with embedding
+    #     strategies.append(
+    #         (
+    #             f"gradmatch_llem_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=GradMatchDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayerWithEmbedding", period=period
+    #                 )
+    #             ),
+    #         )
+    #     )
+    #
+    #     # Craig StB last layer
+    #     strategies.append(
+    #         (
+    #             f"craig_ll_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=CraigDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayer", period=period
+    #                 )
+    #             ),
+    #         )
+    #     )
+    #
+    #     # Craig StB last layer with embedding
+    #     strategies.append(
+    #         (
+    #             f"craig_llem_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=CraigDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, full_grad_approximation="LastLayerWithEmbedding", period=period
+    #                 )
+    #             ),
+    #         )
+    #     )
+    #
+    #     # Gradnorm StB
+    #     strategies.append(
+    #         (
+    #             f"grad_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=GradNormDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
+    #             ),
+    #         )
+    #     )
+    #     # Loss StB
+    #     strategies.append(
+    #         (
+    #             f"loss_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=LossDownsamplingConfig(ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period),
+    #             ),
+    #         )
+    #     )
+    #     # Margin StB
+    #     strategies.append(
+    #         (
+    #             f"margin_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=UncertaintyDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Margin"
+    #                 ),
+    #             ),
+    #         )
+    #     )
+    #     # LeastConf StB
+    #     strategies.append(
+    #         (
+    #             f"lc_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=UncertaintyDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="LeastConfidence"
+    #                 ),
+    #             ),
+    #         )
+    #     )
+    #     # Entropy StB
+    #     strategies.append(
+    #         (
+    #             f"entropy_stb_period{period}",
+    #             CoresetStrategyConfig(
+    #                 maximum_keys_in_memory=maximum_keys_in_memory,
+    #                 storage_backend="database",
+    #                 tail_triggers=0,
+    #                 limit=-1,
+    #                 warmup_triggers=warmup_triggers,
+    #                 downsampling_config=UncertaintyDownsamplingConfig(
+    #                     ratio=ratio, ratio_max=ratio_max,  sample_then_batch=True, period=period, score_metric="Entropy"
+    #                 ),
+    #             ),
+    #         )
+    #     )
+    #
+    # # # RHOLossDownsamplingConfig
+    # # for use_previous_model in [True]:
+    # #     for use_pretrained in [False, True]:
+    # #         il_config_options = {
+    # #             "il_model_id": "ResNet18",
+    # #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
+    # #             "use_previous_model": use_previous_model,
+    # #             "drop_last_batch": False,
+    # #         }
+    # #         if not use_pretrained:
+    # #             # delete the key
+    # #             del il_config_options["il_model_config"]["use_pretrained"]
+    # #         training_config_dict = training_config.model_dump()
+    # #         training_config_dict.update(il_config_options)
+    # #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
+    # #         use_prev_suffix = "_use_prev" if use_previous_model else ""
+    # #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
+    # #         rho_name = f"rho_loss_bts_twin_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
+    # #         strategies.append(
+    # #             (
+    # #                 rho_name,
+    # #                 CoresetStrategyConfig(
+    # #                     maximum_keys_in_memory=100000,
+    # #                     storage_backend="database",
+    # #                     tail_triggers=0,
+    # #                     limit=-1,
+    # #                     warmup_triggers=warmup_triggers,
+    # #                     downsampling_config=RHOLossDownsamplingConfig(
+    # #                         ratio=ratio, ratio_max=ratio_max,
+    # #                         sample_then_batch=False,
+    # #                         period=period,
+    # #                         holdout_set_ratio=50,
+    # #                         holdout_set_strategy="Twin",
+    # #                         il_training_config=ILTrainingConfig(**training_config_dict),
+    # #                     ),
+    # #                 ),
+    # #             )
+    # #         )
     return strategies
 
 
@@ -530,9 +531,10 @@ def run_experiment(
     logger.info(f"Existing pipelines: {existing_pipeline_names}")
     # Pick the line you want.
     # pipeline_gen_func = gen_yearbook_config
-    pipeline_gen_func = gen_arxiv_config
+    # pipeline_gen_func = gen_arxiv_config
     # pipeline_gen_func = gen_cglm_config
     # pipeline_gen_func = gen_cifar10_config
+    pipeline_gen_func = gen_criteo_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = f"cuda:{physical_gpu_id}"
@@ -590,6 +592,16 @@ def run_experiment(
         optimizer = "AdamW"
         # train_conf_func = gen_cifar10_training_conf
         trigger_period = "1d"
+    elif pipeline_gen_func == gen_criteo_config:
+        min_lr = 0.0001  # actually not used
+        warmup_triggers = 1
+        num_epochs = 1
+        num_classes = 2  # actually not used
+        optimizer = "AdamW"  # actually not used
+        trigger_period = "1d"
+        maximum_keys_in_memory = 2500000
+        # TODO: change it to 10 days
+        maximum_triggers = 1
     else:
         raise RuntimeError("Unknown pipeline generator function.")
 
