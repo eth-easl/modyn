@@ -30,7 +30,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.dummyyear)
+    downloader.store_data(args.dummyyear, args.customsplit)
 
 
 class YearbookDownloader(Dataset):
@@ -74,8 +74,27 @@ class YearbookDownloader(Dataset):
 
     def __len__(self) -> int:
         return len(self._dataset["labels"])
+    
+    def generate_custom_split(self):
+        print("yearbook custom split!")
 
-    def store_data(self, add_final_dummy_year: bool) -> None:
+        # Merge train and test datasets
+        merged_data = {}
+        for year in self.time_steps:
+            year_data, _ = self._get_year_data(year)
+            train_data = year_data['train']
+            test_data = year_data['test']
+            merged_data[year] = train_data + test_data
+            np.random.shuffle(merged_data[year])  # Shuffle the merged dataset
+
+        # Generate new train/test split
+        for year in self.time_steps:
+            year_data, _ = self._get_year_data(year)
+            original_test_size = len(year_data['test'])
+            self._dataset[year]['test'] = merged_data[year][:original_test_size]
+            self._dataset[year]['train'] = merged_data[year][original_test_size:]
+
+    def store_data(self, add_final_dummy_year: bool, custom_split: bool) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
@@ -86,6 +105,10 @@ class YearbookDownloader(Dataset):
         }
         for dir_ in split_dirs.values():
             os.makedirs(dir_, exist_ok=True)
+
+        if custom_split:
+
+            self.generate_custom_split()
 
         overall_stats = {}
         for year in self.time_steps:
