@@ -111,6 +111,7 @@ class EvaluationExecutor:
             eval_state_config.pipeline,
             grpc_handler,
         )
+        executor.grpc.init_cluster_connection()
         executor.context = context
         return executor
 

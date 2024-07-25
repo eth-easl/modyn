@@ -745,6 +745,7 @@ class PytorchTrainer:
         self._downsampler = self._instantiate_downsampler(
             strategy_name, downsampler_config, modyn_config, self._criterion_nored
         )
+        self._log["received_downsampler_config"] = downsampler_config
         self._downsampling_ratio_max = downsampler_config["ratio_max"]
         assert "sample_then_batch" in downsampler_config
         self._log["received_downsampler_config"] = downsampler_config
