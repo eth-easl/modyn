@@ -1,8 +1,8 @@
+import copy
 import logging
 from typing import Any, Optional
 
 import torch
-import copy
 from modyn.utils import dynamic_module_import
 from torch import nn
 
