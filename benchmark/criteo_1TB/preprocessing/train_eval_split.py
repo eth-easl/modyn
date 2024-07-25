@@ -8,8 +8,6 @@ import sys
 from typing import Annotated, Optional
 
 import typer
-from modyn.trainer_server.internal.dataset.extra_local_eval.binary_file_wrapper import BinaryFileWrapper
-
 
 RECORD_SIZE = 160
 LABEL_SIZE = 4
