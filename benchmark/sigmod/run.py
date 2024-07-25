@@ -545,8 +545,8 @@ def run_experiment(
 
     period = 0
     disable_scheduling = True  # For our baselines, scheduling was mostly meaningless.
-    seeds = [42]#, 99, 12]  # set to [None] to disable, should be 0-100
-    ratios = [500]# 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
+    seeds = [42]  #, 99, 12]  # set to [None] to disable, should be 0-100
+    ratios = [500]  # 250, 125] # 12.5%, 50%, 25% due to ratio max scaling
     ratio_max = 1000
     small_run = True
     include_full = False
@@ -567,13 +567,13 @@ def run_experiment(
         trigger_period = "1d"
     elif pipeline_gen_func == gen_arxiv_config:
         min_lr = 0.00001
-        warmup_triggers = 1
+        warmup_triggers = 2
         num_epochs = 5
         num_classes = 172
         optimizer = "AdamW"
         lr = 0.00002
         # train_conf_func = gen_arxiv_training_conf
-        trigger_period = "9d"
+        trigger_period = "4d"
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
         warmup_triggers = 5
