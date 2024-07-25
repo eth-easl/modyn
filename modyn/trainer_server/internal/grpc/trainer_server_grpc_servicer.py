@@ -105,7 +105,9 @@ class TrainerServerGRPCServicer:
 
         pretrained_model_path: Optional[pathlib.Path] = None
         if request.use_pretrained_model:
-            fetch_request = FetchModelRequest(model_id=request.pretrained_model_id, load_metadata=True)
+            fetch_request = FetchModelRequest(
+                model_id=request.pretrained_model_id, load_metadata=True, device=request.device
+            )
             fetch_resp: FetchModelResponse = self.model_storage_stub.FetchModel(fetch_request)
 
             if not fetch_resp.success:
@@ -373,7 +375,7 @@ class TrainerServerGRPCServicer:
                 return StoreFinalModelResponse(valid_state=False)
             final_checkpoint_path.unlink()
             logger.info(f"Deleted final model on path {final_checkpoint_path}")
-
+            del self._training_dict[training_id]
             return StoreFinalModelResponse(valid_state=True, model_id=register_response.model_id)
 
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")

@@ -57,7 +57,7 @@ class EmbeddingEncoderDownloader:
         return embedding_encoder
 
     def download(self, model_id: int) -> pathlib.Path:
-        fetch_request = FetchModelRequest(model_id=model_id, load_metadata=False)
+        fetch_request = FetchModelRequest(model_id=model_id, load_metadata=False, device="cpu")
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
         if not fetch_resp.success:

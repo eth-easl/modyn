@@ -25,6 +25,7 @@ message RegisterModelResponse {
 message FetchModelRequest {
   int32 model_id = 1;
   bool load_metadata = 2;
+  string device = 3;
 }
 
 message FetchModelResponse {

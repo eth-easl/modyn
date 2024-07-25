@@ -99,7 +99,7 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         """
         logger.info(f"Try to fetch model having id {request.model_id}")
 
-        model_dict = self.model_storage_manager.load_model(request.model_id, request.load_metadata)
+        model_dict = self.model_storage_manager.load_model(request.model_id, request.load_metadata, request.device)
         if not model_dict:
             logger.error(f"Trained model {request.model_id} could not be fetched.")
             return FetchModelResponse(success=False)

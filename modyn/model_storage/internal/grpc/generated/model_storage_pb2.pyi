@@ -64,15 +64,18 @@ class FetchModelRequest(google.protobuf.message.Message):
 
     MODEL_ID_FIELD_NUMBER: builtins.int
     LOAD_METADATA_FIELD_NUMBER: builtins.int
+    DEVICE_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     load_metadata: builtins.bool
+    device: builtins.str
     def __init__(
         self,
         *,
         model_id: builtins.int = ...,
         load_metadata: builtins.bool = ...,
+        device: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["load_metadata", b"load_metadata", "model_id", b"model_id"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["device", b"device", "load_metadata", b"load_metadata", "model_id", b"model_id"]) -> None: ...
 
 global___FetchModelRequest = FetchModelRequest
 

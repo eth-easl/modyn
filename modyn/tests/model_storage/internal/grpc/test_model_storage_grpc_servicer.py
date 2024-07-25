@@ -118,7 +118,7 @@ def test_fetch_model(load_model_mock: MagicMock, init_manager_mock, current_time
         servicer = ModelStorageGRPCServicer(config, storage_path, storage_path)
         assert servicer is not None
 
-        req = FetchModelRequest(model_id=10, load_metadata=True)
+        req = FetchModelRequest(model_id=10, load_metadata=True, device="cpu")
         resp: FetchModelResponse = servicer.FetchModel(req, None)
 
         assert resp.success
@@ -140,12 +140,12 @@ def test_fetch_model_invalid(load_model_mock: MagicMock, init_manager_mock):
         servicer = ModelStorageGRPCServicer(config, storage_path, storage_dir)
         assert servicer is not None
 
-        req = FetchModelRequest(model_id=101, load_metadata=False)
+        req = FetchModelRequest(model_id=101, load_metadata=False, device="cpu")
         resp: FetchModelResponse = servicer.FetchModel(req, None)
 
         assert not resp.success
 
-        req = FetchModelRequest(model_id=101, load_metadata=True)
+        req = FetchModelRequest(model_id=101, load_metadata=True, device="cpu")
         resp: FetchModelResponse = servicer.FetchModel(req, None)
 
         assert not resp.success
