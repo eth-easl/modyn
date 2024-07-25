@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 import sys
 
-from benchmark.sigmod.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
-from benchmark.sigmod.cglm_config import gen_cglm_config, gen_cglm_training_conf
+from benchmark.sigmod.selection.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
+from benchmark.sigmod.selection.cglm_config import gen_cglm_config, gen_cglm_training_conf
 from benchmark.sigmod.yearbook_config import gen_yearbook_config, gen_yearbook_training_conf
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config import (

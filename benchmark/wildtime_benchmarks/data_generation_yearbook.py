@@ -76,8 +76,7 @@ class YearbookDownloader(Dataset):
         return len(self._dataset["labels"])
     
     def generate_custom_split(self):
-        print("yearbook custom split!")
-
+        print("Generating custom yearbook split!")
         # Merge train and test datasets
         merged_data = {}
         for year in self.time_steps:
@@ -107,7 +106,6 @@ class YearbookDownloader(Dataset):
             os.makedirs(dir_, exist_ok=True)
 
         if custom_split:
-
             self.generate_custom_split()
 
         overall_stats = {}

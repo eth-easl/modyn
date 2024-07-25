@@ -54,7 +54,7 @@ def gen_arxiv_training_conf(
         dataloader_workers=1,
         use_previous_model=True,
         initial_model="random",
-        batch_size=128,  # TODO(MaxiBoether): Do we want to increase this? Might affect BtS.
+        batch_size=128,
         optimizers=[opti_conf],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
         checkpointing=CheckpointingConfig(activated=False),

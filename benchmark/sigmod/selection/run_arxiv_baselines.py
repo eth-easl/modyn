@@ -63,7 +63,6 @@ def gen_lr_scheduler_configs(min_lr: float, disable: bool) -> list[tuple[str, No
         )
     )
 
-    # TODO(MaxiBoether): Implement / test learning rate warmup
 
     return configs
 
