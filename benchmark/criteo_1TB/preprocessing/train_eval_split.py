@@ -1,6 +1,7 @@
 import concurrent.futures
 import logging
 import logging.handlers
+import os.path
 import pathlib
 import random
 import sys
@@ -9,6 +10,9 @@ from typing import Annotated, Optional
 import typer
 from modyn.trainer_server.internal.dataset.extra_local_eval.binary_file_wrapper import BinaryFileWrapper
 
+
+RECORD_SIZE = 160
+LABEL_SIZE = 4
 logging.basicConfig(
     level=logging.NOTSET,
     format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
@@ -29,21 +33,13 @@ def split_bins(
     day: int,
 ):
     logger = logging.getLogger(__name__)
-    # # persist logs to a file
-    # file_handler = logging.FileHandler(f"split_bins_worker_{worker_id}.log", mode="a")
-    # file_handler.setLevel(logging.INFO)
-    # file_handler.setFormatter(logging.Formatter("[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s"))
-    # logger.addHandler(file_handler)
 
     for bin_file in bin_files:
         bin_file_name = bin_file.name
-        original_file_wrapper = BinaryFileWrapper(
-            file_path=str(bin_file),
-            byteorder="little",
-            record_size=160,
-            label_size=4,
-        )
-        num_samples = original_file_wrapper.get_number_of_samples()
+        file_size = os.path.getsize(bin_file)
+        if file_size % RECORD_SIZE != 0:
+            raise ValueError(f"File {bin_file} does not contain an exact number of records of size {RECORD_SIZE}")
+        num_samples = int(file_size / RECORD_SIZE)
         train_file_path = target_train_day_dataset_path / bin_file_name
         test_file_path = target_test_day_dataset_path / bin_file_name
 
@@ -55,8 +51,22 @@ def split_bins(
         train_indices = all_indices[test_size:]
 
         logger.info(f"[worker {worker_id} at day {day}]: Splitting {bin_file_name} with {num_samples} into {len(train_indices)} training samples and {len(test_indices)} test samples")
-        original_file_wrapper.persist_sub_file(train_indices, str(train_file_path))
-        original_file_wrapper.persist_sub_file(test_indices, str(test_file_path))
+        persist_sub_file(RECORD_SIZE, train_indices, bin_file, train_file_path)
+        persist_sub_file(RECORD_SIZE, test_indices, bin_file, test_file_path)
+
+
+def persist_sub_file(
+        record_size: int,
+        indices: list[int],
+        source_file_path: pathlib.Path,
+        target_file_path: pathlib.Path,
+):
+    with open(source_file_path, "rb") as source_file:
+        data = source_file.read()
+
+    with open(target_file_path, "wb") as target_file:
+        for idx in indices:
+            target_file.write(data[(idx * record_size) : (idx * record_size) + record_size])
 
 
 def main(
