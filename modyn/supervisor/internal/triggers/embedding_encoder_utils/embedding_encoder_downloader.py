@@ -4,6 +4,7 @@ from typing import Optional
 
 import grpc
 from modyn.common.ftp import download_trained_model
+from modyn.config.schema.system.config import ModynConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
 
@@ -24,7 +25,7 @@ class EmbeddingEncoderDownloader:
 
     def __init__(
         self,
-        modyn_config: dict,
+        modyn_config: ModynConfig,
         pipeline_id: int,
         base_dir: pathlib.Path,
         model_storage_address: str,

@@ -6,7 +6,7 @@ import os
 import pathlib
 import threading
 from pathlib import Path
-from typing import Any, Callable, Generator, Iterator, Optional, Tuple
+from typing import Any, Callable, Generator, Iterator, Literal, Optional, Tuple
 
 import torch
 from modyn.common.benchmark.stopwatch import Stopwatch
@@ -118,7 +118,7 @@ class CriteoLocalDataset(IterableDataset):
     ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
         record_size = 160
         label_size = 4
-        byte_order = "little"
+        byte_order: Literal["little"] = "little"
         self._info("Globbing paths", worker_id)
 
         pathlist = sorted(Path(self._criteo_path).glob("**/*.bin"))
