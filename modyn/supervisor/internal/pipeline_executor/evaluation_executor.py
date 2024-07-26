@@ -103,7 +103,6 @@ class EvaluationExecutor:
         context = pickle.loads((snapshot_dir / "context.pcl").read_bytes())
 
         grpc_handler = GRPCHandler(eval_state_config.config.model_dump(by_alias=True))
-        grpc_handler.init_cluster_connection()
         executor = EvaluationExecutor(
             eval_state_config.pipeline_id,
             eval_state_config.eval_dir,
