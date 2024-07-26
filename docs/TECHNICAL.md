@@ -4,6 +4,43 @@ Please follow the Quickstart Section in the [README](../README.md) for a list of
 Please refer to the ­[Architecture Documentation](ARCHITECTURE.md) for an overview of Modyn's components.
 This document will deal with some more details of development and how to extend Modyn.
 
+## Coding
+
+### Pipeline Orchestration
+
+The pipeline is orchestrated by the `Supervisor` component. We use the `PipelineExecutor` class in the `modyn/supervisor/internal/pipeline_executor/pipeline_executor.py` file to coordinate the different stages of the pipeline. The pipeline stages correspond to the `PipelineStage` enum values from `modyn/supervisor/internal/grpc/enums.py` and are reflected in dedicated member functions of the `PipelineExecutor` class. State transitions are managed by the `PipelineExecutor's` `run` method together with the `@pipeline_stage` decorator which adds logging to every pipeline stage function. The flow of stages can be found in [PIPELINE.md](pipeline/PIPELINE.md).
+
+### Data selection policies
+
+Data selection policies are managed by the Selector.
+All policies are implemented in the `modyn/selector/internal/selector_strategies` directory.
+The `AbstractSelectionStrategy` class is the parent class all selection strategies inherit from.
+A new strategy needs to overwrite the `_on_trigger`, `_reset_state`, and `inform_data` functions according to the specification outlined in the `AbstractSelectionStrategy` class.
+
+#### Adding new data selection policies
+
+When implementing a new strategy, make sure to respect the `limit`, `reset_after_trigger`, and `_maximum_keys_in_memory` parameters.
+Check out the `NewDataStrategy` for an example implementation.
+
+### Triggering policies
+
+Triggering policies are managed by the Supervisor.
+All policies are implemented in the `modyn/supervisor/internal/triggers` directory.
+The `Trigger` class is the parent class all triggers inherit from.
+
+#### Adding new triggering policies
+
+A new trigger needs to overwrite the `inform` function according to the specification outlined in the `Trigger` class.
+Checkout the `DataAmountTrigger` for an example implementation.
+
+### Evaluation logic
+
+As depicted in [PIPELINE.md](pipeline/PIPELINE.md) we support running evaluations on model right after their training (during their pipeline) as well as after the full pipeline has been executed.
+Evaluations can be conducted with different strategies (e.g. Slicing, Periodic Windows, etc.). To measure the performance of a full pipeline run we use `composite models`, a post factum evaluation concept condensing multiple models that were trained during a pipeline run.
+More details can be found in the [EVALUATION.md](EVALUATION.md) document.
+
+## Tooling
+
 ### Linting and Testing
 For an automatic execution of automatic formatting, linting, and testing of the Python components, you can use the `scripts/python_compliance.sh` script in the project root. 
 This script runs isort, autopep8, black, mypy, pylint, and pytest.
@@ -71,18 +108,3 @@ For local deployment, you can use tmuxp, which enables to load a tmux session fr
 After running `./scripts/run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.
 To end the session, run CTRL+B (or your tmux modifier), and enter `:kill-session`.
-
-## Adding new data selection and triggering policies
-
-Data selection policies are managed by the Selector.
-All policies are implemented in the `modyn/selector/internal/selector_strategies` directory.
-The `AbstractSelectionStrategy` class is the parent class all selection strategies inherit from.
-A new strategy needs to overwrite the `_on_trigger`, `_reset_state`, and `inform_data` functions according to the specification outlined in the `AbstractSelectionStrategy` class.
-When implementing a new strategy, make sure to respect the `limit`, `reset_after_trigger`, and `_maximum_keys_in_memory` parameters.
-Check out the `NewDataStrategy` for an example implementation.
-
-Triggering policies are managed by the Supervisor.
-All policies are implemented in the `modyn/supervisor/internal/triggers` directory.
-The `Trigger` class is the parent class all triggers inherit from.
-A new trigger needs to overwrite the `inform` function according to the specification outlined in the `Trigger` class.
-Checkout the `DataAmountTrigger` for an example implementation.
