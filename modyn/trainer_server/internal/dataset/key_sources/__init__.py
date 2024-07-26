@@ -3,13 +3,10 @@ Key sources
 """
 
 import os
-from enum import Enum
 
 from .abstract_key_source import AbstractKeySource  # noqa: F401
 from .local_key_source import LocalKeySource  # noqa: F401
 from .selector_key_source import SelectorKeySource  # noqa: F401
-
-KeySourceNames = Enum("KeySource", ["LOCAL_DOWNSAMPLER", "SELECTOR"])
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")
