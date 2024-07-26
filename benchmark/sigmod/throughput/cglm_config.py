@@ -2,12 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from modyn.config import (
-    CheckpointingConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
-)
+from modyn.config import CheckpointingConfig, OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.pipeline import (
     DataConfig,
     FullModelStrategy,

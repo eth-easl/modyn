@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from benchmark.sigmod.throughput.criteo_config import gen_criteo_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
-from modyn.config.schema.pipeline import (
-    ModynPipelineConfig,
-)
-
+from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 from modyn.utils.utils import current_time_millis
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor

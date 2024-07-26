@@ -1,11 +1,6 @@
 from __future__ import annotations
 
-from modyn.config import (
-    CheckpointingConfig,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
-)
+from modyn.config import CheckpointingConfig, OptimizationCriterion, OptimizerConfig, OptimizerParamGroup
 from modyn.config.schema.pipeline import (
     AccuracyMetricConfig,
     DataConfig,

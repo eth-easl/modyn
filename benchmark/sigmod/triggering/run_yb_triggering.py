@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from benchmark.sigmod.triggering.yearbook_triggering_config import gen_yearbook_triggering_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
-
-from modyn.config.schema.pipeline import (
-    ModynPipelineConfig,
-)
+from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
 from modyn.config.schema.pipeline.trigger.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig

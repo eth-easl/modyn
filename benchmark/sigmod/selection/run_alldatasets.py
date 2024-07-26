@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from benchmark.sigmod.selection.arxiv_config import gen_arxiv_config, gen_arxiv_training_conf
 from benchmark.sigmod.selection.cglm_config import gen_cglm_config, gen_cglm_training_conf
