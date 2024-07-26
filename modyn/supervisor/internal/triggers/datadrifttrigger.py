@@ -253,7 +253,9 @@ class DataDriftTrigger(Trigger):
         # make the final decisions with the decision engines
         for metric_name, metric_result in drift_results.items():
             distance = (
-                metric_result.distance if isinstance(metric_result.distance, float) else mean(metric_result.distance)
+                metric_result.distance
+                if isinstance(metric_result.distance, float)
+                else float(mean(metric_result.distance))
             )
             drift_results[metric_name].is_drift = self.decision_engines[metric_name].evaluate_decision(
                 distance, metric_result.is_drift
