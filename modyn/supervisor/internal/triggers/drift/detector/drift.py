@@ -3,7 +3,6 @@ from abc import ABC
 import numpy as np
 import pandas as pd
 import torch
-
 from modyn.config.schema.pipeline.trigger.drift.config import DriftMetric
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 

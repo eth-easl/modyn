@@ -4,8 +4,6 @@ import pathlib
 from typing import Optional
 from unittest.mock import MagicMock, patch
 
-from pytest import fixture
-
 from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
 from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
@@ -17,6 +15,7 @@ from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
+from pytest import fixture
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42

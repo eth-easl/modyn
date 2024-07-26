@@ -1,9 +1,8 @@
 from typing import Annotated, Literal, Union
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, model_validator
-
 from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
+from pydantic import Field, model_validator
 
 
 class _AlibiDetectBaseDriftMetric(BaseMetric):

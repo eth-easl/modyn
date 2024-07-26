@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from modyn.config.schema.pipeline import (
     EvidentlyModelDriftMetric,
     EvidentlyRatioDriftMetric,

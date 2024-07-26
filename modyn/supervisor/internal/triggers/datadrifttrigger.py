@@ -4,8 +4,6 @@ import gc
 import logging
 from typing import Generator, Optional
 
-from numpy import mean
-
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
@@ -39,6 +37,7 @@ from modyn.supervisor.internal.triggers.utils import (
     get_embeddings,
     prepare_trigger_dataloader_fixed_keys,
 )
+from numpy import mean
 
 logger = logging.getLogger(__name__)
 

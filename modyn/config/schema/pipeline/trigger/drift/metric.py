@@ -1,8 +1,7 @@
 from typing import Annotated, Literal, Union
 
-from pydantic import Field
-
 from modyn.config.schema.base_model import ModynBaseModel
+from pydantic import Field
 
 
 class HypothesisTestDecisionCriterion(ModynBaseModel):

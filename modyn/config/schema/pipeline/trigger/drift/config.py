@@ -2,13 +2,9 @@ from __future__ import annotations
 
 from typing import Annotated, ForwardRef, Literal, Optional, Union
 
-from pydantic import Field
-
 from modyn.config.schema.base_model import ModynBaseModel
-from modyn.config.schema.pipeline.trigger.drift.detection_window import (
-    AmountWindowingStrategy,
-    DriftWindowingStrategy,
-)
+from modyn.config.schema.pipeline.trigger.drift.detection_window import AmountWindowingStrategy, DriftWindowingStrategy
+from pydantic import Field
 
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric

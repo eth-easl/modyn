@@ -1,8 +1,7 @@
 from typing import Annotated, Literal, Union
 
-from pydantic import Field
-
 from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
+from pydantic import Field
 
 
 class _EvidentlyBaseDriftMetric(BaseMetric):
