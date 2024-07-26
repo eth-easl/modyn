@@ -44,6 +44,10 @@ repos:
     rev: v1.20.9
     hooks:
       - id: typos
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
