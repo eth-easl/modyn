@@ -17,6 +17,7 @@ training:
   use_previous_model: True
   initial_model: random
   batch_size: 64
+  shuffle: True
   optimizers:
     - name: "default"
       algorithm: "SGD"
@@ -30,13 +31,6 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: False
-  selection_strategy:
-    name: NewDataStrategy
-    maximum_keys_in_memory: 1000
-    config:
-      storage_backend: "database"
-      limit: -1
-      reset_after_trigger: True
 data:
   dataset_id: yearbook
   transformations: []
@@ -46,9 +40,14 @@ data:
     def bytes_parser_function(data: memoryview) -> torch.Tensor:
       with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=UserWarning)
-      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)
+      return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)  # TODO: check
 
 trigger:
   id: TimeTrigger
-  trigger_config:
-    trigger_every: "1d"
+  every: 1d
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 1000
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0

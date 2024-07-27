@@ -24,6 +24,18 @@ class CsvFileWrapper : public FileWrapper {
       separator_ = ',';
     }
 
+    if (file_wrapper_config_["quote_char"]) {
+      quote_ = file_wrapper_config_["quote_char"].as<char>();
+    } else {
+      quote_ = '\0';  // effectively disables quoting
+    }
+
+    if (file_wrapper_config_["quoted_linebreaks"]) {
+      allow_quoted_linebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
+    } else {
+      allow_quoted_linebreaks_ = true;
+    }
+
     bool ignore_first_line = false;
     if (file_wrapper_config_["ignore_first_line"]) {
       ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
@@ -34,12 +46,8 @@ class CsvFileWrapper : public FileWrapper {
     ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
 
     validate_file_extension();
-
     label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
-
-    stream_ = filesystem_wrapper_->get_stream(path);
-
-    doc_ = rapidcsv::Document(*stream_, label_params_, rapidcsv::SeparatorParams(separator_));
+    setup_document(path);
   }
 
   ~CsvFileWrapper() override {
@@ -52,6 +60,7 @@ class CsvFileWrapper : public FileWrapper {
   CsvFileWrapper(CsvFileWrapper&&) = default;
   CsvFileWrapper& operator=(CsvFileWrapper&&) = default;
 
+  void setup_document(const std::string& path);
   uint64_t get_number_of_samples() override;
   int64_t get_label(uint64_t index) override;
   std::vector<int64_t> get_all_labels() override;
@@ -64,7 +73,8 @@ class CsvFileWrapper : public FileWrapper {
   FileWrapperType get_type() override;
 
  private:
-  char separator_;
+  char separator_, quote_;
+  bool allow_quoted_linebreaks_ = true;
   uint64_t label_index_;
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;

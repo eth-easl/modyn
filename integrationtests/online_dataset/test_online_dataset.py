@@ -19,7 +19,7 @@ from integrationtests.utils import (
     init_metadata_db,
     register_pipeline,
 )
-from modyn.config.schema.pipeline import NewDataSelectionStrategy
+from modyn.config.schema.pipeline import NewDataStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import DataInformRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
@@ -157,14 +157,17 @@ def create_dataset_dir() -> None:
 
 
 def cleanup_dataset_dir() -> None:
+    print("Cleaning dataset dir.")
     shutil.rmtree(DATASET_PATH)
 
 
 def cleanup_storage_database() -> None:
+    print("Cleaning up storage database.")
     storage_channel = connect_to_storage()
     storage = StorageStub(storage_channel)
     request = DatasetAvailableRequest(dataset_id="test_dataset")
     response = storage.DeleteDataset(request)
+    print("Cleaned up storage database.")
 
     assert response.success, "Could not cleanup storage database."
 
@@ -205,8 +208,8 @@ def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit
     # We also enforce high partitioning (maximum_keys_in_memory == 2) to ensure that works
 
-    strategy_config = NewDataSelectionStrategy(
-        maximum_keys_in_memory=2, limit=-1, reset_after_trigger=True, storage_backend="database"
+    strategy_config = NewDataStrategyConfig(
+        maximum_keys_in_memory=2, limit=-1, tail_triggers=0, storage_backend="database"
     )
     pipeline_config = get_minimal_pipeline_config(max(num_dataworkers, 1), strategy_config.model_dump(by_alias=True))
     init_metadata_db(get_modyn_config())
@@ -275,6 +278,8 @@ def test_dataset_impl(
     pipeline_id: int,
     trigger_id: int,
     items: list[int],
+    shuffle: bool,
+    consistency_check: bool,
 ) -> None:
     dataloader, _ = prepare_dataloaders(
         pipeline_id,
@@ -289,8 +294,10 @@ def test_dataset_impl(
         42,
         prefetched_partitions,
         parallel_prefetch_requests,
+        shuffle,
         None,
         None,
+        drop_last=False,  # To allow for consistent checks
     )
 
     expected_min_batches = math.floor(len(items) / batch_size)
@@ -326,7 +333,7 @@ def test_dataset_impl(
         + f"expected_min = {expected_min_batches}, expected_max = {expected_max_batches}"
     )
 
-    assert set(all_samples) == set(items)
+    assert set(all_samples) == set(items), f"all_samples = {all_samples} \n\n items = {items}"
     assert set(all_labels) == set(range(len(items)))
 
     trans = transforms.Compose([transforms.ToPILImage()])
@@ -338,6 +345,47 @@ def test_dataset_impl(
         image_bytes = pil_image.tobytes()
         if image_bytes not in FIRST_ADDED_IMAGES:
             raise ValueError(f"Could not find image {idx} in created images, all_samples = {all_samples}")
+
+    if not consistency_check:
+        return
+
+    print("Iterating again to check across epochs.")
+
+    second_samples = []
+    second_data = []
+    second_labels = []
+
+    for batch_number, batch in enumerate(dataloader):
+        sample_ids = batch[0]
+        if isinstance(sample_ids, torch.Tensor):
+            sample_ids = sample_ids.tolist()
+        elif isinstance(sample_ids, tuple):
+            sample_ids = list(sample_ids)
+
+        assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
+        assert isinstance(batch[1], torch.Tensor) and isinstance(batch[2], torch.Tensor)
+
+        second_samples.extend(sample_ids)
+        for sample in batch[1]:
+            second_data.append(sample)  # iterate over batch dimension to extract samples
+        second_labels.extend(batch[2].tolist())
+
+    # Same content, but not same order
+    # (even without shuffle, the storage may return samples in a slightly different order)
+
+    assert set(second_samples) == set(
+        all_samples
+    ), f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
+    assert set(second_labels) == set(all_labels), f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
+    for data1 in second_data:
+        assert any(torch.allclose(data1, data2) for data2 in all_data)
+
+    # when shuffling, we expect a different order
+
+    if shuffle:
+        assert second_samples != all_samples, f"second_samples = {second_samples} \n\n all_samples = {all_samples}"
+        assert not all(torch.allclose(data1, data2) for data1, data2 in zip(second_data, all_data))
+        assert second_labels != all_labels, f"second_labels = {second_labels} \n\n all_labels = {all_labels}"
 
 
 def test_dataset() -> None:
@@ -359,28 +407,45 @@ def test_dataset() -> None:
             if prefetched_partitions == 5:
                 ppr_list = [1, 2, 5, 999]
 
+            # By default, we do neither test shuffle nor cross-epoch consistency
+            # Only in a selected case, we test it to avoid blowing up the test further.
+            shuffles = [False]
+            consistency_checks = [False]
+            if num_dataworkers in [0, 4] and prefetched_partitions in [0, 4]:
+                shuffles = [False, True]
+                consistency_checks = [True]
+
             for parallel_prefetch_requests in ppr_list:
                 for batch_size in [1, 2, 10]:
-                    print(
-                        f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
-                        + f"batch_size = {batch_size}, parallel_prefetch_requests={parallel_prefetch_requests}"
-                    )
-                    test_dataset_impl(
-                        num_dataworkers,
-                        batch_size,
-                        prefetched_partitions,
-                        parallel_prefetch_requests,
-                        pipeline_id,
-                        trigger_id,
-                        keys,
-                    )
-                    gc.collect()
+                    for consistency_check in consistency_checks:
+                        for shuffle in shuffles:
+                            print(
+                                f"Testing num_workers = {num_dataworkers}, partitions = {prefetched_partitions},"
+                                + f"batch_size = {batch_size}, parallel_prefetch_requests={parallel_prefetch_requests}"
+                                + f" consistency_check = {consistency_check} shuffle = {shuffle}"
+                            )
+                            test_dataset_impl(
+                                num_dataworkers,
+                                batch_size,
+                                prefetched_partitions,
+                                parallel_prefetch_requests,
+                                pipeline_id,
+                                trigger_id,
+                                keys,
+                                shuffle,
+                                consistency_check,
+                            )
+                            gc.collect()
 
 
 def main() -> None:
     try:
         test_dataset()
+    except Exception as e:
+        print(f"An exception occurred: {e}")
+        raise
     finally:
+        print("Test is exiting, running cleanup.")
         cleanup_storage_database()
         cleanup_dataset_dir()
 

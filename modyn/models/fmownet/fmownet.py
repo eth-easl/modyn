@@ -1,7 +1,7 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as func
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from torchvision.models import densenet121
@@ -27,10 +27,11 @@ class FmowNetModel(CoresetSupportingModule):
         self.enc = densenet121(pretrained=True).features
         self.classifier = nn.Linear(1024, self.num_classes)
 
-    def forward(self, data: torch.Tensor) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
         features = self.enc(data)
-        out = F.relu(features, inplace=True)
-        out = F.adaptive_avg_pool2d(out, (1, 1))
+        out = func.relu(features, inplace=True)
+        out = func.adaptive_avg_pool2d(out, (1, 1))
         out = torch.flatten(out, 1)
         out = self.embedding_recorder(out)
         return self.classifier(out)

@@ -1,6 +1,7 @@
 """Client module. The client communicates with the modyn supervisor server.
 
 """
+
 import os
 
 from .client import Client  # noqa: F401

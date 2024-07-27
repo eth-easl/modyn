@@ -19,26 +19,54 @@ class PipelineStatus(StrEnum):
 
 
 class PipelineStage(StrEnum):
+    """For a state transition graph checkout the `PIPELINE.md` file."""
+
+    MAIN = "Pipeline entrypoint"
+
+    # Setup
     INIT = "Initialize pipeline executor"
     INIT_CLUSTER_CONNECTION = "Initialize cluster connection"
-    GET_SELECTOR_BATCH_SIZE = "Get selector batch size"
-    HANDLE_NEW_DATA = "Handle new data"
-    NEW_DATA_HANDLED = "New data handled"
-    RUN_TRAINING = "Run training"
-    WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"
-    TRAINING_COMPLETED = "Training completed 🚀"
-    WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion"
-    EVALUATION_COMPLETED = "Evaluation completed 🚀"
-    STORE_TRAINED_MODEL = "Store trained model"
-    EVALUATE = "Run evaluation"
-    STORE_EVALUATION_RESULTS = "Store evaluation results"
-    HANDLE_TRIGGERS_WITHIN_BATCH = "Handle triggers within batch"
-    INFORM_SELECTOR_AND_TRIGGER = "Inform selector and trigger"
-    INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
+
+    # Replay Data
     REPLAY_DATA = "Replay data"
     REPLAY_DATA_DONE = "Replay data done"
+
+    # Wait for new data
+    SERVE_ONLINE_DATA = "Serve online data"
     FETCH_NEW_DATA = "Fetch new data"
     WAIT_FOR_NEW_DATA = "Wait for new data"
+
+    # Process new data
+    PROCESS_NEW_DATA = "Process new data"
+    PROCESS_NEW_DATA_BATCH = "Process new data batch"
+    EVALUATE_TRIGGER_POLICY = "Evaluate trigger on batch"
+
+    # Trigger
+    HANDLE_TRIGGERS = "Handle triggers within batch"
+    HANDLE_SINGLE_TRIGGER = "Handle single trigger"
+    INFORM_SELECTOR_ABOUT_TRIGGER = "Inform selector and trigger"
+    INFORM_SELECTOR_REMAINING_DATA = "Inform selector about remaining data"
+
+    NEW_DATA_HANDLED = "New data handled"
+
+    # Training
+    TRAIN_AND_STORE_MODEL = "Train and store model"
+    TRAIN = "Run training"
+
+    WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"
+    """Implements busy waiting for training completion (not a PipelineExecutor stage)."""
+
+    TRAINING_COMPLETED = "Training completed 🚀"
+    STORE_TRAINED_MODEL = "Store trained model"
+
+    # Evaluation
+    EVALUATE = "Run evaluation"
+    EVALUATE_MULTI = "Run multiple interval evaluations for one model"
+    WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion (not a PipelineExecutor stage)"
+    POST_EVALUATION_CHECKPOINT = "Save pipeline metadata as checkpoint"
+    POST_EVALUATION = "Post pipeline evaluation"
+
+    # Teardown
     DONE = "Pipeline done"
     EXIT = "Exit"
 

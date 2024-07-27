@@ -19,21 +19,23 @@ def download_if_not_exists(drive_id: str, destination_dir: str, destination_file
         return
     destination_dir.mkdir(parents=True, exist_ok=True)
     gdown.download(
-        url=f"https://drive.google.com/u/0/uc?id={drive_id}&export=download&confirm=pbef",
+        url=f"http://drive.google.com/u/0/uc?id={drive_id}&export=download&confirm=pbef",
         output=str(destination),
         quiet=False,
+        
     )
 
 
-def setup_argparser_wildtime(dataset: str) -> argparse.ArgumentParser:
+def setup_argparser_wildtime(dataset: str, all_arg: bool = True) -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description=f"{dataset} Benchmark Storage Script")
     parser_.add_argument(
         "--dir", type=pathlib.Path, action="store", help="Path to data directory"
     )
 
-    parser_.add_argument(
-        "--all", action="store_true", help="Store all the available data, including the validation and test sets."
-    )
+    if all_arg:
+        parser_.add_argument(
+            "--all", action="store_true", help="Store all the available data, including the validation and test sets."
+        )
     parser_.add_argument(
         "--dummyyear", action="store_true", help="Add a final dummy year to train also on the last trigger in Modyn"
     )
@@ -57,6 +59,9 @@ def setup_logger():
 
 
 def create_fake_timestamp(year: int, base_year: int) -> int:
+    """As we cannot support years before 1970, we create a fake timestamp based on the year.
+    We convert years from base_year to days since epoch.
+    """
     timestamp = ((year - base_year) * DAY_LENGTH_SECONDS)
     return timestamp
 

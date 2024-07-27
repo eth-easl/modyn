@@ -1,9 +1,9 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 import torch
-from modyn.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
+from modyn.config.schema.pipeline import MetricConfig
 
 logger = logging.getLogger(__name__)
 
@@ -13,26 +13,21 @@ class AbstractEvaluationMetric(ABC):
     This abstract class is used to represent an evaluation metric which can be used to evaluate a trained model.
     """
 
-    def __init__(self, evaluation_transformer: str, config: dict[str, Any]):
+    def __init__(self, config: MetricConfig):
         """
         Initialize the evaluation metric.
 
         Args:
-            evaluation_transformer: transformation that is applied to the label and model output before evaluation.
-            config: configuration options for the metric.
+            config: Configuration for the metric.
         """
         self.config = config
-
-        self.evaluation_transformer = evaluation_transformer
         self.evaluation_transformer_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
 
     def deserialize_evaluation_transformer(self) -> None:
         """
         Deserialize the evaluation transform function.
         """
-        self.evaluation_transformer_function = deserialize_function(
-            self.evaluation_transformer, EVALUATION_TRANSFORMER_FUNC_NAME
-        )
+        self.evaluation_transformer_function = self.config.evaluation_transformer_function_deserialized  # type: ignore
 
     @abstractmethod
     def get_evaluation_result(self) -> float:
@@ -47,9 +42,8 @@ class AbstractEvaluationMetric(ABC):
     def warning(self, message: str) -> None:
         logger.warning(f"[{self.get_name()}] {message}")
 
-    @staticmethod
     @abstractmethod
-    def get_name() -> str:
+    def get_name(self) -> str:
         """
         Get the name of the metric.
 
@@ -73,7 +67,7 @@ class AbstractEvaluationMetric(ABC):
         """
         if self.evaluation_transformer_function:
             y_pred = self.evaluation_transformer_function(y_pred)
-        if y_true.shape != y_pred.shape:
+        if self.config.shape_check and y_true.shape != y_pred.shape:
             raise TypeError(f"Shape of y_true and y_pred must match. Got {y_true.shape} and {y_pred.shape}.")
         assert y_pred.shape[0] == num_elements, "Batch size and target label amount is not equal."
 

@@ -6,6 +6,7 @@ mypy
 pylint
 pytest-console-scripts
 pillow
+ruff
 autopep8
 isort
 black
@@ -13,3 +14,12 @@ grpcio-tools>=1.63
 grpcio>=1.63 # Linux
 mypy-protobuf
 pystack
+
+# Plotting
+plotly
+matplotlib
+seaborn
+dash
+dash-daq
+dash_cytoscape
+dash_bootstrap_components

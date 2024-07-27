@@ -76,9 +76,11 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         model_config: str,
         amp: bool,
         selection_strategy: str,
+        data_config: str,
         full_model_strategy: ModelStorageStrategyConfig,
         incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
         full_model_interval: Optional[int] = None,
+        auxiliary_pipeline_id: Optional[int] = None,
     ) -> int:
         """Register a new pipeline in the database.
 
@@ -89,10 +91,13 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             amp (bool): whether amp is enabled for the model.
             selection_strategy (str): The selection strategy to use
             full_model_strategy: the strategy used to store full models.
+            data_config: The configuration of the training dataset.
             incremental_model_strategy: the (optional) strategy used to store models incrementally.
             full_model_interval: the (optional) interval between which the full model strategy is used. If not set,
                                  the first model is stored according to the full model strategy, and the remaining
                                  by using the incremental model strategy.
+            auxiliary_pipeline_id: (optional) the id of the auxiliary pipeline, used to store extra information. For
+            example, for RHO-LOSS downsampling strategy it is used to store the IL models and holdout set.
         Returns:
             int: Id of the newly created pipeline.
         """
@@ -102,6 +107,8 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             model_config=model_config,
             amp=amp,
             selection_strategy=selection_strategy,
+            data_config=data_config,
+            auxiliary_pipeline_id=auxiliary_pipeline_id,
             full_model_strategy_name=full_model_strategy.name,
             full_model_strategy_zip=full_model_strategy.zip,
             full_model_strategy_zip_algorithm=full_model_strategy.zip_algorithm,

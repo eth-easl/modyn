@@ -12,7 +12,6 @@ from modyn.supervisor.internal.triggers.trigger_datasets import FixedKeysDataset
 from torchvision import transforms
 
 DATASET_ID = "MNIST"
-TRIGGER_ID = 42
 STORAGE_ADDR = "localhost:1234"
 KEYS = list(range(10))
 
@@ -29,7 +28,7 @@ class MockStorageStub:
     def __init__(self, channel) -> None:
         pass
 
-    def Get(self, request: GetRequest):  # pylint: disable=invalid-name
+    def Get(self, request: GetRequest):  # pylint: disable=invalid-name  # noqa: N802
         yield GetResponse(
             samples=[key.to_bytes(2, "big") for key in request.keys], keys=request.keys, labels=[1] * len(request.keys)
         )
@@ -42,7 +41,6 @@ def test_invalid_bytes_parser():
             bytes_parser="",
             serialized_transforms=[],
             storage_address=STORAGE_ADDR,
-            trigger_id=TRIGGER_ID,
             keys=KEYS,
         )._init_transforms()
 
@@ -52,7 +50,6 @@ def test_invalid_bytes_parser():
             bytes_parser="bytes_parser_function=1",
             serialized_transforms=[],
             storage_address=STORAGE_ADDR,
-            trigger_id=TRIGGER_ID,
             keys=KEYS,
         )._init_transforms()
 
@@ -63,12 +60,10 @@ def test_init():
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
         tokenizer="DistilBertTokenizerTransform",
     )
 
-    assert fixed_keys_dataset._trigger_id == TRIGGER_ID
     assert fixed_keys_dataset._dataset_id == DATASET_ID
     assert fixed_keys_dataset._first_call
     assert fixed_keys_dataset._bytes_parser_function is None
@@ -89,7 +84,6 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established):
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
 
@@ -110,7 +104,6 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
 
@@ -127,7 +120,6 @@ def test_init_transforms():
         bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
 
@@ -169,7 +161,6 @@ def test__setup_composed_transform(serialized_transforms, transforms_list):
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=list(serialized_transforms),
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
         tokenizer="DistilBertTokenizerTransform",
     )
@@ -194,7 +185,6 @@ def test_dataset_iter(test_insecure_channel, test_grpc_connection_established):
         bytes_parser=get_identity_bytes_parser(),
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
 
@@ -216,7 +206,6 @@ def test_dataset_iter_with_parsing(test_insecure_channel, test_grpc_connection_e
         bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
     dataset_iter = iter(fixed_keys_dataset)
@@ -238,7 +227,6 @@ def test_dataloader_dataset(test_insecure_channel, test_grpc_connection_establis
         bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=KEYS,
     )
 
@@ -268,7 +256,6 @@ def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connec
         bytes_parser="def bytes_parser_function(x):\n\treturn int.from_bytes(x, 'big')",
         serialized_transforms=[],
         storage_address=STORAGE_ADDR,
-        trigger_id=TRIGGER_ID,
         keys=list(range(16)),
     )
     dataloader = torch.utils.data.DataLoader(fixed_keys_dataset, batch_size=4, num_workers=4)

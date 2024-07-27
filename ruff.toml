@@ -1,0 +1,37 @@
+line-length = 120
+target-version = "py311"
+
+[lint]
+
+exclude = [
+    "*.pyi",
+    "*_grpc.py",
+    "*_pb2.py",
+    "**/generated/*",
+    "./benchmark/*",
+    "./analytics/plotting/*",
+    "./build/*",
+    "./libbuild/*",
+    "./clang-tidy-build/*",
+]
+ignore = [
+  "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
+  "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
+  "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
+
+  # TODO: enable in followup PRs
+  "UP",
+  "I",
+]
+select = [
+  "F",  # pyflakes
+  # pycodestyle
+  "E",
+  "W",
+  "I",  # isort
+  "N",  # pep8-naming
+  "UP",  # pyupgrade
+]
+
+[lint.pydocstyle]
+convention = "google"

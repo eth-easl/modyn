@@ -1,14 +1,17 @@
+
 [tool.black]
 line-length = 120
-target-version = ['py39']
-extend-exclude = """\
-    .*/*\\.pyi|\
-    .*/*\\_grpc.py|\
-    .*/*\\_pb2.py|\
-    .*/generated/.*\
-    .*/benchmark/.*\
-    .*/plotting/.*\
-    .*/build/.*\
-    .*/libbuild/.*\
-    .*/clang-tidy-build/.*\
-"""
+target-version = ['py311']
+extend-exclude = '''
+(
+    .*/.*\.pyi
+  | .*/.*_grpc\.py
+  | .*/.*_pb2\.py
+  | .*/generated/
+  | .*/benchmark/
+  | .*/analytics/plotting/
+  | .*/build/
+  | .*/libbuild/
+  | .*/clang-tidy-build/
+)
+'''

@@ -15,7 +15,8 @@ class DataLoaderInfo:
         selector_address: str,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
-        tokenizer: Optional[None],
+        shuffle: bool,
+        tokenizer: Optional[str],
     ):
         self.pipeline_id = pipeline_id
         self.dataset_id = dataset_id
@@ -29,3 +30,4 @@ class DataLoaderInfo:
         self.parallel_prefetch_requests = parallel_prefetch_requests
         self.tokenizer = tokenizer
         self.training_id = -1
+        self.shuffle = shuffle

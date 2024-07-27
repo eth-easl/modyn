@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, Optional
 
 import torch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import Tensor, nn
-from torchvision.models.resnet import Bottleneck, ResNet
+from torchvision.models.resnet import Bottleneck, ResNet, ResNet152_Weights
 
 
 class ResNet152:
@@ -19,7 +19,23 @@ class ResNet152:
 
 class ResNet152Modyn(ResNet, CoresetSupportingModule):
     def __init__(self, model_configuration: dict[str, Any]) -> None:
+        _num_classes = model_configuration.get("num_classes", None)
+        weights = None
+        if model_configuration.get("use_pretrained", False):
+            weights = ResNet152_Weights.verify("ResNet152_Weights.DEFAULT")
+            # We need to initialize the model with the number of classees
+            # in the pretrained weights
+            model_configuration["num_classes"] = len(weights.meta["categories"])
+            del model_configuration["use_pretrained"]  # don't want to forward this to torchvision
+
         super().__init__(Bottleneck, [3, 8, 36, 3], **model_configuration)  # type: ignore
+
+        if weights is not None:
+            self.load_state_dict(weights.get_state_dict(progress=True))
+            if _num_classes is not None:
+                # we loaded pretrained weights - need to update linear layer
+                self.fc: nn.Linear  # to satisfy mypy
+                self.fc = nn.Linear(self.fc.in_features, _num_classes)
 
     def _forward_impl(self, x: Tensor) -> Tensor:
         x = self.conv1(x)
@@ -39,6 +55,10 @@ class ResNet152Modyn(ResNet, CoresetSupportingModule):
         x = self.fc(x)
 
         return x
+
+    def forward(self, x: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+        del sample_ids
+        return super().forward(x)
 
     def get_last_layer(self) -> nn.Module:
         return self.fc

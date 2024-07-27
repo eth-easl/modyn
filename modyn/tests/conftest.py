@@ -1,8 +1,30 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
-from modyn.config.schema.config import (
+from modyn.config.schema.pipeline import (
+    AccuracyMetricConfig,
+    CheckpointingConfig,
+    DataAmountTriggerConfig,
+    DataConfig,
+    EvalDataConfig,
+    EvaluationConfig,
+    FullModelStrategy,
+    ModelConfig,
+    ModynPipelineConfig,
+    NewDataStrategyConfig,
+    OptimizationCriterion,
+    OptimizerConfig,
+    OptimizerParamGroup,
+    Pipeline,
+    PipelineModelStorageConfig,
+    TrainingConfig,
+)
+from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
+from modyn.config.schema.system.config import (
     DatabaseConfig,
+    DatasetBinaryFileWrapperConfig,
+    DatasetsConfig,
     EvaluatorConfig,
     MetadataDatabaseConfig,
     ModelStorageConfig,
@@ -10,24 +32,6 @@ from modyn.config.schema.config import (
     SelectorConfig,
     StorageConfig,
     TrainingServerConfig,
-)
-from modyn.config.schema.pipeline import (
-    CheckpointingConfig,
-    DataConfig,
-    EvalDataConfig,
-    EvaluationConfig,
-    FullModelStrategy,
-    Metric,
-    ModelConfig,
-    ModynPipelineConfig,
-    NewDataSelectionStrategy,
-    OptimizationCriterion,
-    OptimizerConfig,
-    OptimizerParamGroup,
-    Pipeline,
-    PipelineModelStorageConfig,
-    TrainingConfig,
-    TriggerConfig,
 )
 
 # --------------------------------------------------- Modyn config --------------------------------------------------- #
@@ -128,6 +132,25 @@ def dummy_system_config(
     )
 
 
+@pytest.fixture
+def dummy_dataset_config() -> DatasetsConfig:
+    return DatasetsConfig(
+        name="test",
+        description="",
+        version="",
+        base_path="",
+        filesystem_wrapper_type="BinaryFilesystemWrapper",
+        file_wrapper_type="BinaryFileWrapper",
+        file_wrapper_config=DatasetBinaryFileWrapperConfig(
+            file_extension=".bin",
+            byteorder="little",
+            record_size=8,
+            label_size=4,
+        ),
+        selector_batch_size=128,
+    )
+
+
 # ----------------------------------------------------- Pipeline ----------------------------------------------------- #
 
 
@@ -147,13 +170,26 @@ def pipeline_training_config() -> TrainingConfig:
         ],
         optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
         checkpointing=CheckpointingConfig(activated=False),
-        selection_strategy=NewDataSelectionStrategy(maximum_keys_in_memory=10),
+        shuffle=False,
     )
 
 
 @pytest.fixture
-def pipeline_evaluation_config() -> EvaluationConfig:
+def eval_strategies_config() -> SlicingEvalStrategyConfig:
+    return SlicingEvalStrategyConfig(eval_every="100s", eval_start_from=0, eval_end_at=300)
+
+
+@pytest.fixture
+def pipeline_evaluation_config(eval_strategies_config: SlicingEvalStrategyConfig) -> EvaluationConfig:
     return EvaluationConfig(
+        handlers=[
+            EvalHandlerConfig(
+                execution_time="after_training",
+                strategy=eval_strategies_config,
+                models="matrix",
+                datasets=["MNIST_eval"],
+            )
+        ],
         device="cpu",
         datasets=[
             EvalDataConfig(
@@ -161,7 +197,7 @@ def pipeline_evaluation_config() -> EvaluationConfig:
                 bytes_parser_function="def bytes_parser_function(data: bytes) -> bytes:\n\treturn data",
                 dataloader_workers=2,
                 batch_size=64,
-                metrics=[Metric(name="Accuracy")],
+                metrics=[AccuracyMetricConfig()],
             )
         ],
     )
@@ -178,8 +214,9 @@ def dummy_pipeline_config(pipeline_training_config: TrainingConfig) -> ModynPipe
             dataset_id="test",
             bytes_parser_function="def bytes_parser_function(x):\n\treturn x",
         ),
-        trigger=TriggerConfig(
-            id="DataAmountTrigger",
-            trigger_config={"data_points_for_trigger": 1},
+        trigger=DataAmountTriggerConfig(num_samples=1),
+        selection_strategy=NewDataStrategyConfig(
+            maximum_keys_in_memory=10,
+            tail_triggers=None,
         ),
     )

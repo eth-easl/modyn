@@ -35,7 +35,7 @@ def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(output_dir)
     except Exception as e:
-        logger.error(f"Error while extracing file {zip_path}")
+        logger.error(f"Error while extracting file {zip_path}")
         logger.error(e) 
 
 def setup_argparser() -> argparse.ArgumentParser:

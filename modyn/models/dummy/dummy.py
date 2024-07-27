@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from torch import Tensor, nn
 
@@ -16,5 +16,6 @@ class DummyModyn(nn.Module):
         super().__init__()
         self.output = nn.Linear(2, 2)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, sample_ids: Optional[list[int]] = None) -> Tensor:
+        del sample_ids
         return self.output(x)

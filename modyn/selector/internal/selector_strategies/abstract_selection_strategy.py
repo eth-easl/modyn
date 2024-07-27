@@ -1,14 +1,16 @@
 import logging
 import os
-import platform
+import threading
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 import numpy as np
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
+from modyn.config.schema.pipeline import SelectionStrategy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -25,74 +27,28 @@ class AbstractSelectionStrategy(ABC):
     """
 
     # pylint: disable-next=too-many-branches
-    def __init__(
-        self,
-        config: dict,
-        modyn_config: dict,
-        pipeline_id: int,
-        maximum_keys_in_memory: int,
-        required_configs: Optional[list[str]] = None,
-    ):
+    def __init__(self, config: SelectionStrategy, modyn_config: dict, pipeline_id: int):
         self._config = config
 
-        if required_configs is None:
-            required_configs = []  # Using [] as default is considered unsafe by pylint
-
-        required_configs.extend(["limit", "reset_after_trigger"])
-        for required_config in required_configs:
-            if required_config not in self._config.keys():
-                raise ValueError(f"{required_config} not given but required.")
-
-        self.training_set_size_limit: int = config["limit"]
+        self.training_set_size_limit: int = config.limit
         self.has_limit = self.training_set_size_limit > 0
-        self.reset_after_trigger: bool = config["reset_after_trigger"]
 
         # weighted optimization (with weights supplied by the selector) is quite unusual, so the default us false
-        if config.get("uses_weights", None):
-            self.uses_weights = config["uses_weights"]
-        else:
-            self.uses_weights = False
+        self.uses_weights = config.uses_weights
 
-        if config.get("tail_triggers", None):
-            self.tail_triggers = config["tail_triggers"]
-            if self.tail_triggers < 0 or not isinstance(config["tail_triggers"], int):
-                raise ValueError("Tail trigger must be an integer greater than 0")
-            if (self.reset_after_trigger and self.tail_triggers > 0) or (
-                (not self.reset_after_trigger) and self.tail_triggers == 0
-            ):
-                raise ValueError("Reset after trigger is equivalent to setting tail triggers to 0.")
+        self.tail_triggers = config.tail_triggers
+        if self.tail_triggers is None:
+            self.reset_after_trigger = False
         else:
-            if self.reset_after_trigger:
-                self.tail_triggers = 0  # consider only the current trigger
-            else:
-                self.tail_triggers = None  # consider every datapoint
+            self.reset_after_trigger = self.tail_triggers == 0
 
         self._modyn_config = modyn_config
         self._pipeline_id = pipeline_id
-        self._maximum_keys_in_memory = maximum_keys_in_memory
-        self._insertion_threads = modyn_config["selector"]["insertion_threads"]
-
-        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
-        self._is_mac = platform.system() == "Darwin"
-        self._disable_mt = self._insertion_threads <= 0
-
-        if self._maximum_keys_in_memory < 1:
-            raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")
+        self._maximum_keys_in_memory = config.maximum_keys_in_memory
 
         logger.info(f"Initializing selection strategy for pipeline {pipeline_id}.")
 
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            last_trigger_id = (
-                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
-                .filter(Trigger.pipeline_id == self._pipeline_id)
-                .scalar()
-            )
-            if last_trigger_id is None:
-                logger.info(f"Did not find previous trigger id DB for pipeline {pipeline_id}, next trigger is 0.")
-                self._next_trigger_id = 0
-            else:
-                logger.info(f"Last trigger in DB for pipeline {pipeline_id} was {last_trigger_id}.")
-                self._next_trigger_id = last_trigger_id + 1
+        self._update_next_trigger_id()
 
         if self.has_limit and self.training_set_size_limit > self._maximum_keys_in_memory:
             # TODO(#179) Otherwise, we need to somehow sample over multiple not-in-memory partitions, which is a problem
@@ -106,6 +62,33 @@ class AbstractSelectionStrategy(ABC):
             )
 
         self._trigger_sample_directory = self._modyn_config["selector"]["trigger_sample_directory"]
+        self._storage_backend = self._init_storage_backend()
+
+    def _update_next_trigger_id(self) -> None:
+        tid = threading.get_native_id()
+        pid = os.getpid()
+
+        with MetadataDatabaseConnection(self._modyn_config) as database:
+            last_trigger_id = (
+                database.session.query(func.max(Trigger.trigger_id))  # pylint: disable=not-callable
+                .filter(Trigger.pipeline_id == self._pipeline_id)
+                .scalar()
+            )
+            if last_trigger_id is None:
+                self._next_trigger_id = 0
+                logger.info(
+                    f"[{pid}][{tid}] Didn't find prev. trigger id for pipeline {self._pipeline_id}, next trigger = 0."
+                )
+            else:
+                self._next_trigger_id = last_trigger_id + 1
+                logger.info(
+                    f"[{pid}][{tid}] Updating next trigger for pipeline {self._pipeline_id} to {self._next_trigger_id}."
+                )
+
+    @abstractmethod
+    def _init_storage_backend(self) -> AbstractStorageBackend:
+        """Initializes the storage backend."""
+        raise NotImplementedError
 
     @property
     def maximum_keys_in_memory(self) -> int:
@@ -191,85 +174,70 @@ class AbstractSelectionStrategy(ABC):
             database.session.add(trigger_partition)
             database.session.commit()
 
-    # pylint: disable=too-many-locals,too-many-statements
-    def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
+    # pylint: disable=too-many-locals
+    @staticmethod
+    def store_training_set(
+        target_pipeline_id: int,
+        target_trigger_id: int,
+        modyn_config: dict,
+        training_set_producer: Callable[[], Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]],
+        insertion_threads: int,
+    ) -> tuple[int, int, dict[str, Any]]:
         """
-        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
+        Store the training set, produced by the training_set_producer, as TriggerSampleStorage.
+        Relevant metadata for the trigger is also stored in the metadata database.
 
-        Returns:
-            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
+        :param target_pipeline_id: the pipeline id the training set is associated with.
+        :param target_trigger_id: the trigger id the training set is associated with.
+        :param modyn_config: the modyn configuration.
+        :param training_set_producer: a callable that returns partitioned training samples. The type is the same as
+            the return type of the _on_trigger method.
+        :param insertion_threads: how many threads are used to store. If bigger than 1, multiple threads are used to
+            store the data.
+        :return: total number of keys in the trigger, number of partitions, and a log.
         """
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
-
-        trigger_id = self._next_trigger_id
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
-
-        swt.start("trigger_creation")
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            trigger = Trigger(pipeline_id=self._pipeline_id, trigger_id=trigger_id)
-            database.session.add(trigger)
-            database.session.commit()
-        log["trigger_creation_time"] = swt.stop()
-
         partition_num_keys = {}
         partition: Optional[int] = None
         swt.start("on_trigger")
 
-        for partition, (training_samples, partition_log) in enumerate(self._on_trigger()):
+        for partition, (training_samples, partition_log) in enumerate(training_set_producer()):
             overall_partition_log = {"partition_log": partition_log, "on_trigger_time": swt.stop("on_trigger")}
-
-            logger.info(
-                f"Strategy for pipeline {self._pipeline_id} returned batch of"
-                + f" {len(training_samples)} samples for new trigger {trigger_id}."
-            )
 
             partition_num_keys[partition] = len(training_samples)
 
             total_keys_in_trigger += len(training_samples)
 
-            if (self._is_mac and self._is_test) or self._disable_mt:
-                swt.start("store_triggersamples", overwrite=True)
+            swt.start("store_triggersamples", overwrite=True)
+            if insertion_threads == 1:
                 AbstractSelectionStrategy._store_triggersamples_impl(
                     partition,
-                    trigger_id,
-                    self._pipeline_id,
+                    target_trigger_id,
+                    target_pipeline_id,
                     np.array(training_samples, dtype=np.dtype("i8,f8")),
                     [len(training_samples)],
-                    self._modyn_config,
+                    modyn_config,
                 )
-                overall_partition_log["store_triggersamples_time"] = swt.stop()
-                log["trigger_partitions"].append(overall_partition_log)
-                swt.start("on_trigger", overwrite=True)
-                continue
+            else:
+                samples_per_proc = int(len(training_samples) / insertion_threads)
+                data_lengths = []
+                if samples_per_proc > 0:
+                    data_lengths = [samples_per_proc] * (insertion_threads - 1)
+                if sum(data_lengths) < len(training_samples):
+                    data_lengths.append(len(training_samples) - sum(data_lengths))
 
-            swt.start("store_triggersamples", overwrite=True)
-            swt.start("mt_prep", overwrite=True)
-            samples_per_proc = int(len(training_samples) / self._insertion_threads)
-
-            data_lengths = []
-
-            overall_partition_log["mt_prep_time"] = swt.stop()
-            swt.start("mt_finish", overwrite=True)
-
-            if samples_per_proc > 0:
-                data_lengths = [samples_per_proc] * (self._insertion_threads - 1)
-
-            if sum(data_lengths) < len(training_samples):
-                data_lengths.append(len(training_samples) - sum(data_lengths))
-
-            AbstractSelectionStrategy._store_triggersamples_impl(
-                partition,
-                trigger_id,
-                self._pipeline_id,
-                np.array(training_samples, dtype=np.dtype("i8,f8")),
-                data_lengths,
-                self._modyn_config,
-            )
-
-            overall_partition_log["mt_finish_time"] = swt.stop()
-            overall_partition_log["store_triggersamples_time"] = swt.stop("store_triggersamples")
+                AbstractSelectionStrategy._store_triggersamples_impl(
+                    partition,
+                    target_trigger_id,
+                    target_pipeline_id,
+                    np.array(training_samples, dtype=np.dtype("i8,f8")),
+                    data_lengths,
+                    modyn_config,
+                )
+            overall_partition_log["store_triggersamples_time"] = swt.stop()
 
             log["trigger_partitions"].append(overall_partition_log)
             swt.start("on_trigger", overwrite=True)
@@ -280,34 +248,51 @@ class AbstractSelectionStrategy(ABC):
         log["num_keys"] = total_keys_in_trigger
 
         swt.start("db_update")
-        # Update Trigger about number of partitions and keys
-        with MetadataDatabaseConnection(self._modyn_config) as database:
-            trigger = (
-                database.session.query(Trigger)
-                .filter(Trigger.pipeline_id == self._pipeline_id, Trigger.trigger_id == trigger_id)
-                .first()
+        with MetadataDatabaseConnection(modyn_config) as database:
+            trigger = Trigger(
+                pipeline_id=target_pipeline_id,
+                trigger_id=target_trigger_id,
+                num_keys=total_keys_in_trigger,
+                num_partitions=num_partitions,
             )
-            trigger.num_keys = total_keys_in_trigger
-            trigger.num_partitions = num_partitions
+            database.session.add(trigger)
             database.session.commit()
 
         # Insert all partition lengths into DB
         for partition, partition_keys in partition_num_keys.items():
             AbstractSelectionStrategy._store_trigger_num_keys(
-                modyn_config=self._modyn_config,
-                pipeline_id=self._pipeline_id,
-                trigger_id=trigger_id,
+                modyn_config=modyn_config,
+                pipeline_id=target_pipeline_id,
+                trigger_id=target_trigger_id,
                 partition_id=partition,
                 num_keys=partition_keys,
             )
 
         log["db_update_time"] = swt.stop()
+        return total_keys_in_trigger, num_partitions, log
 
+    def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
+        """
+        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
+
+        Returns:
+            tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
+        """
+        total_keys_in_trigger, num_partitions, log = self.store_training_set(
+            self._pipeline_id,
+            self._next_trigger_id,
+            self._modyn_config,
+            self._on_trigger,
+            insertion_threads=self._storage_backend.insertion_threads,
+        )
+
+        swt = Stopwatch()
         if self.reset_after_trigger:
             swt.start("reset_state")
             self._reset_state()
             log["reset_state_time"] = swt.stop()
 
+        trigger_id = self._next_trigger_id
         self._next_trigger_id += 1
         return trigger_id, total_keys_in_trigger, num_partitions, log
 

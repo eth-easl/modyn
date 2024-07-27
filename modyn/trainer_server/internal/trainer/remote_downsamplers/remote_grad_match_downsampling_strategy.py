@@ -6,6 +6,9 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_d
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    FULL_GRAD_APPROXIMATION,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.orthogonal_matching_pursuit import (
     orthogonal_matching_pursuit,
     orthogonal_matching_pursuit_np,
@@ -32,11 +35,26 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         trigger_id: int,
         batch_size: int,
         params_from_selector: dict,
+        modyn_config: dict,
         per_sample_loss: Any,
         device: str,
     ):
-        super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, per_sample_loss, device)
-        self.matrix_content = MatrixContent.GRADIENTS
+        self.full_grad_approximation = params_from_selector["full_grad_approximation"]
+        assert self.full_grad_approximation in FULL_GRAD_APPROXIMATION
+        super().__init__(
+            pipeline_id,
+            trigger_id,
+            batch_size,
+            params_from_selector,
+            modyn_config,
+            per_sample_loss,
+            device,
+            (
+                MatrixContent.LAST_LAYER_GRADIENTS
+                if self.full_grad_approximation == "LastLayer"
+                else MatrixContent.LAST_TWO_LAYERS_GRADIENTS
+            ),
+        )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
         cur_val_gradients = np.mean(matrix, axis=0)

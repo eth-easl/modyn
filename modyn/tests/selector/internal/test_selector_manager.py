@@ -8,6 +8,7 @@ import pytest
 from modyn.metadata_database.models import Pipeline
 from modyn.selector.internal.selector_manager import SelectorManager
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
+from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.selector import Selector
 
 EXISTING_PIPELINE_ID = 42
@@ -33,6 +34,9 @@ def noop_init_metadata_db(self) -> None:  # pylint: disable=unused-argument
 
 class MockStrategy(AbstractSelectionStrategy):
     def __init__(self):  # pylint: disable=super-init-not-called
+        pass
+
+    def _init_storage_backend(self) -> AbstractStorageBackend:
         pass
 
     def _on_trigger(self) -> list[tuple[str, float]]:  # pylint: disable=unused-argument

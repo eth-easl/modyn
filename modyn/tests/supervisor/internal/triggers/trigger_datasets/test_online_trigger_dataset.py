@@ -53,6 +53,7 @@ def test_init():
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
         sample_prob=0.5,
+        shuffle=False,
     )
     assert online_trigger_dataset._pipeline_id == 1
     assert online_trigger_dataset._trigger_id == 1
@@ -78,6 +79,7 @@ def test_dataset_iter():
         num_prefetched_partitions=1,
         parallel_prefetch_requests=1,
         sample_prob=0.5,
+        shuffle=False,
     )
 
     all_trigger_data = list(online_trigger_dataset)

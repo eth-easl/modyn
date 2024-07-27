@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 import torch
 from modyn.common.trigger_sample import TriggerSampleStorage
-from modyn.config import read_modyn_config, read_pipeline
+from modyn.config import ModynConfig, read_modyn_config, read_pipeline
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteLossDownsampling
 from modyn.utils import (
@@ -72,7 +72,7 @@ def test_validate_yaml():
     read_pipeline(pipeline_path)
 
 
-@patch("time.time", lambda: 0.4)
+@patch("time.monotonic_ns", lambda: 400_000_000)
 def test_current_time_millis():
     assert current_time_millis() == 400
 
@@ -177,7 +177,7 @@ def test_seed():
         assert np.all(np.equal(np_master, np.random.randn(10)))
 
 
-def test_instantiate_class_existing():
+def test_instantiate_class_existing(dummy_system_config: ModynConfig):
     # class with a single parameter
     trigger_storage = instantiate_class("modyn.common.trigger_sample", "TriggerSampleStorage", "test_path")
     assert isinstance(trigger_storage, TriggerSampleStorage)
@@ -189,7 +189,8 @@ def test_instantiate_class_existing():
         10,
         11,
         64,
-        {"downsampling_ratio": 67},
+        {"downsampling_ratio": 67, "ratio_max": 100},
+        dummy_system_config.model_dump(by_alias=True),
         {},
         "cpu",
     )

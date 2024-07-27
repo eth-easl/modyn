@@ -5,7 +5,6 @@ from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
-from modyn.evaluator.internal.metrics import AbstractEvaluationMetric
 from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
@@ -22,24 +21,25 @@ class EvaluationInfo:
         model_config: str,
         amp: bool,
         storage_address: str,
-        metrics: list[AbstractEvaluationMetric],
         model_path: pathlib.Path,
+        not_failed_interval_ids: list[int],
     ) -> None:  # pragma: no cover
         self.model_id = request.model_id
         self.dataset_id = request.dataset_info.dataset_id
         self.num_dataloaders = request.dataset_info.num_dataloaders
-        if request.dataset_info.HasField("start_timestamp"):
-            self.start_timestamp: Optional[int] = request.dataset_info.start_timestamp
-        else:
-            self.start_timestamp = None
-        if request.dataset_info.HasField("end_timestamp"):
-            self.end_timestamp: Optional[int] = request.dataset_info.end_timestamp
-        else:
-            self.end_timestamp = None
+        self.all_evaluation_intervals: list[tuple[Optional[int], Optional[int]]] = []
+        for interval in request.dataset_info.evaluation_intervals:
+            self.all_evaluation_intervals.append(
+                (
+                    interval.start_timestamp if interval.HasField("start_timestamp") else None,
+                    interval.end_timestamp if interval.HasField("end_timestamp") else None,
+                )
+            )
+        self.not_failed_interval_ids = not_failed_interval_ids
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size
-        self.metrics = metrics
+        self.raw_metrics = [metric.value for metric in request.metrics]
 
         self.model_class_name = model_class_name
         model_module = dynamic_module_import("modyn.models")
@@ -49,11 +49,7 @@ class EvaluationInfo:
         self.transform_list = list(request.transform_list)
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
-        self.tokenizer: Optional[str] = None
-        if request.HasField("tokenizer"):
-            self.tokenizer = request.tokenizer.value
-        else:
-            self.tokenizer = None
+        self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
 
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address

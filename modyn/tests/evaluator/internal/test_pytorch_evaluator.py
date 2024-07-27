@@ -1,27 +1,22 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
-import json
 import logging
 import multiprocessing as mp
 import pathlib
-import platform
 import tempfile
-from time import sleep
 from typing import Generator
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 import torch
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    DatasetInfo,
-    EvaluateModelRequest,
-    JsonString,
-    MetricConfiguration,
-    PythonString,
-)
-from modyn.evaluator.internal.metrics import AbstractEvaluationMetric, Accuracy
+from modyn.config import F1ScoreMetricConfig
+from modyn.config.schema.pipeline import AccuracyMetricConfig
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import DatasetInfo, EvaluateModelRequest, EvaluationInterval
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
+from modyn.evaluator.internal.metrics import Accuracy, F1Score
 from modyn.evaluator.internal.pytorch_evaluator import PytorchEvaluator
-from modyn.evaluator.internal.utils import EvaluationInfo, EvaluatorMessages
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.evaluator.internal.utils import EvaluationInfo
+from pydantic import ValidationError
 from torch.utils.data import IterableDataset
 
 
@@ -34,10 +29,7 @@ def get_mock_bytes_parser():
 
 
 def get_mock_label_transformer():
-    return (
-        "import torch\ndef label_transformer_function(x: torch.Tensor) -> "
-        "torch.Tensor:\n\treturn x.to(torch.float32)"
-    )
+    return "import torch\ndef label_transformer_function(x: torch.Tensor) -> " "torch.Tensor:\n\treturn x"
 
 
 def get_mock_accuracy_transformer():
@@ -54,7 +46,7 @@ class MockModel(torch.nn.Module):
         self._weight = torch.nn.Parameter(torch.ones(1))
 
     def forward(self, data):
-        return data * 2
+        return torch.zeros_like(data)
 
 
 class MockModelWrapper:
@@ -71,113 +63,104 @@ class MockModule:
 
 
 class MockEvaluationDataset(IterableDataset):
-    # pylint: disable=abstract-method
 
-    def __init__(
-        self,
-        dataset_id,
-        bytes_parser,
-        transform_list,
-        storage_address,
-        evaluation_id,
-        start_timestamp,
-        end_timestamp,
-        tokenizer,
-    ):
-        self.dataset = iter([(key, key, key * 2) for key in range(100)])
+    def __init__(self, input_to_output_func=lambda x: 0):
+        self.dataset = iter(
+            [
+                (key, torch.tensor((key,)), torch.tensor((input_to_output_func(key),), dtype=torch.int))
+                for key in range(100)
+            ]
+        )
 
     def __iter__(self) -> Generator:
         yield from self.dataset
+
+
+EVALUATION_INTERVALS = [
+    EvaluationInterval(),
+    EvaluationInterval(end_timestamp=100),
+    EvaluationInterval(start_timestamp=100, end_timestamp=200),
+    EvaluationInterval(start_timestamp=150, end_timestamp=250),
+    EvaluationInterval(start_timestamp=200),
+]
 
 
 @patch("modyn.evaluator.internal.utils.evaluation_info.dynamic_module_import")
 def get_evaluation_info(
     evaluation_id: int,
     storage_address: str,
-    metrics: [AbstractEvaluationMetric],
+    metrics: list[EvaluatorJsonString],
     trained_model_path: pathlib.Path,
     label_transformer: bool,
+    not_failed_interval_ids: list[int],
     model_dynamic_module_patch: MagicMock,
-):
+) -> EvaluationInfo:
     model_dynamic_module_patch.return_value = MockModule()
     request = EvaluateModelRequest(
         model_id=1,
-        dataset_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=1),
+        dataset_info=DatasetInfo(
+            dataset_id="MNIST",
+            num_dataloaders=1,
+            evaluation_intervals=EVALUATION_INTERVALS,
+        ),
         device="cpu",
         batch_size=4,
-        metrics=[
-            MetricConfiguration(
-                name="Accuracy",
-                config=JsonString(value=json.dumps({})),
-                evaluation_transformer=PythonString(value=get_mock_accuracy_transformer()),
-            )
-        ],
+        metrics=metrics,
         transform_list=[],
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=get_mock_label_transformer() if label_transformer else ""),
     )
-    return EvaluationInfo(request, evaluation_id, "model", "{}", False, storage_address, metrics, trained_model_path)
+    return EvaluationInfo(
+        request, evaluation_id, "model", "{}", False, storage_address, trained_model_path, not_failed_interval_ids
+    )
 
 
-@patch.object(StorageStub, "__init__", noop_constructor_mock)
 def get_mock_evaluator(
-    query_queue: mp.Queue,
-    response_queue: mp.Queue,
-    metric_result_queue: mp.Queue,
-    trained_model_path: pathlib.Path,
+    trained_model_path: str,
     label_transformer: bool,
-):
+    metric_queue: mp.Queue = mp.Queue(),
+    not_failed_interval_ids=None,
+    metric_jsons=None,
+) -> PytorchEvaluator:
+    if not_failed_interval_ids is None:
+        not_failed_interval_ids = [0, 1, 2, 3]
+    if metric_jsons is None:
+        metric_jsons = [
+            AccuracyMetricConfig(evaluation_transformer_function=get_mock_accuracy_transformer()).model_dump_json()
+        ]
+    proto_metrics = [EvaluatorJsonString(value=metric_json) for metric_json in metric_jsons]
     evaluation_info = get_evaluation_info(
-        1,
-        "storage:5000",
-        [Accuracy(config={}, evaluation_transform_func=get_mock_accuracy_transformer())],
-        trained_model_path,
-        label_transformer,
+        1, "storage:5000", proto_metrics, pathlib.Path(trained_model_path), label_transformer, not_failed_interval_ids
     )
-    evaluator = PytorchEvaluator(
-        evaluation_info, query_queue, response_queue, metric_result_queue, logging.getLogger(__name__)
-    )
+    evaluator = PytorchEvaluator(evaluation_info, logging.getLogger(__name__), metric_queue)
     return evaluator
 
 
 @patch.object(PytorchEvaluator, "_load_state")
-def test_evaluator_init(load_state_mock: MagicMock):
-    evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), "trained_model.modyn", True)
+def test_evaluator_init(load_state_mock: MagicMock) -> None:
+    evaluator: PytorchEvaluator = get_mock_evaluator("trained_model.modyn", True)
 
     assert isinstance(evaluator._model, MockModelWrapper)
     assert isinstance(evaluator._model.model, MockModel)
-    assert len(evaluator._metrics) == 1
-    assert isinstance(evaluator._metrics[0], Accuracy)
-    assert evaluator._dataloader is not None
-    assert torch.all(
-        torch.eq(
-            evaluator._metrics[0].evaluation_transformer_function(torch.ones(5)),
-            torch.ones(5),
-        )
-    )
-    assert torch.all(torch.eq(evaluator._label_tranformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
+    assert evaluator._evaluation_id == 1
+    assert torch.all(torch.eq(evaluator._label_transformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
     assert evaluator._device == "cpu"
     assert evaluator._device_type == "cpu"
     assert not evaluator._amp
-    assert evaluator._num_samples == 0
-    load_state_mock.assert_called_once_with("trained_model.modyn")
+    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 
 
 @patch.object(PytorchEvaluator, "_load_state")
 def test_no_transform_evaluator_init(load_state_mock: MagicMock):
-    evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), "trained_model.modyn", False)
+    evaluator: PytorchEvaluator = get_mock_evaluator("trained_model.modyn", False)
 
     assert isinstance(evaluator._model, MockModelWrapper)
     assert isinstance(evaluator._model.model, MockModel)
-    assert len(evaluator._metrics) == 1
-    assert isinstance(evaluator._metrics[0], Accuracy)
-    assert evaluator._dataloader is not None
-    assert not evaluator._label_tranformer_function
+    assert not evaluator._label_transformer_function
     assert evaluator._device == "cpu"
     assert evaluator._device_type == "cpu"
     assert not evaluator._amp
-    assert evaluator._num_samples == 0
-    load_state_mock.assert_called_once_with("trained_model.modyn")
+    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 
 
 def test_load_model():
@@ -188,108 +171,93 @@ def test_load_model():
 
         torch.save(dict_to_save, model_path)
 
-        evaluator: PytorchEvaluator = get_mock_evaluator(mp.Queue(), mp.Queue(), mp.Queue(), model_path, False)
+        evaluator: PytorchEvaluator = get_mock_evaluator(str(model_path), False)
 
         assert evaluator._model.model.state_dict() == dict_to_save["model"]
-        assert torch.all(torch.eq(evaluator._model.model(torch.ones(4)), torch.ones(4) * 2))
         assert not model_path.is_file()
 
 
+@patch.object(
+    PytorchEvaluator,
+    "_prepare_dataloader",
+    side_effect=[
+        # all samples are correctly labeled
+        MockEvaluationDataset(),
+        # only the first sample 0 is correctly labeled
+        MockEvaluationDataset(lambda x: 0 if x == 0 else 1),
+        # no samples are correctly labeled
+        MockEvaluationDataset(lambda x: 1),
+        # half of the samples are correctly labeled
+        MockEvaluationDataset(lambda x: x % 2),
+    ],
+)
 @patch.object(PytorchEvaluator, "_load_state")
-def test_send_status_to_server(load_state_mock: MagicMock):
-    response_queue = mp.Queue()
+def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMock):
+    metric_queue = mp.Queue()
+    not_failed_interval_ids = [0, 1, 2, 4]
+    metric_jsons = [
+        AccuracyMetricConfig(evaluation_transformer_function=get_mock_accuracy_transformer()).model_dump_json(),
+        F1ScoreMetricConfig(num_classes=2).model_dump_json(),
+    ]
     evaluator: PytorchEvaluator = get_mock_evaluator(
-        mp.Queue(), response_queue, mp.Queue(), "trained_model.modyn", True
+        "trained_model.modyn", True, metric_queue, not_failed_interval_ids, metric_jsons
     )
-
-    evaluator.send_status_to_server(20)
-    response = response_queue.get()
-    assert response["num_batches"] == 20
-    assert response["num_samples"] == 0
-
-
-@patch("modyn.evaluator.internal.pytorch_evaluator.EvaluationDataset", MockEvaluationDataset)
-@patch.object(PytorchEvaluator, "_load_state")
-def test_evaluate_invalid_query_message(load_state_mock: MagicMock):
-    query_status_queue = mp.Queue()
-    response_queue = mp.Queue()
-    evaluator: PytorchEvaluator = get_mock_evaluator(
-        query_status_queue, response_queue, mp.Queue(), "trained_model.modyn", True
-    )
-
-    query_status_queue.put("INVALID MESSAGE")
-    timeout = 5
-    elapsed = 0
-    while query_status_queue.empty():
-        sleep(0.1)
-        elapsed += 0.1
-
-        if elapsed >= timeout:
-            raise TimeoutError("Did not reach desired queue state within time limit.")
-
-    with pytest.raises(ValueError):
-        evaluator.evaluate()
-
-    elapsed = 0
-    while not (query_status_queue.empty() and response_queue.empty()):
-        sleep(0.1)
-        elapsed += 0.1
-
-        if elapsed >= timeout:
-            raise TimeoutError("Did not reach desired queue state within time limit.")
-
-
-@patch("modyn.evaluator.internal.pytorch_evaluator.EvaluationDataset", MockEvaluationDataset)
-@patch.object(PytorchEvaluator, "_load_state")
-def test_evaluate(load_state_mock: MagicMock):
-    query_status_queue = mp.Queue()
-    response_queue = mp.Queue()
-    metric_result_queue = mp.Queue()
-    evaluator: PytorchEvaluator = get_mock_evaluator(
-        query_status_queue, response_queue, metric_result_queue, "trained_model.modyn", True
-    )
-
-    query_status_queue.put(EvaluatorMessages.STATUS_QUERY_MESSAGE)
-    timeout = 2
-    elapsed = 0
-
-    while query_status_queue.empty():
-        sleep(0.1)
-        elapsed += 0.1
-
-        if elapsed >= timeout:
-            raise TimeoutError("Did not reach desired queue state within timelimit.")
-
     evaluator.evaluate()
-    assert evaluator._num_samples == 100
-    elapsed = 0
-    while not query_status_queue.empty():
-        sleep(0.1)
-        elapsed += 0.1
 
-        if elapsed >= timeout:
-            raise TimeoutError("Did not reach desired queue state within timelimit.")
+    prepare_dataloader_mock.assert_has_calls(
+        [
+            call(ANY, None, None),
+            call(ANY, None, 100),
+            call(ANY, 100, 200),
+            call(ANY, 200, None),
+        ]
+    )
 
-    elapsed = 0
-    while True:
-        if not platform.system() == "Darwin":
-            if response_queue.qsize() == 1 and metric_result_queue.qsize() == 1:
-                break
-        else:
-            if not response_queue.empty() and not metric_result_queue.empty():
-                break
+    expected_accuracies = [1.0, 0.01, 0.0, 0.5]
+    expected_f1scores = [0.5, ANY, 0.0, 1 / 3]
+    for idx, accuracy, f1score in zip(not_failed_interval_ids, expected_accuracies, expected_f1scores):
+        # the accuracies are only correctly calculated if we correctly reset the
+        res = metric_queue.get()
+        assert res == (idx, [("Accuracy", pytest.approx(accuracy)), ("F1-macro", pytest.approx(f1score))])
 
-        sleep(0.1)
-        elapsed += 0.1
 
-        if elapsed >= timeout:
-            raise AssertionError("Did not reach desired queue state after 5 seconds.")
+def test__setup_metrics():
+    acc_metric_config = AccuracyMetricConfig().model_dump_json()
+    metrics = PytorchEvaluator._setup_metrics([acc_metric_config])
 
-    status = response_queue.get()
-    assert status["num_batches"] == 0
-    assert status["num_samples"] == 0
+    assert len(metrics) == 1
+    assert isinstance(metrics[0], Accuracy)
+    unknown_metric_config = '{"name": "UnknownMetric", "config": "", "evaluation_transformer_function": ""}'
+    with pytest.raises(ValidationError):
+        PytorchEvaluator._setup_metrics([unknown_metric_config])
 
-    # accuracy
-    metric_name, metric_result = metric_result_queue.get()
-    assert metric_name == Accuracy.get_name()
-    assert metric_result == pytest.approx(1)
+    f1score_metric_config = F1ScoreMetricConfig(num_classes=2).model_dump_json()
+    metrics = PytorchEvaluator._setup_metrics([acc_metric_config, acc_metric_config, f1score_metric_config])
+    assert len(metrics) == 2
+    assert isinstance(metrics[0], Accuracy)
+    assert isinstance(metrics[1], F1Score)
+
+
+def test__setup_metrics_multiple_f1():
+    macro_f1_config = F1ScoreMetricConfig(
+        evaluation_transformer_function="",
+        num_classes=2,
+        average="macro",
+    ).model_dump_json()
+
+    micro_f1_config = F1ScoreMetricConfig(
+        evaluation_transformer_function="",
+        num_classes=2,
+        average="micro",
+    ).model_dump_json()
+
+    # not double macro, but macro and micro work
+    metrics = PytorchEvaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
+
+    assert len(metrics) == 2
+    assert isinstance(metrics[0], F1Score)
+    assert isinstance(metrics[1], F1Score)
+    assert metrics[0].config.average == "macro"
+    assert metrics[1].config.average == "micro"
+    assert metrics[0].get_name() == "F1-macro"
+    assert metrics[1].get_name() == "F1-micro"

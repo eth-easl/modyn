@@ -9,9 +9,7 @@ class Project(BaseModel):
 
 class Supervisor(BaseModel):
     ip: str = Field(description="The ip address on which modyn supervisor is run.")
-    port: int = Field(
-        description="The port on which modyn supervisor is run.", min=0, max=65535
-    )
+    port: int = Field(description="The port on which modyn supervisor is run.", min=0, max=65535)
 
 
 class ModynClientConfig(BaseModel):

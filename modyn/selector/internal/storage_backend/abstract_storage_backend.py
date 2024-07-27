@@ -13,10 +13,15 @@ class AbstractStorageBackend(ABC):
         self._maximum_keys_in_memory = maximum_keys_in_memory
         self._pipeline_id = pipeline_id
 
-        self._insertion_threads = modyn_config["selector"]["insertion_threads"]
-        self._is_test = "PYTEST_CURRENT_TEST" in os.environ
-        self._is_mac = platform.system() == "Darwin"
-        self._disable_mt = self._insertion_threads <= 0
+        raw_insertion_threads = modyn_config["selector"]["insertion_threads"]
+
+        is_test = "PYTEST_CURRENT_TEST" in os.environ
+        is_mac = platform.system() == "Darwin"
+
+        if raw_insertion_threads <= 0 or (is_test and is_mac):
+            self.insertion_threads = 1
+        else:
+            self.insertion_threads = raw_insertion_threads
 
         if self._maximum_keys_in_memory < 1:
             raise ValueError(f"Invalid setting for maximum_keys_in_memory: {self._maximum_keys_in_memory}")

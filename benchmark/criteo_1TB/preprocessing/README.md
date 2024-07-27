@@ -1,8 +1,8 @@
 # Criteo 1TB Dataset Preprocessing for Modyn
 
 The preprocessing for the Criteo 1TB dataset is based on the steps provided in the [NVIDIA repository](https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/Recommendation/DLRM/README.md).
-However some changes were required to process the data in the format requried for the benchmark tests done for Modyn.
-We have created a patch for the respository which contains the changes.
+However some changes were required to process the data in the format required for the benchmark tests done for Modyn.
+We have created a patch for the repository which contains the changes.
 The below steps explain how the data can be regenerated if needed, including the setup of a google cloud machine as well the running of the script with the changes applied.
 
 
@@ -13,11 +13,11 @@ The second is done by re-embedding the categorical features.
 First off, we filter out low frequency values, ie, values that occur less than a chosen threshold - T by embedding them all as a default value.
 This helps the training as the model learns to ignore that default value rather than learning from multiple infrequent features.
 We also re-embedded the values into a range from 1 to the x+1 where x is the number of high frequency values.
-For example, if there are 100 unique high frequency values, we re-embed the values in the cateogry to values in the range 1 to 101, where 1-100 are used for the high frequency value and 101 is used to denote all the low frequency values.
+For example, if there are 100 unique high frequency values, we re-embed the values in the category to values in the range 1 to 101, where 1-100 are used for the high frequency value and 101 is used to denote all the low frequency values.
 This helps represent the data as int8 or int16 instead of int32, saving space.
 
 This preprocessing is done with the help of Spark. First all files are read to count the frequency of all categorical values and create a dictionary of the counts.
-Secondly a spark processes is triggered to apply this transformation to the data in each day's file one by one. Each file is processed parallely by multiple Spark threads, which works on a subset of the records and outputs the transformed records into a parquet file in the output folder for that day.
+Secondly a spark processes is triggered to apply this transformation to the data in each day's file one by one. Each file is processed parallelly by multiple Spark threads, which works on a subset of the records and outputs the transformed records into a parquet file in the output folder for that day.
 Since there are 600 shuffle partitions configured in the Spark job, 600 output parquet files are created per day, each containing a subset of the records of the overall day file.
 Finally another script reads the parquet file output by the spark processes and saves it as binary files.
 

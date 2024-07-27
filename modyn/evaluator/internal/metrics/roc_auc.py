@@ -1,7 +1,8 @@
 import math
-from typing import Any, Optional
+from typing import Optional
 
 import torch
+from modyn.config.schema.pipeline import RocAucMetricConfig
 from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
 
 
@@ -10,9 +11,8 @@ class RocAuc(AbstractHolisticMetric):
     ROC-AUC metric implementation.
     """
 
-    def __init__(self, evaluation_transform_func: str, config: dict[str, Any]) -> None:
-        super().__init__(evaluation_transform_func, config)
-
+    def __init__(self, config: RocAucMetricConfig) -> None:
+        super().__init__(config)
         self.evaluation_result: Optional[float] = None
 
     # Taken from
@@ -55,6 +55,5 @@ class RocAuc(AbstractHolisticMetric):
 
         return self.evaluation_result
 
-    @staticmethod
-    def get_name() -> str:
+    def get_name(self) -> str:
         return "ROC-AUC"
