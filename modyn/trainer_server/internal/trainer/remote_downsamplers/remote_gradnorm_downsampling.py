@@ -51,7 +51,9 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target
         )
-        scores = torch.norm(last_layer_gradients, dim=-1).cpu()
+        if last_layer_gradients.dim() == 1:
+            last_layer_gradients = last_layer_gradients.unsqueeze(1)
+        scores = torch.linalg.vector_norm(last_layer_gradients, dim=1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
@@ -65,13 +67,19 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
-        probabilities = probabilities / probabilities.sum()
+        sum_probability = probabilities.sum()
+        if torch.isclose(sum_probability, torch.tensor(0.0)):
+            logger.warning("Sum of probabilities is zero; Possibly all gradients are zero. Cannot normalize.")
+            logger.warning("uniformly random select points")
+            # TODO: not 100% correct as it allows replacement
+            downsampled_idxs = torch.randint(0, probabilities.shape[0], (target_size,))
+            weights = torch.ones(target_size, dtype=torch.float32)
+        else:
+            probabilities = probabilities / sum_probability
+            downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)
 
-        downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)
-
-        # lower probability, higher weight to reduce the variance
-        weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
-
+            # lower probability, higher weight to reduce the variance
+            weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
         selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
         return selected_ids, weights
 

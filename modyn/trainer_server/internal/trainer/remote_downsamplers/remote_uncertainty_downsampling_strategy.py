@@ -68,6 +68,8 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         self.index_sampleid_map += sample_ids
 
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
+        if forward_output.dim() == 1:
+            forward_output = forward_output.unsqueeze(1)
         if self.score_metric == "LeastConfidence":
             scores = forward_output.max(dim=1).values.cpu().numpy()
         elif self.score_metric == "Entropy":

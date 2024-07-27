@@ -428,8 +428,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     if (num_paths % chunk_size != 0) {
       ++num_chunks;
     }
+    SPDLOG_INFO("[XZM]: num_chunks = {}", num_chunks);
 
     for (int64_t i = 0; i < num_chunks; ++i) {
+      SPDLOG_INFO("[XZM]: works on i = {}", i);
       auto start_it = begin + i * chunk_size;
       auto end_it = i < num_chunks - 1 ? start_it + chunk_size : end;
 
@@ -461,6 +463,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         }
 
         const uint64_t obtained_records = records.size();
+        SPDLOG_INFO("[XZM]: obtained_records = {}", obtained_records);
         ASSERT(static_cast<int64_t>(obtained_records) <= sample_batch_size, "Received too many samples");
 
         if (static_cast<int64_t>(obtained_records) == sample_batch_size) {
@@ -474,7 +477,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
           /* SPDLOG_INFO("Sending with response_keys = {}, response_labels = {}, records.size = {}",
              response.keys_size(), response.labels_size(), records.size()); */
-
+          SPDLOG_INFO("[XZM]: send response and clear records");
           records.clear();
 
           {
@@ -483,10 +486,12 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           }
         } else {
           // If not, we append to our record buf
+          SPDLOG_INFO("[XZM]: append records to record_buf");
           record_buf.insert(record_buf.end(), records.begin(), records.end());
           records.clear();
           // If our record buf is big enough, emit a message
           if (static_cast<int64_t>(record_buf.size()) >= sample_batch_size) {
+            SPDLOG_INFO("[XZM]: record size is big enough, send response");
             ResponseT response;
 
             // sample_batch_size is signed int...

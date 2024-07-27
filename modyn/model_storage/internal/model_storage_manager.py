@@ -144,8 +144,9 @@ class ModelStorageManager:
             model: TrainedModel = database.session.get(TrainedModel, model_id)
         if not model.parent_model:
             # base case: we can load a fully stored model.
-            model_state = self._get_base_model_state(model.pipeline_id, device)
-            self._clear_cuda_mem()
+            # model_state = self._get_base_model_state(model.pipeline_id, device)
+            # self._clear_cuda_mem()
+            model_state = {}
             return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
         # recursive step: we recurse to load the model state of the parent model.

@@ -78,20 +78,20 @@ def gen_selection_strategies(
             )
         )
 
-    # Uniform random sampling
-    strategies.append(
-        (
-            "uniform",
-            CoresetStrategyConfig(
-                maximum_keys_in_memory=maximum_keys_in_memory,
-                storage_backend="database",
-                tail_triggers=0,
-                limit=-1,
-                warmup_triggers=warmup_triggers,
-                presampling_config=PresamplingConfig(strategy="Random", ratio=ratio, ratio_max=ratio_max),
-            ),
-        )
-    )
+    # # Uniform random sampling
+    # strategies.append(
+    #     (
+    #         "uniform",
+    #         CoresetStrategyConfig(
+    #             maximum_keys_in_memory=maximum_keys_in_memory,
+    #             storage_backend="database",
+    #             tail_triggers=0,
+    #             limit=-1,
+    #             warmup_triggers=warmup_triggers,
+    #             presampling_config=PresamplingConfig(strategy="Random", ratio=ratio, ratio_max=ratio_max),
+    #         ),
+    #     )
+    # )
 
     # # Class balanced sampling
     # strategies.append(
@@ -238,22 +238,22 @@ def gen_selection_strategies(
     #     )
     # )
     #
-    # # Margin BtS
-    # strategies.append(
-    #     (
-    #         "margin_bts",
-    #         CoresetStrategyConfig(
-    #             maximum_keys_in_memory=maximum_keys_in_memory,
-    #             storage_backend="database",
-    #             tail_triggers=0,
-    #             limit=-1,
-    #             warmup_triggers=warmup_triggers,
-    #             downsampling_config=UncertaintyDownsamplingConfig(
-    #                 ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Margin"
-    #             ),
-    #         ),
-    #     )
-    # )
+    # Margin BtS
+    strategies.append(
+        (
+            "margin_bts",
+            CoresetStrategyConfig(
+                maximum_keys_in_memory=maximum_keys_in_memory,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+                warmup_triggers=warmup_triggers,
+                downsampling_config=UncertaintyDownsamplingConfig(
+                    ratio=ratio, ratio_max=ratio_max,  sample_then_batch=False, score_metric="Margin"
+                ),
+            ),
+        )
+    )
     #
     #
     # # LeastConf BtS
@@ -557,6 +557,7 @@ def run_experiment(
     train_conf_func = None
     maximum_triggers = None
     maximum_keys_in_memory = 100000
+    start_replay_at = 0
     if pipeline_gen_func == gen_yearbook_config:
         num_classes = 2
         min_lr = 1e-4
@@ -689,7 +690,7 @@ def run_experiment(
     run_multiple_pipelines_parallel(
         client_config=ModynClientConfig(supervisor=Supervisor(ip=host, port=port)),
         pipeline_configs=current_pipeline_configs,
-        start_replay_at=0,
+        start_replay_at=start_replay_at,
         stop_replay_at=None,
         maximum_triggers=maximum_triggers,
         show_eval_progress=False,

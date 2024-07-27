@@ -109,8 +109,8 @@ def gen_criteo_config(
         "  return x.to(torch.float32)"
     )
     dataloader_workers = 16
-    num_prefetched_partitions = 4
-    parallel_prefetch_requests = 2
+    num_prefetched_partitions = 2
+    parallel_prefetch_requests = 1
 
     return ModynPipelineConfig(
         pipeline=Pipeline(
