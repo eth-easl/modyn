@@ -38,10 +38,8 @@ class PipelineStage(StrEnum):
 
     # Process new data
     PROCESS_NEW_DATA = "Process new data"
-
     PROCESS_NEW_DATA_BATCH = "Process new data batch"
     EVALUATE_TRIGGER_POLICY = "Evaluate trigger on batch"
-    INFORM_SELECTOR_NO_TRIGGER = "Inform selector about no trigger"
 
     # Trigger
     HANDLE_TRIGGERS = "Handle triggers within batch"
@@ -56,7 +54,7 @@ class PipelineStage(StrEnum):
     TRAIN = "Run training"
 
     WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"
-    """Implements busy waiting for training completion."""
+    """Implements busy waiting for training completion (not a PipelineExecutor stage)."""
 
     TRAINING_COMPLETED = "Training completed 🚀"
     STORE_TRAINED_MODEL = "Store trained model"
@@ -64,7 +62,7 @@ class PipelineStage(StrEnum):
     # Evaluation
     EVALUATE = "Run evaluation"
     EVALUATE_MULTI = "Run multiple interval evaluations for one model"
-    WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion"
+    WAIT_FOR_EVALUATION_COMPLETION = "Wait for evaluation completion (not a PipelineExecutor stage)"
     POST_EVALUATION_CHECKPOINT = "Save pipeline metadata as checkpoint"
     POST_EVALUATION = "Post pipeline evaluation"
 
