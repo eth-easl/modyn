@@ -195,7 +195,7 @@ class TrainerServerGRPCServicer:
         context: grpc.ServicerContext,  # pylint: disable=unused-argument
     ) -> TrainingStatusResponse:
         training_id = request.training_id
-        logger.info(f"Received status request for training {training_id}")
+        # logger.info(f"Received status request for training {training_id}")
 
         if training_id not in self._training_dict:
             logger.error(f"Training with id {training_id} has not been registered")
@@ -203,7 +203,7 @@ class TrainerServerGRPCServicer:
 
         process_handler = self._training_process_dict[training_id].process_handler
         if process_handler.is_alive():
-            logger.info(f"Training {training_id} is still running, obtaining info from running process.")
+            # logger.info(f"Training {training_id} is still running, obtaining info from running process.")
             (
                 is_training,
                 downsampling_num_batches,

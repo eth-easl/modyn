@@ -252,7 +252,7 @@ class OnlineDataset(IterableDataset):
             if partition_signals is not None:
                 with partition_signals[partition_id]:
                     partition_signals[partition_id].notify_all()
-
+        self._info("Finished getting data from storage", worker_id)
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
         assert self._log_lock is not None

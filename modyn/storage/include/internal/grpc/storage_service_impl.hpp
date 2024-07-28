@@ -320,7 +320,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const std::vector<int64_t>::const_iterator begin = request_keys.begin();  // NOLINT (modernize-use-auto)
       const std::vector<int64_t>::const_iterator end = request_keys.end();      // NOLINT (modernize-use-auto)
 
+      // randomly generated a number as identifier for this request
+      int64_t request_id = rand();
+      SPDLOG_INFO("Sending data for {} keys for request pseudo-id {}.", request_keys.size(), request_id);
       get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_);
+      SPDLOG_INFO("Finished sending data for {} keys for request pseudo-id {}", request_keys.size(), request_id);
 
     } else {
       std::vector<std::exception_ptr> thread_exceptions(retrieval_threads_);

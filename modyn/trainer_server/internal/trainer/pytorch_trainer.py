@@ -257,6 +257,7 @@ class PytorchTrainer:
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
             for batch in self._train_dataloader:
+                self.logger.info(f"[XZM]: working on epoch {epoch}, batch {passed_batches}")
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))

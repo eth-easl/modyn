@@ -304,7 +304,7 @@ class TrainerServerGRPCHandlerMixin:
 
             if res.blocked:
                 blocked_in_a_row += 1
-
+                logger.info(f"[XZM]: Trainer Server is blocked.")
                 if blocked_in_a_row >= 3:
                     logger.warning(
                         f"Trainer Server returned {blocked_in_a_row} blocked responses in a row, cannot update status."
@@ -320,6 +320,12 @@ class TrainerServerGRPCHandlerMixin:
                     assert (res.HasField("samples_seen") and res.HasField("batches_seen")) or (
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
+                    if res.HasField("samples_seen") and res.HasField("batches_seen"):
+                        logger.info(f"[XZM]: samples_seen: {res.samples_seen}, batches_seen: {res.batches_seen}")
+                    else:
+                        logger.info(
+                            f"[XZM]: downsampling_samples_seen: {res.downsampling_samples_seen}, downsampling_batches_seen: {res.downsampling_batches_seen}"
+                        )
 
                     if training_reporter is not None:
                         training_reporter.progress_counter(
@@ -328,6 +334,8 @@ class TrainerServerGRPCHandlerMixin:
 
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
+                else:
+                    logger.info(f"[XZM]: Training {training_id} should have finished.")
 
             if res.is_running:
                 time.sleep(2)
