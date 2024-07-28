@@ -107,7 +107,7 @@ def test__load_il_eval_model(mock__load_il_model_architecture, minimal_modyn_con
             assert torch.allclose(model.model.output.bias, expected_bias)
             assert not model.model.training
             mock_model_storage_stub.FetchModel.assert_called_once_with(
-                FetchModelRequest(model_id=il_model_id, load_metadata=True, device=ANY)
+                FetchModelRequest(model_id=il_model_id, load_metadata=True)
             )
 
             mock_download_trained_model.assert_called_once_with(

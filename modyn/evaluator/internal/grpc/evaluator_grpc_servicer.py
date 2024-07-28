@@ -127,7 +127,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 * num_intervals,
             )
 
-        fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False, device=request.device)
+        fetch_request = FetchModelRequest(model_id=request.model_id, load_metadata=False)
         fetch_resp: FetchModelResponse = self._model_storage_stub.FetchModel(fetch_request)
 
         if not fetch_resp.success:

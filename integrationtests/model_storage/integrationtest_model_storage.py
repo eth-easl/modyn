@@ -155,7 +155,7 @@ def download_and_check_model(
     model_id = response_register.model_id
 
     # try to fetch the registered model
-    request_fetch = FetchModelRequest(model_id=model_id, load_metadata=True, device="cpu")
+    request_fetch = FetchModelRequest(model_id=model_id, load_metadata=True)
     response_fetch: FetchModelResponse = model_storage.FetchModel(request_fetch)
 
     assert response_fetch.success, "Could not find model with this id"
@@ -222,7 +222,7 @@ def test_model_storage(
     assert response_delete.success
 
     # fetch a (now) invalid model
-    request_invalid_fetch = FetchModelRequest(model_id=child_id, device="cpu")
+    request_invalid_fetch = FetchModelRequest(model_id=child_id)
     response_invalid_fetch: FetchModelResponse = model_storage.FetchModel(request_invalid_fetch)
 
     assert not response_invalid_fetch.success

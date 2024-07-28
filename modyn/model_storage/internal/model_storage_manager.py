@@ -126,7 +126,7 @@ class ModelStorageManager:
         self._clear_cuda_mem()
         return None
 
-    def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy, device: str) -> dict:
+    def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
         """
         Reconstruct a given model according to the model storage policy.
         The function recursively calls itself whenever the model is stored as a delta.
@@ -150,7 +150,7 @@ class ModelStorageManager:
             return policy.full_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
         # recursive step: we recurse to load the model state of the parent model.
-        model_state = self._reconstruct_model_state(model.parent_model, policy, device)
+        model_state = self._reconstruct_model_state(model.parent_model, policy)
 
         self._clear_cuda_mem()
 
@@ -158,7 +158,7 @@ class ModelStorageManager:
         assert policy.incremental_model_strategy is not None
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
-    def _get_base_model_state(self, pipeline_id: int, device: str) -> dict:
+    def _get_base_model_state(self, pipeline_id: int) -> dict:
         """
         Get a randomly initialized model associated with the pipeline.
 
@@ -174,14 +174,8 @@ class ModelStorageManager:
         assert hasattr(model_module, model_class_name), f"Model {model_class_name} not available."
 
         model_handler = getattr(model_module, model_class_name)
-        if device != "cpu":
-            # fetch the device number
-            device_number = int(device.split(":")[1])
-            logger.info(f"device number: {device_number}")
-            # we assume the number is 2 or 3, and set the device to 0 or 1 based on parity
-            load_device_number = device_number % 2
-            device = f"cuda:{load_device_number}"
-            logger.info(f"Loading model on device {device}")
+        # TODO(create issue): remove cuda and fix GPU loading for DLRM (also apex for model storage)
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         return model_handler(json.loads(model_config), device, amp).model.state_dict()
 
     def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
@@ -212,7 +206,7 @@ class ModelStorageManager:
         # otherwise return the parent model of the previous model.
         return previous_model.parent_model
 
-    def load_model(self, model_id: int, metadata: bool, device: str) -> Optional[dict]:
+    def load_model(self, model_id: int, metadata: bool) -> Optional[dict]:
         """
         Loads a given model and optionally, also appends the metadata.
 
@@ -231,7 +225,7 @@ class ModelStorageManager:
         policy = self.get_model_storage_policy(model.pipeline_id)
 
         # retrieve the model by loading its state dictionary.
-        model_state = self._reconstruct_model_state(model_id, policy, device)
+        model_state = self._reconstruct_model_state(model_id, policy)
         model_dict = {"model": model_state}
 
         # append the metadata to the dictionary if specified.

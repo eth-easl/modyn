@@ -83,7 +83,7 @@ class IrreducibleLossProducer:
         model_storage_stub = IrreducibleLossProducer.connect_to_model_storage(
             f"{modyn_config['model_storage']['hostname']}:{modyn_config['model_storage']['port']}"
         )
-        fetch_request = FetchModelRequest(model_id=il_model_id, load_metadata=True, device="cpu")
+        fetch_request = FetchModelRequest(model_id=il_model_id, load_metadata=True)
         fetch_resp: FetchModelResponse = model_storage_stub.FetchModel(fetch_request)
         assert fetch_resp.success, f"Failed to fetch model with id {il_model_id}"
         with tempfile.TemporaryDirectory() as temp_dir:
