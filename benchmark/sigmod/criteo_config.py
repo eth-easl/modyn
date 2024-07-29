@@ -209,7 +209,45 @@ def gen_criteo_config(
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
                                 "    return torch.sigmoid(model_output).float()"
                             ),
-                        )
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.round(model_output).long()"
+                            ),
+                            num_classes=2,
+                            average="binary",
+                            pos_label=1,
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.round(model_output).long()"
+                            ),
+                            num_classes=2,
+                            average="binary",
+                            pos_label=0,
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.round(model_output).long()"
+                            ),
+                            num_classes=2,
+                            average="macro",
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "   return torch.round(model_output).long()"
+                            ),
+                            num_classes=2,
+                            average="weighted",
+                        ),
                     ],
                 )
             ]

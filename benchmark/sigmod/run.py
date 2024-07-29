@@ -383,7 +383,7 @@ def config_str_fn(
 def run_experiment(
         physical_gpu_id: Annotated[int, typer.Argument(help="The GPU ID to run the experiment on")],
         logical_gpu_id: Annotated[Optional[int], typer.Argument(help="The logical GPU ID to run the experiment on")] = None,
-        disable_run: Annotated[bool, typer.Option(help="If set, will only print the pipelines to run")] = False,
+        disable_run: Annotated[bool, typer.Option(help="If set, will only print the pipelines to run")] = True,
         existing_pipeline_file: Annotated[Optional[str], typer.Option(help="If set, will skip pipelines inside")] = None,
         only_run_pipeline: Annotated[Optional[str], typer.Option(help="If set, will only run the pipeline with this name")] = None,
 ) -> None:
