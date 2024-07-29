@@ -306,6 +306,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 break
             if not res.is_running:
                 break
+            logger.info(f"[XZM]: Evaluation {evaluation_id} is still running.")
             sleep(1)
         return not has_exception
 
