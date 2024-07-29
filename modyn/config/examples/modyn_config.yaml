@@ -101,24 +101,24 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 2000000,
       },
-#      {
-#        name: "criteo_tiny",
-#        description: "Criteo Dataset (tiny set)",
-#        version: "0.0.1",
-#        base_path: "/datasets/criteo_tiny",
-#        filesystem_wrapper_type: "LocalFilesystemWrapper",
-#        file_wrapper_type: "BinaryFileWrapper",
-#        file_wrapper_config:
-#          {
-#            byteorder: "little",
-#            record_size: 160,
-#            label_size: 4,
-#            file_extension: ".bin"
-#          },
-#        ignore_last_timestamp: false,
-#        file_watcher_interval: 5,
-#        selector_batch_size: 2000000,
-#      },
+      {
+        name: "criteo_tiny",
+        description: "Criteo Dataset (tiny set)",
+        version: "0.0.1",
+        base_path: "/datasets/criteo_tiny",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "little",
+            record_size: 160,
+            label_size: 4,
+            file_extension: ".bin"
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2000000,
+      },
       # ---------------------------------- YEARBOOK ---------------------------------- #
       {
         name: "yearbook_train",
