@@ -126,6 +126,7 @@ class TrainerServerGRPCServicer:
                 checksum=fetch_resp.checksum,
                 identifier=training_id,
                 base_directory=self._modyn_base_dir,
+                pipeline_id=request.pipeline_id,
             )
 
             if not pretrained_model_path:

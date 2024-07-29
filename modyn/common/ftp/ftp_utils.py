@@ -103,7 +103,7 @@ def delete_file(hostname: str, port: int, user: str, password: str, remote_file_
 
     """
     ftp = FTP()
-    ftp.connect(hostname, port, timeout=3)
+    ftp.connect(hostname, port, timeout=5 * 60)
     ftp.login(user, password)
     ftp.delete(str(remote_file_path))
     ftp.close()
@@ -137,6 +137,7 @@ def download_trained_model(
     checksum: bytes,
     identifier: int,
     base_directory: pathlib.Path,
+    pipeline_id: Optional[int] = None,
 ) -> Optional[pathlib.Path]:
     model_path = base_directory / f"trained_model_{identifier}.modyn"
 
@@ -174,7 +175,8 @@ def download_trained_model(
     if not success:
         logger.error("Checksums did not match, evaluation cannot be started.")
         return None
-
+    identifier_prefix = f"Pipeline ID: {pipeline_id}; Training ID: {identifier}" if pipeline_id is not None else ""
+    logger.info(f"[XZM]: {identifier_prefix} Successfully downloaded the model; now delete it from the FTP server.")
     for num_try in range(tries):
         try:
             delete_file(
@@ -182,7 +184,7 @@ def download_trained_model(
                 port=int(model_storage_config["ftp_port"]),
                 user="modyn",
                 password="modyn",
-                remote_file_path=pathlib.Path(remote_path),
+                remote_file_path=remote_path,
             )
         except Exception as ex:  # pylint: disable=broad-exception-caught
             logger.error("Caught exception while deleting file.")
@@ -190,10 +192,7 @@ def download_trained_model(
             if num_try < tries - 1:
                 logger.warning("Trying again")
                 continue
-
-            logger.error("Tried enough times.")
-            raise
-
+            logger.error(f"[XZM]: {identifier_prefix} Tried enough times to delete the file. Give up deleting it.")
         break
 
     logger.info(f"Successfully downloaded trained model to {model_path}.")
