@@ -7,10 +7,10 @@ docker run -it --rm  -v $directory:/tmp/hahaha postgres:15.2-alpine chmod -R 777
 rm .modyn_configured
 docker volume rm $(docker volume ls -q)
 
-rm -rf $directory/local_storage
-rm -rf $directory/logs
-rm -rf $directory/metadatadb5
-rm -rf $directory/modelstorage
-rm -rf $directory/offline_dataset
-#rm -rf $directory/storagedb2
-rm -rf $directory/trigger_samples
+rm -rf $directory/local_storage/*
+rm -rf $directory/logs/*
+rm -rf $directory/metadatadb5/*
+rm -rf $directory/modelstorage/*
+rm -rf $directory/offline_dataset/*
+#rm -rf $directory/storagedb2/*
+rm -rf $directory/trigger_samples/*
