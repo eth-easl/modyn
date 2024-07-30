@@ -26,6 +26,8 @@ class ResNet50Modyn(ResNet, CoresetSupportingModule):
             # We need to initialize the model with the number of classees
             # in the pretrained weights
             model_configuration["num_classes"] = len(weights.meta["categories"])
+
+        if "use_pretrained" in model_configuration:  # no matter if True or False
             del model_configuration["use_pretrained"]  # don't want to forward this to torchvision
 
         super().__init__(Bottleneck, [3, 4, 6, 3], **model_configuration)  # type: ignore

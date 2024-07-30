@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import threading
 from pathlib import Path
 from typing import Any, Callable, Generator, Iterator, Literal, Optional, Tuple
@@ -17,8 +18,10 @@ from torchvision import transforms
 
 logger = logging.getLogger(__name__)
 
+# Iterate over each sample in each file, but one file after another
 
-class CriteoLocalDataset(IterableDataset):  # pragma: no cover
+
+class CriteoRandomFullLocalDataset(IterableDataset):  # pragma: no cover
 
     # pylint: disable=too-many-instance-attributes, abstract-method
 
@@ -74,7 +77,7 @@ class CriteoLocalDataset(IterableDataset):  # pragma: no cover
 
     def _setup_composed_transform(self) -> None:  # pragma: no cover
 
-        self._transform_list = [CriteoLocalDataset.bytes_parser_function]
+        self._transform_list = [CriteoRandomFullLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:  # pragma: no cover
@@ -141,16 +144,25 @@ class CriteoLocalDataset(IterableDataset):  # pragma: no cover
         worker_paths = next(x for i, x in enumerate(pathgen) if i == worker_id)
         sample_idx = 0
         self._info(f"Got {len(worker_paths)} paths.", worker_id)
-        for path in worker_paths:
+
+        all_samples = []
+        for path_idx, path in enumerate(worker_paths):
             fw = BinaryFileWrapper(path, byte_order, record_size, label_size)
             num_samples = fw.get_number_of_samples()
-            labels = fw.get_all_labels()
-            samples = fw.get_samples(0, num_samples - 1)
+            all_samples.extend([(path_idx, idx) for idx in range(num_samples)])
 
-            for idx, sample in enumerate(samples):
-                yield sample_idx, memoryview(sample), labels[idx], None
+        self._info("Extracted number of samples.", worker_id)
+        # Shuffle the list to randomize the order of sample access
+        random.shuffle(all_samples)
+        self._info("Shuffled.", worker_id)
 
-                sample_idx = sample_idx + 1
+        # Iterate over the shuffled list and read samples
+        for path_idx, idx in all_samples:
+            fw = BinaryFileWrapper(worker_paths[path_idx], byte_order, record_size, label_size)
+            label = fw.get_all_labels()[idx]
+            sample = fw.get_sample(idx)
+            yield sample_idx, memoryview(sample), label, None
+            sample_idx += 1
 
     def __iter__(self) -> Generator:  # pragma: no cover
 
