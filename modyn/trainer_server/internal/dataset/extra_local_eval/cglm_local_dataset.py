@@ -1,4 +1,5 @@
 # pylint: skip-file
+# pragma: no cover
 
 import io
 import json

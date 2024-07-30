@@ -1,4 +1,5 @@
 # pylint: skip-file
+# pragma: no cover
 
 """Binary file wrapper."""
 import os
