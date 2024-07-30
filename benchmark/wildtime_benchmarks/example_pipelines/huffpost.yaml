@@ -5,7 +5,7 @@ pipeline:
 model:
   id: ArticleNet
   config:
-    num_classes: 55
+  num_classes: 55
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
