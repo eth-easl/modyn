@@ -291,7 +291,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
                 )
                 self._evaluation_data_dict[evaluation_id][interval_idx].extend(metric_result)
 
-        logger.info(f"Drained results queue for evaluation {evaluation_id}")
+        # logger.info(f"Drained results queue for evaluation {evaluation_id}")
 
     def get_evaluation_result(
         self, request: EvaluationResultRequest, context: grpc.ServicerContext

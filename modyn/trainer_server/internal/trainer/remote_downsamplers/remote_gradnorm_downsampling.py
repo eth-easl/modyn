@@ -71,8 +71,8 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         if torch.isclose(sum_probability, torch.tensor(0.0)):
             logger.warning("Sum of probabilities is zero; Possibly all gradients are zero. Cannot normalize.")
             logger.warning("uniformly random select points")
-            # TODO: not 100% correct as it allows replacement
-            downsampled_idxs = torch.randint(0, probabilities.shape[0], (target_size,))
+            # random select without replacement
+            downsampled_idxs = torch.randperm(probabilities.shape[0])[:target_size]
             weights = torch.ones(target_size, dtype=torch.float32)
         else:
             probabilities = probabilities / sum_probability

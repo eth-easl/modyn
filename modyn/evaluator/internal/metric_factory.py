@@ -19,5 +19,5 @@ class MetricFactory:
         for metric in metrics:
             metric.deserialize_evaluation_transformer()
             if isinstance(metric, AbstractHolisticMetric):
-                return True
+                contains_holistic = True
         return contains_holistic

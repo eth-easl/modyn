@@ -106,7 +106,7 @@ def gen_criteo_config(
     label_transformer_function = (
         "import torch\n"
         "def label_transformer_function(x: torch.Tensor) -> torch.Tensor:\n"
-        "  return x.to(torch.float32)"
+        "\treturn x.to(torch.float32)"
     )
     dataloader_workers = 16
     num_prefetched_partitions = 1
@@ -199,22 +199,15 @@ def gen_criteo_config(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
+                                "\treturn torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
                             ),
                             topn=1,
-                        ),
-                        RocAucMetricConfig(
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.sigmoid(model_output).float()"
-                            ),
                         ),
                         F1ScoreMetricConfig(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
+                                "\treturn torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
                             ),
                             num_classes=2,
                             average="binary",
@@ -224,7 +217,7 @@ def gen_criteo_config(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
+                                "\treturn torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
                             ),
                             num_classes=2,
                             average="binary",
@@ -234,7 +227,7 @@ def gen_criteo_config(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
+                                "\treturn torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
                             ),
                             num_classes=2,
                             average="macro",
@@ -243,10 +236,17 @@ def gen_criteo_config(
                             evaluation_transformer_function=(
                                 "import torch\n"
                                 "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
+                                "\treturn torch.ge(torch.sigmoid(model_output).float(), 0.5).to(torch.long)"
                             ),
                             num_classes=2,
                             average="weighted",
+                        ),
+                        RocAucMetricConfig(
+                            evaluation_transformer_function=(
+                                "import torch\n"
+                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+                                "\treturn torch.sigmoid(model_output).float()"
+                            ),
                         ),
                     ],
                 )
