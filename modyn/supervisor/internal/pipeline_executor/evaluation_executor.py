@@ -352,7 +352,7 @@ class EvaluationExecutor:
             return failure_reasons
 
         logger.info(f"Evaluation started for model {model_id_to_eval} on intervals {intervals}.")
-        self.grpc.wait_for_evaluation_completion(response.evaluation_id)
+        self.grpc.wait_for_evaluation_completion(response.evaluation_id, pipeline_id=self.pipeline_id)
         eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
         self.grpc.cleanup_evaluations([response.evaluation_id])
 

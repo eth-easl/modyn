@@ -274,13 +274,14 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         )
 
     # pylint: disable=too-many-branches
-    def wait_for_evaluation_completion(self, evaluation_id: int) -> bool:
+    def wait_for_evaluation_completion(self, evaluation_id: int, pipeline_id: Optional[int] = None) -> bool:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
 
         req = EvaluationStatusRequest(evaluation_id=evaluation_id)
         has_exception = False
+        log_prefix = f"[Pipeline {pipeline_id}]: " if pipeline_id is not None else ""
         while True:
             for attempt in Retrying(
                 stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
@@ -306,7 +307,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 break
             if not res.is_running:
                 break
-            logger.info(f"[XZM]: Evaluation {evaluation_id} is still running.")
+            logger.info(f"[XZM] {log_prefix}: Evaluation {evaluation_id} is still running.")
             sleep(1)
         return not has_exception
 
