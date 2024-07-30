@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 # Iterate over each sample in each file, but one file after another
 
 
-class CriteoRandomFileByFileLocalDataset(IterableDataset):
+class CriteoRandomFileByFileLocalDataset(IterableDataset):  # pragma: no cover
+
     # pylint: disable=too-many-instance-attributes, abstract-method
 
     def __init__(
@@ -39,7 +40,8 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
         shuffle: bool,
         tokenizer: Optional[str],
         log_path: Optional[pathlib.Path],
-    ):
+    ):  # pragma: no cover
+
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id
@@ -66,17 +68,20 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
         logger.debug("Initialized CriteoDataset.")
 
     @staticmethod
-    def bytes_parser_function(x: memoryview) -> dict:
+    def bytes_parser_function(x: memoryview) -> dict:  # pragma: no cover
+
         return {
             "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
             "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long(),
         }
 
-    def _setup_composed_transform(self) -> None:
+    def _setup_composed_transform(self) -> None:  # pragma: no cover
+
         self._transform_list = [CriteoRandomFileByFileLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
 
-    def _init_transforms(self) -> None:
+    def _init_transforms(self) -> None:  # pragma: no cover
+
         self._setup_composed_transform()
 
     def _silence_pil(self) -> None:  # pragma: no cover
@@ -91,14 +96,16 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
 
     def _get_transformed_data_tuple(
         self, key: int, sample: memoryview, label: int, weight: Optional[float]
-    ) -> Optional[Tuple]:
+    ) -> Optional[Tuple]:  # pragma: no cover
+
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
         transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
         return key, transformed_sample, label
 
-    def _persist_log(self, worker_id: int) -> None:
+    def _persist_log(self, worker_id: int) -> None:  # pragma: no cover
+
         if self._log_path is None:
             return
 
@@ -119,7 +126,8 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
 
     def criteo_generator(
         self, worker_id: int, num_workers: int
-    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
+    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:  # pragma: no cover
+
         record_size = 160
         label_size = 4
         byte_order: Literal["little"] = "little"
@@ -150,7 +158,8 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
                 yield sample_idx, memoryview(sample), label, None
                 sample_idx += 1
 
-    def __iter__(self) -> Generator:
+    def __iter__(self) -> Generator:  # pragma: no cover
+
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
@@ -180,5 +189,6 @@ class CriteoRandomFileByFileLocalDataset(IterableDataset):
 
         self._persist_log(worker_id)
 
-    def end_of_trigger_cleaning(self) -> None:
+    def end_of_trigger_cleaning(self) -> None:  # pragma: no cover
+
         pass
