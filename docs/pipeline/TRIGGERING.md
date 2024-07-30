@@ -12,10 +12,12 @@ Another policy type is the `EnsemblePolicy` which can be used to combine multipl
 One can either use pre-defined ensemble strategies like `MajorityVote` and `AtLeastNEnsembleStrategy` or define custom functions that reduce a list of trigger decisions (one per sub-policy) and make decisions on them freely via the  CustomEnsembleStrategy.
 
 ```mermaid
-
 classDiagram
     class Trigger {
         <<Abstract>>
+        +init_trigger()
+        +inform()
+        +inform_previous_model()
     }
 
     namespace simple_triggers {
@@ -55,5 +57,4 @@ classDiagram
     _BatchedTrigger <|-- CostBased
 
     EnsemblePolicy *-- "n" Trigger
-
 ```
