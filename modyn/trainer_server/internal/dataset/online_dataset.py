@@ -148,10 +148,10 @@ class OnlineDataset(IterableDataset):
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
     def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
-        logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
+        logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Trigger {self._trigger_id}][Worker {worker_id}] {msg}")
 
     def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
-        logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
+        logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Trigger {self._trigger_id}][Worker {worker_id}] {msg}")
 
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: Optional[int] = None

@@ -283,7 +283,10 @@ class TrainerServerGRPCHandlerMixin:
 
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
-        self, training_id: int, training_reporter: Optional[TrainingStatusReporter] = None
+        self,
+        training_id: int,
+        training_reporter: Optional[TrainingStatusReporter] = None,
+        pipeline_id: Optional[int] = None,
     ) -> dict[str, Any]:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
@@ -294,7 +297,7 @@ class TrainerServerGRPCHandlerMixin:
         if training_reporter is not None:
             training_reporter.create_tracker()
         blocked_in_a_row = 0
-
+        log_prefix = f"[{pipeline_id}] " if pipeline_id is not None else ""
         while True:
             req = TrainingStatusRequest(training_id=training_id)
             res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
@@ -304,7 +307,7 @@ class TrainerServerGRPCHandlerMixin:
 
             if res.blocked:
                 blocked_in_a_row += 1
-                logger.info(f"[XZM]: Trainer Server is blocked.")
+                logger.info(f"[XZM]: {log_prefix} Trainer Server is blocked.")
                 if blocked_in_a_row >= 3:
                     logger.warning(
                         f"Trainer Server returned {blocked_in_a_row} blocked responses in a row, cannot update status."
@@ -321,10 +324,10 @@ class TrainerServerGRPCHandlerMixin:
                         res.HasField("downsampling_samples_seen") and res.HasField("downsampling_batches_seen")
                     ), f"Inconsistent server response:\n{res}"
                     if res.HasField("samples_seen") and res.HasField("batches_seen"):
-                        logger.info(f"[XZM]: samples_seen: {res.samples_seen}, batches_seen: {res.batches_seen}")
+                        logger.info(f"[XZM]: {log_prefix} samples_seen: {res.samples_seen}, batches_seen: {res.batches_seen}")
                     else:
                         logger.info(
-                            f"[XZM]: downsampling_samples_seen: {res.downsampling_samples_seen}, downsampling_batches_seen: {res.downsampling_batches_seen}"
+                            f"[XZM]: {log_prefix} downsampling_samples_seen: {res.downsampling_samples_seen}, downsampling_batches_seen: {res.downsampling_batches_seen}"
                         )
 
                     if training_reporter is not None:
@@ -335,7 +338,7 @@ class TrainerServerGRPCHandlerMixin:
                 elif res.is_running:
                     logger.warning("Trainer server is not blocked and running, but no state is available.")
                 else:
-                    logger.info(f"[XZM]: Training {training_id} should have finished.")
+                    logger.info(f"[XZM]: {log_prefix} Training {training_id} should have finished.")
 
             if res.is_running:
                 time.sleep(2)

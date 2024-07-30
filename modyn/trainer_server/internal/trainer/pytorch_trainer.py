@@ -926,13 +926,13 @@ class PytorchTrainer:
     # ---------------------------------------------------- Logging --------------------------------------------------- #
 
     def _info(self, msg: str) -> None:
-        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+        self.logger.info(f"[Training {self.training_id}][PL {self.pipeline_id}][Trigger {self.trigger_id}] {msg}")
 
     def _warning(self, msg: str) -> None:
-        self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+        self.logger.warning(f"[Training {self.training_id}][PL {self.pipeline_id}][Trigger {self.trigger_id}] {msg}")
 
     def _error(self, msg: str) -> None:
-        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}] {msg}")
+        self.logger.error(f"[Training {self.training_id}][PL {self.pipeline_id}][Trigger {self.trigger_id}] {msg}")
 
     def _load_dataset_log(self) -> None:
         worker_log = {}

@@ -658,7 +658,11 @@ class PipelineExecutor:
             self.state.training_status_queue, trigger_id, s.current_training_id, total_samples, status_bar_scale
         )
 
-        trainer_log = self.grpc.wait_for_training_completion(s.current_training_id, training_reporter)
+        trainer_log = self.grpc.wait_for_training_completion(
+            s.current_training_id,
+            training_reporter,
+            s.pipeline_id,
+        )
 
         # add log data
         log.info = TrainingInfo(
