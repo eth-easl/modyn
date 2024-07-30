@@ -1,7 +1,7 @@
 [run]
 source=**/modyn/*
 omit = 
-    **/__init__.py
-    **/extra_local_eval/*
-    **/generated/*
-    **/modyn/tests/*
+    **/*/__init__.py
+    **/*/extra_local_eval/*
+    **/*/generated/*
+    **/*/modyn/tests/*
