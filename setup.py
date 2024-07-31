@@ -28,7 +28,7 @@ REQUIRED = [""]
 
 # What packages are optional?
 # 'fancy feature': ['django'],}
-EXTRAS = {}
+EXTRAS: dict = {}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -46,29 +46,29 @@ except FileNotFoundError:
     long_description = DESCRIPTION
 
 # Load the package's _version.py module as a dictionary.
-about = {}
+about: dict = {}
 project_slug = "modyn"
 
 EXTENSION_BUILD_DIR = pathlib.Path(here) / "libbuild"
 
 
-def _get_env_variable(name, default="OFF"):
+def _get_env_variable(name: str, default: str = "OFF") -> str:
     if name not in os.environ.keys():
         return default
     return os.environ[name]
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, cmake_lists_dir=".", sources=[], **kwa):
+    def __init__(self, name: str, cmake_lists_dir: str = ".", sources: list = [], **kwa: dict) -> None:
         Extension.__init__(self, name, sources=sources, **kwa)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
 
 
 class CMakeBuild(build_ext):
-    def copy_extensions_to_source(self):
+    def copy_extensions_to_source(self) -> None:
         pass
 
-    def build_extensions(self):
+    def build_extensions(self) -> None:
         try:
             subprocess.check_output(["cmake", "--version"])
         except OSError:

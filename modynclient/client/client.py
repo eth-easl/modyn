@@ -4,10 +4,18 @@ import time
 
 import enlighten
 
-from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
+from modyn.supervisor.internal.grpc.enums import (
+    CounterAction,
+    MsgType,
+    PipelineStage,
+    PipelineStatus,
+)
 from modyn.utils.utils import current_time_millis
 from modynclient.client.internal.grpc_handler import GRPCHandler
-from modynclient.client.internal.utils import EvaluationStatusTracker, TrainingStatusTracker
+from modynclient.client.internal.utils import (
+    EvaluationStatusTracker,
+    TrainingStatusTracker,
+)
 from modynclient.config.schema.client_config import ModynClientConfig
 
 POLL_TIMEOUT = 2
@@ -112,17 +120,23 @@ class Client:
         self.status_bar.update(demo=demo)
 
     def _monitor_training_progress(self, msg: dict) -> None:
+        assert self.training_status_tracker
         id = msg["id"]
 
         if msg["action"] == "create_tracker":
             params = msg["training_create_tracker_params"]
             self.training_status_tracker = TrainingStatusTracker(
-                self.progress_mgr, id, params["total_samples"], params["status_bar_scale"]
+                self.progress_mgr,
+                id,
+                params["total_samples"],
+                params["status_bar_scale"],
             )
         elif msg["action"] == "progress_counter":
             params = msg["training_progress_counter_params"]
             self.training_status_tracker.progress_counter(
-                params["samples_seen"], params["downsampling_samples_seen"], params["is_training"]
+                params["samples_seen"],
+                params["downsampling_samples_seen"],
+                params["is_training"],
             )
         elif msg["action"] == "close_counter":
             self.training_status_tracker.close_counter()
@@ -158,18 +172,18 @@ class Client:
             for i, msg in enumerate(res["pipeline_stage"]):
                 self._monitor_pipeline_progress(msg)
 
-    def poll_pipeline_status(self, show_eval_progress=True) -> bool:
-        res = self.grpc.get_pipeline_status(self.pipeline_id)
+    def poll_pipeline_status(self, show_eval_progress: bool = True) -> bool:
+        res = self.grpc.get_pipeline_status(self.pipeline_id or -1)
         while res["status"] == PipelineStatus.RUNNING:
             self._process_msgs(res, show_eval_progress=show_eval_progress)
             time.sleep(POLL_TIMEOUT)
-            res = self.grpc.get_pipeline_status(self.pipeline_id)
+            res = self.grpc.get_pipeline_status(self.pipeline_id or -1)
 
         if res["status"] == PipelineStatus.EXIT:
             self._process_msgs(res, show_eval_progress=show_eval_progress)
             return True
         elif res["status"] == PipelineStatus.NOTFOUND:
-            logger.info(f"Pipeline <{self.pipeline_id}> not found.")
+            logger.info(f"Pipeline <{self.pipeline_id or -1}> not found.")
             return False
         else:
             filename = f"client_error_{current_time_millis()}.log"

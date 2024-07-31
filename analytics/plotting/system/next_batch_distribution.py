@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,7 @@ from analytics.plotting.common.common import (
 )
 
 
-def plot_nbd(pipeline_log, ax, trigger):
+def plot_nbd(pipeline_log: Any, ax: Any, trigger: Any) -> None:
     relevant_data = pipeline_log["supervisor"]["triggers"][trigger]["trainer_log"]
     all_epoch_timings = []
     for epoch in relevant_data["epochs"]:
@@ -35,7 +36,7 @@ def plot_nbd(pipeline_log, ax, trigger):
     # ax.set_title("Histogram of waiting times")
 
 
-def load_all_pipelines(data_path, worker_count_filter):
+def load_all_pipelines(data_path: Any, worker_count_filter: Any) -> tuple:
     all_data = []
     uniq_prefetched_partitions = set()
     uniq_parallel_prefetch_requests = set()

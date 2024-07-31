@@ -6,7 +6,11 @@ import pandas as pd
 
 from analytics.app.data.transform import dfs_models_and_evals, logs_dataframe
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs, SingleEvaluationInfo
+from modyn.supervisor.internal.pipeline_executor.models import (
+    MultiEvaluationInfo,
+    PipelineLogs,
+    SingleEvaluationInfo,
+)
 
 
 def patch_logfile(log: Path) -> PipelineLogs:
@@ -47,7 +51,9 @@ def patch_logfile(log: Path) -> PipelineLogs:
     return patch_current_currently_trained_model_dataset_end(pipeline_logs)
 
 
-def patch_current_currently_trained_model_dataset_end(logs: PipelineLogs) -> PipelineLogs:
+def patch_current_currently_trained_model_dataset_end(
+    logs: PipelineLogs,
+) -> PipelineLogs:
     """At the end of the dataset, after the last training there won't be a
     currently trained model anymore.
 
@@ -57,6 +63,7 @@ def patch_current_currently_trained_model_dataset_end(logs: PipelineLogs) -> Pip
     pipeline_ref = "pipeline_ref"
     df_all = logs_dataframe(logs, pipeline_ref)
     _, df_eval_requests, _ = dfs_models_and_evals(logs, df_all["sample_time"].max(), pipeline_ref)
+    assert df_eval_requests
 
     df_eval_requests.sort_values("interval_center", inplace=True)
     # df_eval_requests

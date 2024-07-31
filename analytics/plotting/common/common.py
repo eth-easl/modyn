@@ -2,6 +2,8 @@
 
 import json
 import os
+from pathlib import Path
+from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -18,7 +20,7 @@ SINGLE_FIG_SIZE = (SINGLE_FIG_WIDTH, SINGLE_FIG_HEIGHT)
 DOUBLE_FIG_WIDTH = 10
 DOUBLE_FIG_HEIGHT = 3.5
 DOUBLE_FIG_SIZE = (DOUBLE_FIG_WIDTH, DOUBLE_FIG_HEIGHT)
-PLOT_PATHS = []
+PLOT_PATHS: list[str] = []
 IMG_TYPES = [".png", ".svg"]  # add .svg here to generate svg
 
 PIPELINE_COLOR = {
@@ -62,7 +64,7 @@ PIPELINE_NAME = {
 }
 
 
-def init_plot():
+def init_plot() -> None:
     matplotlib.rcParams.update(
         {
             "font.size": FS,
@@ -71,11 +73,11 @@ def init_plot():
     )
 
 
-def print_plot_paths():
+def print_plot_paths() -> None:
     print(f"To view new plots, run:\n\topen {' '.join(PLOT_PATHS)}")
 
 
-def bar(system):
+def bar(system: Any) -> dict[str, Any]:
     return {
         "color": "white",
         "edgecolor": PIPELINE_COLOR[system],
@@ -84,7 +86,7 @@ def bar(system):
     }
 
 
-def line(system):
+def line(system: Any) -> dict[str, Any]:
     return {
         "lw": 4,
         "ms": 10,
@@ -95,34 +97,34 @@ def line(system):
     }
 
 
-def bar_x_ticks_pos(bar_width, num_bars, num_xticks):
+def bar_x_ticks_pos(bar_width: int, num_bars: int, num_xticks: int) -> list[int | float]:
     return [i - (bar_width / 2) + ((num_bars * bar_width) / 2) for i in range(num_xticks)]
 
 
-def resize_ticks(ax, x=FS, y=FS):
+def resize_ticks(ax: Any, x: int = FS, y: int = FS) -> None:
     for tick in ax.xaxis.get_major_ticks():
         tick.label.set_fontsize(x)
     for tick in ax.yaxis.get_major_ticks():
         tick.label.set_fontsize(y)
 
 
-def hatch_width(width=4):
+def hatch_width(width: int = 4) -> None:
     matplotlib.rcParams["hatch.linewidth"] = width
 
 
-def y_grid(ax):
+def y_grid(ax: Any) -> None:
     ax.grid(axis="y", which="major")
     ax.set_axisbelow(True)
 
 
-def hide_borders(ax, show_left=False):
+def hide_borders(ax: Any, show_left: bool = False) -> None:
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["bottom"].set_visible(True)
     ax.spines["left"].set_visible(show_left)
 
 
-def fig_legend(fig):
+def fig_legend(fig: Any) -> None:
     fig.legend(
         loc="upper center",
         bbox_to_anchor=(0.5, 1.1),
@@ -135,12 +137,12 @@ def fig_legend(fig):
     fig.tight_layout()
 
 
-def load_data(path):
+def load_data(path: Path) -> Any:
     with open(path) as json_file:
         return json.load(json_file)
 
 
-def save_plot(plot_path, img_types=None):
+def save_plot(plot_path: str | Path, img_types: Any = None) -> None:
     if img_types is None:
         img_types = IMG_TYPES
 
@@ -152,7 +154,7 @@ def save_plot(plot_path, img_types=None):
     plt.figure()
 
 
-def init(args=None):
+def init(args: Any = None) -> tuple[str, str]:
     if len(args) > 2:
         result_path = args[1]
         plot_dir = args[2]
