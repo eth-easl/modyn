@@ -130,7 +130,7 @@ setup(
             "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main",
             "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main",
             "_modyn_client=modynclient.client.client_entrypoint:main",
-            "_modyn_analytics=analytics.app.app",
+            "_modyn_analytics=analytics.app.app:main",
         ]
     },
     scripts=[
