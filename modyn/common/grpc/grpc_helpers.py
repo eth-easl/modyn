@@ -297,7 +297,7 @@ class TrainerServerGRPCHandlerMixin:
         if training_reporter is not None:
             training_reporter.create_tracker()
         blocked_in_a_row = 0
-        log_prefix = f"[{pipeline_id}] " if pipeline_id is not None else ""
+        log_prefix = f"[pipeline {pipeline_id}] " if pipeline_id is not None else ""
         while True:
             req = TrainingStatusRequest(training_id=training_id)
             res: TrainingStatusResponse = self.trainer_server.get_training_status(req)
