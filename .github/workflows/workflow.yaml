@@ -300,12 +300,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
       - tidy
       - format
@@ -324,12 +322,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:
@@ -343,14 +339,11 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
-
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -362,12 +355,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:
@@ -381,12 +372,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:
