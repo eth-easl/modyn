@@ -2,6 +2,7 @@ import statistics
 
 import numpy as np
 import pytest
+
 from modyn.config.schema.pipeline import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric, AlibiDetectMmdDriftMetric
 from modyn.supervisor.internal.triggers.drift.alibi_detector import AlibiDriftDetector
 

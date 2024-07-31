@@ -1,6 +1,4 @@
-"""
-ResNet152
-"""
+"""ResNet152."""
 
 import os
 

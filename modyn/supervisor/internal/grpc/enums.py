@@ -54,7 +54,8 @@ class PipelineStage(StrEnum):
     TRAIN = "Run training"
 
     WAIT_FOR_TRAINING_COMPLETION = "Wait for training completion"
-    """Implements busy waiting for training completion (not a PipelineExecutor stage)."""
+    """Implements busy waiting for training completion (not a PipelineExecutor
+    stage)."""
 
     TRAINING_COMPLETED = "Training completed 🚀"
     STORE_TRAINED_MODEL = "Store trained model"

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+
+from sqlalchemy import Select
 
 from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
-from sqlalchemy import Select
 
 
 class AbstractPresamplingStrategy(ABC):
@@ -25,17 +25,19 @@ class AbstractPresamplingStrategy(ABC):
     def get_presampling_query(
         self,
         next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
+        tail_triggers: int | None,
+        limit: int | None,
+        trigger_dataset_size: int | None,
     ) -> Select:
-        """
-        This abstract class should return the query to get the presampled samples. The query should have only
-        SelectorStateMetadata.sample_key in the SELECT clause.
+        """This abstract class should return the query to get the presampled
+        samples.
+
+        The query should have only SelectorStateMetadata.sample_key in
+        the SELECT clause.
         """
         raise NotImplementedError()
 
-    def get_target_size(self, trigger_dataset_size: int, limit: Optional[int]) -> int:
+    def get_target_size(self, trigger_dataset_size: int, limit: int | None) -> int:
         assert trigger_dataset_size >= 0
         target_presampling = (trigger_dataset_size * self.presampling_ratio) // self.ratio_max
 

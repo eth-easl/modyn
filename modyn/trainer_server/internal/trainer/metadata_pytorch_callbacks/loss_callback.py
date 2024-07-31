@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
 from modyn.trainer_server.internal.utils.metric_type import MetricType

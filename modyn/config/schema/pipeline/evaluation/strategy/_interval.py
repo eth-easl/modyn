@@ -1,10 +1,11 @@
 from functools import cached_property
 from typing import Literal, cast, get_args
 
+from pydantic import Field, field_validator, model_validator
+
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.const.types import TimeUnit
-from pydantic import Field, field_validator, model_validator
 
 _EVAL_INTERVAL_BOUND_PATTERN = rf"[+-]?\s*((\d+\s*({REGEX_TIME_UNIT}))|(inf))"
 _EVAL_INTERVAL_PATTERN = (
@@ -15,8 +16,9 @@ IntervalEvalStrategyBounds = Literal["inf", "-inf"]
 
 
 class _IntervalEvalStrategyConfig(ModynBaseModel):
-    """Allows to evaluate a model on an interval that is centered around the time of the evaluation trigger.
-    Bounds of the evaluation interval can be have an offset relative to the training interval bounds.
+    """Allows to evaluate a model on an interval that is centered around the
+    time of the evaluation trigger. Bounds of the evaluation interval can be
+    have an offset relative to the training interval bounds.
 
     Checkout `docs/EVALUATION.md` for a graphical representation of the options.
 

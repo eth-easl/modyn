@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 
 import pandas as pd
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import linearize_ids, patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import linearize_ids, patch_yearbook_time
 
 
 @dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_models: pd.DataFrame
     df_eval_single: pd.DataFrame
@@ -35,8 +35,8 @@ def gen_figure(
     dataset_id: str,
     metric: str,
 ) -> go.Figure:
-    """
-    Create the cost over time figure with barplot or histogram. Histogram has nice binning while barplot is precise.
+    """Create the cost over time figure with barplot or histogram. Histogram
+    has nice binning while barplot is precise.
 
     Args:
         page: Page name where the plot is displayed

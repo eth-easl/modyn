@@ -1,10 +1,10 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
 import os
 import tempfile
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from modyn.metadata_database.models import Pipeline
 from modyn.selector.internal.selector_manager import SelectorManager
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
@@ -43,7 +43,10 @@ class MockStrategy(AbstractSelectionStrategy):
         return []
 
     def inform_data(
-        self, keys: list[str], timestamps: list[int], labels: list[int]
+        self,
+        keys: list[str],
+        timestamps: list[int],
+        labels: list[int],
     ) -> None:  # pylint: disable=unused-argument
         pass
 
@@ -67,7 +70,7 @@ class MockDatabaseConnection:
 
 
 class MockSession:
-    def get(self, some_type, pipeline_id) -> Optional[Pipeline]:  # pylint: disable=unused-argument
+    def get(self, some_type, pipeline_id) -> Pipeline | None:  # pylint: disable=unused-argument
         if pipeline_id == EXISTING_PIPELINE_ID:
             return Pipeline(num_workers=2, selection_strategy="{}")
         return None

@@ -1,20 +1,24 @@
 import logging
 import random
-from typing import Generator, Optional
+from collections.abc import Generator
+
+from torch.utils.data import IterableDataset
 
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
-from torch.utils.data import IterableDataset
 
 logger = logging.getLogger(__name__)
 
 
 # TODO(#275): inherit common abstraction of dataset
 class OnlineTriggerDataset(OnlineDataset, IterableDataset):
-    """The OnlineTriggerDataset is a wrapper around OnlineDataset in trainer_server.
-    It uses logic in OnlineDataset obtain samples by trigger_id.
-    It supports random sampling to reduce the number of samples if the sample_prob is provided.
-    Random sampling is needed for example in DataDriftTrigger to reduce the number of samples
-    processed in data drift detection in case there are too many untriggered samples.
+    """The OnlineTriggerDataset is a wrapper around OnlineDataset in
+    trainer_server.
+
+    It uses logic in OnlineDataset obtain samples by trigger_id. It
+    supports random sampling to reduce the number of samples if the
+    sample_prob is provided. Random sampling is needed for example in
+    DataDriftTrigger to reduce the number of samples processed in data
+    drift detection in case there are too many untriggered samples.
     """
 
     # pylint: disable=too-many-instance-attributes, abstract-method
@@ -32,8 +36,8 @@ class OnlineTriggerDataset(OnlineDataset, IterableDataset):
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
         shuffle: bool,
-        tokenizer: Optional[str] = None,
-        sample_prob: Optional[float] = None,
+        tokenizer: str | None = None,
+        sample_prob: float | None = None,
     ):
         OnlineDataset.__init__(
             self,

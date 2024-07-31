@@ -1,6 +1,5 @@
-"""
-This submodule provides the base functionality for the selector server component.
-"""
+"""This submodule provides the base functionality for the selector server
+component."""
 
 import os
 

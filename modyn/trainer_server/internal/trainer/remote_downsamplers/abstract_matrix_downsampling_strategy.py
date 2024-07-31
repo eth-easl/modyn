@@ -1,9 +1,10 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -17,10 +18,10 @@ class MatrixContent(Enum):
 
 
 class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
-    """
-    Class to abstract the common behaviour of many downsampling strategies that collect the gradients or the embeddings
-    (thus a Matrix) and then select the points based on some method-specific metric (submodular, clustering, OMP...).
-    """
+    """Class to abstract the common behaviour of many downsampling strategies
+    that collect the gradients or the embeddings (thus a Matrix) and then
+    select the points based on some method-specific metric (submodular,
+    clustering, OMP...)."""
 
     def __init__(
         self,
@@ -63,10 +64,10 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         batch_size = len(sample_ids)
         assert self.matrix_content is not None

@@ -1,7 +1,7 @@
-"""
-Evaluator module.
+"""Evaluator module.
 
-The evaluator module contains all classes and functions related the evaluation of models.
+The evaluator module contains all classes and functions related the
+evaluation of models.
 """
 
 import os

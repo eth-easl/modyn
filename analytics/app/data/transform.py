@@ -2,6 +2,7 @@ import datetime
 from typing import Any, Literal
 
 import pandas as pd
+
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs, StageLog
 from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
@@ -67,7 +68,8 @@ def pipeline_stage_parents(logs: PipelineLogs) -> pd.DataFrame:
 def dfs_models_and_evals(
     logs: PipelineLogs, max_sample_time: Any, pipeline_ref: str = "pipeline"
 ) -> tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame | None]:
-    """Returns a dataframe with the stored models and the dataframe for evaluations"""
+    """Returns a dataframe with the stored models and the dataframe for
+    evaluations."""
 
     # ---------------------------------------------------- MODELS ---------------------------------------------------- #
 
@@ -131,7 +133,7 @@ def dfs_models_and_evals(
 
     dfs_requests = MultiEvaluationInfo.requests_df(logs.supervisor_logs.stage_runs)
     dfs_metrics = MultiEvaluationInfo.results_df(
-        (run.info for run in logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo))
+        run.info for run in logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo)
     )
 
     if dfs_requests.shape[0] == 0 or dfs_metrics.shape[0] == 0:
@@ -187,8 +189,9 @@ def add_pipeline_ref(df: pd.DataFrame | None, ref: str) -> pd.DataFrame | None:
 def linearize_ids(
     df: pd.DataFrame, group_columns: list[str], target_col: str, mapping: dict[tuple[str], dict[int, int]] | None = None
 ) -> tuple[pd.DataFrame, dict[tuple[str], dict[int, int]]]:
-    """Within certain groups of a dataframe we want to linearize the ids (model_ids, trigger_ids, ...) so that they
-    are consecutive integers starting from 1.
+    """Within certain groups of a dataframe we want to linearize the ids
+    (model_ids, trigger_ids, ...) so that they are consecutive integers
+    starting from 1.
 
     Args:
         df: DataFrame with the ids.
@@ -221,6 +224,7 @@ def linearize_ids(
 
 def convert_epoch_to_datetime(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """Convert epoch time to datetime in place.
+
     Args:
         df: DataFrame with epoch time.
         column: Column with epoch time.
@@ -233,6 +237,7 @@ def convert_epoch_to_datetime(df: pd.DataFrame, column: str) -> pd.DataFrame:
 
 def patch_yearbook_time(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """Patch yearbook time in place.
+
     Args:
         df: DataFrame with yearbook time.
         column: Column with yearbook time, has to be a datetime column.

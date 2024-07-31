@@ -1,6 +1,6 @@
 # CGLM Dataset
 
-In this directory, you can find the files necessary to run experiments with the CGLM dataset. 
+In this directory, you can find the files necessary to run experiments with the CGLM dataset.
 This dataset contains pictures of landmarks (e.g., the Montblanc) over time.
 The dataset was introduced [in this paper](https://drimpossible.github.io/documents/ACM.pdf).
 However, their host is down and we have to regenerate the dataset.
@@ -27,6 +27,7 @@ wget https://github.com/eth-easl/cglm-metadata/raw/main/cglm_labels_timestamps_c
 
 Next, you can use the `data_generation.py` script in this directory to generate the dataset.
 Note that there are different versions of CGLM you can generate:
+
 - You can filter out classes that have less than `n` samples using the `--min_samples_per_class` flag. This defaults to 25.
 - If you supply the `--clean` flag, then the [cleaned version](https://arxiv.org/abs/2003.11211) of the landmark dataset is used. This dataset has been cleaned to contain more consistent images of each landmark, but is a lot smaller.
 - Using `--labeltype`, you can control which label we use. By default, we use the (remapped) landmark id. However, the team behind the landmark datasets supplies two classes of hierarchical labels (supercategory and hierarchical) that can alternatively be used, to make the classification problem smaller.
@@ -37,6 +38,7 @@ The script will also generate some statistics over the generated dataset.
 You might find the `analyze_centeredness.py` file helpful to understand how many classes are only prevalent in a single year (how much they are dominated by their mode), and `analyze_samples_per_year_and_class.py` can give for each class a visual intuition of the sample distribution over time.
 
 ## Regenerate the metadata
+
 This paragraph is only relevant if you are interested in how we generated the `cglm_labels_timestamps_clean.csv` file.
 For this, relevant scripts are supplied in the `metadata_regeneration` subdirectory.
 First, we need to scrape the metadata from the commonsapi.
@@ -44,7 +46,7 @@ Note that you might consider hosting this API yourself (https://bitbucket.org/ma
 We thank the authors of the CGLM for the [initial version of the scraper](https://github.com/drimpossible/ACM/blob/main/scripts/cglm_scrape.py), which we extended to parallelize across machines, show the progress correctly, and be more robust.
 Note that scraping the metadata might take several days here.
 
-Next we need to parse the scraped XML data using the `xml_to_csv.py` script. 
+Next we need to parse the scraped XML data using the `xml_to_csv.py` script.
 Using both XML parsing and regex, this script tries to extract the upload date from the downloaded metadata, and generates a csv containing the timestamp for each file ID.
 
 Next, we need to accumulate all those csvs on a single machine (in case you decided to parallelize the scraping and parsing across machines).

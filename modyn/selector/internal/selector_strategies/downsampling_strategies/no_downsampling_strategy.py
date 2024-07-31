@@ -5,10 +5,7 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies import 
 
 
 class NoDownsamplingStrategy(AbstractDownsamplingStrategy):
-    """
-    This class is a little hack to just use presampling.
-
-    """
+    """This class is a little hack to just use presampling."""
 
     def __init__(
         self,

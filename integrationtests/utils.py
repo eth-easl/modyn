@@ -4,13 +4,14 @@ import pathlib
 import random
 import shutil
 import time
-from typing import Optional
 
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import numpy as np
 import pandas as pd
 import yaml
+from PIL import Image
+
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.selector.internal.grpc.generated.selector_pb2 import JsonString as SelectorJsonString
@@ -23,7 +24,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
-from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 MODYN_CONFIG_PATH = pathlib.Path(
@@ -80,7 +80,7 @@ def get_minimal_pipeline_config(
 
 
 def load_config_from_file(config_file: pathlib.Path) -> dict:
-    with open(config_file, "r", encoding="utf-8") as f:
+    with open(config_file, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     return config
@@ -109,8 +109,8 @@ def register_pipeline(pipeline_config: dict, modyn_config: dict) -> int:
     full_model_strategy = ModelStorageStrategyConfig.from_config(
         get_model_strategy(model_storage_config["full_model_strategy"])
     )
-    incremental_model_strategy_config: Optional[StrategyConfig] = None
-    full_model_interval: Optional[int] = None
+    incremental_model_strategy_config: StrategyConfig | None = None
+    full_model_interval: int | None = None
     if "incremental_model_strategy" in model_storage_config:
         incremental_strategy = model_storage_config["incremental_model_strategy"]
         incremental_model_strategy_config = get_model_strategy(incremental_strategy)
@@ -118,7 +118,7 @@ def register_pipeline(pipeline_config: dict, modyn_config: dict) -> int:
             incremental_strategy["full_model_interval"] if "full_model_interval" in incremental_strategy else None
         )
 
-    incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+    incremental_model_strategy: ModelStorageStrategyConfig | None = None
     if incremental_model_strategy_config is not None:
         incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
 

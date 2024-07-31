@@ -102,7 +102,7 @@ def run_experiment() -> None:
     for seed in seeds:
         for triggering_strategy_id, triggering_strategy in gen_triggering_strategies():
             if isinstance(triggering_strategy, DataDriftTriggerConfig) and seed != seeds[0]:
-                continue # only execute drift triggers once
+                continue  # only execute drift triggers once
 
             pipeline_config = gen_yearbook_triggering_config(
                 triggering_strategy_id, train_gpu, triggering_strategy, seed

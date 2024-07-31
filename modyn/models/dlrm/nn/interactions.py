@@ -15,6 +15,7 @@
 # mypy: ignore-errors
 
 import torch
+
 from modyn.models.dlrm.cuda_ext.dot_based_interact import dotBasedInteract
 
 
@@ -39,9 +40,11 @@ class Interaction:
 
 class DotInteraction(Interaction):
     def __init__(self, embedding_num: int, embedding_dim: int, device: str):
-        """
-        Interactions are among outputs of all the embedding tables and bottom MLP, total number of
-        (num_embedding_tables + 1) vectors with size embedding_dim. ``dot`` product interaction computes dot product
+        """Interactions are among outputs of all the embedding tables and
+        bottom MLP, total number of (num_embedding_tables + 1) vectors with
+        size embedding_dim.
+
+        ``dot`` product interaction computes dot product
         between any 2 vectors. Output of interaction will have shape [num_interactions, embedding_dim].
         """
         self._num_interaction_inputs = embedding_num + 1
@@ -103,9 +106,11 @@ class CudaDotInteraction(Interaction):
 
 class CatInteraction(Interaction):
     def __init__(self, embedding_num: int, embedding_dim: int):
-        """
-        Interactions are among outputs of all the embedding tables and bottom MLP, total number of
-        (num_embedding_tables + 1) vectors with size embdding_dim. ``cat`` interaction concatenate all the vectors
+        """Interactions are among outputs of all the embedding tables and
+        bottom MLP, total number of (num_embedding_tables + 1) vectors with
+        size embdding_dim.
+
+        ``cat`` interaction concatenate all the vectors
         together. Output of interaction will have shape [num_interactions, embedding_dim].
         """
         self._num_interaction_inputs = embedding_num + 1

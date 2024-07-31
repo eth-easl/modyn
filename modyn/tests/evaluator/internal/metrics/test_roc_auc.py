@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+
 from modyn.config.schema.pipeline import RocAucMetricConfig
 from modyn.evaluator.internal.metrics import AbstractHolisticMetric, RocAuc
 

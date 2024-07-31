@@ -2,6 +2,7 @@ from typing import Any
 
 import numpy as np
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,
@@ -50,6 +51,6 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         )
 
         # no weights are returned by this technique
-        selected_weights = torch.ones((len(selected_indices)))
+        selected_weights = torch.ones(len(selected_indices))
 
         return selected_indices, selected_weights

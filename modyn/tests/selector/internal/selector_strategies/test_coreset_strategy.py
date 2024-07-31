@@ -5,6 +5,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig, PresamplingConfig
 from modyn.config.schema.pipeline.sampling.downsampling_config import (
     GradNormDownsamplingConfig,
@@ -557,7 +558,6 @@ def test_warmup_downsampling():
     assert strat._next_trigger_id == 0
 
     with patch.object(AbstractSelectionStrategy, "trigger", fake_super_trigger):
-
         # As threshold is 3 and we have 2 warmup triggers, trigger 0,1 should not use downsampling,
         # 2,3,4 should use Loss downsampling
         # and trigger 5,6 should use GradNorm downsampling

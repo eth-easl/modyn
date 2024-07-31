@@ -3,7 +3,6 @@ from modyn.supervisor.internal.eval.strategies._interval import _IntervalEvalStr
 
 
 def test_generate_interval() -> None:
-
     eval_strategy = _IntervalEvalStrategyMixin(_IntervalEvalStrategyConfig(interval="[-inf,-0d]"))
     assert eval_strategy._generate_interval(0, 0) == (0, 0)
     assert eval_strategy._generate_interval(40, 70) == (0, 40)

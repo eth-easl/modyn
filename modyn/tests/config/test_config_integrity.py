@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+
 from modyn.config import read_modyn_config, read_pipeline
 from modynclient.config import read_client_config
 

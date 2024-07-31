@@ -13,6 +13,9 @@ from typing import Any, cast
 
 import grpc
 import pandas as pd
+from pydantic import BaseModel
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
+
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
 
@@ -30,8 +33,6 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     SupervisorLogs,
 )
 from modyn.utils.utils import current_time_micros, dynamic_module_import
-from pydantic import BaseModel
-from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -77,7 +78,8 @@ class EvaluationExecutor:
         self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs)
 
     def create_snapshot(self) -> None:
-        """Create a snapshot of the pipeline metadata before starting to evaluate."""
+        """Create a snapshot of the pipeline metadata before starting to
+        evaluate."""
         if not self.pipeline.evaluation:
             return
 
@@ -161,7 +163,8 @@ class EvaluationExecutor:
         return logs
 
     def run_post_pipeline_evaluations(self, manual_run: bool = False) -> SupervisorLogs:
-        """Evaluate the trained models after the core pipeline and store the results."""
+        """Evaluate the trained models after the core pipeline and store the
+        results."""
         if not self.pipeline.evaluation:
             return SupervisorLogs(stage_runs=[])
 
@@ -299,7 +302,8 @@ class EvaluationExecutor:
         model_id_to_eval: int,
         dataset_id: str,
     ) -> list[tuple[str | None, dict]]:
-        """Takes a list of intervals to be evaluated for a certain model and dataset.
+        """Takes a list of intervals to be evaluated for a certain model and
+        dataset.
 
         Returns:
             A list of tuples, where the first element is the failure reason (if any) and the second element is the
@@ -310,7 +314,7 @@ class EvaluationExecutor:
         logger.info(
             f"Evaluation Starts for model {model_id_to_eval} and dataset {dataset_id} on intervals:  {intervals}."
         )
-        dataset_config = next((d for d in self.pipeline.evaluation.datasets if d.dataset_id == dataset_id))
+        dataset_config = next(d for d in self.pipeline.evaluation.datasets if d.dataset_id == dataset_id)
 
         request = GRPCHandler.prepare_evaluation_request(
             dataset_config.model_dump(by_alias=True),

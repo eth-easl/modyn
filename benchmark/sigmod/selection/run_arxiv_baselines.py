@@ -7,7 +7,11 @@ import sys
 from benchmark.sigmod.arxiv_config import gen_arxiv_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config import LrSchedulerConfig
-from modyn.config.schema.pipeline import ModynPipelineConfig, NewDataStrategyConfig, SelectionStrategy
+from modyn.config.schema.pipeline import (
+    ModynPipelineConfig,
+    NewDataStrategyConfig,
+    SelectionStrategy,
+)
 from modyn.utils.utils import current_time_millis
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -33,7 +37,12 @@ def gen_selection_strategies(
     strategies.append(
         (
             "full",
-            NewDataStrategyConfig(maximum_keys_in_memory=100000, storage_backend="database", tail_triggers=0, limit=-1),
+            NewDataStrategyConfig(
+                maximum_keys_in_memory=100000,
+                storage_backend="database",
+                tail_triggers=0,
+                limit=-1,
+            ),
         )
     )
 
@@ -63,7 +72,6 @@ def gen_lr_scheduler_configs(min_lr: float, disable: bool) -> list[tuple[str, No
         )
     )
 
-
     return configs
 
 
@@ -92,25 +100,30 @@ def run_experiment() -> None:
     num_epochss = [5, 10]
     optimizers = ["AdamW", "SGD"]
     lrs = [0.00002, 0.00005]
-    config_str_fn = (
-        lambda model,
-        selection_strategy_id,
-        lr_sched_id,
-        num_epochs,
-        warmup_triggers,
-        dataset,
-        optimizer,
-        lr: f"{lr}_{lr_sched_id}_{optimizer}_epoch{num_epochs}"
-    )
+
+    def config_str_fn(
+        model: str,
+        selection_strategy_id: str,
+        lr_sched_id: str,
+        num_epochs: int,
+        warmup_triggers: int,
+        dataset: str,
+        optimizer: str,
+        lr: float,
+    ) -> str:
+        return (
+            f"{model}_{selection_strategy_id}_{lr_sched_id}_{num_epochs}_{warmup_triggers}_{dataset}_{optimizer}_{lr}"
+        )
 
     run_id = 0
     for lr in lrs:
         for optimizer in optimizers:
             for num_epochs in num_epochss:
                 for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-                    for selection_strategy_id, selection_strategy in gen_selection_strategies(
-                        warmup_triggers, num_classes
-                    ):
+                    for (
+                        selection_strategy_id,
+                        selection_strategy,
+                    ) in gen_selection_strategies(warmup_triggers, num_classes):
                         config_id = config_str_fn(
                             model,
                             selection_strategy_id,

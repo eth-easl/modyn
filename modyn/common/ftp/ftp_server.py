@@ -3,7 +3,6 @@
 import logging
 import pathlib
 import threading
-from typing import Optional
 
 from pyftpdlib.authorizers import DummyAuthorizer
 from pyftpdlib.handlers import FTPHandler
@@ -33,7 +32,7 @@ class FTPServer:
 
         self.address = ("", self.ftp_port)
         self.thread = threading.Thread(target=self.create_server_and_serve)
-        self.server: Optional[pyFTPServer] = None
+        self.server: pyFTPServer | None = None
 
     def create_server_and_serve(self) -> None:
         self.server = pyFTPServer(self.address, self.handler)

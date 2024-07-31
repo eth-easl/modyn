@@ -1,10 +1,10 @@
 import json
 import multiprocessing as mp
 from pathlib import Path
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from modyn.common.grpc import GenericGRPCServer
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config import (
@@ -80,8 +80,8 @@ def lr_scheduler_config():
 def test_prepare_start_training_request(
     disable_checkpointing: bool,
     set_lr_scheduler_to_none: bool,
-    num_samples_to_pass: Optional[int],
-    previous_model_id: Optional[int],
+    num_samples_to_pass: int | None,
+    previous_model_id: int | None,
     pipeline_training_config: TrainingConfig,
     pipeline_data_config: DataConfig,
     lr_scheduler_config: LrSchedulerConfig,

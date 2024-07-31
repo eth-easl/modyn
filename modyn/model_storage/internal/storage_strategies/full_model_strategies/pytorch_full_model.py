@@ -2,6 +2,7 @@ import logging
 import pathlib
 
 import torch
+
 from modyn.model_storage.internal.storage_strategies.full_model_strategies.abstract_full_model_strategy import (
     AbstractFullModelStrategy,
 )
@@ -10,9 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class PyTorchFullModel(AbstractFullModelStrategy):
-    """
-    This full model strategy naively stores the whole model on disk (default pytorch implementation).
-    """
+    """This full model strategy naively stores the whole model on disk (default
+    pytorch implementation)."""
 
     # pylint: disable-next=unused-argument
     def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str, config: dict):

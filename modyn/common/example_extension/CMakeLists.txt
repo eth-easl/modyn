@@ -20,5 +20,3 @@ target_sources(example_extension PRIVATE ${MODYN_EXAMPLEEXTENSION_HEADERS} ${MOD
 target_include_directories(example_extension PUBLIC include)
 target_compile_options(example_extension PRIVATE ${MODYN_COMPILE_OPTIONS} -Wno-unused-function)
 target_link_libraries(example_extension PUBLIC modyn)
-
-

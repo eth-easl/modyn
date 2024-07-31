@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,

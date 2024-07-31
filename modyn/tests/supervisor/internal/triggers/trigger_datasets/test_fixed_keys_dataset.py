@@ -6,10 +6,11 @@ from unittest.mock import patch
 import grpc
 import pytest
 import torch
+from torchvision import transforms
+
 from modyn.models.tokenizers import DistilBertTokenizerTransform
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, GetResponse
 from modyn.supervisor.internal.triggers.trigger_datasets import FixedKeysDataset
-from torchvision import transforms
 
 DATASET_ID = "MNIST"
 STORAGE_ADDR = "localhost:1234"

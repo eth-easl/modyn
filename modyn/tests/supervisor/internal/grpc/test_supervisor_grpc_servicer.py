@@ -5,6 +5,7 @@ import pathlib
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from modyn.config.schema.system.config import ModynConfig, SupervisorConfig
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (  # noqa: E402, E501, E611;
     GetPipelineStatusRequest,

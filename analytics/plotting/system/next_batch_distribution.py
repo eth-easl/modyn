@@ -1,10 +1,20 @@
 import glob
+import os
 import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from analytics.common.common import *
+
+from analytics.plotting.common.common import (
+    hatch_width,
+    hide_borders,
+    init,
+    load_data,
+    print_plot_paths,
+    save_plot,
+    y_grid,
+)
 
 
 def plot_nbd(pipeline_log, ax, trigger):
@@ -31,7 +41,7 @@ def load_all_pipelines(data_path, worker_count_filter):
     uniq_parallel_prefetch_requests = set()
 
     for filename in glob.iglob(data_path + "/**/*.log", recursive=True):
-        data = LOAD_DATA(filename)
+        data = load_data(filename)
         num_data_loaders = data["configuration"]["pipeline_config"]["training"]["dataloader_workers"]
         prefetched_partitions = data["configuration"]["pipeline_config"]["training"]["num_prefetched_partitions"]
         parallel_prefetch_requests = data["configuration"]["pipeline_config"]["training"]["parallel_prefetch_requests"]
@@ -50,12 +60,15 @@ def load_all_pipelines(data_path, worker_count_filter):
 
 
 if __name__ == "__main__":
-    data_path, plot_dir = INIT(sys.argv)
+    data_path, plot_dir = init(sys.argv)
     WORKER_COUNT = 8
 
-    all_data, figure_dimensions, uniq_prefetched_partitions, uniq_parallel_prefetch_requests = load_all_pipelines(
-        data_path, WORKER_COUNT
-    )
+    (
+        all_data,
+        figure_dimensions,
+        uniq_prefetched_partitions,
+        uniq_parallel_prefetch_requests,
+    ) = load_all_pipelines(data_path, WORKER_COUNT)
 
     fig, axes = plt.subplots(*figure_dimensions, figsize=(40, 20), sharex=True)
 
@@ -81,15 +94,15 @@ if __name__ == "__main__":
                 if row_val == prefetched_partitions and column_val == parallel_prefetch_requests:
                     plot_nbd(data, ax, "0")
 
-    HATCH_WIDTH()
+    hatch_width()
     # FIG_LEGEND(fig)
     for row in axes:
         for ax in row:
-            Y_GRID(ax)
-            HIDE_BORDERS(ax)
+            y_grid(ax)
+            hide_borders(ax)
 
     fig.tight_layout()
 
     plot_path = os.path.join(plot_dir, "next_batch_distribution")
-    SAVE_PLOT(plot_path)
-    PRINT_PLOT_PATHS()
+    save_plot(plot_path)
+    print_plot_paths()

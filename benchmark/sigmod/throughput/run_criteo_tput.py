@@ -81,7 +81,7 @@ def run_experiment() -> None:
                             if shuffle and num_dataloader_workers not in [1, 16]:
                                 continue
 
-                            if num_dataloader_workers == 1 and num_prefetched_partitions not in [0,1]:
+                            if num_dataloader_workers == 1 and num_prefetched_partitions not in [0, 1]:
                                 continue
 
                             pipeline_config = gen_criteo_config(

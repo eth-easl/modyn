@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator
+from collections.abc import Generator
 
 from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
@@ -9,8 +9,10 @@ from modyn.supervisor.internal.triggers.trigger import Trigger
 
 class TimeTrigger(Trigger):
     """Triggers after a certain amount of time has passed.
-    Uses the sample timestamps and not time at supervisor to measure passed time.
-    Clock starts with the first observed datapoint"""
+
+    Uses the sample timestamps and not time at supervisor to measure
+    passed time. Clock starts with the first observed datapoint
+    """
 
     def __init__(self, config: TimeTriggerConfig):
         self.config = config

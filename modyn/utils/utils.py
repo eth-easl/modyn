@@ -13,10 +13,11 @@ import re
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from enum import Enum
 from inspect import isfunction
 from types import ModuleType
-from typing import Any, Callable, Optional
+from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import grpc
@@ -37,8 +38,8 @@ DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "S
 
 
 def dynamic_module_import(name: str) -> ModuleType:
-    """
-    Import a module by name to enable dynamic loading of modules from config
+    """Import a module by name to enable dynamic loading of modules from
+    config.
 
     Args:
         name (str): name of the module to import
@@ -79,7 +80,8 @@ def current_time_nanos() -> int:
 
 
 def grpc_connection_established(channel: grpc.Channel, timeout_sec: int = 5) -> bool:
-    """Establishes a connection to a given GRPC channel. Returns the connection status.
+    """Establishes a connection to a given GRPC channel. Returns the connection
+    status.
 
     Args:
         channel (grpc.Channel): The GRPC to connect to.
@@ -211,9 +213,9 @@ def is_directory_writable(path: pathlib.Path) -> bool:
     return True
 
 
-def deserialize_function(serialized_function: str, func_name: str) -> Optional[Callable]:
-    """
-    Use this method to deserialize a particular python function given its string representation.
+def deserialize_function(serialized_function: str, func_name: str) -> Callable | None:
+    """Use this method to deserialize a particular python function given its
+    string representation.
 
     Args:
         serialized_function: the function in plaintext.
@@ -232,10 +234,10 @@ def deserialize_function(serialized_function: str, func_name: str) -> Optional[C
 
 
 def get_partition_for_worker(worker_id: int, total_workers: int, total_num_elements: int) -> tuple[int, int]:
-    """
-    Returns the subset of data for a specific worker.
-    This method splits the range of all elements evenly among all workers. If you e.g have 13 elements and want to split
-    it among 5 workers, then workers [0, 1, 2] get 3 keys whereas workers [3, 4] get two keys.
+    """Returns the subset of data for a specific worker. This method splits the
+    range of all elements evenly among all workers. If you e.g have 13 elements
+    and want to split it among 5 workers, then workers [0, 1, 2] get 3 keys
+    whereas workers [3, 4] get two keys.
 
     Args:
         worker_id: the id of the worker.
@@ -271,8 +273,7 @@ def calculate_checksum(
     hash_func_name: str = "blake2b",
     chunk_num_blocks: int = 128,
 ) -> bytes:
-    """
-    Returns the checksum of a file.
+    """Returns the checksum of a file.
 
     Args:
         file_path: the path to the file.
@@ -297,8 +298,7 @@ def zip_file(
     compression: int = ZIP_DEFLATED,
     remove_file: bool = False,
 ) -> None:
-    """
-    Zips a file.
+    """Zips a file.
 
     Args:
         file_path: the path to the file that should be zipped.
@@ -321,8 +321,7 @@ def unzip_file(
     compression: int = ZIP_DEFLATED,
     remove_file: bool = False,
 ) -> None:
-    """
-    Unzips a file.
+    """Unzips a file.
 
     Args:
         zipped_file_path: path to the zipped file.
@@ -341,8 +340,7 @@ def unzip_file(
 
 
 def reconstruct_tensor_from_bytes(tensor: torch.Tensor, buffer: bytes) -> torch.Tensor:
-    """
-    Reconstruct a tensor from bytes.
+    """Reconstruct a tensor from bytes.
 
     Args:
         tensor: the template for the reconstructed tensor.
@@ -356,8 +354,7 @@ def reconstruct_tensor_from_bytes(tensor: torch.Tensor, buffer: bytes) -> torch.
 
 
 def get_tensor_byte_size(tensor: torch.Tensor) -> int:
-    """
-    Get the amount of bytes needed to represent a tensor in binary format.
+    """Get the amount of bytes needed to represent a tensor in binary format.
 
     Args:
         tensor: the tensor, for which the number of bytes is calculated.

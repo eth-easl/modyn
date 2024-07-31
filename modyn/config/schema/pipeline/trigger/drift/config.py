@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Annotated, ForwardRef, Literal, Optional, Union
+from typing import Annotated, ForwardRef, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import Field
 
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
@@ -15,10 +16,7 @@ from .evidently import EvidentlyDriftMetric
 __TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 
 DriftMetric = Annotated[
-    Union[
-        EvidentlyDriftMetric,
-        AlibiDetectDriftMetric,
-    ],
+    EvidentlyDriftMetric | AlibiDetectDriftMetric,
     Field(discriminator="id"),
 ]
 
@@ -43,10 +41,7 @@ class TimeWindowingStrategy(ModynBaseModel):
 
 
 DriftWindowingStrategy = Annotated[
-    Union[
-        AmountWindowingStrategy,
-        TimeWindowingStrategy,
-    ],
+    AmountWindowingStrategy | TimeWindowingStrategy,
     Field(discriminator="id"),
 ]
 
@@ -54,7 +49,7 @@ DriftWindowingStrategy = Annotated[
 class DataDriftTriggerConfig(ModynBaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
 
-    detection_interval: Optional[__TriggerConfig] = Field(  # type: ignore[valid-type]
+    detection_interval: __TriggerConfig | None = Field(  # type: ignore[valid-type]
         None, description="The Trigger policy to determine the interval at which drift detection is performed."
     )  # currently not used
 

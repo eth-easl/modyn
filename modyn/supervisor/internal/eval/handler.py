@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import pandas as pd
+from pydantic import BaseModel, Field
+
 from modyn.config.schema.pipeline import EvalHandlerConfig
 from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy
 from modyn.utils import dynamic_module_import
-from pydantic import BaseModel, Field
 
 eval_strategy_module = dynamic_module_import("modyn.supervisor.internal.eval.strategies")
 
@@ -38,7 +39,8 @@ class EvalRequest(BaseModel):
 
 
 class EvalHandler:
-    """Handles one series of evaluations configured through an `EvalHandlerConfig`."""
+    """Handles one series of evaluations configured through an
+    `EvalHandlerConfig`."""
 
     def __init__(self, config: EvalHandlerConfig):
         self.config = config

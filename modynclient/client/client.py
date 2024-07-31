@@ -1,9 +1,9 @@
 import json
 import logging
 import time
-from typing import Optional
 
 import enlighten
+
 from modyn.supervisor.internal.grpc.enums import CounterAction, MsgType, PipelineStage, PipelineStatus
 from modyn.utils.utils import current_time_millis
 from modynclient.client.internal.grpc_handler import GRPCHandler
@@ -20,9 +20,9 @@ class Client:
         self,
         client_config: ModynClientConfig,
         pipeline_config: dict,
-        start_replay_at: Optional[int] = None,
-        stop_replay_at: Optional[int] = None,
-        maximum_triggers: Optional[int] = None,
+        start_replay_at: int | None = None,
+        stop_replay_at: int | None = None,
+        maximum_triggers: int | None = None,
     ) -> None:
         self.client_config = client_config
         self.pipeline_config = pipeline_config
@@ -31,8 +31,8 @@ class Client:
         self.maximum_triggers = maximum_triggers
 
         self.grpc = GRPCHandler(client_config)
-        self.pipeline_id: Optional[int] = None
-        self.training_status_tracker: Optional[TrainingStatusTracker] = None
+        self.pipeline_id: int | None = None
+        self.training_status_tracker: TrainingStatusTracker | None = None
 
         self.progress_mgr = enlighten.get_manager()
         self.status_bar = self.progress_mgr.status_bar(
@@ -43,7 +43,7 @@ class Client:
             autorefresh=True,
             min_delta=0.5,
         )
-        self.pbar: Optional[enlighten.Counter] = None
+        self.pbar: enlighten.Counter | None = None
         self.evaluations: dict[int, EvaluationStatusTracker] = {}
         self.eval_err_count: int = 0
 
