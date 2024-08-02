@@ -65,7 +65,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
 
         self.scores = np.append(self.scores, self._compute_score(forward_output.detach()))
         # keep the mapping index<->sample_id
-        self.index_sampleid_map += sample_ids
+        # self.index_sampleid_map += sample_ids
 
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
         if forward_output.dim() == 1:
@@ -108,7 +108,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         self.already_selected_weights = torch.cat((self.already_selected_weights, selected_weights))
         # clean the data structures for the following class
         self.scores = np.array([])
-        self.index_sampleid_map: list[int] = []
+        # self.index_sampleid_map: list[int] = []
 
     def select_points(self) -> tuple[list[int], torch.Tensor]:
         if self.balance:
@@ -117,18 +117,18 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         else:
             # select the sampleIDs and compute the weights
             ids, weights = self._select_from_scores()
-        return _shuffle_list_and_tensor(ids, weights)
+        return ids, weights # _shuffle_list_and_tensor(ids, weights)
 
     def _select_from_scores(self) -> tuple[list[int], torch.Tensor]:
         number_of_samples = len(self.scores)
         target_size = max(int(self.downsampling_ratio * number_of_samples / self.ratio_max), 1)
         selected_indices, weights = self._select_indexes_from_scores(target_size)
-        selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
-        return selected_ids, weights
+        # selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
+        return selected_indices, weights
 
     def init_downsampler(self) -> None:
         self.scores = []
-        self.index_sampleid_map = []
+        # self.index_sampleid_map = []
 
     def _select_indexes_from_scores(self, target_size: int) -> tuple[list[int], torch.Tensor]:
         # np.argsort sorts in ascending order

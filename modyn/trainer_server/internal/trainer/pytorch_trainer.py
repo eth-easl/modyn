@@ -580,11 +580,15 @@ class PytorchTrainer:
 
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
-        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
-        sample_ids, data, target = selected_indexes, selected_data, selected_target
+        if isinstance(data, torch.Tensor):
+            sub_data = data[selected_indexes]
+        else:
+            sub_data = {key: tensor[selected_indexes] for key, tensor in data.items()}
+        sub_target = target[selected_indexes]
+        sub_sample_ids = torch.tensor(sample_ids)[selected_indexes].tolist()
         # TODO(#219) Investigate if we can avoid 2 forward passes
         self._model.model.train()
-        return data, sample_ids, target, weights.to(self._device)
+        return sub_data, sub_sample_ids, sub_target, weights.to(self._device)
 
     def start_embedding_recording_if_needed(self) -> None:
         if self._downsampler.requires_coreset_supporting_module:

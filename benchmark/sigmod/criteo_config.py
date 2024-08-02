@@ -129,6 +129,7 @@ def gen_criteo_config(
             epochs_per_trigger=num_epochs,
             use_previous_model=True,
             initial_model="random",
+            record_loss_every=1,
             batch_size=65536,
             optimizers=[
                 OptimizerConfig(

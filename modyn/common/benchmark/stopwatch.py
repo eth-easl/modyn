@@ -10,10 +10,12 @@ class Stopwatch:
     interface and export all measurements as a dictionary.
     """
 
-    def __init__(self):
+    def __init__(self, warmup: Optional[int] = None):
         self.measurements: dict[str, int] = {}  # Unit is milliseconds
         self._running_measurements: dict[str, int] = {}
         self._last_started_measurement: Optional[str] = None
+        self._warmup = warmup
+        self._count: dict[str, int] = {}
 
     def start(self, name: str, resume: bool = False, overwrite: bool = False) -> None:
         assert not (resume and overwrite), "Must either resume or overwrite"
@@ -35,7 +37,12 @@ class Stopwatch:
 
         assert name in self._running_measurements, f"Measurement {name} not running"
 
-        self.measurements[name] = self.measurements.get(name, 0) + time - self._running_measurements[name]
+        self._count[name] = self._count.get(name, 0) + 1
+
+        if self._warmup is not None and self._count[name] <= self._warmup:
+            self.measurements[name] = 0
+        else:
+            self.measurements[name] = self.measurements.get(name, 0) + time - self._running_measurements[name]
 
         del self._running_measurements[name]
         if name == self._last_started_measurement:
