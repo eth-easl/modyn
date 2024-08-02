@@ -219,6 +219,7 @@ class PytorchTrainer:
         actual_loss: list[float] = []
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
+            self._info(f"[XZM]: Training will stop after {self.epochs_per_trigger} epochs.")
         else:
             # an infinity epoch generator
             epoch_num_generator = itertools.count(start=0)

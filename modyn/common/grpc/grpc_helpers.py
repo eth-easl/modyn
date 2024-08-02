@@ -184,6 +184,7 @@ class TrainerServerGRPCHandlerMixin:
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
+        determined_epochs_per_trigger: int,
         previous_model_id: Optional[int],
         num_samples_to_pass: Optional[int] = None,
     ) -> StartTrainingRequest:
@@ -237,7 +238,7 @@ class TrainerServerGRPCHandlerMixin:
             label_transformer=PythonString(value=data_config.label_transformer_function),
             lr_scheduler=TrainerServerJsonString(value=json.dumps(lr_scheduler_configs)),
             grad_scaler_configuration=TrainerServerJsonString(value=json.dumps(grad_scaler_config)),
-            epochs_per_trigger=training_config.epochs_per_trigger,
+            epochs_per_trigger=determined_epochs_per_trigger,
             num_prefetched_partitions=training_config.num_prefetched_partitions,
             parallel_prefetch_requests=training_config.parallel_prefetch_requests,
             seed=training_config.seed,  # seed is an optional field which can accept None
@@ -256,6 +257,7 @@ class TrainerServerGRPCHandlerMixin:
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
+        determined_epochs_per_trigger: int,
         previous_model_id: Optional[int],
         num_samples_to_pass: Optional[int] = None,
     ) -> int:
@@ -268,6 +270,7 @@ class TrainerServerGRPCHandlerMixin:
             trigger_id,
             training_config,
             data_config,
+            determined_epochs_per_trigger,
             previous_model_id,
             num_samples_to_pass,
         )

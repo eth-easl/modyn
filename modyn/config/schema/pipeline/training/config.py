@@ -70,7 +70,7 @@ class LrSchedulerConfig(ModynBaseModel):
 
 class TrainingConfig(ModynBaseModel):
     gpus: int = Field(description="The number of GPUs that should be used for training.", ge=1)
-    epochs_per_trigger: int = Field(1, description="The number of epochs that should be trained per trigger.")
+    epochs_per_trigger: int | list[int] = Field(1, description="The number of epochs that should be trained per trigger.")
     num_samples_to_pass: list[int] | None = Field(
         None,
         description=(

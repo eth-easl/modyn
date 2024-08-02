@@ -155,6 +155,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             training_config=self.il_training_config,
             data_config=self.data_config,
             previous_model_id=previous_model_id,
+            determined_epochs_per_trigger=self.il_training_config.epochs_per_trigger,
         )
         trainer_log = self.grpc.wait_for_training_completion(training_id)
         model_id = self.grpc.store_trained_model(training_id)

@@ -643,11 +643,22 @@ class PipelineExecutor:
         else:
             num_samples_to_pass = None
 
+        # check if s.pipeline_config.training.epochs_per_trigger is a list
+        if isinstance(s.pipeline_config.training.epochs_per_trigger, list):
+            if current_trigger_index <= len(s.pipeline_config.training.epochs_per_trigger) - 1:
+                determined_epochs = s.pipeline_config.training.epochs_per_trigger[current_trigger_index]
+            else:
+                determined_epochs = s.pipeline_config.training.epochs_per_trigger[-1]
+        else:
+            determined_epochs = s.pipeline_config.training.epochs_per_trigger
+        logger.info(f"[XZM]: Training epochs for pipeline {s.pipeline_id} trigger {trigger_id}: {determined_epochs}")
+
         s.current_training_id = self.grpc.start_training(
             s.pipeline_id,
             trigger_id,
             s.pipeline_config.training,
             s.pipeline_config.data,
+            determined_epochs,
             s.previous_model_id,
             num_samples_to_pass,
         )
