@@ -56,7 +56,7 @@ def gen_selection_strategies(
     ratio_max: int,
     warmup_triggers: int,
     num_classes: int,
-    # training_config: TrainingConfig,
+    training_config: TrainingConfig,
     period: int,
     maximum_keys_in_memory: int,
     small_run: bool = False,
@@ -438,7 +438,7 @@ def run_experiment(
         num_classes = 172
         optimizer = "AdamW"
         lr = 0.00002
-        # train_conf_func = gen_arxiv_training_conf
+        train_conf_func = gen_arxiv_training_conf
         trigger_period = "4d"
     elif pipeline_gen_func == gen_cglm_config:
         min_lr = 0.0025
@@ -473,13 +473,13 @@ def run_experiment(
     for seed in seeds:
         for ratio in ratios:
             for lr_sched_id, lr_scheduler_config in gen_lr_scheduler_configs(min_lr, disable_scheduling):
-                # train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
+                train_conf = train_conf_func(optimizer, lr, train_gpu, lr_scheduler_config, num_epochs, seed)
                 for selection_strategy_id, selection_strategy in gen_selection_strategies(
                     ratio,
                     ratio_max,
                     warmup_triggers,
                     num_classes,
-                    # train_conf,
+                    train_conf,
                     period,
                     maximum_keys_in_memory,
                     small_run=small_run,
@@ -495,8 +495,8 @@ def run_experiment(
                     if pipeline_gen_func == gen_arxiv_config and selection_strategy_id == "classb":
                         continue # classb on arxiv does not work
 
-                    if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
-                        continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
+                    # if pipeline_gen_func == gen_arxiv_config and selection_strategy_id.startswith("rho_loss"):
+                    #     continue  # we don't have a small model for RHO LOSS that deals with tokenized texts yet
 
                     config_id = config_str_fn(
                         selection_strategy_id, lr_sched_id, num_epochs, warmup_triggers, ratio, trigger_period, seed
