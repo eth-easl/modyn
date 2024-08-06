@@ -84,3 +84,5 @@ libbuild/
 
 .data/
 .env
+
+exploration/
