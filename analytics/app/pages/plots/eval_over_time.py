@@ -2,10 +2,11 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
@@ -26,7 +27,12 @@ _shared_data: dict[str, _PageState] = {}  # page -> _PageState
 
 
 def gen_figure(
-    page: str, multi_pipeline_mode: bool, patch_yearbook: bool, eval_handler: str, dataset_id: str, metric: str
+    page: str,
+    multi_pipeline_mode: bool,
+    patch_yearbook: bool,
+    eval_handler: str,
+    dataset_id: str,
+    metric: str,
 ) -> go.Figure:
     """
     Create the evaluation over time figure with a line plot.
@@ -58,7 +64,7 @@ def gen_figure(
         # we only want the pipeline performance (composed of the models active periods stitched together)
         df_adjusted = df_adjusted[df_adjusted[composite_model_variant]]
     else:
-        assert df_adjusted["pipeline_ref"].nunique() == 1
+        assert df_adjusted["pipeline_ref"].nunique() <= 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
         pipeline_composite_model = df_adjusted[df_adjusted[composite_model_variant]]
@@ -106,7 +112,10 @@ def section_metricovertime(
     composite_model_variant: CompositeModelOptions,
 ) -> html.Div:
     if page not in _shared_data:
-        _shared_data[page] = _PageState(composite_model_variant=composite_model_variant, df_eval_single=df_eval_single)
+        _shared_data[page] = _PageState(
+            composite_model_variant=composite_model_variant,
+            df_eval_single=df_eval_single,
+        )
     _shared_data[page].composite_model_variant = composite_model_variant
     _shared_data[page].df_eval_single = df_eval_single
 
@@ -118,7 +127,14 @@ def section_metricovertime(
         Input(f"{page}-evalovertime-evaluation-metric", "value"),
     )
     def update_figure(patch_yearbook: bool, eval_handler_ref: str, dataset_id: str, metric: str) -> go.Figure:
-        return gen_figure(page, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric)
+        return gen_figure(
+            page,
+            multi_pipeline_mode,
+            patch_yearbook,
+            eval_handler_ref,
+            dataset_id,
+            metric,
+        )
 
     eval_handler_refs = list(df_eval_single["eval_handler"].unique())
     eval_datasets = list(df_eval_single["dataset_id"].unique())
@@ -139,7 +155,7 @@ def section_metricovertime(
                             dcc.RadioItems(
                                 id=f"{page}-evalovertime-evaluation-handler",
                                 options=eval_handler_refs,
-                                value=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
+                                value=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -155,7 +171,7 @@ def section_metricovertime(
                             dcc.RadioItems(
                                 id=f"{page}-evalovertime-dataset-id",
                                 options=eval_datasets,
-                                value=eval_datasets[0] if len(eval_datasets) > 0 else None,
+                                value=(eval_datasets[0] if len(eval_datasets) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -173,7 +189,7 @@ def section_metricovertime(
                                 options=[
                                     {"label": metric, "value": metric, "disabled": True} for metric in eval_metrics
                                 ],
-                                value=eval_metrics[0] if len(eval_metrics) > 0 else None,
+                                value=(eval_metrics[0] if len(eval_metrics) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -189,8 +205,14 @@ def section_metricovertime(
                             dcc.RadioItems(
                                 id=f"{page}-evalovertime-radio-time-patch-yearbook",
                                 options=[
-                                    {"label": "yes (convert day based timestamps to years)", "value": True},
-                                    {"label": "no (use timestamps as they are)", "value": False},
+                                    {
+                                        "label": "yes (convert day based timestamps to years)",
+                                        "value": True,
+                                    },
+                                    {
+                                        "label": "no (use timestamps as they are)",
+                                        "value": False,
+                                    },
                                 ],
                                 value=False,
                                 persistence=True,
@@ -206,7 +228,7 @@ def section_metricovertime(
                     page,
                     multi_pipeline_mode,
                     False,
-                    eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
+                    eval_handler=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
                     dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                     metric=eval_metrics[0] if len(eval_metrics) > 0 else None,
                 ),

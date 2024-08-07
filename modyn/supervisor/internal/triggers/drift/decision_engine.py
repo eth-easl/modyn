@@ -2,14 +2,18 @@ from abc import ABC, abstractmethod
 from collections import deque
 from typing import Deque
 
-from modyn.config.schema.pipeline.trigger.drift.metric import DynamicThresholdCriterion, ThresholdDecisionCriterion
+from modyn.config.schema.pipeline.trigger.drift.metric import (
+    DynamicThresholdCriterion,
+    HypothesisTestDecisionCriterion,
+    ThresholdDecisionCriterion,
+)
 
 
 class DriftDecisionEngine(ABC):
     """
     Decision policy that will make the binary is_drift decisions based on the similarity/distance metrics.
 
-    Each drift decision wraps one DriftMetric and observes it's time series of distance values.
+    Each drift decision wraps one DriftMetric and observes its time series of distance values.
     """
 
     @abstractmethod
@@ -33,7 +37,7 @@ class HypothesisTestDecisionEngine(DriftDecisionEngine):
     Each drift decision wraps one DriftMetric and observes it's time series of p-values.
     """
 
-    def __init__(self, config: DynamicThresholdCriterion):
+    def __init__(self, config: HypothesisTestDecisionCriterion):
         self.config = config
 
     def evaluate_decision(self, distance: float, raw_is_drift: bool) -> bool:

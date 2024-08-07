@@ -1,7 +1,9 @@
 from collections import deque
 from typing import Deque
 
-from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
+)
 
 from .window import DetectionWindowManager
 

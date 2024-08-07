@@ -1,5 +1,9 @@
-from modyn.config.schema.pipeline.trigger.drift.detection_window.window import TimeWindowingStrategy
-from modyn.supervisor.internal.triggers.drift.detection_window.timestamp import TimeDetectionWindowManager
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.time_ import (
+    TimeDetectionWindowManager,
+)
 
 
 def test_time_detection_window_manager_no_overlap() -> None:
@@ -45,7 +49,14 @@ def test_time_detection_window_manager_no_overlap() -> None:
     assert len(windows.current_reservoir_) == 0
     assert len(windows.reference_) == 6
     assert len(windows.exclusive_current) == 0
-    assert list(windows.reference_) == [(2, 30), (3, 45), (4, 60), (5, 75), (6, 90), (7, 120)]
+    assert list(windows.reference_) == [
+        (2, 30),
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+    ]
 
     windows.inform_data([(8, 135)])
     assert len(windows.current_) == 1
@@ -53,7 +64,14 @@ def test_time_detection_window_manager_no_overlap() -> None:
     assert len(windows.reference_) == 6
     assert len(windows.exclusive_current) == 0
     assert list(windows.current_) == [(8, 135)]
-    assert list(windows.reference_) == [(2, 30), (3, 45), (4, 60), (5, 75), (6, 90), (7, 120)]
+    assert list(windows.reference_) == [
+        (2, 30),
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+    ]
 
     # test ref overflow
     windows.inform_trigger()
@@ -61,7 +79,14 @@ def test_time_detection_window_manager_no_overlap() -> None:
     assert len(windows.current_reservoir_) == 0
     assert len(windows.reference_) == 6
     assert len(windows.exclusive_current) == 0
-    assert list(windows.reference_) == [(3, 45), (4, 60), (5, 75), (6, 90), (7, 120), (8, 135)]
+    assert list(windows.reference_) == [
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+        (8, 135),
+    ]
 
 
 def test_time_detection_window_manager_no_overlap_ref_smaller_cur() -> None:
@@ -154,7 +179,14 @@ def test_time_detection_window_manager_with_overlap() -> None:
     assert len(windows.reference_) == 0
     assert len(windows.exclusive_current) == 6
     assert list(windows.current_) == [(5, 75), (6, 90), (7, 120)]
-    assert list(windows.exclusive_current) == [(2, 30), (3, 45), (4, 60), (5, 75), (6, 90), (7, 120)]
+    assert list(windows.exclusive_current) == [
+        (2, 30),
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+    ]
 
     # trigger: reset current_ and move data to reference_
     windows.inform_trigger()
@@ -163,7 +195,14 @@ def test_time_detection_window_manager_with_overlap() -> None:
     assert len(windows.reference_) == 6
     assert len(windows.exclusive_current) == 0
     assert list(windows.current_) == [(5, 75), (6, 90), (7, 120)]
-    assert list(windows.reference_) == [(2, 30), (3, 45), (4, 60), (5, 75), (6, 90), (7, 120)]
+    assert list(windows.reference_) == [
+        (2, 30),
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+    ]
 
     windows.inform_data([(8, 135)])
     assert len(windows.current_) == 3
@@ -172,7 +211,14 @@ def test_time_detection_window_manager_with_overlap() -> None:
     assert len(windows.exclusive_current) == 1
     assert list(windows.current_) == [(6, 90), (7, 120), (8, 135)]
     assert list(windows.exclusive_current) == [(8, 135)]
-    assert list(windows.reference_) == [(2, 30), (3, 45), (4, 60), (5, 75), (6, 90), (7, 120)]
+    assert list(windows.reference_) == [
+        (2, 30),
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+    ]
 
     # test ref overflow
     windows.inform_trigger()
@@ -181,7 +227,14 @@ def test_time_detection_window_manager_with_overlap() -> None:
     assert len(windows.reference_) == 6
     assert len(windows.exclusive_current) == 0
     assert list(windows.current_) == [(6, 90), (7, 120), (8, 135)]
-    assert list(windows.reference_) == [(3, 45), (4, 60), (5, 75), (6, 90), (7, 120), (8, 135)]
+    assert list(windows.reference_) == [
+        (3, 45),
+        (4, 60),
+        (5, 75),
+        (6, 90),
+        (7, 120),
+        (8, 135),
+    ]
 
 
 def test_time_detection_window_manager_with_overlap_ref_smaller_cur() -> None:

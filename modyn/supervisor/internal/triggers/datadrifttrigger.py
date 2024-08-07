@@ -4,6 +4,8 @@ import gc
 import logging
 from typing import Generator, Optional
 
+from numpy import mean
+
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
@@ -21,15 +23,29 @@ from modyn.supervisor.internal.triggers.drift.decision_engine import (
     HypothesisTestDecisionEngine,
     ThresholdDecisionEngine,
 )
-from modyn.supervisor.internal.triggers.drift.detection_window.amount import AmountDetectionWindowManager
-from modyn.supervisor.internal.triggers.drift.detection_window.timestamp import TimeDetectionWindowManager
-from modyn.supervisor.internal.triggers.drift.detection_window.window import DetectionWindowManager
+from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
+    AmountDetectionWindowManager,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.time_ import (
+    TimeDetectionWindowManager,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.window import (
+    DetectionWindowManager,
+)
 from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
-from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
+from modyn.supervisor.internal.triggers.drift.detector.evidently import (
+    EvidentlyDriftDetector,
+)
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
+    EmbeddingEncoder,
+    EmbeddingEncoderDownloader,
+)
 
 # pylint: disable-next=no-name-in-module
-from modyn.supervisor.internal.triggers.models import DriftTriggerEvalLog, TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.models import (
+    DriftTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
@@ -37,7 +53,6 @@ from modyn.supervisor.internal.triggers.utils import (
     get_embeddings,
     prepare_trigger_dataloader_fixed_keys,
 )
-from numpy import mean
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +97,10 @@ class DataDriftTrigger(Trigger):
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         drift_eval_log = DriftTriggerEvalLog(
-            detection_interval=(self._windows.current_[0][1], self._windows.current_[-1][1]),
+            detection_interval=(
+                self._windows.current_[0][1],
+                self._windows.current_[-1][1],
+            ),
             reference_interval=(
                 (self._windows.reference_[0][1], self._windows.reference_[-1][1])
                 if self._windows.reference_
@@ -102,7 +120,9 @@ class DataDriftTrigger(Trigger):
             yield trigger_idx
 
     def inform(
-        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+        self,
+        new_data: list[tuple[int, int, int]],
+        log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         """Analyzes a batch of new data to determine if data drift has occurred and triggers retraining if necessary.
 
@@ -134,7 +154,8 @@ class DataDriftTrigger(Trigger):
 
         Yields:
             The index of the data point that triggered the drift detection. This is used to identify the point in the
-            data stream where the model's performance may have started to degrade due to drift."""
+            data stream where the model's performance may have started to degrade due to drift.
+        """
 
         new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
         initial_batch_pointer = 0
@@ -161,7 +182,8 @@ class DataDriftTrigger(Trigger):
                 self._triggered_once = True
                 triggered = True
                 drift_results: dict[str, MetricResult] = {}
-                self.warmup_intervals.append(list(self._windows.reference_))
+                if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
+                    self.warmup_intervals.append(list(self._windows.reference_))
 
             else:
                 # Run the detection
@@ -175,12 +197,20 @@ class DataDriftTrigger(Trigger):
                         # we generate the calibration with different reference windows, the latest model and
                         # the current window
                         _warmup_triggered, _warmup_results = self._run_detection(
-                            warmup_interval, list(self._windows.current_), is_warmup=True
+                            warmup_interval,
+                            list(self._windows.current_),
+                            is_warmup=True,
                         )
                         if log:
                             warmup_log = DriftTriggerEvalLog(
-                                detection_interval=(self._windows.current_[0][1], self._windows.current_[-1][1]),
-                                reference_interval=(self._windows.reference_[0][1], self._windows.reference_[-1][1]),
+                                detection_interval=(
+                                    self._windows.current_[0][1],
+                                    self._windows.current_[-1][1],
+                                ),
+                                reference_interval=(
+                                    self._windows.reference_[0][1],
+                                    self._windows.reference_[-1][1],
+                                ),
                                 triggered=_warmup_triggered,
                                 trigger_index=-1,
                                 drift_results=_warmup_results,
@@ -191,7 +221,9 @@ class DataDriftTrigger(Trigger):
                     gc.collect()
 
                 triggered, drift_results = self._run_detection(
-                    list(self._windows.reference_), list(self._windows.current_), is_warmup=False
+                    list(self._windows.reference_),
+                    list(self._windows.current_),
+                    is_warmup=False,
                 )
 
             self._sample_left_until_detection = self.config.detection_interval_data_points
@@ -207,7 +239,10 @@ class DataDriftTrigger(Trigger):
     # --------------------------------------------------- INTERNAL --------------------------------------------------- #
 
     def _run_detection(
-        self, reference: list[tuple[int, int]], current: list[tuple[int, int]], is_warmup: bool
+        self,
+        reference: list[tuple[int, int]],
+        current: list[tuple[int, int]],
+        is_warmup: bool,
     ) -> tuple[bool, dict[str, MetricResult]]:
         """Compare current data against reference data.
         current data: all untriggered samples in the sliding window in inform().
@@ -252,6 +287,8 @@ class DataDriftTrigger(Trigger):
 
         # make the final decisions with the decision engines
         for metric_name, metric_result in drift_results.items():
+            # to be able to evaluate multiple distance metrics on the same embeddings (without recalculating them
+            # in another drift trigger), we support aggregation of different metrics within one DriftTrigger
             distance = (
                 metric_result.distance
                 if isinstance(metric_result.distance, float)
@@ -263,7 +300,7 @@ class DataDriftTrigger(Trigger):
 
         logger.info(f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}")
         if is_warmup:
-            return False, {}  # unused dummy
+            return False, {}
 
         # aggregate the different drift detection results
         drift_detected = self.config.aggregation_strategy.aggregate_decision_func(drift_results)
@@ -302,7 +339,9 @@ class DataDriftTrigger(Trigger):
         )
 
 
-def _setup_detection_window_manager(windowing_strategy: DriftWindowingStrategy) -> DetectionWindowManager:
+def _setup_detection_window_manager(
+    windowing_strategy: DriftWindowingStrategy,
+) -> DetectionWindowManager:
     if isinstance(windowing_strategy, AmountWindowingStrategy):
         return AmountDetectionWindowManager(windowing_strategy)
     if isinstance(windowing_strategy, TimeWindowingStrategy):
@@ -310,7 +349,9 @@ def _setup_detection_window_manager(windowing_strategy: DriftWindowingStrategy) 
     raise ValueError(f"Unsupported windowing strategy: {windowing_strategy}")
 
 
-def _setup_decision_engines(config: DataDriftTriggerConfig) -> dict[str, DriftDecisionEngine]:
+def _setup_decision_engines(
+    config: DataDriftTriggerConfig,
+) -> dict[str, DriftDecisionEngine]:
     decision_engines: dict[str, DriftDecisionEngine] = {}
     for metric_name, metric_config in config.metrics.items():
         criterion = metric_config.decision_criterion
