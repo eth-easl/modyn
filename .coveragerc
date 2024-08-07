@@ -4,3 +4,4 @@ omit =
     **/*/__init__.py
     **/generated/*
     **/modyn/tests/*
+    **/extra_local_eval/*.py
