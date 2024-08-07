@@ -301,44 +301,44 @@ def gen_selection_strategies(
             )
         )
     #
-    # # # RHOLossDownsamplingConfig
-    # # for use_previous_model in [True]:
-    # #     for use_pretrained in [False, True]:
-    # #         il_config_options = {
-    # #             "il_model_id": "ResNet18",
-    # #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
-    # #             "use_previous_model": use_previous_model,
-    # #             "drop_last_batch": False,
-    # #         }
-    # #         if not use_pretrained:
-    # #             # delete the key
-    # #             del il_config_options["il_model_config"]["use_pretrained"]
-    # #         training_config_dict = training_config.model_dump()
-    # #         training_config_dict.update(il_config_options)
-    # #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
-    # #         use_prev_suffix = "_use_prev" if use_previous_model else ""
-    # #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
-    # #         rho_name = f"rho_loss_bts_twin_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
-    # #         strategies.append(
-    # #             (
-    # #                 rho_name,
-    # #                 CoresetStrategyConfig(
-    # #                     maximum_keys_in_memory=100000,
-    # #                     storage_backend="database",
-    # #                     tail_triggers=0,
-    # #                     limit=-1,
-    # #                     warmup_triggers=warmup_triggers,
-    # #                     downsampling_config=RHOLossDownsamplingConfig(
-    # #                         ratio=ratio, ratio_max=ratio_max,
-    # #                         sample_then_batch=False,
-    # #                         period=period,
-    # #                         holdout_set_ratio=50,
-    # #                         holdout_set_strategy="Twin",
-    # #                         il_training_config=ILTrainingConfig(**training_config_dict),
-    # #                     ),
-    # #                 ),
-    # #             )
-    # #         )
+    # # RHOLossDownsamplingConfig
+    # for use_previous_model in [True]:
+    #     for use_pretrained in [False]:
+    #         il_config_options = {
+    #             "il_model_id": "ArticleNet",
+    #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
+    #             "use_previous_model": use_previous_model,
+    #             "drop_last_batch": False,
+    #         }
+    #         if not use_pretrained:
+    #             # delete the key
+    #             del il_config_options["il_model_config"]["use_pretrained"]
+    #         training_config_dict = training_config.model_dump()
+    #         training_config_dict.update(il_config_options)
+    #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
+    #         use_prev_suffix = "_use_prev" if use_previous_model else ""
+    #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
+    #         rho_name = f"rho_loss_bts_twin_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
+    #         strategies.append(
+    #             (
+    #                 rho_name,
+    #                 CoresetStrategyConfig(
+    #                     maximum_keys_in_memory=maximum_keys_in_memory,
+    #                     storage_backend="database",
+    #                     tail_triggers=0,
+    #                     limit=-1,
+    #                     warmup_triggers=warmup_triggers,
+    #                     downsampling_config=RHOLossDownsamplingConfig(
+    #                         ratio=ratio, ratio_max=ratio_max,
+    #                         sample_then_batch=False,
+    #                         period=period,
+    #                         holdout_set_ratio=50,
+    #                         holdout_set_strategy="Twin",
+    #                         il_training_config=ILTrainingConfig(**training_config_dict),
+    #                     ),
+    #                 ),
+    #             )
+    #         )
     return strategies
 
 

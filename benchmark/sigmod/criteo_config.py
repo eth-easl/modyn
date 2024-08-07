@@ -166,7 +166,7 @@ def gen_criteo_config(
                 },
             ),
             shuffle=True,
-            amp=True,
+            amp=False,
             seed=seed,
             grad_scaler_config={"growth_interval": 1000000000},
         ),
