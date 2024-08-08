@@ -1,10 +1,15 @@
+# Note: we don't use the hypothesis testing in the alibi-detect metrics. However, we still keep
+# the support for it in this wrapper configuration for offline experiments to still be able to
+# use the hypothesis testing.
+
 from typing import Annotated, Literal, Union
 
 from modyn.config.schema.base_model import ModynBaseModel
+from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
 from pydantic import Field, model_validator
 
 
-class _AlibiDetectBaseDriftMetric(ModynBaseModel):
+class _AlibiDetectBaseDriftMetric(BaseMetric):
     p_val: float = Field(0.05, description="The p-value threshold for the drift detection.")
     x_ref_preprocessed: bool = Field(False)
 
@@ -35,7 +40,8 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         ),
     )
     kernel: str = Field(
-        "GaussianRBF", description="The kernel used for distance calculation imported from alibi_detect.utils.pytorch"
+        "GaussianRBF",
+        description="The kernel used for distance calculation imported from alibi_detect.utils.pytorch",
     )
     configure_kernel_from_x_ref: bool = Field(True)
     threshold: float | None = Field(
@@ -61,7 +67,11 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         return self
 
 
-class AlibiDetectKSDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectAlternativeMixin, _AlibiDetectCorrectionMixin):
+class AlibiDetectKSDriftMetric(
+    _AlibiDetectBaseDriftMetric,
+    _AlibiDetectAlternativeMixin,
+    _AlibiDetectCorrectionMixin,
+):
     id: Literal["AlibiDetectKSDriftMetric"] = Field("AlibiDetectKSDriftMetric")
 
 
