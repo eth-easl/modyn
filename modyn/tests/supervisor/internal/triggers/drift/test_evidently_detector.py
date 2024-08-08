@@ -6,7 +6,7 @@ from modyn.config.schema.pipeline import (
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
 )
-from modyn.supervisor.internal.triggers.drift.decision_policy import DynamicDecisionPolicy
+from modyn.config.schema.pipeline.trigger.drift.metric import DynamicThresholdCriterion
 from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
 
 
@@ -32,12 +32,12 @@ def df_data_cur(data_cur: np.ndarray) -> pd.DataFrame:
 
 @pytest.fixture
 def model_drift_metric() -> EvidentlyModelDriftMetric:
-    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicDecisionPolicy())
+    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicThresholdCriterion())
 
 
 @pytest.fixture
 def ratio_drift_metric() -> EvidentlyRatioDriftMetric:
-    return EvidentlyRatioDriftMetric(decision_criterion=DynamicDecisionPolicy())
+    return EvidentlyRatioDriftMetric(decision_criterion=DynamicThresholdCriterion())
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
     return EvidentlySimpleDistanceDriftMetric(
         bootstrap=False,
         distance_metric="euclidean",
-        decision_criterion=DynamicDecisionPolicy(),
+        decision_criterion=DynamicThresholdCriterion(),
     )
 
 
