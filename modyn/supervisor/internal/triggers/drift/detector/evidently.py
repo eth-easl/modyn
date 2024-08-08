@@ -52,13 +52,18 @@ class EvidentlyDriftDetector(DriftDetector):
                 if not is_warmup or self.evidently_metrics[name][0].decision_criterion.needs_calibration
             ]
         )
-        report.run(reference_data=embeddings_ref, current_data=embeddings_cur, column_mapping=column_mapping)
+        report.run(
+            reference_data=embeddings_ref,
+            current_data=embeddings_cur,
+            column_mapping=column_mapping,
+        )
         results_raw = report.as_dict()
 
         metric_names = list(self.metrics_config)
         results = {
             metric_names[metric_idx]: MetricResult(
                 metric_id=metric_result["metric"],
+                # will be overwritten by DecisionPolicy inside the DataDriftTrigger
                 is_drift=metric_result["result"]["drift_detected"],
                 distance=metric_result["result"]["drift_score"],
             )
@@ -84,7 +89,10 @@ def _get_evidently_metrics(
     Otherwise, we use the metric given by metric_name, with optional metric configuration specific to the metric.
     """
     metrics = {
-        metric_ref: (config, EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config)))
+        metric_ref: (
+            config,
+            EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config)),
+        )
         for metric_ref, config in metrics_config.items()
     }
     return metrics
@@ -92,9 +100,10 @@ def _get_evidently_metrics(
 
 def _evidently_metric_factory(config: EvidentlyDriftMetric) -> EmbeddingsDriftMetric:
     if config.id == "EvidentlyModelDriftMetric":
+        assert config.bootstrap is False, "Bootstrap is not supported in EvidentlyModelDriftMetric."
         return embedding_drift_methods.model(
             threshold=config.threshold,
-            bootstrap=config.bootstrap,
+            bootstrap=False,
             quantile_probability=config.quantile_probability,
             pca_components=config.num_pca_component,
         )
@@ -106,10 +115,11 @@ def _evidently_metric_factory(config: EvidentlyDriftMetric) -> EmbeddingsDriftMe
             pca_components=config.num_pca_component,
         )
     if config.id == "EvidentlySimpleDistanceDriftMetric":
+        assert config.bootstrap is False, "Bootstrap is not supported in EvidentlySimpleDistanceDriftMetric."
         return embedding_drift_methods.distance(
             dist=config.distance_metric,
             threshold=config.threshold,
-            bootstrap=config.bootstrap,
+            bootstrap=False,
             pca_components=config.num_pca_component,
             quantile_probability=config.quantile_probability,
         )

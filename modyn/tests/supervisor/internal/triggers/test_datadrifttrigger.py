@@ -28,7 +28,9 @@ def drift_trigger_config() -> DataDriftTriggerConfig:
         detection_interval_data_points=42,
         metrics={
             "mmd": AlibiDetectMmdDriftMetric(
-                decision_criterion=ThresholdDecisionCriterion(threshold=0.5), num_permutations=1000
+                decision_criterion=ThresholdDecisionCriterion(threshold=0.5),
+                num_permutations=None,
+                threshold=0.5,
             )
         },
         aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
@@ -75,7 +77,11 @@ def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     assert trigger.config.windowing_strategy.id == "AmountWindowingStrategy"
 
 
-@patch.object(EmbeddingEncoderDownloader, "__init__", noop_embedding_encoder_downloader_constructor_mock)
+@patch.object(
+    EmbeddingEncoderDownloader,
+    "__init__",
+    noop_embedding_encoder_downloader_constructor_mock,
+)
 @patch.object(DataLoaderInfo, "__init__", noop_dataloader_info_constructor_mock)
 def test_init_trigger(
     dummy_pipeline_config: ModynPipelineConfig,
@@ -161,38 +167,44 @@ def test_inform_no_drift(test_detect_no_drift, drift_trigger_config: DataDriftTr
     assert num_triggers == 1
 
 
-def test_update_current_window_amount_strategy(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_update_current_window_amount_strategy(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount_cur=3, amount_ref=3)
     drift_trigger_config.detection_interval_data_points = 100
     trigger = DataDriftTrigger(drift_trigger_config)
 
     # Inform with less data than the window amount
     list(trigger.inform([(1, 100, 1), (2, 101, 1)]))
-    assert len(trigger._windows.current_) == 2, "Current window should contain 2 data points."
+    assert len(trigger._windows.current) == 2, "Current window should contain 2 data points."
 
     # Inform with additional data points to exceed the window size
     list(trigger.inform([(3, 102, 1), (4, 103, 1)]))
-    assert len(trigger._windows.current_) == 3, "Current window should not exceed 3 data points."
-    assert trigger._windows.current_[0][0] == 2, "Oldest data point should be dropped."
+    assert len(trigger._windows.current) == 3, "Current window should not exceed 3 data points."
+    assert trigger._windows.current[0][0] == 2, "Oldest data point should be dropped."
 
 
-def test_time_windowing_strategy_update(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_time_windowing_strategy_update(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.windowing_strategy = TimeWindowingStrategy(limit_cur="10s", limit_ref="10s")
     trigger = DataDriftTrigger(drift_trigger_config)
 
     # Inform with initial data points
     list(trigger.inform([(1, 100, 1), (2, 104, 1), (3, 105, 1)]))
-    assert len(trigger._windows.current_) == 3, "Current window should contain 3 data points."
+    assert len(trigger._windows.current) == 3, "Current window should contain 3 data points."
 
     # Inform with additional data points outside the time window
     list(trigger.inform([(4, 111, 1), (5, 115, 1)]))
-    assert len(trigger._windows.current_) == 3, "Current window should contain only recent data within 10 seconds."
+    assert len(trigger._windows.current) == 3, "Current window should contain only recent data within 10 seconds."
     # Since the window is inclusive, we have 105 in there!
-    assert trigger._windows.current_[0][0] == 3, "Data points outside the time window should be dropped."
+    assert trigger._windows.current[0][0] == 3, "Data points outside the time window should be dropped."
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
-def test_update_current_window_amount_strategy_cross_inform(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_update_current_window_amount_strategy_cross_inform(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.warmup_intervals = 0
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount_cur=5, amount_ref=5)
     drift_trigger_config.detection_interval_data_points = 3
@@ -202,18 +214,26 @@ def test_update_current_window_amount_strategy_cross_inform(drift_trigger_config
         len(
             list(
                 trigger.inform(
-                    [(1, 100, 1), (2, 100, 1), (3, 100, 1), (4, 100, 1), (5, 100, 1), (6, 100, 1), (7, 100, 1)]
+                    [
+                        (1, 100, 1),
+                        (2, 100, 1),
+                        (3, 100, 1),
+                        (4, 100, 1),
+                        (5, 100, 1),
+                        (6, 100, 1),
+                        (7, 100, 1),
+                    ]
                 )
             )
         )
         == 1
     ), "Only the first batch should trigger."
-    assert len(trigger._windows.current_) == 4
+    assert len(trigger._windows.current) == 4
 
     assert len(list(trigger.inform([(8, 100, 1)]))) == 0
-    assert len(trigger._windows.current_) == 5
-    assert trigger._windows.current_[0][0] == 4
+    assert len(trigger._windows.current) == 5
+    assert trigger._windows.current[0][0] == 4
 
     assert len(list(trigger.inform([(9, 100, 1)]))) == 0, "Only the first batch should trigger."
-    assert len(trigger._windows.current_) == 5
-    assert trigger._windows.current_[0][0] == 5
+    assert len(trigger._windows.current) == 5
+    assert trigger._windows.current[0][0] == 5

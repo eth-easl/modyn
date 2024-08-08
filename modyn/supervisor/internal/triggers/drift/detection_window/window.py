@@ -3,9 +3,9 @@ from collections import deque
 from typing import Deque
 
 
-class DetectionWindowManager(ABC):
+class DetectionWindows(ABC):
     """
-    Manager for the drift detection windows include reference, current and reservoir window.
+    Wrapper and manager for the drift detection windows include reference, current and reservoir window.
 
     All windows contain tuples with (sample_id, timestamp).
 
@@ -21,9 +21,9 @@ class DetectionWindowManager(ABC):
     """
 
     def __init__(self) -> None:
-        self.current_: Deque[tuple[int, int]] = deque()
-        self.current_reservoir_: Deque[tuple[int, int]] = deque()
-        self.reference_: Deque[tuple[int, int]] = deque()
+        self.current: Deque[tuple[int, int]] = deque()
+        self.current_reservoir: Deque[tuple[int, int]] = deque()
+        self.reference: Deque[tuple[int, int]] = deque()
 
     @abstractmethod
     def inform_data(self, data: list[tuple[int, int]]) -> None: ...

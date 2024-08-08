@@ -68,14 +68,10 @@ class AlibiDriftDetector(DriftDetector):
                 else result["data"]["p_val"]
             )
 
-            is_drift = result["data"]["is_drift"]
-
-            if isinstance(config, AlibiDetectMmdDriftMetric) and config.threshold is not None:
-                is_drift = _dist > config.threshold
-
             results[metric_ref] = MetricResult(
                 metric_id=metric_ref,
-                is_drift=is_drift,
+                # will be overwritten by DecisionPolicy inside the DataDriftTrigger
+                is_drift=result["data"]["is_drift"],
                 distance=_dist,
                 p_val=_p_val,
                 threshold=result["data"].get("threshold"),
@@ -111,7 +107,6 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
         return KSDrift(
             x_ref=embeddings_ref,
             p_val=config.p_val,
-            alternative=config.alternative_hypothesis,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
         )

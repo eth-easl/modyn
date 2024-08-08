@@ -2,11 +2,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from dash import Input, Output, callback, dcc, html
-from plotly import graph_objects as go
-
 from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import patch_yearbook_time
+from dash import Input, Output, callback, dcc, html
+from plotly import graph_objects as go
 
 
 @dataclass

@@ -48,7 +48,8 @@ trigger:
       id: AlibiDetectMmdDriftMetric
       num_permutations: 1000
       decision_criterion:
-        id: HypothesisTestDecisionCriterion
+        id: DynamicThresholdCriterion
+        
   aggregation_strategy:
     id: MajorityVote
 selection_strategy:

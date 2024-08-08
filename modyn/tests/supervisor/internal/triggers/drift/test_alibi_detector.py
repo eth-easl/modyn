@@ -23,7 +23,6 @@ def ks_drift_metric() -> AlibiDetectKSDriftMetric:
     return AlibiDetectKSDriftMetric(
         p_val=0.05,
         correction="bonferroni",
-        alternative_hypothesis="two-sided",
         decision_criterion=ThresholdDecisionCriterion(threshold=0.2),
     )
 

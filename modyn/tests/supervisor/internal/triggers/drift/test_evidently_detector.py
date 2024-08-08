@@ -6,7 +6,7 @@ from modyn.config.schema.pipeline import (
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import HypothesisTestDecisionCriterion
+from modyn.supervisor.internal.triggers.drift.decision_policy import DynamicDecisionPolicy
 from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
 
 
@@ -32,20 +32,20 @@ def df_data_cur(data_cur: np.ndarray) -> pd.DataFrame:
 
 @pytest.fixture
 def model_drift_metric() -> EvidentlyModelDriftMetric:
-    return EvidentlyModelDriftMetric(bootstrap=True, decision_criterion=HypothesisTestDecisionCriterion())
+    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicDecisionPolicy())
 
 
 @pytest.fixture
 def ratio_drift_metric() -> EvidentlyRatioDriftMetric:
-    return EvidentlyRatioDriftMetric(decision_criterion=HypothesisTestDecisionCriterion())
+    return EvidentlyRatioDriftMetric(decision_criterion=DynamicDecisionPolicy())
 
 
 @pytest.fixture
 def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
     return EvidentlySimpleDistanceDriftMetric(
-        bootstrap=True,
+        bootstrap=False,
         distance_metric="euclidean",
-        decision_criterion=HypothesisTestDecisionCriterion(),
+        decision_criterion=DynamicDecisionPolicy(),
     )
 
 
@@ -60,7 +60,10 @@ def test_evidently_detect_drift_metric(
     detector = [
         ("model", EvidentlyDriftDetector({"model": model_drift_metric})),
         ("ratio", EvidentlyDriftDetector({"ratio": ratio_drift_metric})),
-        ("simple_distance", EvidentlyDriftDetector({"simple_distance": simple_distance_drift_metric})),
+        (
+            "simple_distance",
+            EvidentlyDriftDetector({"simple_distance": simple_distance_drift_metric}),
+        ),
     ]
     for name, ad in detector:
         assert isinstance(ad, EvidentlyDriftDetector)
