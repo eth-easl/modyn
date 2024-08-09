@@ -120,7 +120,6 @@ class Client:
         self.status_bar.update(demo=demo)
 
     def _monitor_training_progress(self, msg: dict) -> None:
-        assert self.training_status_tracker
         id = msg["id"]
 
         if msg["action"] == "create_tracker":
@@ -132,6 +131,7 @@ class Client:
                 params["status_bar_scale"],
             )
         elif msg["action"] == "progress_counter":
+            assert self.training_status_tracker
             params = msg["training_progress_counter_params"]
             self.training_status_tracker.progress_counter(
                 params["samples_seen"],
@@ -139,6 +139,7 @@ class Client:
                 params["is_training"],
             )
         elif msg["action"] == "close_counter":
+            assert self.training_status_tracker
             self.training_status_tracker.close_counter()
 
     def _monitor_evaluation_progress(self, msg: dict) -> None:
