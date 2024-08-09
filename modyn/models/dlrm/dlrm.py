@@ -1,14 +1,15 @@
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import torch
+from torch import nn
+
 from modyn.models.coreset_methods_support import CoresetSupportingModule, EmbeddingRecorder
 from modyn.models.dlrm.nn.factories import create_interaction
 from modyn.models.dlrm.nn.parts import DlrmBottom, DlrmTop
 from modyn.models.dlrm.utils.install_lib import install_cuda_extensions_if_not_present
 from modyn.models.dlrm.utils.utils import get_device_mapping
 from modyn.utils.utils import package_available_and_can_be_imported
-from torch import nn
 
 
 class DLRM:
@@ -106,12 +107,12 @@ class DlrmModel(CoresetSupportingModule):
         return f"interaction_op={self._interaction_op}, hash_indices={self._hash_indices}"
 
     def reorder_categorical_input(self, cat_input: torch.Tensor) -> torch.Tensor:
-        """Reorder categorical input based on embedding ordering"""
+        """Reorder categorical input based on embedding ordering."""
         dim0 = cat_input.shape[0]
         order = self._embedding_ordering.expand(dim0, -1)
         return torch.gather(cat_input, 1, order)
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: list[int] | None = None) -> torch.Tensor:
         """
         Args:
             data: a dict containing:
@@ -129,7 +130,7 @@ class DlrmModel(CoresetSupportingModule):
 
     # delegate the embedding handling to the top model
     @property
-    def embedding(self) -> Optional[torch.Tensor]:
+    def embedding(self) -> torch.Tensor | None:
         return self.top_model.embedding
 
     @property

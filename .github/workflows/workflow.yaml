@@ -10,37 +10,39 @@ defaults:
     shell: bash -l {0}
 
 jobs:
-  flake8:
-    timeout-minutes: 40
+  pre-commit-checks:
+    name: Pre-commit Checks
+    timeout-minutes: 30
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup mamba
-        uses: ./.github/actions/mamba
-
-      - name: Flake8
-        run: |
-          micromamba run -n modyn flake8 --version
-          micromamba run -n modyn flake8 modyn --statistics
+      - name: Checkout branch
+        uses: actions/checkout@v4
+      - name: Run pre-commit-conda
+        uses: quantco/pre-commit-conda@v1
 
   mypy-typechecking:
-    timeout-minutes: 20
+    name: Mypy Type Checks
     runs-on: ubuntu-latest
-
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup mamba
-        uses: ./.github/actions/mamba
-
-      - name: Mypy
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Conda env
+        uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+      - name: Install repository
         run: |
-          micromamba run -n modyn mypy --version
-          micromamba run -n modyn mypy modyn
+          python -m pip install --no-build-isolation --no-deps --disable-pip-version-check -e .
+          micromamba run -n modyn pip install -r dev-requirements.txt
+      - name: Run mypy
+        run: mypy .
 
   pylint:
     timeout-minutes: 20
@@ -58,40 +60,6 @@ jobs:
           micromamba run -n modyn pylint --version
           micromamba run -n modyn pylint modyn
 
-  isort:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup mamba
-        uses: ./.github/actions/mamba
-
-      - name: Isort
-        run: |
-          micromamba run -n modyn isort --version
-          micromamba run -n modyn isort modyn --check --diff
-          micromamba run -n modyn isort integrationtests --check --diff
-          micromamba run -n modyn isort benchmark --check --diff
-
-  black:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Setup mamba
-        uses: ./.github/actions/mamba
-
-      - name: Black
-        run: |
-          micromamba run -n modyn black --version
-          micromamba run -n modyn black --check modyn --verbose --config black.toml
-
   unittests:
     timeout-minutes: 25
     runs-on: ubuntu-latest
@@ -107,7 +75,7 @@ jobs:
         run: |
           set -o pipefail
           micromamba run -n modyn pytest modyn --cache-clear --cov-report=xml --cov-fail-under=82
-        
+
       - name: Upload codecov
         uses: codecov/codecov-action@v4
         with:
@@ -122,8 +90,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: DoozyX/clang-format-lint-action@v0.16.2
         with:
-          source: 'modyn'
-          extensions: 'hpp,cpp'
+          source: "modyn"
+          extensions: "hpp,cpp"
           clangFormatVersion: 16
 
   tidy:
@@ -160,7 +128,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build-type: [ Release, Debug ]
+        build-type: [Release, Debug]
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
@@ -169,9 +137,9 @@ jobs:
         include:
           # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
           # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
-          - compiler: {c: clang, cxx: clang++, version: 14}
+          - compiler: { c: clang, cxx: clang++, version: 14 }
             build-type: Tsan
-          - compiler: {c: clang, cxx: clang++, version: 14}
+          - compiler: { c: clang, cxx: clang++, version: 14 }
             build-type: Asan
         exclude:
           # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
@@ -224,7 +192,11 @@ jobs:
         timeout-minutes: 20
         working-directory: ${{github.workspace}}/build/modyn/tests
         shell: bash
-        env: {"TSAN_OPTIONS": "halt_on_error=1", "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"}
+        env:
+          {
+            "TSAN_OPTIONS": "halt_on_error=1",
+            "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1",
+          }
         run: ./modyn-test
 
         # The next two steps are solely related to creating coverage reports and will only run coverage in the compiler matrix is set to true
@@ -260,7 +232,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: main 
+          ref: main
 
       - name: Install clang 17
         uses: KyleMayes/install-llvm-action@v1
@@ -302,14 +274,14 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     name: Comment Coverage Results
-    needs: [ cpp_build_and_test, cpp_coverage_main ]
+    needs: [cpp_build_and_test, cpp_coverage_main]
     timeout-minutes: 5
     steps:
       - name: Calculate changes
         shell: bash
         run: |
           echo ::set-output name=line-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.line-coverage }}-${{ needs.cpp_coverage_main.outputs.line-coverage }}; exit}')"
-          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"        
+          echo ::set-output name=branch-changes::"$(awk 'BEGIN {printf "%+.2f", ${{ needs.cpp_build_and_test.outputs.branch-coverage }}-${{ needs.cpp_coverage_main.outputs.branch-coverage }}; exit}')"
         id: calculation
 
       - name: Comment on PR
@@ -319,45 +291,40 @@ jobs:
             ![Line Coverage: ${{ needs.cpp_build_and_test.outputs.line-coverage }}%](https://img.shields.io/badge/Line_Coverage-${{ needs.cpp_build_and_test.outputs.line-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.line-changes }} % to main)</sup>
             ![Branch Coverage: ${{ needs.cpp_build_and_test.outputs.branch-coverage }}%](https://img.shields.io/badge/Branch_Coverage-${{ needs.cpp_build_and_test.outputs.branch-coverage }}%20%25-informational) <sup>(${{ steps.calculation.outputs.branch-changes }} % to main)</sup>
 
-### Integration Tests ###
-# We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
+  ### Integration Tests ###
+  # We have them in the same workflow because it's impossible to have a simple "if workflow A runs through completely, then workflow B should run" pipeline on Github currently
 
-# Checks whether the base container works correctly.
+  # Checks whether the base container works correctly.
   dockerized-unittests:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
       - tidy
       - format
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-    - name: Setup base container
-      uses: ./.github/actions/base
+      - name: Setup base container
+        uses: ./.github/actions/base
 
-    - name: Setup dev-requirements and run pytest within container
-      run: docker run modynbase mamba run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
-
+      - name: Setup dev-requirements and run pytest within container
+        run: docker run modynbase mamba run -n modyn bash -c "pip install -r dev-requirements.txt && echo Running pytest && pytest"
 
   integrationtests-debug:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:
@@ -371,14 +338,11 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
-
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -390,12 +354,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:
@@ -409,12 +371,10 @@ jobs:
     timeout-minutes: 180
     runs-on: ubuntu-latest
     needs:
-      - flake8
+      - pre-commit-checks
       - mypy-typechecking
       - pylint
       - unittests
-      - isort
-      - black
       - cpp_build_and_test
 
     steps:

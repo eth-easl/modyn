@@ -1,15 +1,17 @@
 from functools import cached_property
 from typing import Literal
 
+from pydantic import Field
+
 from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import Field
 
 from ._interval import _IntervalEvalStrategyConfig
 
 
 class PeriodicEvalStrategyConfig(_IntervalEvalStrategyConfig):
-    """The PeriodicEvalStrategy allows to generate evaluation intervals that are centered around certain points in time.
+    """The PeriodicEvalStrategy allows to generate evaluation intervals that
+    are centered around certain points in time.
 
     These evaluation trigger points follow a fixed scheduled defined by the `every` parameter.
 

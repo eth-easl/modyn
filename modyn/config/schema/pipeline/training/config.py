@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Self
+
+from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, field_validator, model_validator
-from typing_extensions import Self
 
 OptimizerSource = Literal["PyTorch", "APEX"]
 
@@ -14,7 +14,7 @@ class OptimizerParamGroup(ModynBaseModel):
     """Configuration for a parameter group."""
 
     module: str = Field(description="A set of parameters.")
-    config: Dict[str, Any] = Field(
+    config: dict[str, Any] = Field(
         default_factory=dict,
         description="Optional configuration for the parameter group. (e.g. learning rate)",
     )
@@ -26,7 +26,7 @@ class OptimizerConfig(ModynBaseModel):
     name: str = Field(description="The name of the optimizer (like an ID).")
     algorithm: str = Field(description="The type of the optimizer (e.g. SGD).")
     source: OptimizerSource = Field(description="The framework/package the optimizer comes from.")
-    param_groups: List[OptimizerParamGroup] = Field(
+    param_groups: list[OptimizerParamGroup] = Field(
         description="An array of the parameter groups (parameters and optional configs) this optimizer supervises.",
         min_length=1,
     )
@@ -36,23 +36,24 @@ class OptimizationCriterion(ModynBaseModel):
     """Configuration for the optimization criterion that we optimize."""
 
     name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
-    config: Dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
+    config: dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
 
 
 LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class LrSchedulerConfig(ModynBaseModel):
-    """Configuration for the Torch-based Learning Rate (LR) scheduler used for training."""
+    """Configuration for the Torch-based Learning Rate (LR) scheduler used for
+    training."""
 
     name: str = Field(description="The name of the LR scheduler.")
     source: LrSchedulerSource = Field(description="Source of the LR scheduler.")
     step_every: Literal["epoch", "batch"] = Field(description="Whether to call scheduler.step() every batch or epoch.")
-    optimizers: List[str] = Field(
+    optimizers: list[str] = Field(
         description="List of optimizers that this scheduler is responsible for.",
         min_length=1,
     )
-    config: Dict[str, Any] = Field(
+    config: dict[str, Any] = Field(
         default_factory=dict,
         description=(
             "Optional configuration of the lr scheduler. Passed to the lr scheduler as a dict."
@@ -118,7 +119,7 @@ class TrainingConfig(ModynBaseModel):
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
     )
-    seed: Optional[int] = Field(
+    seed: int | None = Field(
         None,
         description=(
             "If provided, every random python function (torch, numpy..) is seeded with this number. Must be in the "
@@ -129,7 +130,7 @@ class TrainingConfig(ModynBaseModel):
     initial_model: Literal["random", "pretrained"] = Field(
         description="What type of initial model should be used (random or pretrained)."
     )
-    initial_model_id: Optional[int] = Field(
+    initial_model_id: int | None = Field(
         None,
         description="The ID of the model that should be used as the initial model.",
     )
@@ -138,18 +139,18 @@ class TrainingConfig(ModynBaseModel):
         default=0,
         description="Record the training loss in the trainer_log very n-th batch/step. If 0, loss is not recorded.",
     )
-    optimizers: List[OptimizerConfig] = Field(
+    optimizers: list[OptimizerConfig] = Field(
         description="An array of the optimizers for the training",
         min_length=1,
     )
     optimization_criterion: OptimizationCriterion = Field(
         description="Configuration for the optimization criterion that we optimize",
     )
-    lr_scheduler: Optional[LrSchedulerConfig] = Field(
+    lr_scheduler: LrSchedulerConfig | None = Field(
         None,
         description="Configuration for the Torch-based Learning Rate (LR) scheduler used for training.",
     )
-    grad_scaler_config: Optional[Dict[str, Any]] = Field(
+    grad_scaler_config: dict[str, Any] | None = Field(
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
     )

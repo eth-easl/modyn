@@ -1,6 +1,6 @@
 [run]
 source=**/modyn/*
-omit = 
+omit =
     **/*/__init__.py
     **/generated/*
     **/modyn/tests/*

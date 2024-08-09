@@ -1,13 +1,14 @@
 from typing import Any
 
 import torch
-from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
+
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class SmallYearbookNet:
-    """
-    Adapted from WildTime.
+    """Adapted from WildTime.
+
     Here you can find the original implementation:
     https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/yearbook.py
     Can be used for experiments on RHO-LOSS as the IL model.

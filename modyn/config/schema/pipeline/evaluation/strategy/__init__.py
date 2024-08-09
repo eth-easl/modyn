@@ -1,4 +1,4 @@
-from typing import Annotated, Union
+from typing import Annotated
 
 from pydantic import Field
 
@@ -14,12 +14,10 @@ from .static import *  # noqa
 from .static import StaticEvalStrategyConfig
 
 EvalStrategyConfig = Annotated[
-    Union[
-        SlicingEvalStrategyConfig,
-        OffsetEvalStrategyConfig,
-        BetweenTwoTriggersEvalStrategyConfig,
-        PeriodicEvalStrategyConfig,
-        StaticEvalStrategyConfig,
-    ],
+    SlicingEvalStrategyConfig
+    | OffsetEvalStrategyConfig
+    | BetweenTwoTriggersEvalStrategyConfig
+    | PeriodicEvalStrategyConfig
+    | StaticEvalStrategyConfig,
     Field(discriminator="type"),
 ]

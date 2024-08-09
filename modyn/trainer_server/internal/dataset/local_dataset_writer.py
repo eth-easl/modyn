@@ -6,17 +6,20 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
 from modyn.common.trigger_sample import TriggerSampleStorage
 
 
 class LocalDatasetWriter(TriggerSampleStorage):
-    """
-    Class that wraps TriggerSampleStorage to use it as a local storage for samples.
+    """Class that wraps TriggerSampleStorage to use it as a local storage for
+    samples.
 
-    This Class is informed of samples and when the desired size is reached, it stores them in a file.
-    Files can be stored using different workers in parallel or using just one worker.
-    Furthermore, this class is used to map the usual format in the training loop (list of keys and list of weights) to
-    the desired format of TriggerSampleStorage (list of tuples (key, weight)).
+    This Class is informed of samples and when the desired size is
+    reached, it stores them in a file. Files can be stored using
+    different workers in parallel or using just one worker. Furthermore,
+    this class is used to map the usual format in the training loop
+    (list of keys and list of weights) to the desired format of
+    TriggerSampleStorage (list of tuples (key, weight)).
     """
 
     def __init__(

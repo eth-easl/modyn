@@ -1,4 +1,5 @@
 import torch
+
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
@@ -124,7 +125,6 @@ def test_multiple_epochs_without_replacement(dummy_system_config: ModynConfig):
         device,
     )
     with torch.inference_mode(mode=(not downsampler.requires_grad)):
-
         sample_ids = list(range(10))
         data = torch.randn(10, 10)
         target = torch.randint(0, 10, (10,))

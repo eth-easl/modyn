@@ -1,6 +1,5 @@
-from typing import Optional, Union
-
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
@@ -10,9 +9,10 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils.ir
 
 
 class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
-    """
-    Method adapted from Prioritized Training on Points that are Learnable, Worth Learning, and Not Yet Learnt
-    (Sören Mindermann+, 2022). https://arxiv.org/abs/2206.07137
+    """Method adapted from Prioritized Training on Points that are Learnable,
+    Worth Learning, and Not Yet Learnt (Sören Mindermann+, 2022).
+
+    https://arxiv.org/abs/2206.07137
     """
 
     def __init__(
@@ -46,10 +46,10 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         training_loss = self.per_sample_loss_fct(forward_output, target).detach()
         self.index_sampleid_map += sample_ids

@@ -19,12 +19,12 @@ dependencies:
   - tqdm
   - conda-forge::enlighten
   - pip:
-    - grpcio>=1.63
-    - protobuf==5.26.*
-    - types-protobuf==5.26.*
-    - evidently==0.4.27
-    - alibi-detect==0.12.*
-    - tenacity
+      - grpcio>=1.63
+      - protobuf==5.26.*
+      - types-protobuf==5.26.*
+      - evidently==0.4.27
+      - alibi-detect==0.12.*
+      - tenacity
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0

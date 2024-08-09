@@ -2,9 +2,9 @@ import gc
 import json
 import logging
 import pathlib
-from typing import Optional
 
 import torch
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Pipeline, TrainedModel
 from modyn.model_storage.internal.utils import ModelStoragePolicy
@@ -14,14 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 class ModelStorageManager:
-    """
-    Class used as manager of the model storage component. Implements all model storage related functionalities.
+    """Class used as manager of the model storage component.
+
+    Implements all model storage related functionalities.
     """
 
     def __init__(self, modyn_config: dict, storage_dir: pathlib.Path, ftp_dir: pathlib.Path):
-        """
-        Constructor of the model storage manager. It establishes a connection to the metadata database in order
-        to store information related to the trained models.
+        """Constructor of the model storage manager. It establishes a
+        connection to the metadata database in order to store information
+        related to the trained models.
 
         Args:
             modyn_config: the modyn configuration.
@@ -33,10 +34,11 @@ class ModelStorageManager:
         self._ftp_dir = ftp_dir
 
     def store_model(self, pipeline_id: int, trigger_id: int, checkpoint_path: pathlib.Path) -> int:
-        """
-        Store the trained model contained in the checkpoint file to disk. It uses the model storage policy that is
-        specified for the pipeline. Depending on the trigger id, it is either stored fully (according to full model
-        strategy) or incrementally by using the incremental model strategy.
+        """Store the trained model contained in the checkpoint file to disk. It
+        uses the model storage policy that is specified for the pipeline.
+        Depending on the trigger id, it is either stored fully (according to
+        full model strategy) or incrementally by using the incremental model
+        strategy.
 
         Args:
             pipeline_id: the pipeline identifier for the model.
@@ -87,9 +89,8 @@ class ModelStorageManager:
         state_dict: dict,
         model_path: pathlib.Path,
         policy: ModelStoragePolicy,
-    ) -> Optional[int]:
-        """
-        Handle the new model according to the model storage policy.
+    ) -> int | None:
+        """Handle the new model according to the model storage policy.
 
         Args:
             pipeline_id: the pipeline, to which the model belongs.
@@ -104,7 +105,7 @@ class ModelStorageManager:
         if policy.incremental_model_strategy and (
             policy.full_model_interval is None or trigger_id % policy.full_model_interval != 0
         ):
-            parent_model_id: Optional[int] = self._determine_parent_model_id(pipeline_id, trigger_id)
+            parent_model_id: int | None = self._determine_parent_model_id(pipeline_id, trigger_id)
             if parent_model_id is not None:
                 # load model state of the parent model.
                 parent_model_state = self._reconstruct_model_state(parent_model_id, policy)
@@ -127,10 +128,10 @@ class ModelStorageManager:
         return None
 
     def _reconstruct_model_state(self, model_id: int, policy: ModelStoragePolicy) -> dict:
-        """
-        Reconstruct a given model according to the model storage policy.
-        The function recursively calls itself whenever the model is stored as a delta.
-        Otherwise it is stored according to a full model strategy and the model state can be retrieved.
+        """Reconstruct a given model according to the model storage policy. The
+        function recursively calls itself whenever the model is stored as a
+        delta. Otherwise it is stored according to a full model strategy and
+        the model state can be retrieved.
 
         Args:
             model_id: the identifier of the model to be reconstructed.
@@ -158,8 +159,7 @@ class ModelStorageManager:
         return policy.incremental_model_strategy.load_model(model_state, self._storage_dir / model.model_path)
 
     def _get_base_model_state(self, pipeline_id: int) -> dict:
-        """
-        Get a randomly initialized model associated with the pipeline.
+        """Get a randomly initialized model associated with the pipeline.
 
         Args:
             pipeline_id: the involved pipeline.
@@ -177,10 +177,10 @@ class ModelStorageManager:
         device = "cuda:1" if torch.cuda.is_available() else "cpu"
         return model_handler(json.loads(model_config), device, amp).model.state_dict()
 
-    def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> Optional[int]:
-        """
-        Determines the id of the parent model given the trigger id of a pipeline. Usually, the last fully stored
-        model is identified as such. The function returns None whenever no parent model can be found.
+    def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> int | None:
+        """Determines the id of the parent model given the trigger id of a
+        pipeline. Usually, the last fully stored model is identified as such.
+        The function returns None whenever no parent model can be found.
 
         Args:
             pipeline_id: the pipeline that generated the model.
@@ -205,9 +205,8 @@ class ModelStorageManager:
         # otherwise return the parent model of the previous model.
         return previous_model.parent_model
 
-    def load_model(self, model_id: int, metadata: bool) -> Optional[dict]:
-        """
-        Loads a given model and optionally, also appends the metadata.
+    def load_model(self, model_id: int, metadata: bool) -> dict | None:
+        """Loads a given model and optionally, also appends the metadata.
 
         Args:
             model_id: the model identifier of the model.
@@ -217,7 +216,7 @@ class ModelStorageManager:
             Optional[dict]: dictionary containing the model state and metadata if the model exists.
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
+            model: TrainedModel | None = database.session.get(TrainedModel, model_id)
             if model is None:
                 logger.error(f"Model {model_id} does not exist.")
                 return None
@@ -237,8 +236,8 @@ class ModelStorageManager:
         return model_dict
 
     def delete_model(self, model_id: int) -> bool:
-        """
-        Deletes a given model id. Only works, if all depending models (children) are deleted.
+        """Deletes a given model id. Only works, if all depending models
+        (children) are deleted.
 
         Args:
             model_id: the identifier of the model.
@@ -247,7 +246,7 @@ class ModelStorageManager:
             bool: True, whenever deletion was successful.
         """
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
+            model: TrainedModel | None = database.session.get(TrainedModel, model_id)
 
             if model is None:
                 logger.error(f"Trained model {model_id} was not found.")
@@ -268,8 +267,7 @@ class ModelStorageManager:
         return True
 
     def get_model_storage_policy(self, pipeline_id: int) -> ModelStoragePolicy:
-        """
-        Returns the model storage policy associated with the pipeline.
+        """Returns the model storage policy associated with the pipeline.
 
         Args:
             pipeline_id: the id of the pipeline, from which the policy is taken.

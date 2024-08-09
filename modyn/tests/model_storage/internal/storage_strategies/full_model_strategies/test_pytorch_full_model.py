@@ -2,6 +2,7 @@ import pathlib
 import tempfile
 
 import torch
+
 from modyn.model_storage.internal.storage_strategies.full_model_strategies import PyTorchFullModel
 
 

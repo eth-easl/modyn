@@ -1,20 +1,20 @@
 from dataclasses import dataclass
+from typing import get_args
 
 import pandas as pd
 import plotly.express as px
+from dash import Input, Output, callback, dcc, html
+from plotly import graph_objects as go
+
 from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import OPTIONAL_EVAL_AGGREGATION_FUNCTION, df_aggregate_eval_metric
-from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from plotly import graph_objects as go
-from typing_extensions import get_args
 
 
 @dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_all: pd.DataFrame
     df_eval_single: pd.DataFrame

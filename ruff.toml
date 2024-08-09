@@ -8,8 +8,6 @@ exclude = [
     "*_grpc.py",
     "*_pb2.py",
     "**/generated/*",
-    "./benchmark/*",
-    "./analytics/plotting/*",
     "./build/*",
     "./libbuild/*",
     "./clang-tidy-build/*",
@@ -18,10 +16,7 @@ ignore = [
   "N803", # https://docs.astral.sh/ruff/rules/invalid-argument-name
   "N806", # https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function
   "E501", # https://docs.astral.sh/ruff/faq/#is-the-ruff-linter-compatible-with-black
-
-  # TODO: enable in followup PRs
-  "UP",
-  "I",
+  "E722", # https://docs.astral.sh/ruff/rules/bare-except
 ]
 select = [
   "F",  # pyflakes

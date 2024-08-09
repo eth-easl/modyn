@@ -1,8 +1,7 @@
-
 pipeline:
-    name: criteo_16_6_2_100000
-    description: DLRM/Criteo Training.
-    version: 1.0.0
+  name: criteo_16_6_2_100000
+  description: DLRM/Criteo Training.
+  version: 1.0.0
 model:
   id: DLRM
   config: # these parameters are consistent with the parameters used for the experiments shown in the NVIDIA repo:  https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM

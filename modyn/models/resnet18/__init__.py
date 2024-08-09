@@ -1,6 +1,4 @@
-"""
-ResNet18
-"""
+"""ResNet18."""
 
 import os
 

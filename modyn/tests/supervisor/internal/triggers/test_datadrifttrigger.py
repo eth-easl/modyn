@@ -1,19 +1,28 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import os
 import pathlib
-from typing import Optional
 from unittest.mock import patch
 
+from pytest import fixture
+
 from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
-from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
-from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy, TimeWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.aggregation import (
+    MajorityVoteDriftAggregationStrategy,
+)
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectMmdDriftMetric,
+)
+from modyn.config.schema.pipeline.trigger.drift.config import (
+    AmountWindowingStrategy,
+    TimeWindowingStrategy,
+)
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
+    EmbeddingEncoderDownloader,
+)
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from pytest import fixture
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
@@ -56,7 +65,7 @@ def noop_dataloader_info_constructor_mock(
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
     shuffle: bool,
-    tokenizer: Optional[None],
+    tokenizer: None,
 ) -> None:
     pass
 
@@ -69,7 +78,11 @@ def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     assert trigger.config.windowing_strategy.id == "AmountWindowingStrategy"
 
 
-@patch.object(EmbeddingEncoderDownloader, "__init__", noop_embedding_encoder_downloader_constructor_mock)
+@patch.object(
+    EmbeddingEncoderDownloader,
+    "__init__",
+    noop_embedding_encoder_downloader_constructor_mock,
+)
 @patch.object(DataLoaderInfo, "__init__", noop_dataloader_info_constructor_mock)
 def test_init_trigger(
     dummy_pipeline_config: ModynPipelineConfig,
@@ -155,7 +168,9 @@ def test_inform_no_drift(test_detect_no_drift, drift_trigger_config: DataDriftTr
     assert num_triggers == 1
 
 
-def test_update_current_window_amount_strategy(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_update_current_window_amount_strategy(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount=3)
     drift_trigger_config.detection_interval_data_points = 100
     trigger = DataDriftTrigger(drift_trigger_config)
@@ -170,7 +185,9 @@ def test_update_current_window_amount_strategy(drift_trigger_config: DataDriftTr
     assert trigger._current_window[0][0] == 2, "Oldest data point should be dropped."
 
 
-def test_time_windowing_strategy_update(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_time_windowing_strategy_update(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.windowing_strategy = TimeWindowingStrategy(limit="10s")
     trigger = DataDriftTrigger(drift_trigger_config)
 
@@ -186,7 +203,9 @@ def test_time_windowing_strategy_update(drift_trigger_config: DataDriftTriggerCo
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
-def test_update_current_window_amount_strategy_cross_inform(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_update_current_window_amount_strategy_cross_inform(
+    drift_trigger_config: DataDriftTriggerConfig,
+) -> None:
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount=5)
     drift_trigger_config.detection_interval_data_points = 3
     # TODO(MaxiBoether/robinholzi: If this is not set,
@@ -196,7 +215,17 @@ def test_update_current_window_amount_strategy_cross_inform(drift_trigger_config
     trigger = DataDriftTrigger(drift_trigger_config)
 
     assert list(
-        trigger.inform([(1, 100, 1), (2, 100, 1), (3, 100, 1), (4, 100, 1), (5, 100, 1), (6, 100, 1), (7, 100, 1)])
+        trigger.inform(
+            [
+                (1, 100, 1),
+                (2, 100, 1),
+                (3, 100, 1),
+                (4, 100, 1),
+                (5, 100, 1),
+                (6, 100, 1),
+                (7, 100, 1),
+            ]
+        )
     ) == [2, 5]
     assert len(trigger._current_window) == 5
     assert trigger._total_items_in_current_window == 7

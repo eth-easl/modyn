@@ -1,18 +1,18 @@
 import os
 import pickle
-from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
 import torch
+from torch.utils.data import Dataset
+from tqdm import tqdm
+
 from benchmark.wildtime_benchmarks.benchmark_utils import (
     create_timestamp,
     download_if_not_exists,
     setup_argparser_wildtime,
     setup_logger,
 )
-from torch.utils.data import Dataset
-from tqdm import tqdm
 
 logger = setup_logger()
 
@@ -20,11 +20,13 @@ logger = setup_logger()
 def main():
     parser = setup_argparser_wildtime("Huffpost", all_arg=False)
     parser.add_argument(
-        "--mode", choices=["train", "all", "train_and_test"], help=(
+        "--mode",
+        choices=["train", "all", "train_and_test"],
+        help=(
             "Weather to store only training data (`train`), training and testing (`train_and_test`), or merge "
             "and only have one split (`all`)"
-        )
-    )    
+        ),
+    )
     args = parser.parse_args()
 
     logger.info(f"Downloading data to {args.dir}")
@@ -60,12 +62,8 @@ class HuffpostDownloader(Dataset):
 
     def store_data(self, mode: Literal["train", "all", "train_and_test"], add_final_dummy_year: bool) -> None:
         for year in tqdm(self._dataset):
-            year_timestamp = create_timestamp(year=1970, month=1, day=year-2011)
-            year_rows: dict[str, list] = {
-                "train": [],
-                "test": [],
-                "all": []
-            }
+            year_timestamp = create_timestamp(year=1970, month=1, day=year - 2011)
+            year_rows: dict[str, list] = {"train": [], "test": [], "all": []}
             splits = [0, 1]
             for split in splits:
                 if mode == "train" and split != 0:
@@ -110,19 +108,20 @@ class HuffpostDownloader(Dataset):
                 os.utime(text_file, (year_timestamp, year_timestamp))
 
         if add_final_dummy_year:
-            data_directories = [self.path] if mode == "all" else (
-                [self.path / "train"] + ([self.path / "test"] if mode == "train_and_test" else [])
+            data_directories = (
+                [self.path]
+                if mode == "all"
+                else ([self.path / "train"] + ([self.path / "test"] if mode == "train_and_test" else []))
             )
             for data_dir in data_directories:
                 dummy_year = year + 1
-                year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2011)
+                year_timestamp = create_timestamp(year=1970, month=1, day=dummy_year - 2011)
                 text_file = data_dir / f"{dummy_year}.csv"
                 with open(text_file, "w", encoding="utf-8") as f:
                     f.write("\n".join(["dummy\t0"]))
 
                 # set timestamp
                 os.utime(text_file, (year_timestamp, year_timestamp))
-
 
         os.remove(os.path.join(self.path, "huffpost.pkl"))
 

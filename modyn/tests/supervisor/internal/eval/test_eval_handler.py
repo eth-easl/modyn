@@ -1,6 +1,7 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 import pandas as pd
+
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
 from modyn.config.schema.pipeline.evaluation.strategy.static import StaticEvalStrategyConfig
@@ -174,7 +175,7 @@ def test_get_eval_requests_after_pipeline() -> None:
 
 
 def test_between_two_trigger_after_pipeline() -> None:
-    """Let's check for off-by-one errors"""
+    """Let's check for off-by-one errors."""
 
     trigger_dataframe = pd.DataFrame(
         {

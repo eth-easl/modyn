@@ -1,19 +1,17 @@
-from typing import Optional
-
 from modyn.utils import current_time_millis
 
 
 class Stopwatch:
     """Stopwatch to be used in benchmarking.
 
-    Using a stopwatch, you can do several named measurements using a start/stop
-    interface and export all measurements as a dictionary.
+    Using a stopwatch, you can do several named measurements using a
+    start/stop interface and export all measurements as a dictionary.
     """
 
     def __init__(self):
         self.measurements: dict[str, int] = {}  # Unit is milliseconds
         self._running_measurements: dict[str, int] = {}
-        self._last_started_measurement: Optional[str] = None
+        self._last_started_measurement: str | None = None
 
     def start(self, name: str, resume: bool = False, overwrite: bool = False) -> None:
         assert not (resume and overwrite), "Must either resume or overwrite"
@@ -26,7 +24,7 @@ class Stopwatch:
         self._running_measurements[name] = current_time_millis()
         self._last_started_measurement = name
 
-    def stop(self, name: Optional[str] = None) -> int:
+    def stop(self, name: str | None = None) -> int:
         time = current_time_millis()
 
         if name is None:

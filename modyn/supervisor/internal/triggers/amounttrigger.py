@@ -1,4 +1,4 @@
-from typing import Generator
+from collections.abc import Generator
 
 from modyn.config.schema.pipeline import DataAmountTriggerConfig
 from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog

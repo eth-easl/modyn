@@ -4,11 +4,11 @@ import os
 import pathlib
 import shutil
 import time
-from typing import Optional
 from unittest import mock
 from unittest.mock import patch
 
 import pytest
+
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig, SupervisorConfig
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -43,9 +43,9 @@ def noop_pipeline_executor_constructor_mock(
     pipeline_status_queue: mp.Queue,
     training_status_queue: mp.Queue,
     eval_status_queue: mp.Queue,
-    start_replay_at: Optional[int] = None,
-    stop_replay_at: Optional[int] = None,
-    maximum_triggers: Optional[int] = None,
+    start_replay_at: int | None = None,
+    stop_replay_at: int | None = None,
+    maximum_triggers: int | None = None,
 ) -> None:
     pass
 
@@ -83,9 +83,9 @@ class MockDatabaseConnection:
         selection_strategy: str,
         data_config: str,
         full_model_strategy: ModelStorageStrategyConfig,
-        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
-        full_model_interval: Optional[int] = None,
-        auxiliary_pipeline_id: Optional[int] = None,
+        incremental_model_strategy: ModelStorageStrategyConfig | None = None,
+        full_model_interval: int | None = None,
+        auxiliary_pipeline_id: int | None = None,
     ) -> int:
         pid = self.current_pipeline_id
         self.current_pipeline_id += 1

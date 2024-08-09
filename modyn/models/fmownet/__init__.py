@@ -1,6 +1,4 @@
-"""
-Densenet121 + linear layer
-"""
+"""Densenet121 + linear layer."""
 
 import os
 

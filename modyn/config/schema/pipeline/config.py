@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional, Self
+from typing import Self
+
+from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, model_validator
 
 from .data import DataConfig
 from .evaluation.config import EvaluationConfig
@@ -17,8 +18,8 @@ from .trigger import TriggerConfig
 
 class Pipeline(ModynBaseModel):
     name: str = Field(description="The name of the pipeline.")
-    description: Optional[str] = Field(None, description="The description of the pipeline.")
-    version: Optional[str] = Field(None, description="The version of the pipeline.")
+    description: str | None = Field(None, description="The description of the pipeline.")
+    version: str | None = Field(None, description="The version of the pipeline.")
 
 
 class ModynPipelineConfig(ModynBaseModel):

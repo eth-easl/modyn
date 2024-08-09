@@ -1,9 +1,10 @@
 # Utils file containing functions in order to simplify FTP server interactions.
 import logging
 import pathlib
+from collections.abc import Callable
 from ftplib import FTP
 from logging import Logger
-from typing import Any, Callable, Optional
+from typing import Any
 
 from modyn.utils import EMIT_MESSAGE_PERCENTAGES, calculate_checksum
 
@@ -15,10 +16,11 @@ def download_file(
     password: str,
     remote_file_path: pathlib.Path,
     local_file_path: pathlib.Path,
-    callback: Optional[Callable[[float], None]] = None,
-    checksum: Optional[bytes] = None,
+    callback: Callable[[float], None] | None = None,
+    checksum: bytes | None = None,
 ) -> bool:
-    """Downloads a file from a given host to the local filesystem. If the file already exists, it gets overwritten.
+    """Downloads a file from a given host to the local filesystem. If the file
+    already exists, it gets overwritten.
 
     Args:
         hostname: the host from which to download the file.
@@ -76,7 +78,6 @@ def upload_file(
         remote_file_path: path on the remote ftp server to which the file gets written.
 
     Returns:
-
     """
     ftp = FTP()
     ftp.connect(hostname, port, timeout=5 * 60)
@@ -100,7 +101,6 @@ def delete_file(hostname: str, port: int, user: str, password: str, remote_file_
         remote_file_path: path to the file on the remote ftp server which should be deleted.
 
     Returns:
-
     """
     ftp = FTP()
     ftp.connect(hostname, port, timeout=3)
@@ -137,7 +137,7 @@ def download_trained_model(
     checksum: bytes,
     identifier: int,
     base_directory: pathlib.Path,
-) -> Optional[pathlib.Path]:
+) -> pathlib.Path | None:
     model_path = base_directory / f"trained_model_{identifier}.modyn"
 
     tries = 3

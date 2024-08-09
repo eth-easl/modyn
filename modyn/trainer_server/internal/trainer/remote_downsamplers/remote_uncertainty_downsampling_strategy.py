@@ -1,7 +1,8 @@
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -56,10 +57,10 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         assert embedding is None
 
@@ -81,9 +82,10 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
             preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
             preds_argmax = torch.argmax(preds, dim=1)  # gets top class
             max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
-            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = (
-                -1.0
-            )  # remove highest class from softmax output
+
+            # remove highest class from softmax output
+            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
+
             preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
             second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
             scores = (max_preds - second_max_preds).cpu().numpy()
@@ -93,10 +95,10 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         return scores
 
     def inform_end_of_current_label(self) -> None:
-        """
-        Per-class selection. Here the top-k% samples of the current classes are selected and kept in
-        already_selected_ids
+        """Per-class selection.
 
+        Here the top-k% samples of the current classes are selected and
+        kept in already_selected_ids
         """
         assert self.balance
         # select the samples

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -24,12 +23,12 @@ class AbstractDatabaseConnection(ABC):
         self.session: Session = None
         self.engine: Engine = None
         self.url = None
-        self.drivername: Optional[str] = None
-        self.username: Optional[str] = None
-        self.password: Optional[str] = None
-        self.host: Optional[str] = None
-        self.port: Optional[int] = None
-        self.database: Optional[str] = None
+        self.drivername: str | None = None
+        self.username: str | None = None
+        self.password: str | None = None
+        self.host: str | None = None
+        self.port: int | None = None
+        self.database: str | None = None
 
     def setup_connection(self) -> None:
         self.url = URL.create(

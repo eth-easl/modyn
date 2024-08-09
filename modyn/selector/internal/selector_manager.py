@@ -6,7 +6,9 @@ import shutil
 from multiprocessing import Manager
 from multiprocessing.managers import DictProxy
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
+from pydantic import TypeAdapter
 
 from modyn.config.schema.pipeline import SelectionStrategy as SelectionStrategyModel
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -14,7 +16,6 @@ from modyn.metadata_database.models.pipelines import Pipeline
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.selector import Selector
 from modyn.utils.utils import dynamic_module_import, is_directory_writable
-from pydantic import TypeAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class SelectorManager:
             return
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            pipeline: Optional[Pipeline] = database.session.get(Pipeline, pipeline_id)
+            pipeline: Pipeline | None = database.session.get(Pipeline, pipeline_id)
             if pipeline is None:
                 return
             logging.info(
@@ -100,10 +101,12 @@ class SelectorManager:
     def get_sample_keys_and_weights(
         self, pipeline_id: int, trigger_id: int, worker_id: int, partition_id: int
     ) -> list[tuple[int, float]]:
-        """
-        For a given pipeline, trigger, partition of that trigger, and worker, this function returns the subset of sample
-        keys to be queried from storage. It also returns the associated weight of each sample.
-        This weight can be used during training to support advanced strategies that want to weight the
+        """For a given pipeline, trigger, partition of that trigger, and
+        worker, this function returns the subset of sample keys to be queried
+        from storage. It also returns the associated weight of each sample.
+        This weight can be used during training to support advanced strategies
+        that want to weight the.
+
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
         by learning_rate * gradient, you would change the parameters by sample_weight * learning_rate * gradient.
 
@@ -120,9 +123,7 @@ class SelectorManager:
         if worker_id < 0 or worker_id >= num_workers:
             raise ValueError(f"Training {pipeline_id} has {num_workers} workers, but queried for worker {worker_id}!")
 
-        return self._selectors[pipeline_id].get_sample_keys_and_weights(
-            trigger_id, worker_id, partition_id
-        )  # type: ignore
+        return self._selectors[pipeline_id].get_sample_keys_and_weights(trigger_id, worker_id, partition_id)  # type: ignore
 
     def inform_data(
         self, pipeline_id: int, keys: list[int], timestamps: list[int], labels: list[int]

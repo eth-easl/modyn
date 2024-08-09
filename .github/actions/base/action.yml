@@ -1,9 +1,9 @@
 runs:
   using: "composite"
-  steps: 
+  steps:
     - name: Setup Docker buildx
       uses: docker/setup-buildx-action@v2
-    
+
     # Necessary to e.g. patch which container image is being used
     - name: Apply initial setup
       run: |
@@ -30,5 +30,3 @@ runs:
       run: |
         docker build -t modynbase -f docker/Base/Dockerfile .
       shell: bash
-
-

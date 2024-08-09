@@ -55,5 +55,10 @@ app.layout = html.Div(
     style={"padding": "50px 100px"},
 )
 
-if __name__ == "__main__":
+
+def main() -> None:
     app.run(debug=True, port=12312)
+
+
+if __name__ == "__main__":
+    main()

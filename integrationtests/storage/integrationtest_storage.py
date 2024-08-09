@@ -6,11 +6,13 @@ import pathlib
 import random
 import shutil
 import time
-from typing import Iterable
+from collections.abc import Iterable
 
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import yaml
+from PIL import Image
+
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from integrationtests.utils import MODYN_CONFIG_FILE, MODYN_DATASET_PATH
 from modyn.storage.internal.grpc.generated.storage_pb2 import (
     DatasetAvailableRequest,
@@ -29,7 +31,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_connection_established
 from modyn.utils.utils import flatten
-from PIL import Image
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
@@ -49,7 +50,7 @@ IMAGE_UPDATED_TIME_STAMPS = []
 
 
 def get_modyn_config() -> dict:
-    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config

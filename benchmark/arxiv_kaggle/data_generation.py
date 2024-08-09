@@ -5,14 +5,15 @@ from typing import Annotated, Any
 
 import pandas as pd
 import typer
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+
 from benchmark.utils.time_resolution_binning import (
     HELP_RESOLUTION,
     bin_dataframe_wrt_time_resolution,
     df_to_csv_with_timestamp,
 )
 from modyn.const.types import TimeResolution
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 
 
 class ArxivKaggleDataGenerator:

@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
-from modyn.database import PartitionByMeta
-from modyn.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import BigInteger, Boolean, Column, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm.session import Session
+
+from modyn.database import PartitionByMeta
+from modyn.metadata_database.metadata_base import MetadataBase
 
 BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
@@ -109,11 +110,11 @@ class SelectorStateMetadata(
         instance: Any,  # This is the class itself
         partition_suffix: str,
         partition_stmt: str,
-        subpartition_by: Optional[str],
-        subpartition_type: Optional[str],
+        subpartition_by: str | None,
+        subpartition_type: str | None,
         session: Session,
         engine: Engine,
-    ) -> Optional[PartitionByMeta]:
+    ) -> PartitionByMeta | None:
         """Create a partition for the SelectorStateMetadata table."""
         #  If sqlite, do not partition
         if session.bind.dialect.name == "sqlite":

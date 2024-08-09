@@ -2,16 +2,16 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_leaf: pd.DataFrame
 
@@ -32,8 +32,8 @@ def gen_figure(
     nbins: int = 65,
     patch_yearbook: bool = False,
 ) -> go.Figure:
-    """
-    Create the cost over time figure with barplot or histogram. Histogram has nice binning while barplot is precise.
+    """Create the cost over time figure with barplot or histogram. Histogram
+    has nice binning while barplot is precise.
 
     Args:
         page: Page name where the plot is displayed

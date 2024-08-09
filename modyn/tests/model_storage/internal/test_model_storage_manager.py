@@ -8,6 +8,7 @@ from zipfile import ZIP_DEFLATED
 
 import pytest
 import torch
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
 from modyn.metadata_database.utils import ModelStorageStrategyConfig

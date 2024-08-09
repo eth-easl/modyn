@@ -1,22 +1,26 @@
 import ctypes
 import logging
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from sys import platform
-from typing import Any, Iterable, Optional
+from typing import Any
 
 import numpy as np
+from numpy.ctypeslib import ndpointer
+
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
-from numpy.ctypeslib import ndpointer
 
 logger = logging.getLogger(__name__)
 
 
 class LocalStorageBackend(AbstractStorageBackend):
-    """
-    This class is used to store and retrieve samples from the local file system. The samples are stored
-    in the directory specified in the modyn config file.
+    """This class is used to store and retrieve samples from the local file
+    system.
+
+    The samples are stored in the directory specified in the modyn
+    config file.
     """
 
     def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
@@ -70,7 +74,8 @@ class LocalStorageBackend(AbstractStorageBackend):
             raise RuntimeError(f"Cannot find LocalStorageBackend library at {path}")
 
     def _parse_files(self, file_paths: list, data_lengths: list, data_offsets: list) -> np.ndarray:
-        """Read data from multiple files. Reading supports offset and length per file.
+        """Read data from multiple files. Reading supports offset and length
+        per file.
 
         Args:
             file_paths (list): File paths to write to.
@@ -209,7 +214,7 @@ class LocalStorageBackend(AbstractStorageBackend):
         log["persist_samples_time"] = swt.stop()
         return log
 
-    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
+    def get_available_labels(self, next_trigger_id: int, tail_triggers: int | None = None) -> list[int]:
         root = self._modyn_config["selector"]["local_storage_directory"]
 
         available_labels = set()

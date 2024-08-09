@@ -1,10 +1,11 @@
 from functools import cached_property
 from typing import Literal
 
+from pydantic import Field
+
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import Field
 
 
 class TimeTriggerConfig(ModynBaseModel):

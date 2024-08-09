@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
+
+from sqlalchemy import func
 
 from modyn.database.abstract_database_connection import AbstractDatabaseConnection
 from modyn.metadata_database.metadata_base import MetadataBase
@@ -11,7 +12,6 @@ from modyn.metadata_database.models import Pipeline
 from modyn.metadata_database.models.selector_state_metadata import SelectorStateMetadata
 from modyn.metadata_database.models.trained_models import TrainedModel
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
-from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +58,14 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         return self
 
     def create_tables(self) -> None:
-        """
-        Create all tables. Each table is represented by a class.
+        """Create all tables. Each table is represented by a class.
 
-        All classes that inherit from Base are mapped to tables
-        which are created in the database if they do not exist.
+        All classes that inherit from Base are mapped to tables which
+        are created in the database if they do not exist.
 
-        The metadata is a collection of Table objects that inherit from Base and their associated
-        schema constructs (such as Column objects, ForeignKey objects, and so on).
+        The metadata is a collection of Table objects that inherit from
+        Base and their associated schema constructs (such as Column
+        objects, ForeignKey objects, and so on).
         """
         MetadataBase.metadata.create_all(self.engine)
 
@@ -78,9 +78,9 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         selection_strategy: str,
         data_config: str,
         full_model_strategy: ModelStorageStrategyConfig,
-        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None,
-        full_model_interval: Optional[int] = None,
-        auxiliary_pipeline_id: Optional[int] = None,
+        incremental_model_strategy: ModelStorageStrategyConfig | None = None,
+        full_model_interval: int | None = None,
+        auxiliary_pipeline_id: int | None = None,
     ) -> int:
         """Register a new pipeline in the database.
 
@@ -144,10 +144,11 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
         trigger_id: int,
         model_path: str,
         metadata_path: str,
-        parent_model: Optional[int] = None,
+        parent_model: int | None = None,
     ) -> int:
-        """Add a trained model to the database. Whenever the parent model is not specified, the model is expected to be
-        fully stored, i.e., by applying a full model strategy.
+        """Add a trained model to the database. Whenever the parent model is
+        not specified, the model is expected to be fully stored, i.e., by
+        applying a full model strategy.
 
         Args:
             pipeline_id: id of the pipeline it was created from.

@@ -1,7 +1,8 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
+
+from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, model_validator
 
 
 class _AlibiDetectBaseDriftMetric(ModynBaseModel):
@@ -70,6 +71,6 @@ class AlibiDetectCVMDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrect
 
 
 AlibiDetectDriftMetric = Annotated[
-    Union[AlibiDetectMmdDriftMetric, AlibiDetectKSDriftMetric, AlibiDetectCVMDriftMetric],
+    AlibiDetectMmdDriftMetric | AlibiDetectKSDriftMetric | AlibiDetectCVMDriftMetric,
     Field(discriminator="id"),
 ]

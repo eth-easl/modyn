@@ -2,6 +2,7 @@ from unittest.mock import ANY, Mock, patch
 
 import pytest
 import torch
+
 from modyn.config import ModynConfig
 from modyn.models import Dummy
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (

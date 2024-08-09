@@ -1,6 +1,7 @@
 import os
 
 import torch
+
 from modyn.trainer_server.internal.dataset.local_dataset_writer import LocalDatasetWriter
 
 OFFLINE_DATASET_PATH = "/tmp/offline_dataset"

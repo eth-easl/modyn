@@ -1,6 +1,4 @@
-"""
-This module contains classes shared among several components.
-"""
+"""This module contains classes shared among several components."""
 
 import os
 

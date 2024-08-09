@@ -1,7 +1,5 @@
-"""
-This module contains extensions of the MetadataProcessorStrategy class that
-implement custom processing strategies.
-"""
+"""This module contains extensions of the MetadataProcessorStrategy class that
+implement custom processing strategies."""
 
 import os
 

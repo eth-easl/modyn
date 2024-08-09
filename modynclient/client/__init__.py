@@ -1,5 +1,6 @@
-"""Client module. The client communicates with the modyn supervisor server.
+"""Client module.
 
+The client communicates with the modyn supervisor server.
 """
 
 import os

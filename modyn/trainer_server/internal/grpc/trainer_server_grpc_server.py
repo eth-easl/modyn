@@ -5,6 +5,7 @@ import pathlib
 from concurrent import futures
 
 import grpc
+
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import add_TrainerServerServicer_to_server
 from modyn.trainer_server.internal.grpc.trainer_server_grpc_servicer import TrainerServerGRPCServicer
 from modyn.utils import MAX_MESSAGE_SIZE

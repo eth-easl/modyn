@@ -2,9 +2,9 @@ import json
 import pathlib
 import shutil
 import time
-from typing import Tuple
 
 import torch
+
 from integrationtests.utils import MODYN_MODELS_PATH, ImageDatasetHelper, connect_to_server, get_modyn_config
 from modyn.common.ftp import delete_file, upload_file
 from modyn.config.schema.pipeline import AccuracyMetricConfig
@@ -57,7 +57,7 @@ def wait_for_evaluation(evaluation_id: int, evaluator: EvaluatorStub) -> Evaluat
     return evaluator.get_evaluation_result(req)
 
 
-def prepare_dataset(dataset_helper: ImageDatasetHelper) -> Tuple[int, int, int, int, int]:
+def prepare_dataset(dataset_helper: ImageDatasetHelper) -> tuple[int, int, int, int, int]:
     dataset_helper.add_images_to_dataset(start_number=0, end_number=5)
     split_ts1 = int(time.time()) + 1
     # we want to make sure the split_ts properly splits the dataset

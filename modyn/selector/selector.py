@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
+
 from modyn.common.trigger_sample import ArrayWrapper
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models.triggers import Trigger
@@ -12,9 +13,8 @@ from modyn.utils.utils import flatten, get_partition_for_worker
 
 
 class Selector:
-    """
-    This class implements the functionality of the Selector for a concrete pipeline.
-    """
+    """This class implements the functionality of the Selector for a concrete
+    pipeline."""
 
     def __init__(
         self,
@@ -30,12 +30,12 @@ class Selector:
         self._modyn_config = modyn_config
 
         # TODO(#308): Share partition cache between selector instances
-        self._trigger_cache: Dict[int, list[ArrayWrapper]] = {}
+        self._trigger_cache: dict[int, list[ArrayWrapper]] = {}
         self._maximum_keys_in_cache = cache_size
         self._current_keys_in_cache = 0
 
-        self._trigger_size_cache: Dict[int, int] = {}
-        self._trigger_partition_cache: Dict[int, int] = {}
+        self._trigger_size_cache: dict[int, int] = {}
+        self._trigger_partition_cache: dict[int, int] = {}
 
     def _populate_trigger_if_exists(self, trigger_id: int) -> None:
         if trigger_id in self._trigger_size_cache:
@@ -46,7 +46,7 @@ class Selector:
             return
 
         with MetadataDatabaseConnection(self._modyn_config) as database:
-            trigger: Optional[Trigger] = database.session.get(Trigger, (trigger_id, self._pipeline_id))
+            trigger: Trigger | None = database.session.get(Trigger, (trigger_id, self._pipeline_id))
             if trigger is None:
                 return
 
@@ -55,11 +55,12 @@ class Selector:
 
     def get_sample_keys_and_weights(
         self, trigger_id: int, worker_id: int, partition_id: int
-    ) -> Union[np.ndarray, ArrayWrapper]:
-        """
-        For a given trigger and worker, this function returns the subset of sample
-        keys to be queried from storage. It also returns the associated weight of each sample.
-        This weight can be used during training to support advanced strategies that want to weight the
+    ) -> np.ndarray | ArrayWrapper:
+        """For a given trigger and worker, this function returns the subset of
+        sample keys to be queried from storage. It also returns the associated
+        weight of each sample. This weight can be used during training to
+        support advanced strategies that want to weight the.
+
         gradient descent step for different samples differently. Explicitly, instead of changing parameters
         by learning_rate * gradient, you would change the parameters by sample_weight * learning_rate * gradient.
 

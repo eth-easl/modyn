@@ -4,10 +4,10 @@ import json
 import logging
 import pathlib
 import shutil
-from typing import Optional, Tuple
 
 import grpc
 import torch
+
 from integrationtests.utils import MODYN_MODELS_PATH, get_modyn_config
 from modyn.common.ftp import delete_file, download_trained_model, upload_file
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -81,9 +81,9 @@ def delete_dummy_files_from_trainer(config: dict):
 def insert_triggers_into_database(
     modyn_config: dict,
     full_strategy: ModelStorageStrategyConfig,
-    inc_strategy: Optional[ModelStorageStrategyConfig],
-    full_model_interval: Optional[int],
-) -> Tuple[int, int, int]:
+    inc_strategy: ModelStorageStrategyConfig | None,
+    full_model_interval: int | None,
+) -> tuple[int, int, int]:
     parent_trigger_id = 0
     child_trigger_id = 1
     with MetadataDatabaseConnection(modyn_config) as database:
@@ -182,8 +182,8 @@ def download_and_check_model(
 def test_model_storage(
     modyn_config: dict,
     full_strategy: ModelStorageStrategyConfig,
-    inc_strategy: Optional[ModelStorageStrategyConfig],
-    full_model_interval: Optional[int],
+    inc_strategy: ModelStorageStrategyConfig | None,
+    full_model_interval: int | None,
 ):
     # register pipeline and trigger
     pipeline_id, parent_trigger, child_trigger = insert_triggers_into_database(

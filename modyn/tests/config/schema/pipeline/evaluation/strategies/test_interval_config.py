@@ -1,7 +1,8 @@
 import pytest
+from pydantic import TypeAdapter, ValidationError
+
 from modyn.config.schema.pipeline import EvaluationConfig
 from modyn.config.schema.pipeline.evaluation.strategy._interval import _IntervalEvalStrategyConfig
-from pydantic import TypeAdapter, ValidationError
 
 VALID_INTERVALS = [
     ("[-inf;+inf]", "-inf", "d", True, "+inf", "d", True),
@@ -18,7 +19,8 @@ VALID_INTERVALS = [
     ("[ +10s, +20m)", "+10", "s", True, "+20", "m", False),
     ("( +10s, +20m)", "+10", "s", False, "+20", "m", False),
 ]
-"""interval string, expected: left, left_unit, left_bound_inclusive, right, right_unit, right_bound_inclusive"""
+"""Interval string, expected: left, left_unit, left_bound_inclusive, right,
+right_unit, right_bound_inclusive."""
 
 
 @pytest.mark.parametrize(

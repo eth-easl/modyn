@@ -8,6 +8,7 @@ import pathlib
 
 import grpc
 import torch
+
 from modyn.common.ftp.ftp_utils import download_file, get_pretrained_model_callback
 from modyn.model_storage.internal import ModelStorageManager
 
@@ -45,7 +46,8 @@ class ModelStorageGRPCServicer(ModelStorageServicer):
         self.model_storage_manager = ModelStorageManager(self._config, self.storage_dir, self.ftp_dir)
 
     def RegisterModel(self, request: RegisterModelRequest, context: grpc.ServicerContext) -> RegisterModelResponse:
-        """Registers a new model at the model storage component by downloading it from a given server.
+        """Registers a new model at the model storage component by downloading
+        it from a given server.
 
         Args:
             request: the requested model.

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Self
+
+from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, model_validator
-from typing_extensions import Self
 
 from .downsampling_config import MultiDownsamplingConfig, NoDownsamplingConfig, SingleDownsamplingConfig
 
@@ -12,7 +12,10 @@ LimitResetStrategy = Literal["lastX", "sampleUAR"]
 
 
 class PresamplingConfig(ModynBaseModel):
-    """Config for the presampling strategy of CoresetStrategy. If missing, no presampling is applied."""
+    """Config for the presampling strategy of CoresetStrategy.
+
+    If missing, no presampling is applied.
+    """
 
     strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
         description="Strategy used to presample the data."
@@ -52,7 +55,7 @@ class _BaseSelectionStrategy(ModynBaseModel):
         description="Limits how many keys should be materialized at a time in the strategy.",
         ge=1,
     )
-    processor_type: Optional[str] = Field(
+    processor_type: str | None = Field(
         None,
         description="The name of the Metadata Processor strategy that should be used.",
     )
@@ -133,5 +136,5 @@ class CoresetStrategyConfig(_BaseSelectionStrategy):
 
 
 SelectionStrategy = Annotated[
-    Union[FreshnessSamplingStrategyConfig, NewDataStrategyConfig, CoresetStrategyConfig], Field(discriminator="name")
+    FreshnessSamplingStrategyConfig | NewDataStrategyConfig | CoresetStrategyConfig, Field(discriminator="name")
 ]

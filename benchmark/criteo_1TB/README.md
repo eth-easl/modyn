@@ -2,7 +2,6 @@
 
 This readme provides information about the Criteo dataset, the preprocessing steps used and additional useful information.
 
-
 ## <ins>Dataset Information</ins>
 
 The training dataset consists of a portion of Criteo’s traffic over a period of 24 days.
@@ -18,7 +17,6 @@ The rows are chronologically ordered.
 
 It can be downloaded from: https://labs.criteo.com/2013/12/download-terabyte-click-logs-2/
 
-
 ## <ins>Preprocessing for Modyn:</ins>
 
 The preprocessing is done for a couple of reasons.
@@ -30,8 +28,8 @@ Removing out the low frequency values by mapping them all to the same default va
 Also we want to convert the format into something that takes less space and is more efficiently read.
 The final preprocessing converts all the input files into binary files while re embedding the categorical values to filter out the low frequency values.
 
-
 ### Preprocessing Steps
+
 We build upon the preprocessing scripts found in the [NVIDIA Deep Learning Example repository](https://github.com/NVIDIA/DeepLearningExamples/blob/master/PyTorch/Recommendation/DLRM/README.md).
 The preprocessing in the NVIDIA repository is setup to embed the categorical features, as well as split the 24 days of data into a train, validation and test set.
 It uses the first 23 days as the train set and divides the data of the last day equally into the validation and the test sets.
@@ -42,6 +40,6 @@ Instead of train, test and validaiton, the data was processed and split into ind
 
 The steps to run the preprocessing as well as the patch to apply to the above scripts are present in the '/preprocessing/ folder.
 
-
 ### Output
+
 The preprocessed data is finally output as a set of binary files per day. For each day, there is an individual folder containing binary files. Each binary file contains a subset of the preprocessed samples.

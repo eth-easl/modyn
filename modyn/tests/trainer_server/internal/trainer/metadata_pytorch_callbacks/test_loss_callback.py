@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import torch
+
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.loss_callback import LossCallback
 from modyn.trainer_server.internal.utils.metric_type import MetricType

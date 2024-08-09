@@ -10,7 +10,6 @@ import math
 import os
 import random
 import time
-from typing import Tuple
 
 # unchanged functions are imported from the original test file
 from integrationtests.storage.integrationtest_storage import (
@@ -67,7 +66,7 @@ def create_random_csv_row(file: int, counter: int) -> str:
     return f"A{index}file{file},B{index}file{file},C{index}file{file},{counter}"
 
 
-def create_random_csv_file(file: int, counter: int) -> Tuple[str, list[str], int]:
+def create_random_csv_file(file: int, counter: int) -> tuple[str, list[str], int]:
     rows = []
     samples = []
     for repeat in range(25):

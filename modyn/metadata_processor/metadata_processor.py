@@ -1,11 +1,11 @@
 """Metadata Processor module.
 
-The Metadata Processor module contains all classes and functions related to the
-post-training processing of metadata collected by the GPU Node.
+The Metadata Processor module contains all classes and functions related
+to the post-training processing of metadata collected by the GPU Node.
 """
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 # pylint: disable-next=no-name-in-module
 from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501

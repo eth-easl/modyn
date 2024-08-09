@@ -1,4 +1,3 @@
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
 from modynclient.client import Client
@@ -70,9 +69,9 @@ def noop_constructor_mock(
     self,
     client_config: dict,
     pipeline_config: dict,
-    start_replay_at: Optional[int] = None,
-    stop_replay_at: Optional[int] = None,
-    maximum_triggers: Optional[int] = None,
+    start_replay_at: int | None = None,
+    stop_replay_at: int | None = None,
+    maximum_triggers: int | None = None,
 ) -> None:
     pass
 

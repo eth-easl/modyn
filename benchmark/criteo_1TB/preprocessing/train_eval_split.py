@@ -5,7 +5,7 @@ import os.path
 import pathlib
 import random
 import sys
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -48,16 +48,18 @@ def split_bins(
         test_indices = all_indices[:test_size]
         train_indices = all_indices[test_size:]
 
-        logger.info(f"[worker {worker_id} at day {day}]: Splitting {bin_file_name} with {num_samples} into {len(train_indices)} training samples and {len(test_indices)} test samples")
+        logger.info(
+            f"[worker {worker_id} at day {day}]: Splitting {bin_file_name} with {num_samples} into {len(train_indices)} training samples and {len(test_indices)} test samples"
+        )
         persist_sub_file(RECORD_SIZE, train_indices, bin_file, train_file_path)
         persist_sub_file(RECORD_SIZE, test_indices, bin_file, test_file_path)
 
 
 def persist_sub_file(
-        record_size: int,
-        indices: list[int],
-        source_file_path: pathlib.Path,
-        target_file_path: pathlib.Path,
+    record_size: int,
+    indices: list[int],
+    source_file_path: pathlib.Path,
+    target_file_path: pathlib.Path,
 ):
     with open(source_file_path, "rb") as source_file:
         data = source_file.read()
@@ -72,7 +74,7 @@ def main(
     target_criteo_path: Annotated[pathlib.Path, typer.Argument(help="The path to save the split criteo dataset")],
     seed: Annotated[int, typer.Argument(help="The seed to use for the random number generator")],
     percentage: Annotated[int, typer.Option(help="The percentage of the dataset to use for evaluation")] = 1,
-    days_up_to: Annotated[Optional[int], typer.Option(help="Only split the dataset up to this day")] = None,
+    days_up_to: Annotated[int | None, typer.Option(help="Only split the dataset up to this day")] = None,
     num_workers: Annotated[int, typer.Option(help="The number of workers to use for the split")] = 32,
 ):
     logger = logging.getLogger(__name__)

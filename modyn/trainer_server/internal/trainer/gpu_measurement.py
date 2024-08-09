@@ -1,7 +1,7 @@
 from types import TracebackType
-from typing import Optional, Type
 
 import torch
+
 from modyn.common.benchmark import Stopwatch
 
 
@@ -22,9 +22,9 @@ class GPUMeasurement:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        ex_traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        ex_traceback: TracebackType | None,
     ) -> None:
         if self._enabled:
             torch.cuda.synchronize(device=self._device)

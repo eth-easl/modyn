@@ -14,17 +14,14 @@
 
 # flake8: noqa
 # mypy: ignore-errors
-
-"""
-Fused Buckle Embedding
-"""
+"""Fused Buckle Embedding."""
 
 import apex
 from torch.autograd import Function
 
 
 class BuckleEmbeddingFusedGatherFunction(Function):
-    """Customized embedding gather"""
+    """Customized embedding gather."""
 
     @staticmethod
     def forward(ctx, embedding, indices, offsets, amp_train):

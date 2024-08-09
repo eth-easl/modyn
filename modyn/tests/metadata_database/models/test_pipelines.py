@@ -2,9 +2,10 @@
 import json
 
 import pytest
-from modyn.metadata_database.models import Pipeline
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from modyn.metadata_database.models import Pipeline
 
 
 @pytest.fixture(autouse=True)

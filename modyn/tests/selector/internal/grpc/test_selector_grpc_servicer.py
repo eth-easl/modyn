@@ -1,7 +1,7 @@
 # pylint: disable=unused-argument, no-name-in-module, redefined-outer-name
 
 import tempfile
-from typing import Iterable
+from collections.abc import Iterable
 from unittest.mock import MagicMock, patch
 
 from modyn.selector.internal.grpc.generated.selector_pb2 import (  # noqa: E402, E501, E611;

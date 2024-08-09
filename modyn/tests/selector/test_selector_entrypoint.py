@@ -1,7 +1,10 @@
 # pylint: disable=unused-argument
-""" This tests that the entry point script for the trainer server
-successfully runs through. This is _not_ the place for an integration test.
+"""This tests that the entry point script for the trainer server successfully
+runs through.
+
+This is _not_ the place for an integration test.
 """
+
 import os
 import pathlib
 from unittest.mock import patch

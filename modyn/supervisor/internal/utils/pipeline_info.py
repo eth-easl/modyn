@@ -1,6 +1,5 @@
 import multiprocessing as mp
 import queue
-from typing import Optional
 
 # less than client poll interval
 QUEUE_GET_TIMEOUT = 0.1
@@ -22,7 +21,7 @@ class PipelineInfo:
         self.training_status_queue = training_status_queue
         self.eval_status_queue = eval_status_queue
 
-    def get_msg_from_queue(self, queue_name: str, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[dict]:
+    def get_msg_from_queue(self, queue_name: str, timeout: float = QUEUE_GET_TIMEOUT) -> dict | None:
         try:
             # blocks for timeout seconds
             msg_queue = getattr(self, queue_name)
@@ -40,7 +39,7 @@ class PipelineInfo:
 
         return msgs
 
-    def check_for_exception(self, timeout: float = QUEUE_GET_TIMEOUT) -> Optional[str]:
+    def check_for_exception(self, timeout: float = QUEUE_GET_TIMEOUT) -> str | None:
         # As qsize() is unreliable and not implemented on macOS,
         # we try to fetch an element within 100ms. If there is no
         # element within that timeframe returned, we return None.

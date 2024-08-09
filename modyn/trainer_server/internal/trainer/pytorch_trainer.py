@@ -14,11 +14,13 @@ import queue
 import shutil
 import tempfile
 import traceback
-from typing import Any, Iterable, Literal, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Any, Literal
 
 import grpc
 import numpy as np
 import torch
+
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -422,11 +424,9 @@ class PytorchTrainer:
     # --------------------------------------------- Core training stages --------------------------------------------- #
 
     def downsample_trigger_training_set(self) -> None:
-        """
-        Function to score every datapoint in the current PRESAMPLED DATASET and sample a fraction of it
-        Used for downsampling strategies in SAMPLE_THEN_BATCH mode
-
-        """
+        """Function to score every datapoint in the current PRESAMPLED DATASET
+        and sample a fraction of it Used for downsampling strategies in
+        SAMPLE_THEN_BATCH mode."""
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH
 
@@ -501,8 +501,8 @@ class PytorchTrainer:
         self._model.model.train()
 
     def preprocess_batch(
-        self, batch: tuple, stopw: Optional[Stopwatch] = None
-    ) -> tuple[list, torch.Tensor, Union[torch.Tensor, dict]]:
+        self, batch: tuple, stopw: Stopwatch | None = None
+    ) -> tuple[list, torch.Tensor, torch.Tensor | dict]:
         if stopw is None:
             stopw = Stopwatch()
 
@@ -527,7 +527,7 @@ class PytorchTrainer:
             target = target.to(self._device)
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
-            data: Union[torch.Tensor, dict]
+            data: torch.Tensor | dict
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(self._device)
             elif isinstance(batch[1], dict):
@@ -543,14 +543,15 @@ class PytorchTrainer:
         return sample_ids, target, data
 
     def downsample_batch(
-        self, data: Union[dict[str, torch.Tensor], torch.Tensor], sample_ids: list, target: torch.Tensor
-    ) -> Tuple[Union[dict[str, torch.Tensor], torch.Tensor], list, torch.Tensor, torch.Tensor]:
-        """
-        Function to score every datapoint in the current BATCH and sample a fraction of it
-        Used for downsampling strategies in BATCH_THEN_SAMPLE mode
+        self, data: dict[str, torch.Tensor] | torch.Tensor, sample_ids: list, target: torch.Tensor
+    ) -> tuple[dict[str, torch.Tensor] | torch.Tensor, list, torch.Tensor, torch.Tensor]:
+        """Function to score every datapoint in the current BATCH and sample a
+        fraction of it Used for downsampling strategies in BATCH_THEN_SAMPLE
+        mode.
 
-        Receives the samples, the sample ids and the targets. Returns the selected subset of these
-        tensors and the weights for each sample.
+        Receives the samples, the sample ids and the targets. Returns
+        the selected subset of these tensors and the weights for each
+        sample.
         """
 
         assert self._downsampler is not None
@@ -581,7 +582,7 @@ class PytorchTrainer:
             assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.start_recording()
 
-    def get_embeddings_if_recorded(self) -> Optional[torch.Tensor]:
+    def get_embeddings_if_recorded(self) -> torch.Tensor | None:
         # supply the embeddings if required by the downsampler
         if self._downsampler.requires_coreset_supporting_module:
             embeddings = self._model.model.embedding_recorder.embedding
@@ -595,7 +596,7 @@ class PytorchTrainer:
             assert isinstance(self._model.model, CoresetSupportingModule)
             self._model.model.embedding_recorder.end_recording()
 
-    def weights_handling(self, batch_len: int) -> Tuple[bool, bool]:
+    def weights_handling(self, batch_len: int) -> tuple[bool, bool]:
         # whether the dataloader returned the weights.
         retrieve_weights_from_dataloader = batch_len == 4  # key, sample, label, weight
 
@@ -687,7 +688,7 @@ class PytorchTrainer:
 
     # ----------------------------------------------- State management ----------------------------------------------- #
 
-    def save_state(self, destination: Union[pathlib.Path, io.BytesIO], iteration: Optional[int] = None) -> None:
+    def save_state(self, destination: pathlib.Path | io.BytesIO, iteration: int | None = None) -> None:
         dict_to_save = {}
         dict_to_save["model"] = self._model.model.state_dict()
         for optimizer_name, optimizer in self._optimizers.items():
@@ -866,7 +867,8 @@ class PytorchTrainer:
     # --------------------------------------------------- Sampling --------------------------------------------------- #
 
     def _sample_then_batch_this_epoch(self, epoch: int) -> bool:
-        """Checks if the current epoch should downsample the dataset in SAMPLE_THEN_BATCH mode."""
+        """Checks if the current epoch should downsample the dataset in
+        SAMPLE_THEN_BATCH mode."""
         if self._downsampling_mode != DownsamplingMode.SAMPLE_THEN_BATCH:
             return False
 
@@ -881,7 +883,7 @@ class PytorchTrainer:
         dataloader: torch.utils.data.DataLoader,
         previous_batch_number: int = -1,
         previous_number_of_samples: int = 0,
-    ) -> Tuple[int, int]:
+    ) -> tuple[int, int]:
         """
         Function to iterate a dataloader, compute the forward pass and send the forward output to the downsampler.
         Args:
@@ -928,7 +930,7 @@ class PytorchTrainer:
             filepath = pathlib.Path(filename)
             key = filepath.stem
 
-            with open(self._dataset_log_path / filename, "r", encoding="utf-8") as logfile:
+            with open(self._dataset_log_path / filename, encoding="utf-8") as logfile:
                 worker_log[key] = json.load(logfile)
 
         self._log["dataset_worker_log"] = worker_log
@@ -944,7 +946,7 @@ class PytorchTrainer:
 
     @staticmethod
     def _assert_data_size(
-        expected_size: int, data: Union[torch.Tensor, dict[Any, torch.Tensor]], sample_ids: list, target: torch.Tensor
+        expected_size: int, data: torch.Tensor | dict[Any, torch.Tensor], sample_ids: list, target: torch.Tensor
     ) -> None:
         assert (
             all(tensor.shape[0] == expected_size for tensor in data.values())

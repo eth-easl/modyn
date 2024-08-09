@@ -6,6 +6,8 @@ from unittest.mock import ANY, Mock, patch
 
 import pytest
 import torch
+from torch import Tensor
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 
@@ -16,7 +18,6 @@ from modyn.models.dummy.dummy import DummyModyn
 from modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils.irreducible_loss_producer import (
     IrreducibleLossProducer,
 )
-from torch import Tensor
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Literal, Union
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field
 
 
 class HostnamePortMixin(BaseModel):
-    """
-    Mixin for hostname and port configuration.
-    """
+    """Mixin for hostname and port configuration."""
 
     hostname: str = Field(description="The hostname where the service can be reached.")
     port: int = Field(description="The port where the service can be reached.")
@@ -22,9 +20,7 @@ class HostnamePortMixin(BaseModel):
 
 
 class DatabaseMixin(HostnamePortMixin):
-    """
-    Mixin for a database configuration.
-    """
+    """Mixin for a database configuration."""
 
     drivername: str = Field(description="The drivername to use for the database.")
     username: str = Field(description="The username to use for the database.")
@@ -36,9 +32,7 @@ class DatabaseMixin(HostnamePortMixin):
 
 
 class ProjectConfig(BaseModel):
-    """
-    Represents the configuration of a project.
-    """
+    """Represents the configuration of a project."""
 
     name: str = Field("modyn", description="The name of the project.")
     description: str | None = Field(None, description="The description of the project.")
@@ -51,17 +45,13 @@ BinaryFileByteOrder = Literal["big", "little"]
 
 
 class _DatasetBaseFileWrapperConfig(BaseModel):
-    """
-    Represents a dataset file used by modyn.
-    """
+    """Represents a dataset file used by modyn."""
 
     file_extension: str = Field(description="The file extension of the dataset.", pattern=r"^\..*$")
 
 
 class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
-    """
-    Represents a csv dataset file used by modyn.
-    """
+    """Represents a csv dataset file used by modyn."""
 
     separator: str = Field(",", description="The separator used in CSV files.")
     quote: str = Field("\\0", description="The quote character used in CSV files.")
@@ -86,9 +76,7 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
 
 
 class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
-    """
-    Represents a binary dataset file used by modyn.
-    """
+    """Represents a binary dataset file used by modyn."""
 
     byteorder: BinaryFileByteOrder = Field(
         description="The byteorder when reading an integer from multibyte data in a binary file"
@@ -98,22 +86,18 @@ class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
 
 
 class DatasetPngFileWrapperConfig(_DatasetBaseFileWrapperConfig):
-    """
-    Represents a png dataset file used by modyn.
-    """
+    """Represents a png dataset file used by modyn."""
 
     label_file_extension: str = Field(description="The label file extension of the dataset", pattern=r"^\..*$")
 
 
-DatasetFileWrapperConfig = Union[
+DatasetFileWrapperConfig = Union[  # noqa: UP007
     DatasetCsvFileWrapperConfig, DatasetBinaryFileWrapperConfig, DatasetPngFileWrapperConfig
 ]
 
 
 class DatasetsConfig(BaseModel):
-    """
-    Configures a dataset to be used by modyn.
-    """
+    """Configures a dataset to be used by modyn."""
 
     name: str = Field(description="The name of the dataset.")
     description: str = Field(description="The description of the dataset.")
@@ -140,9 +124,7 @@ class DatasetsConfig(BaseModel):
 
 
 class DatabaseConfig(DatabaseMixin):
-    """
-    Configuration for modyn's main database.
-    """
+    """Configuration for modyn's main database."""
 
     hash_partition_modulus: int | None = Field(
         None, description="The modulus to use for the hash partitioning of the samples."
@@ -150,9 +132,7 @@ class DatabaseConfig(DatabaseMixin):
 
 
 class StorageConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's storage engine.
-    """
+    """Configuration for modyn's storage engine."""
 
     sample_batch_size: int = Field(
         10000,
@@ -200,7 +180,7 @@ class StorageConfig(HostnamePortMixin):
             "still alive."
         ),
     )
-    datasets: List[DatasetsConfig] = Field(
+    datasets: list[DatasetsConfig] = Field(
         default_factory=list, description="The datasets to use for the storage engine."
     )
     database: DatabaseConfig = Field(description="The database configuration.")
@@ -210,9 +190,8 @@ class StorageConfig(HostnamePortMixin):
 
 
 class ModelStorageConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's model storage component and its grpc service.
-    """
+    """Configuration for modyn's model storage component and its grpc
+    service."""
 
     ftp_port: str = Field(description="The port of the FDP server used by the model_storage component.")
     models_directory: str | None = Field(None, description="The directory where we store the trained models.")
@@ -222,18 +201,14 @@ class ModelStorageConfig(HostnamePortMixin):
 
 
 class EvaluatorConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's evaluation component.
-    """
+    """Configuration for modyn's evaluation component."""
 
 
 # ---------------------------------------------------- METADATA DB --------------------------------------------------- #
 
 
 class MetadataDatabaseConfig(DatabaseConfig):
-    """
-    Configuration for modyn's metadata database.
-    """
+    """Configuration for modyn's metadata database."""
 
     hash_partition_modulus: int | None = Field(
         None, description="The modulus to use for the hash partitioning of the metadata."
@@ -245,9 +220,7 @@ class MetadataDatabaseConfig(DatabaseConfig):
 
 
 class SelectorConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's selector.
-    """
+    """Configuration for modyn's selector."""
 
     keys_in_selector_cache: int = Field(description="How many keys each selector is allowed to cache in memory.")
     sample_batch_size: int = Field(
@@ -295,9 +268,7 @@ class SelectorConfig(HostnamePortMixin):
 
 
 class TrainingServerConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's training server and its grpc service.
-    """
+    """Configuration for modyn's training server and its grpc service."""
 
     ftp_port: str = Field(description="The port of the FDP server used by the trainer_server component.")
     offline_dataset_directory: str = Field(
@@ -311,18 +282,14 @@ class TrainingServerConfig(HostnamePortMixin):
 
 
 class MetadataProcessorConfig(HostnamePortMixin):
-    """
-    Configuration for modyn's metadata engine.
-    """
+    """Configuration for modyn's metadata engine."""
 
 
 # ---------------------------------------------------- TENSORBOARD --------------------------------------------------- #
 
 
 class TensorboardConfig(BaseModel):
-    """
-    Configuration for modyn's Tensorboard.
-    """
+    """Configuration for modyn's Tensorboard."""
 
     port: str = Field(description="The port on which tensorboard is run.")
 
@@ -331,9 +298,7 @@ class TensorboardConfig(BaseModel):
 
 
 class SupervisorConfig(HostnamePortMixin):
-    """
-    Configuration for the modyn's supervisor.
-    """
+    """Configuration for the modyn's supervisor."""
 
     eval_directory: str | Path = Field(description="The directory to store the evaluation results.")
 
@@ -342,7 +307,10 @@ class SupervisorConfig(HostnamePortMixin):
 
 
 class ModynConfig(BaseModel):
-    """Configuration for the Modyn system. Please adapt the fields as needed."""
+    """Configuration for the Modyn system.
+
+    Please adapt the fields as needed.
+    """
 
     project: ProjectConfig = Field(default_factory=ProjectConfig)
     storage: StorageConfig

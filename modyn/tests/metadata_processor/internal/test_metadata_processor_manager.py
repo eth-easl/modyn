@@ -1,5 +1,5 @@
 # pylint: disable=no-value-for-parameter,redefined-outer-name
-from typing import Iterable, Optional
+from collections.abc import Iterable
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -43,10 +43,10 @@ class MockStrategy(AbstractProcessorStrategy):
     ) -> None:
         pass
 
-    def process_trigger_metadata(self, trigger_metadata: PerTriggerMetadata) -> Optional[dict]:
+    def process_trigger_metadata(self, trigger_metadata: PerTriggerMetadata) -> dict | None:
         pass
 
-    def process_sample_metadata(self, sample_metadata: Iterable[PerSampleMetadata]) -> Optional[list[dict]]:
+    def process_sample_metadata(self, sample_metadata: Iterable[PerSampleMetadata]) -> list[dict] | None:
         pass
 
 

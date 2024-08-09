@@ -1,6 +1,4 @@
-"""
-DLRM
-"""
+"""DLRM."""
 
 import os
 

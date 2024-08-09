@@ -58,14 +58,50 @@ class StrategyConfig(google.protobuf.message.Message):
         zip_algorithm: builtins.str | None = ...,
         config: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_config", b"_config", "_zip", b"_zip", "_zip_algorithm", b"_zip_algorithm", "config", b"config", "zip", b"zip", "zip_algorithm", b"zip_algorithm"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_config", b"_config", "_zip", b"_zip", "_zip_algorithm", b"_zip_algorithm", "config", b"config", "name", b"name", "zip", b"zip", "zip_algorithm", b"zip_algorithm"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_config",
+            b"_config",
+            "_zip",
+            b"_zip",
+            "_zip_algorithm",
+            b"_zip_algorithm",
+            "config",
+            b"config",
+            "zip",
+            b"zip",
+            "zip_algorithm",
+            b"zip_algorithm",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_config",
+            b"_config",
+            "_zip",
+            b"_zip",
+            "_zip_algorithm",
+            b"_zip_algorithm",
+            "config",
+            b"config",
+            "name",
+            b"name",
+            "zip",
+            b"zip",
+            "zip_algorithm",
+            b"zip_algorithm",
+        ],
+    ) -> None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_config", b"_config"]) -> typing.Literal["config"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_zip", b"_zip"]) -> typing.Literal["zip"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_zip_algorithm", b"_zip_algorithm"]) -> typing.Literal["zip_algorithm"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_zip_algorithm", b"_zip_algorithm"]
+    ) -> typing.Literal["zip_algorithm"] | None: ...
 
 global___StrategyConfig = StrategyConfig
 
@@ -92,7 +128,12 @@ class DataInformRequest(google.protobuf.message.Message):
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "pipeline_id", b"pipeline_id", "timestamps", b"timestamps"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "keys", b"keys", "labels", b"labels", "pipeline_id", b"pipeline_id", "timestamps", b"timestamps"
+        ],
+    ) -> None: ...
 
 global___DataInformRequest = DataInformRequest
 
@@ -153,7 +194,19 @@ class GetSamplesRequest(google.protobuf.message.Message):
         partition_id: builtins.int = ...,
         worker_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["partition_id", b"partition_id", "pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id", "worker_id", b"worker_id"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "partition_id",
+            b"partition_id",
+            "pipeline_id",
+            b"pipeline_id",
+            "trigger_id",
+            b"trigger_id",
+            "worker_id",
+            b"worker_id",
+        ],
+    ) -> None: ...
 
 global___GetSamplesRequest = GetSamplesRequest
 
@@ -164,16 +217,28 @@ class SamplesResponse(google.protobuf.message.Message):
     TRAINING_SAMPLES_SUBSET_FIELD_NUMBER: builtins.int
     TRAINING_SAMPLES_WEIGHTS_FIELD_NUMBER: builtins.int
     @property
-    def training_samples_subset(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    def training_samples_subset(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
-    def training_samples_weights(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
+    def training_samples_weights(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.float]: ...
     def __init__(
         self,
         *,
         training_samples_subset: collections.abc.Iterable[builtins.int] | None = ...,
         training_samples_weights: collections.abc.Iterable[builtins.float] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["training_samples_subset", b"training_samples_subset", "training_samples_weights", b"training_samples_weights"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "training_samples_subset",
+            b"training_samples_subset",
+            "training_samples_weights",
+            b"training_samples_weights",
+        ],
+    ) -> None: ...
 
 global___SamplesResponse = SamplesResponse
 
@@ -191,7 +256,9 @@ class GetNumberOfSamplesRequest(google.protobuf.message.Message):
         pipeline_id: builtins.int = ...,
         trigger_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]
+    ) -> None: ...
 
 global___GetNumberOfSamplesRequest = GetNumberOfSamplesRequest
 
@@ -254,7 +321,9 @@ class GetNumberOfPartitionsRequest(google.protobuf.message.Message):
         pipeline_id: builtins.int = ...,
         trigger_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "trigger_id", b"trigger_id"]
+    ) -> None: ...
 
 global___GetNumberOfPartitionsRequest = GetNumberOfPartitionsRequest
 
@@ -338,7 +407,17 @@ class SelectionStrategyResponse(google.protobuf.message.Message):
         downsampler_config: global___JsonString | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing.Literal["downsampler_config", b"downsampler_config"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["downsampler_config", b"downsampler_config", "downsampling_enabled", b"downsampling_enabled", "strategy_name", b"strategy_name"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "downsampler_config",
+            b"downsampler_config",
+            "downsampling_enabled",
+            b"downsampling_enabled",
+            "strategy_name",
+            b"strategy_name",
+        ],
+    ) -> None: ...
 
 global___SelectionStrategyResponse = SelectionStrategyResponse
 

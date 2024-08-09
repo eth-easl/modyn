@@ -7,15 +7,15 @@ from modyn.utils import unzip_file, zip_file
 
 
 class AbstractFullModelStrategy(AbstractModelStorageStrategy, ABC):
-    """
-    This is the base class for all full model strategies. That is, strategies which contain full information about
-    a model in order to reproduce its model state.
+    """This is the base class for all full model strategies.
+
+    That is, strategies which contain full information about a model in
+    order to reproduce its model state.
     """
 
     @abstractmethod
     def _store_model(self, model_state: dict, file_path: pathlib.Path) -> None:
-        """
-        Stores the model state to the given file.
+        """Stores the model state to the given file.
 
         Args:
             model_state: the state dictionary of the model.
@@ -34,8 +34,7 @@ class AbstractFullModelStrategy(AbstractModelStorageStrategy, ABC):
 
     @abstractmethod
     def _load_model(self, base_model_state: dict, file_path: pathlib.Path) -> dict:
-        """
-        Load the model state from the given file.
+        """Load the model state from the given file.
 
         Args:
             base_model_state: the base model state which must be overwritten.

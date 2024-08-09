@@ -4,6 +4,7 @@ import pathlib
 from math import isclose
 
 import pytest
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
 

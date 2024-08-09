@@ -1,6 +1,6 @@
 # FROM modynapex:latest as apex-image
 
-FROM modynbase:latest AS modelstorageimage 
+FROM modynbase:latest AS modelstorageimage
 
 # COPY --from=apex-image /opt/mamba/envs/modyn /opt/mamba/envs/modyn
 

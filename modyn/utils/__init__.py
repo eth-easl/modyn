@@ -1,7 +1,5 @@
-"""
-This submodule contains general utility functions that can be used by multiple
-components in Modyn.
-"""
+"""This submodule contains general utility functions that can be used by
+multiple components in Modyn."""
 
 import os
 

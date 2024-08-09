@@ -1,6 +1,7 @@
 import pytest
-from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
 from pydantic import TypeAdapter, ValidationError
+
+from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
 
 
 def test_offset_eval_strategy_config():

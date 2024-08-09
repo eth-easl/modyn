@@ -4,6 +4,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 import torch
+
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
@@ -50,7 +51,6 @@ def test_collect_embeddings(dummy_system_config: ModynConfig):
     amds = AbstractMatrixDownsamplingStrategy(*get_sampler_config(dummy_system_config))
     amds.matrix_content = MatrixContent.EMBEDDINGS
     with torch.inference_mode(mode=(not amds.requires_grad)):
-
         assert amds.requires_coreset_supporting_module
         assert not amds.matrix_elements  # thank you pylint! amds.matrix_elements == []
 

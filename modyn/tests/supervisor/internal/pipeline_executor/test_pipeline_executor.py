@@ -5,12 +5,14 @@ import os
 import pathlib
 import shutil
 import time
+from collections.abc import Generator, Iterable
 from dataclasses import dataclass
-from typing import Generator, Iterable, overload
+from typing import overload
 from unittest import mock
 from unittest.mock import ANY, MagicMock, PropertyMock, call, patch
 
 import pytest
+
 from modyn.config.schema.pipeline import EvaluationConfig, ModynPipelineConfig
 from modyn.config.schema.system import DatasetsConfig, ModynConfig, SupervisorConfig
 

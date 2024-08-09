@@ -6,13 +6,10 @@ from modyn.utils import dynamic_module_import
 
 
 class AbstractModelStorageStrategy(ABC):
-    """
-    Base class for all model storage strategies.
-    """
+    """Base class for all model storage strategies."""
 
     def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str):
-        """
-        Initialize a model storage strategy.
+        """Initialize a model storage strategy.
 
         Args:
             zipping_dir: directory, in which the model is zipped.

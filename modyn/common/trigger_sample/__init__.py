@@ -1,6 +1,5 @@
-"""
-This submodule implements necessary functions to persist a calculated trigger training set to disk.
-"""
+"""This submodule implements necessary functions to persist a calculated
+trigger training set to disk."""
 
 import os
 

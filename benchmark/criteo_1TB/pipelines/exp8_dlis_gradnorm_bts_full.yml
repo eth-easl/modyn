@@ -1,7 +1,7 @@
 pipeline:
-    name: exp8_gradnorm_bts_full
-    description: DLRM/Criteo Training. Retraining on DLIS GRADNORM 25% on entire dataset, with the old model weights.
-    version: 1.0.0
+  name: exp8_gradnorm_bts_full
+  description: DLRM/Criteo Training. Retraining on DLIS GRADNORM 25% on entire dataset, with the old model weights.
+  version: 1.0.0
 model:
   id: DLRM
   config: # these parameters are consistent with the parameters used for the experiments shown in the NVIDIA repo:  https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM

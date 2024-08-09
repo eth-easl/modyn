@@ -12,7 +12,6 @@ def test_gpu_measurement(cuda_synchronize_mock):
         patch.object(Stopwatch, "stop", wraps=stopwatch.stop) as stopwatch_stop_mock,
         patch.object(Stopwatch, "start", wraps=stopwatch.start) as stopwatch_start_mock,
     ):
-
         with GPUMeasurement(True, "measure", "cpu", stopwatch, resume=True):
             time.sleep(1)
 

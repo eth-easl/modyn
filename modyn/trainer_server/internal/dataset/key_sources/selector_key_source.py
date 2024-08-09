@@ -1,7 +1,8 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import grpc
+from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 
 # pylint: disable-next=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -14,7 +15,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource
 from modyn.utils import MAX_MESSAGE_SIZE, flatten, grpc_connection_established
-from tenacity import after_log, before_log, retry, stop_after_attempt, wait_random_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class SelectorKeySource(AbstractKeySource):
 
         self._selector_address = selector_address
         self._selectorstub = None  # connection is made when the pytorch worker is started
-        self._uses_weights: Optional[bool] = None  # get via gRPC, so unavailable if the connection is not yet made.
+        self._uses_weights: bool | None = None  # get via gRPC, so unavailable if the connection is not yet made.
 
     @staticmethod
     def retry_reconnection_callback(retry_state: Any) -> None:
@@ -41,7 +41,7 @@ class SelectorKeySource(AbstractKeySource):
         reraise=True,
         retry_error_callback=retry_reconnection_callback,
     )
-    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
+    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], list[float] | None]:
         assert self._selectorstub is not None
         assert self._uses_weights is not None
 
@@ -53,7 +53,7 @@ class SelectorKeySource(AbstractKeySource):
             return self._get_both_keys_and_weights(req)
         return self._get_just_keys(req)
 
-    def _get_just_keys(self, req: GetSamplesRequest) -> tuple[list[int], Optional[list[float]]]:
+    def _get_just_keys(self, req: GetSamplesRequest) -> tuple[list[int], list[float] | None]:
         assert self._selectorstub is not None
         assert not self._uses_weights
 

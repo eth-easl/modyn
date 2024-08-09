@@ -1,9 +1,8 @@
-
 # Evaluation of models
 
 ## Configuration
 
-To evaluate models you can configure several `EvalHandlerConfig` within the `evaluation` section of the 
+To evaluate models you can configure several `EvalHandlerConfig` within the `evaluation` section of the
 pipeline configuration file.
 
 ### Evaluation Strategy

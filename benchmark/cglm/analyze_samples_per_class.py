@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Load the statistics from the JSON file
-with open("dataset_stats.json", "r") as f:
+with open("dataset_stats.json") as f:
     stats = json.load(f)
 
 # Sort classes by sample count and get the top 20

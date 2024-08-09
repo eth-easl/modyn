@@ -1,8 +1,11 @@
 import logging
 import math
-from typing import Callable, Generator, Iterable, Optional
+from collections.abc import Callable, Generator, Iterable
 
 import grpc
+from torch.utils.data import IterableDataset, get_worker_info
+from torchvision import transforms
+
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetRequest,
     GetResponse,
@@ -15,19 +18,21 @@ from modyn.utils import (
     grpc_connection_established,
     instantiate_class,
 )
-from torch.utils.data import IterableDataset, get_worker_info
-from torchvision import transforms
 
 logger = logging.getLogger(__name__)
 
 
 # TODO(#275): inherit common abstraction of dataset
 class FixedKeysDataset(IterableDataset):
-    """The FixedKeysDataset is created given a list of fixed sample keys. It fetches samples by the given sample keys.
-    It can be used when sample keys are known, but the corresponding trigger_id is unknown.
-    It can also be used when user wants a dataset containing samples from multiple triggers if the keys are known.
-    In DataDriftTrigger, for example, FixedKeysDataset is used for current untriggered samples
-    because they belong to a future trigger whose trigger_id is unknown.
+    """The FixedKeysDataset is created given a list of fixed sample keys.
+
+    It fetches samples by the given sample keys. It can be used when
+    sample keys are known, but the corresponding trigger_id is unknown.
+    It can also be used when user wants a dataset containing samples
+    from multiple triggers if the keys are known. In DataDriftTrigger,
+    for example, FixedKeysDataset is used for current untriggered
+    samples because they belong to a future trigger whose trigger_id is
+    unknown.
     """
 
     # pylint: disable=too-many-instance-attributes, abstract-method
@@ -39,7 +44,7 @@ class FixedKeysDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         keys: list[int],
-        tokenizer: Optional[str] = None,
+        tokenizer: str | None = None,
     ):
         self._dataset_id = dataset_id
         self._first_call = True
@@ -48,9 +53,9 @@ class FixedKeysDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._transform_list: list[Callable] = []
-        self._transform: Optional[Callable] = None
+        self._transform: Callable | None = None
         self._storagestub: StorageStub = None
-        self._bytes_parser_function: Optional[Callable] = None
+        self._bytes_parser_function: Callable | None = None
 
         # tokenizer for NLP tasks
         self._tokenizer = None
@@ -93,10 +98,10 @@ class FixedKeysDataset(IterableDataset):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
 
-    def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.info(f"[Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.debug(f"[Worker {worker_id}] {msg}")
 
     @staticmethod

@@ -1,12 +1,12 @@
 import logging
 import random
-from typing import Optional, Union
 
 import pandas as pd
 import torch
+from torch.utils.data import DataLoader
+
 from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
-from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 def prepare_trigger_dataloader_by_trigger(
     trigger_id: int,
     dataloader_info: DataLoaderInfo,
-    data_points_in_trigger: Optional[int] = None,
-    sample_size: Optional[int] = None,
+    data_points_in_trigger: int | None = None,
+    sample_size: int | None = None,
 ) -> DataLoader:
-    sample_prob: Optional[float] = None
+    sample_prob: float | None = None
     if data_points_in_trigger is not None and sample_size is not None:
         sample_prob = sample_size / data_points_in_trigger
 
@@ -44,7 +44,7 @@ def prepare_trigger_dataloader_by_trigger(
 def prepare_trigger_dataloader_fixed_keys(
     dataloader_info: DataLoaderInfo,
     keys: list[int],
-    sample_size: Optional[int] = None,
+    sample_size: int | None = None,
 ) -> DataLoader:
     if sample_size is not None:
         keys = random.sample(keys, min(len(keys), sample_size))
@@ -68,14 +68,14 @@ def get_embeddings(embedding_encoder: EmbeddingEncoder, dataloader: DataLoader) 
     output: embeddings Tensor
     """
     assert embedding_encoder._model is not None
-    all_embeddings: Optional[torch.Tensor] = None
+    all_embeddings: torch.Tensor | None = None
 
     embedding_encoder._model.model.eval()
     embedding_encoder._model.model.embedding_recorder.start_recording()
 
     with torch.no_grad():
         for batch in dataloader:
-            data: Union[torch.Tensor, dict]
+            data: torch.Tensor | dict
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(embedding_encoder.device)
             elif isinstance(batch[1], dict):
@@ -98,7 +98,7 @@ def get_embeddings(embedding_encoder: EmbeddingEncoder, dataloader: DataLoader) 
     return all_embeddings
 
 
-def convert_tensor_to_df(t: torch.Tensor, column_name_prefix: Optional[str] = None) -> pd.DataFrame:
+def convert_tensor_to_df(t: torch.Tensor, column_name_prefix: str | None = None) -> pd.DataFrame:
     matrix_numpy = t.cpu().detach().numpy()
     df = pd.DataFrame(matrix_numpy).astype("float64")
     if column_name_prefix is not None:

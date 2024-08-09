@@ -1,8 +1,7 @@
-"""setup file for the project."""
+"""Setup file for the project."""
 
 # code inspired by https://github.com/navdeep-G/setup.py
 
-import io
 import os
 import pathlib
 import subprocess
@@ -29,7 +28,7 @@ REQUIRED = [""]
 
 # What packages are optional?
 # 'fancy feature': ['django'],}
-EXTRAS = {}
+EXTRAS: dict = {}
 
 # The rest you shouldn't have to touch too much :)
 # ------------------------------------------------
@@ -41,35 +40,35 @@ here = os.path.abspath(os.path.dirname(__file__))
 # Import the README and use it as the long-description.
 # Note: this will only work if 'README.md' is present in your MANIFEST.in file!
 try:
-    with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
+    with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
         long_description = "\n" + f.read()
 except FileNotFoundError:
     long_description = DESCRIPTION
 
 # Load the package's _version.py module as a dictionary.
-about = {}
+about: dict = {}
 project_slug = "modyn"
 
 EXTENSION_BUILD_DIR = pathlib.Path(here) / "libbuild"
 
 
-def _get_env_variable(name, default="OFF"):
+def _get_env_variable(name: str, default: str = "OFF") -> str:
     if name not in os.environ.keys():
         return default
     return os.environ[name]
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name, cmake_lists_dir=".", sources=[], **kwa):
+    def __init__(self, name: str, cmake_lists_dir: str = ".", sources: list = [], **kwa: dict) -> None:
         Extension.__init__(self, name, sources=sources, **kwa)
         self.cmake_lists_dir = os.path.abspath(cmake_lists_dir)
 
 
 class CMakeBuild(build_ext):
-    def copy_extensions_to_source(self):
+    def copy_extensions_to_source(self) -> None:
         pass
 
-    def build_extensions(self):
+    def build_extensions(self) -> None:
         try:
             subprocess.check_output(["cmake", "--version"])
         except OSError:
@@ -131,7 +130,7 @@ setup(
             "_modyn_model_storage=modyn.model_storage.model_storage_entrypoint:main",
             "_modyn_evaluator=modyn.evaluator.evaluator_entrypoint:main",
             "_modyn_client=modynclient.client.client_entrypoint:main",
-            "_modyn_analytics=analytics.app.app",
+            "_modyn_analytics=analytics.app.app:main",
         ]
     },
     scripts=[

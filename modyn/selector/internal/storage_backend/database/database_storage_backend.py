@@ -1,12 +1,14 @@
 import logging
 import multiprocessing as mp
-from typing import Any, Callable, Iterable, Optional
+from collections.abc import Callable, Iterable
+from typing import Any
+
+from sqlalchemy import select
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +106,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
     def get_data_since_trigger(
         self, smallest_included_trigger_id: int
     ) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Generator to get all samples seen since a certain trigger
+        """Generator to get all samples seen since a certain trigger.
 
         Returns:
             Iterable[tuple[list[int], dict[str, object]]]:
@@ -114,7 +116,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         yield from self._get_pipeline_data(additional_filter)
 
     def get_trigger_data(self, trigger_id: int) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Generator to get all samples seen during a certain trigger
+        """Generator to get all samples seen during a certain trigger.
 
         Returns:
             Iterable[tuple[list[int], dict[str, object]]]:
@@ -124,7 +126,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         yield from self._get_pipeline_data(additional_filter)
 
     def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Generator to get all samples seen
+        """Generator to get all samples seen.
 
         Returns:
             Iterable[tuple[list[int], dict[str, object]]]:
@@ -132,7 +134,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         """
         yield from self._get_pipeline_data(())
 
-    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
+    def get_available_labels(self, next_trigger_id: int, tail_triggers: int | None = None) -> list[int]:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             result = (
                 database.session.query(SelectorStateMetadata.label)
@@ -155,9 +157,9 @@ class DatabaseStorageBackend(AbstractStorageBackend):
     def _get_pipeline_data(
         self,
         additional_filter: tuple,
-        yield_per: Optional[int] = None,
-        statement_modifier: Optional[Callable] = None,
-        chunk_callback: Optional[Callable] = None,
+        yield_per: int | None = None,
+        statement_modifier: Callable | None = None,
+        chunk_callback: Callable | None = None,
     ) -> Iterable[tuple[list[int], dict[str, object]]]:
         """Internal generator to interact with database.
 
@@ -179,7 +181,7 @@ class DatabaseStorageBackend(AbstractStorageBackend):
         yield from self._partitioned_execute_stmt(stmt, yield_per, chunk_callback)
 
     def _partitioned_execute_stmt(
-        self, stmt: Any, yield_per: int, chunk_callback: Optional[Callable]
+        self, stmt: Any, yield_per: int, chunk_callback: Callable | None
     ) -> Iterable[tuple[list[int], dict[str, object]]]:
         swt = Stopwatch()
         assert yield_per is not None

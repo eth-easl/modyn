@@ -2,24 +2,26 @@ import logging
 import os
 import threading
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Iterable, Optional
+from collections.abc import Callable, Iterable
+from typing import Any
 
 import numpy as np
+from sqlalchemy import func
+
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.common.trigger_sample import ArrayWrapper, TriggerSampleStorage
 from modyn.config.schema.pipeline import SelectionStrategy
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import Trigger, TriggerPartition
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
-from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractSelectionStrategy(ABC):
-    """This class is the base class for selection strategies.
-    New selection strategies need to implement the
-    `_on_trigger`, `_reset_state`, and `inform_data` methods.
+    """This class is the base class for selection strategies. New selection
+    strategies need to implement the `_on_trigger`, `_reset_state`, and
+    `inform_data` methods.
 
     Args:
         config (dict): the configurations for the selector
@@ -104,10 +106,10 @@ class AbstractSelectionStrategy(ABC):
 
     @abstractmethod
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
-        """
-        Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
-        train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
-        keys.
+        """Internal function. Defined by concrete strategy implementations.
+        Calculates the next set of data to train on. Returns an iterator over
+        lists, if next set of data consists of more than
+        _maximum_keys_in_memory keys.
 
         Returns:
             Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
@@ -120,7 +122,8 @@ class AbstractSelectionStrategy(ABC):
 
     @abstractmethod
     def _reset_state(self) -> None:
-        """Resets the internal state of the strategy, e.g., by clearing buffers."""
+        """Resets the internal state of the strategy, e.g., by clearing
+        buffers."""
         raise NotImplementedError
 
     @abstractmethod
@@ -136,10 +139,13 @@ class AbstractSelectionStrategy(ABC):
 
     @abstractmethod
     def get_available_labels(self) -> list[int]:
-        """Returns the list of all labels that could be returned in the latest trigger training set
+        """Returns the list of all labels that could be returned in the latest
+        trigger training set.
 
-        If the labels from the current "in progress" trigger should be included, first,
-        we need to trigger, and then call this function, since this only includes data from the last finished trigger.
+        If the labels from the current "in progress" trigger should be
+        included, first, we need to trigger, and then call this
+        function, since this only includes data from the last finished
+        trigger.
         """
         raise NotImplementedError
 
@@ -183,25 +189,29 @@ class AbstractSelectionStrategy(ABC):
         training_set_producer: Callable[[], Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]],
         insertion_threads: int,
     ) -> tuple[int, int, dict[str, Any]]:
-        """
-        Store the training set, produced by the training_set_producer, as TriggerSampleStorage.
-        Relevant metadata for the trigger is also stored in the metadata database.
+        """Store the training set, produced by the training_set_producer, as
+        TriggerSampleStorage. Relevant metadata for the trigger is also stored
+        in the metadata database.
 
-        :param target_pipeline_id: the pipeline id the training set is associated with.
-        :param target_trigger_id: the trigger id the training set is associated with.
+        :param target_pipeline_id: the pipeline id the training set is
+            associated with.
+        :param target_trigger_id: the trigger id the training set is
+            associated with.
         :param modyn_config: the modyn configuration.
-        :param training_set_producer: a callable that returns partitioned training samples. The type is the same as
-            the return type of the _on_trigger method.
-        :param insertion_threads: how many threads are used to store. If bigger than 1, multiple threads are used to
-            store the data.
-        :return: total number of keys in the trigger, number of partitions, and a log.
+        :param training_set_producer: a callable that returns
+            partitioned training samples. The type is the same as the
+            return type of the _on_trigger method.
+        :param insertion_threads: how many threads are used to store. If
+            bigger than 1, multiple threads are used to store the data.
+        :return: total number of keys in the trigger, number of
+            partitions, and a log.
         """
         # TODO(#276) Unify AbstractSelection Strategy and LocalDatasetWriter
         total_keys_in_trigger = 0
         log: dict[str, Any] = {"trigger_partitions": []}
         swt = Stopwatch()
         partition_num_keys = {}
-        partition: Optional[int] = None
+        partition: int | None = None
         swt.start("on_trigger")
 
         for partition, (training_samples, partition_log) in enumerate(training_set_producer()):
@@ -272,8 +282,8 @@ class AbstractSelectionStrategy(ABC):
         return total_keys_in_trigger, num_partitions, log
 
     def trigger(self) -> tuple[int, int, int, dict[str, Any]]:
-        """
-        Causes the strategy to compute the training set, and (if so configured) reset its internal state.
+        """Causes the strategy to compute the training set, and (if so
+        configured) reset its internal state.
 
         Returns:
             tuple[int, int, int]: Trigger ID, how many keys are in the trigger, number of overall partitions
@@ -299,8 +309,8 @@ class AbstractSelectionStrategy(ABC):
     def get_trigger_partition_keys(
         self, trigger_id: int, partition_id: int, worker_id: int = -1, num_workers: int = -1
     ) -> ArrayWrapper:
-        """
-        Given a trigger id and partition id, returns an ArrayWrapper of all keys in this partition
+        """Given a trigger id and partition id, returns an ArrayWrapper of all
+        keys in this partition.
 
         Args:
             trigger_id (int): The trigger id

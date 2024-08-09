@@ -42,13 +42,14 @@ More details can be found in the [EVALUATION.md](EVALUATION.md) document.
 ## Tooling
 
 ### Linting and Testing
-For an automatic execution of automatic formatting, linting, and testing of the Python components, you can use the `scripts/python_compliance.sh` script in the project root. 
+
+For an automatic execution of automatic formatting, linting, and testing of the Python components, you can use the `scripts/python_compliance.sh` script in the project root.
 This script runs isort, autopep8, black, mypy, pylint, and pytest.
 The script assumes that `micromamba` is available and if not, tries to activate it on `zsh` and `bash`.
 Furthermore, you must have created a conda environment called `modyn` with the dependencies listed in `environment.yml` and `dev-requirements.txt`.
 To run linters/formatters/pytest manually, make sure to enable the conda environment and then run the tools in your command line.
 
-To run clang-format and clang-tidy in order to lint the C++ part of the codebase, use the `scripts/clang-format.sh` and `scripts/clang-tidy.sh` scripts. 
+To run clang-format and clang-tidy in order to lint the C++ part of the codebase, use the `scripts/clang-format.sh` and `scripts/clang-tidy.sh` scripts.
 Clang-format automatically fixes everything, while clang-tidy gives hints on what needs to be fixed.
 To run C++ unit tests, create a `build` directory in the project root, run `cmake ..`, and then `make -j8 modyn-test` to build the test application.
 After building, run `modyn/tests/modyn-test` to execute the tests.
@@ -58,6 +59,7 @@ To run integration tests, run the `./scripts/run_integrationtests.sh` script.
 This will take care of setting up all containers and running the tests.
 
 ### Mamba and Docker Setup
+
 We manage dependency required to run Modyn using micromamba.
 Micromamba is a fast single-executable implementation of conda.
 All dependencies are listed in the `environment.yml` file in the project root.
@@ -67,11 +69,12 @@ First, if not using Docker, you can install all dependencies and the Modyn modul
 Note that the `scripts/initial_setup.sh` scripts performs some adjustments to your micromamba and docker settings, depending on your local system (e.g., choose correct Pytorch channel when on macOS, or enable CUDA).
 
 Second, you can use a Docker container.
-We provide a Modyn base container where the micromamba setup is already done. 
+We provide a Modyn base container where the micromamba setup is already done.
 You can find the Dockerfile in `docker/Base/Dockerfile` and build the image using `docker build -t modyn -f docker/Base/Dockerfile .`.
 Then, you can run a container for example using `docker run modyn /bin/bash`.
 
 ### C++ Setup
+
 Modyn uses pure Python components, C++ extensions for Python, and also pure C++ components.
 We use CMake to manage the installation of extensions and components.
 The `setup.py` file builds the C++ extensions when Modyn is installed via CMake.
@@ -91,10 +94,11 @@ git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules https:/
     make -j8 && make install && cd ../../
 ```
 
-Please adjust the version as required. 
+Please adjust the version as required.
 If you run into problems with the system gRPC installation, set `-DMODYN_TRY_LOCAL_GRPC=Off`.
 
 ### Docker-Compose Setup
+
 We use docker-compose to manage the system setup.
 The `docker-compose.yml` file describes our setup and includes comments explaining it.
 The setup expects the base image to be built already; if you use the scripts, these take care of that for you.
@@ -104,6 +108,7 @@ In case you encounter issues when running integration tests, you can try deletin
 Note that you might want to update the `conf/metadata_postgres.conf` and `conf/storage_postgresql.conf` according to your machine.
 
 ### tmuxp Setup
+
 For local deployment, you can use tmuxp, which enables to load a tmux session from a file.
 After running `./scripts/run_modyn.sh`, run `tmuxp load tmuxp.yaml` to start a tmux session that is attached to all containers.
 You will have access to a supervisor container in which you can submit pipelines, to panes for administrating the databases, and to all gRPC components.

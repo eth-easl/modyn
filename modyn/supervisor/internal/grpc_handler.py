@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable
 from time import sleep
-from typing import Any, Iterable, Optional
+from typing import Any
 
 import grpc
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
+
 from modyn.common.benchmark import Stopwatch
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -46,13 +49,11 @@ from modyn.storage.internal.grpc.generated.storage_pb2 import (
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils import grpc_common_config, grpc_connection_established
-from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 logger = logging.getLogger(__name__)
 
 
 class GRPCHandler(TrainerServerGRPCHandlerMixin):
-
     # pylint: disable=unused-argument
     def __init__(self, modyn_config: dict) -> None:
         super().__init__(modyn_config=modyn_config)
@@ -62,12 +63,12 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         self.connected_to_selector = False
         self.connected_to_evaluator = False
 
-        self.storage: Optional[StorageStub] = None
-        self.storage_channel: Optional[grpc.Channel] = None
-        self.selector: Optional[SelectorStub] = None
-        self.selector_channel: Optional[grpc.Channel] = None
-        self.evaluator: Optional[EvaluatorStub] = None
-        self.evaluator_channel: Optional[grpc.Channel] = None
+        self.storage: StorageStub | None = None
+        self.storage_channel: grpc.Channel | None = None
+        self.selector: SelectorStub | None = None
+        self.selector_channel: grpc.Channel | None = None
+        self.evaluator: EvaluatorStub | None = None
+        self.evaluator_channel: grpc.Channel | None = None
 
     def init_cluster_connection(self) -> None:
         self.init_storage()
@@ -236,7 +237,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataset_config: dict,
         model_id: int,
         device: str,
-        intervals: list[tuple[Optional[int], Optional[int]]],
+        intervals: list[tuple[int | None, int | None]],
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
         transform_list = dataset_config.get("transformations") or []

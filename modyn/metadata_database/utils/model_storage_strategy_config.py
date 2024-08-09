@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
@@ -7,15 +6,15 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import StrategyConfig
 
 @dataclass
 class ModelStorageStrategyConfig:
-    """
-    This class holds all information of a generic model storage strategy.
+    """This class holds all information of a generic model storage strategy.
+
     It is used to insert a given strategy in the metadata database.
     """
 
     name: str
     zip: bool = False
-    zip_algorithm: Optional[str] = None
-    config: Optional[str] = None
+    zip_algorithm: str | None = None
+    config: str | None = None
 
     def __init__(self, name: str):
         self.name = name

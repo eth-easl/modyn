@@ -25,19 +25,19 @@ windows:
     panes:
       - docker logs $(docker compose ps -q storage-db) && docker attach $(docker compose ps -q storage-db)
       - shell_command:
-        - docker exec -it $(docker compose ps -q storage-db) /bin/bash
-        - psql -U postgres
-        - \c postgres
-        - \dt
+          - docker exec -it $(docker compose ps -q storage-db) /bin/bash
+          - psql -U postgres
+          - \c postgres
+          - \dt
   - window_name: metadata-db
     layout: tiled
     panes:
       - docker logs $(docker compose ps -q metadata-db) && docker attach $(docker compose ps -q metadata-db)
       - shell_command:
-        - docker exec -it $(docker compose ps -q metadata-db) /bin/bash
-        - psql -U postgres
-        - \c postgres
-        - \dt
+          - docker exec -it $(docker compose ps -q metadata-db) /bin/bash
+          - psql -U postgres
+          - \c postgres
+          - \dt
   - window_name: metadata_processor
     layout: tiled
     panes:
@@ -47,5 +47,5 @@ windows:
     layout: tiled
     panes:
       - shell_command:
-        - docker logs $(docker compose ps -q tests)
-        - docker attach $(docker compose ps -q tests) 2> /dev/null
+          - docker logs $(docker compose ps -q tests)
+          - docker attach $(docker compose ps -q tests) 2> /dev/null

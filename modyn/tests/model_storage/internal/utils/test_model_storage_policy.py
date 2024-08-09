@@ -3,6 +3,7 @@ import pathlib
 from zipfile import ZIP_LZMA
 
 import pytest
+
 from modyn.model_storage.internal.storage_strategies.difference_operators import XorDifferenceOperator
 from modyn.model_storage.internal.utils import ModelStoragePolicy
 

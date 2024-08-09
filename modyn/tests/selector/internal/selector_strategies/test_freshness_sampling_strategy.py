@@ -6,6 +6,7 @@ from math import isclose
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from modyn.config import FreshnessSamplingStrategyConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata

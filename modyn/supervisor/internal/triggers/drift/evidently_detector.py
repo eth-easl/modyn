@@ -9,6 +9,7 @@ from evidently import ColumnMapping
 from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
+
 from modyn.config.schema.pipeline import EvidentlyDriftMetric, MetricResult
 
 from .drift_detector import DriftDetector
@@ -66,8 +67,9 @@ class EvidentlyDriftDetector(DriftDetector):
 
 
 def _get_evidently_metrics(metrics_config: dict[str, EvidentlyDriftMetric]) -> dict[str, EmbeddingsDriftMetric]:
-    """This function instantiates an Evidently metric given metric configuration.
-    If we want to support multiple metrics in the future, we can loop through the configurations.
+    """This function instantiates an Evidently metric given metric
+    configuration. If we want to support multiple metrics in the future, we can
+    loop through the configurations.
 
     Evidently metric configurations follow exactly the four DriftMethods defined in embedding_drift_methods:
     model, distance, mmd, ratio

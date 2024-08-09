@@ -1,9 +1,11 @@
 """Support the aggregation of the decisions of multiple drift metrics."""
 
-from typing import Annotated, Callable, Literal, Union
+from collections.abc import Callable
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field
 
 from .result import MetricResult
 
@@ -13,7 +15,7 @@ class MajorityVoteDriftAggregationStrategy(ModynBaseModel):
 
     @property
     def aggregate_decision_func(self) -> Callable[[dict[str, MetricResult]], bool]:
-        return lambda decisions: sum((decision.is_drift for decision in decisions.values())) > len(decisions) / 2
+        return lambda decisions: sum(decision.is_drift for decision in decisions.values()) > len(decisions) / 2
 
 
 class AtLeastNDriftAggregationStrategy(ModynBaseModel):
@@ -27,9 +29,6 @@ class AtLeastNDriftAggregationStrategy(ModynBaseModel):
 
 
 DriftAggregationStrategy = Annotated[
-    Union[
-        MajorityVoteDriftAggregationStrategy,
-        AtLeastNDriftAggregationStrategy,
-    ],
+    MajorityVoteDriftAggregationStrategy | AtLeastNDriftAggregationStrategy,
     Field(discriminator="id"),
 ]

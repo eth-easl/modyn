@@ -1,7 +1,11 @@
 import logging
-from typing import Callable, Generator, Iterable, Optional
+from collections.abc import Callable, Generator, Iterable
 
 import grpc
+from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
+from torch.utils.data import IterableDataset, get_worker_info
+from torchvision import transforms
+
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetDataPerWorkerRequest,
     GetDataPerWorkerResponse,
@@ -16,9 +20,6 @@ from modyn.utils.utils import (
     grpc_connection_established,
     instantiate_class,
 )
-from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
-from torch.utils.data import IterableDataset, get_worker_info
-from torchvision import transforms
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +35,9 @@ class EvaluationDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
-        tokenizer: Optional[str] = None,
-        start_timestamp: Optional[int] = None,
-        end_timestamp: Optional[int] = None,
+        tokenizer: str | None = None,
+        start_timestamp: int | None = None,
+        end_timestamp: int | None = None,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -46,9 +47,9 @@ class EvaluationDataset(IterableDataset):
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
         self._transform_list: list[Callable] = []
-        self._transform: Optional[Callable] = None
+        self._transform: Callable | None = None
         self._storagestub: StorageStub = None
-        self._bytes_parser_function: Optional[Callable] = None
+        self._bytes_parser_function: Callable | None = None
         self._start_timestamp = start_timestamp
         self._end_timestamp = end_timestamp
 
@@ -98,10 +99,10 @@ class EvaluationDataset(IterableDataset):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
 
-    def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.info(f"[Evaluation {self._evaluation_id}][Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.debug(f"[Evaluation {self._evaluation_id}][Worker {worker_id}] {msg}")
 
     @staticmethod
@@ -154,7 +155,7 @@ class EvaluationDataset(IterableDataset):
                     raise e
 
     def _get_data_from_storage(
-        self, keys: list[int], worker_id: Optional[int] = None
+        self, keys: list[int], worker_id: int | None = None
     ) -> Iterable[list[tuple[int, bytes, int]]]:
         processed_keys: set[int] | list[int] = []
         has_failed = False

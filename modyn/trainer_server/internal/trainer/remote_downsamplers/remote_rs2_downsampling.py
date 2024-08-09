@@ -1,8 +1,9 @@
 import logging
 import random
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
@@ -42,10 +43,10 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         # We only need to collect the sample information once
         if self._first_epoch:

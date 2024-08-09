@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from modyn.common.trigger_sample.trigger_sample_storage import TriggerSampleStorage
 
 TMP_DIR = tempfile.mkdtemp()

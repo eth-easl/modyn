@@ -4,6 +4,7 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 import torch
+
 from modyn.models import RHOLOSSTwinModel
 from modyn.models.dummy.dummy import Dummy, DummyModyn
 from modyn.models.rho_loss_twin_model.rho_loss_twin_model import RHOLOSSTwinModelModyn
@@ -105,7 +106,6 @@ def test_eval_forward_exclusively_route_to_one_model(
 
 
 def test_eval_forward_mixed(twin_model: RHOLOSSTwinModel):
-
     def model0_mock_forward(data: torch.Tensor):
         return torch.zeros(data.shape[0], 10)
 

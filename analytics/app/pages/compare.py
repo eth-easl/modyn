@@ -1,13 +1,15 @@
+from typing import get_args
+
 import dash
 import pandas as pd
+from dash import Input, Output, callback, dcc, html
+
 from analytics.app.data.const import CompositeModelOptions
 from analytics.app.pages.const.text import COMPOSITE_MODEL_TEXT
 from analytics.app.pages.plots.cost_over_time import section_cost_over_time
 from analytics.app.pages.plots.eval_heatmap import section_evalheatmap
 from analytics.app.pages.plots.eval_over_time import section_metricovertime
 from analytics.app.pages.plots.num_samples import section_num_samples
-from dash import Input, Output, callback, dcc, html
-from typing_extensions import get_args
 
 from .plots.cost_vs_eval_metric_agg import section3_scatter_cost_eval_metric
 from .plots.num_triggers_eval_metric import section3_scatter_num_triggers

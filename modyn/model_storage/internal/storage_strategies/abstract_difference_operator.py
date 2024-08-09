@@ -4,16 +4,17 @@ import torch
 
 
 class AbstractDifferenceOperator(ABC):
-    """
-    This is the base class for all difference operators. These operators can be used to calculate the difference
-    between two successive models in the pipeline and later be used in a incremental model storage strategy.
+    """This is the base class for all difference operators.
+
+    These operators can be used to calculate the difference between two
+    successive models in the pipeline and later be used in a incremental
+    model storage strategy.
     """
 
     @staticmethod
     @abstractmethod
     def calculate_difference(tensor: torch.Tensor, tensor_prev: torch.Tensor) -> bytes:
-        """
-        Calculate the difference between two tensors.
+        """Calculate the difference between two tensors.
 
         Args:
             tensor: the tensor representing some weights of the current model.
@@ -27,8 +28,7 @@ class AbstractDifferenceOperator(ABC):
     @staticmethod
     @abstractmethod
     def restore(tensor_prev: torch.Tensor, buffer: bytes) -> torch.Tensor:
-        """
-        Restores a weight tensor.
+        """Restores a weight tensor.
 
         Args:
             tensor_prev: the tensor representing some weights of the preceding model.

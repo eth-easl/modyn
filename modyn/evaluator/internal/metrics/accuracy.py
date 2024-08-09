@@ -1,12 +1,11 @@
 import torch
+
 from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.metrics.abstract_decomposable_metric import AbstractDecomposableMetric
 
 
 class Accuracy(AbstractDecomposableMetric):
-    """
-    Accuracy metric implementation.
-    """
+    """Accuracy metric implementation."""
 
     def __init__(self, config: AccuracyMetricConfig) -> None:
         super().__init__(config)

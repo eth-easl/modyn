@@ -45,7 +45,7 @@ def main() -> None:
 
     assert args.config.is_file(), f"File does not exist: {args.config}"
 
-    with open(args.config, "r", encoding="utf-8") as config_file:
+    with open(args.config, encoding="utf-8") as config_file:
         modyn_config = yaml.safe_load(config_file)
 
     logger.info("Initializing evaluator.")

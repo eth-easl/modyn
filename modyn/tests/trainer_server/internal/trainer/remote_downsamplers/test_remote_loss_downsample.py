@@ -1,10 +1,11 @@
 import torch
+from torch import nn
+
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_loss_downsampling import RemoteLossDownsampling
-from torch import nn
 
 
 def test_sample_shape(dummy_system_config: ModynConfig):

@@ -14,6 +14,7 @@ from unittest import mock
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
+
 from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
@@ -26,9 +27,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationInterval,
     EvaluationResultRequest,
     EvaluationStatusRequest,
+    PythonString,
 )
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
 from modyn.evaluator.internal.utils import EvaluationInfo, EvaluationProcessInfo
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
@@ -301,7 +302,6 @@ def test_evaluate_model_mixed(
     req = get_evaluate_model_request(intervals)
     with patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=storage_stub_mock):
         with tempfile.TemporaryDirectory() as modyn_temp:
-
             evaluator = EvaluatorGRPCServicer(get_modyn_config(), pathlib.Path(modyn_temp))
 
             resp = evaluator.evaluate_model(req, None)

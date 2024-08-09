@@ -1,10 +1,11 @@
 """TriggerTrainingMetadata model."""
 
-from modyn.metadata_database.metadata_base import MetadataBase
-from modyn.metadata_database.models.triggers import Trigger
 from sqlalchemy import BigInteger, Column, Double, Index, Integer
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.schema import ForeignKeyConstraint
+
+from modyn.metadata_database.metadata_base import MetadataBase
+from modyn.metadata_database.models.triggers import Trigger
 
 BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 
@@ -12,7 +13,8 @@ BIGINT = BigInteger().with_variant(sqlite.INTEGER(), "sqlite")
 class TriggerTrainingMetadata(MetadataBase):
     """TriggerTrainingMetadata model.
 
-    Metadata per trigger. This data is added by both the TrainerServer and the Selector.
+    Metadata per trigger. This data is added by both the TrainerServer
+    and the Selector.
 
     Additional required columns need to be added here.
     """

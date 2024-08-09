@@ -3,8 +3,8 @@ from enlighten import Counter, Manager
 
 class EvaluationStatusTracker:
     def __init__(self, dataset_id: str, dataset_size: int) -> None:
-        """
-        Class used to track the evaluation-progress of a dataset for the supervisor.
+        """Class used to track the evaluation-progress of a dataset for the
+        supervisor.
 
         Args:
             dataset_id: id of the dataset

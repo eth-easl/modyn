@@ -1,38 +1,34 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable, Optional
+from collections.abc import Callable
 
 import torch
+
 from modyn.config.schema.pipeline import MetricConfig
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractEvaluationMetric(ABC):
-    """
-    This abstract class is used to represent an evaluation metric which can be used to evaluate a trained model.
-    """
+    """This abstract class is used to represent an evaluation metric which can
+    be used to evaluate a trained model."""
 
     def __init__(self, config: MetricConfig):
-        """
-        Initialize the evaluation metric.
+        """Initialize the evaluation metric.
 
         Args:
             config: Configuration for the metric.
         """
         self.config = config
-        self.evaluation_transformer_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None
+        self.evaluation_transformer_function: Callable[[torch.Tensor], torch.Tensor] | None = None
 
     def deserialize_evaluation_transformer(self) -> None:
-        """
-        Deserialize the evaluation transform function.
-        """
+        """Deserialize the evaluation transform function."""
         self.evaluation_transformer_function = self.config.evaluation_transformer_function_deserialized  # type: ignore
 
     @abstractmethod
     def get_evaluation_result(self) -> float:
-        """
-        Get the final evaluation result.
+        """Get the final evaluation result.
 
         Returns:
             float: the calculated value of the metric.
@@ -44,8 +40,7 @@ class AbstractEvaluationMetric(ABC):
 
     @abstractmethod
     def get_name(self) -> str:
-        """
-        Get the name of the metric.
+        """Get the name of the metric.
 
         Returns:
             str: the metric name.
@@ -53,9 +48,9 @@ class AbstractEvaluationMetric(ABC):
         raise NotImplementedError()
 
     def transform_prediction(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_elements: int) -> torch.Tensor:
-        """
-        Checks whether the label and prediction values match in dimensions and that they contain num_elements elements.
-        Additionally, transform the model output if needed
+        """Checks whether the label and prediction values match in dimensions
+        and that they contain num_elements elements. Additionally, transform
+        the model output if needed.
 
         Args:
             y_true: true labels.

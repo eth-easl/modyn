@@ -38,5 +38,5 @@ You can specify the time resolution using the `--resolution` argument.
 The dataset contains more features than we use. We actually only use the title (input), the category (target) and the first version timestamp.
 
 - title: The title of the paper; we strip newlines and reduce whitespace to single spaces
-- category: The category of the paper; we only use the primary category; there are 
+- category: The category of the paper; we only use the primary category; there are
 - first_version_timestamp: we extract the first release date of the first version of the paper. Every revision of the paper has an own timestamp, however, we only use the first one.

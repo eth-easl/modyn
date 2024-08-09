@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description=f"CGLM Benchmark Data Generation")
-    parser_.add_argument(
-        "sourcedir", type=pathlib.Path, action="store", help="Path to source data directory"
-    )
-    parser_.add_argument(
-        "output", type=pathlib.Path, action="store", help="Path where we will output the dataset"
-    )
+    parser_ = argparse.ArgumentParser(description="CGLM Benchmark Data Generation")
+    parser_.add_argument("sourcedir", type=pathlib.Path, action="store", help="Path to source data directory")
+    parser_.add_argument("output", type=pathlib.Path, action="store", help="Path where we will output the dataset")
 
     parser_.add_argument(
-        "--metadata", type=pathlib.Path, default="cglm_labels_timestamps_clean.csv", action="store", help="The path to the csv file containing the metadata"
+        "--metadata",
+        type=pathlib.Path,
+        default="cglm_labels_timestamps_clean.csv",
+        action="store",
+        help="The path to the csv file containing the metadata",
     )
 
     parser_.add_argument(
@@ -55,7 +55,7 @@ def setup_argparser() -> argparse.ArgumentParser:
         "--labeltype",
         default="landmark",
         help="Which label type should be used. `landmark` are the default labels from the CGLM paper, and `supercategory` and `hierarchical` are higher order labels provided by Google.",
-        choices=["landmark", "supercategory", "hierarchical"]
+        choices=["landmark", "supercategory", "hierarchical"],
     )
 
     parser_.add_argument(
@@ -72,9 +72,15 @@ def main():
     parser = setup_argparser()
     args = parser.parse_args()
     identifier = f"cglm{'_clean' if args.clean else ''}_{args.labeltype}_min{args.min_samples_per_class}"
-    logger.info(f"Final destination is {args.output / identifier}. Generating subset to use. Identifier is {identifier}.")
+    logger.info(
+        f"Final destination is {args.output / identifier}. Generating subset to use. Identifier is {identifier}."
+    )
 
-    label_type_to_column = {"landmark": 'landmark_id', "supercategory": "supercategory_label", "hierarchical": "hierarchical_label_label"}
+    label_type_to_column = {
+        "landmark": "landmark_id",
+        "supercategory": "supercategory_label",
+        "hierarchical": "hierarchical_label_label",
+    }
     label_column = label_type_to_column[args.labeltype]
 
     df = pd.read_csv(args.metadata)
@@ -85,9 +91,11 @@ def main():
     df = df[~df[label_column].isin(label_ids_to_drop)]
 
     label_to_new_label = {old_label: label for label, old_label in enumerate(df[label_column].unique())}
-    df['label'] = df[label_column].map(label_to_new_label)
+    df["label"] = df[label_column].map(label_to_new_label)
     df["year"] = df["upload_date"].apply(lambda x: datetime.fromtimestamp(x).year)
-    print(f"We got {df.shape[0]} samples with {len(label_to_new_label)} classes for this configuration. Generating subset.")
+    print(
+        f"We got {df.shape[0]} samples with {len(label_to_new_label)} classes for this configuration. Generating subset."
+    )
 
     if args.eval_split:
         if args.eval_split == "uniform":
@@ -101,13 +109,22 @@ def main():
             train_df = pd.concat(train_dfs)
             eval_df = pd.concat(eval_dfs)
 
-        loop_iterator = [("train", train_df, args.output / identifier / "train"), ("eval", eval_df, args.output / identifier / "eval")]
+        loop_iterator = [
+            ("train", train_df, args.output / identifier / "train"),
+            ("eval", eval_df, args.output / identifier / "eval"),
+        ]
     else:
         loop_iterator = [("train", df, args.output / identifier / "train")]
-    
+
     overall_stats = {}
     for split, split_df, output_dir in loop_iterator:
-        split_stats = {"total_samples": 0, "total_classes": len(label_to_new_label), "per_year": {}, "per_class": {}, "per_year_and_class": {}}
+        split_stats = {
+            "total_samples": 0,
+            "total_classes": len(label_to_new_label),
+            "per_year": {},
+            "per_class": {},
+            "per_year_and_class": {},
+        }
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -163,16 +180,14 @@ def main():
     with open(args.output / identifier / "dataset_stats.json", "w") as f:
         json.dump(overall_stats, f, indent=4)
 
-
     if args.dummy:
-        dummy_path =  args.output / identifier / "train" / "dummy.jpg"
-        shutil.copy(file_path, dummy_path) # just use the last file_path
+        dummy_path = args.output / identifier / "train" / "dummy.jpg"
+        shutil.copy(file_path, dummy_path)  # just use the last file_path
         dummy_ts = timestamp + 24 * 60 * 60 * 1000
         os.utime(dummy_path, (dummy_ts, dummy_ts))
         with open(args.output / identifier / "train" / "dummy.label", "w", encoding="utf-8") as file:
             file.write(str(int(label)))
         os.utime(args.output / identifier / "train" / "dummy.label", (dummy_ts, dummy_ts))
-
 
     logger.info("Done.")
 

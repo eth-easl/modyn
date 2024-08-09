@@ -1,6 +1,4 @@
-"""
-Training functionality of the GPU node
-"""
+"""Training functionality of the GPU node."""
 
 import os
 

@@ -1,6 +1,4 @@
-"""
-DLRM LR Scheduler
-"""
+"""DLRM LR Scheduler."""
 
 import os
 

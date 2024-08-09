@@ -4,10 +4,9 @@ import os
 import threading
 
 # pylint: disable=no-name-in-module
-from typing import Optional
-
 import grpc
 from google.protobuf.json_format import ParseDict
+
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
     GetPipelineStatusRequest,
     GetPipelineStatusResponse,
@@ -34,13 +33,13 @@ class SupervisorGRPCServicer(SupervisorServicer):
 
         logger.info(f"[{pid}][{tid}]: Starting pipeline with request - {request}")
 
-        start_replay_at: Optional[int] = None
+        start_replay_at: int | None = None
         if request.HasField("start_replay_at"):
             start_replay_at = request.start_replay_at
-        stop_replay_at: Optional[int] = None
+        stop_replay_at: int | None = None
         if request.HasField("stop_replay_at"):
             stop_replay_at = request.stop_replay_at
-        maximum_triggers: Optional[int] = None
+        maximum_triggers: int | None = None
         if request.HasField("maximum_triggers"):
             maximum_triggers = request.maximum_triggers
 

@@ -1,7 +1,7 @@
 # pylint: disable=unused-argument
-"""This tests that the entrypoint script for the metadata processor successfully
-runs through.
-"""
+"""This tests that the entrypoint script for the metadata processor
+successfully runs through."""
+
 import os
 import pathlib
 from unittest.mock import patch

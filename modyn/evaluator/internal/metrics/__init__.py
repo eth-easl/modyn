@@ -1,7 +1,7 @@
-"""
-Metrics module.
+"""Metrics module.
 
-The metrics module contains all classes that can be used to evaluate a model on a specific metric.
+The metrics module contains all classes that can be used to evaluate a
+model on a specific metric.
 """
 
 import os

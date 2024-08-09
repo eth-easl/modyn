@@ -15,7 +15,8 @@ if __name__ == "__main__":
                 "0",
                 "--maximum-triggers",
                 "2",
-            ]
+            ],
+            text=True,
         )
         assert rc == 0
     finally:

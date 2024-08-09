@@ -1,12 +1,13 @@
 import numpy as np
 import torch
+
 from modyn.config.schema.pipeline import F1ScoreMetricConfig
 from modyn.evaluator.internal.metrics.abstract_decomposable_metric import AbstractDecomposableMetric
 
 
 class F1Score(AbstractDecomposableMetric):
-    """
-    F1-score implementation. Configuration options:
+    """F1-score implementation. Configuration options:
+
     - num_classes: the total number of classes.
     - (optional) average: the method used to average f1-score in the multiclass setting (default macro).
     - (optional) pos_label: the positive label used in binary classification (default 1), only its f1-score is returned.

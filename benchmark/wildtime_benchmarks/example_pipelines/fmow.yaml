@@ -32,10 +32,11 @@ training:
     activated: False
 data:
   dataset_id: fmow
-  transformations: [
-                "transforms.ToTensor()",
-                "transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])",
-            ]
+  transformations:
+    [
+      "transforms.ToTensor()",
+      "transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])",
+    ]
   bytes_parser_function: |
     from PIL import Image
     import io

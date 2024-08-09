@@ -2,6 +2,7 @@
 from unittest.mock import patch
 
 import grpc
+
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders

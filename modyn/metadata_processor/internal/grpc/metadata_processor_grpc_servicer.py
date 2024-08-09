@@ -1,4 +1,4 @@
-"""GRPC Servicer for Metadata Processor"""
+"""GRPC Servicer for Metadata Processor."""
 
 import logging
 

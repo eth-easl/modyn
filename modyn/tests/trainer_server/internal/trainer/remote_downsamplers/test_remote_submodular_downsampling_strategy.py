@@ -1,12 +1,13 @@
 import numpy as np
 import pytest
 import torch
+from torch.nn import BCEWithLogitsLoss
+
 from modyn.config import ModynConfig
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import DummyModel
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_submodular_downsampling_strategy import (
     RemoteSubmodularDownsamplingStrategy,
 )
-from torch.nn import BCEWithLogitsLoss
 
 
 def get_sampler_config(

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Annotated, List, Literal, Union
+from typing import Annotated, Literal, Self
+
+from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, model_validator
-from typing_extensions import Self
 
 from ..training import CheckpointingConfig, TrainingConfig
 
@@ -200,25 +200,23 @@ class RS2DownsamplingConfig(BaseDownsamplingConfig):
 
 
 SingleDownsamplingConfig = Annotated[
-    Union[
-        UncertaintyDownsamplingConfig,
-        KcenterGreedyDownsamplingConfig,
-        GradMatchDownsamplingConfig,
-        CraigDownsamplingConfig,
-        LossDownsamplingConfig,
-        SubmodularDownsamplingConfig,
-        GradNormDownsamplingConfig,
-        NoDownsamplingConfig,
-        RHOLossDownsamplingConfig,
-        RS2DownsamplingConfig,
-    ],
+    UncertaintyDownsamplingConfig
+    | KcenterGreedyDownsamplingConfig
+    | GradMatchDownsamplingConfig
+    | CraigDownsamplingConfig
+    | LossDownsamplingConfig
+    | SubmodularDownsamplingConfig
+    | GradNormDownsamplingConfig
+    | NoDownsamplingConfig
+    | RHOLossDownsamplingConfig
+    | RS2DownsamplingConfig,
     Field(discriminator="strategy"),
 ]
 
 
 class MultiDownsamplingConfig(ModynBaseModel):
-    downsampling_list: List[SingleDownsamplingConfig] = Field(description="An array of downsampling strategies.")
-    downsampling_thresholds: List[int] = Field(
+    downsampling_list: list[SingleDownsamplingConfig] = Field(description="An array of downsampling strategies.")
+    downsampling_thresholds: list[int] = Field(
         description=(
             "A list of thresholds to switch from a downsampler to another. The i-th threshold is used for the "
             "transition from the i-th downsampler to the (i+1)-th. This array should have one less item than the list "

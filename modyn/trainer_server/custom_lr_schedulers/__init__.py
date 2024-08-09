@@ -1,6 +1,4 @@
-"""Learning rate schedulers.
-
-"""
+"""Learning rate schedulers."""
 
 import os
 

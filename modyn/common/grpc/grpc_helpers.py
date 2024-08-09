@@ -6,18 +6,20 @@ import multiprocessing as mp
 import os
 import socket
 import time
+from collections.abc import Callable, Generator
 from concurrent import futures
-from typing import Any, Callable, Generator, Optional
+from typing import Any
 
 import grpc
+
 from modyn.config.schema.pipeline import TrainingConfig
 from modyn.config.schema.pipeline.data import DataConfig
 
 # pylint: disable=no-name-in-module
 from modyn.supervisor.internal.utils import TrainingStatusReporter
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import CheckpointInfo, Data
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+    CheckpointInfo,
+    Data,
     PythonString,
     StartTrainingRequest,
     StartTrainingResponse,
@@ -28,6 +30,7 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusRequest,
     TrainingStatusResponse,
 )
+from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_common_config, grpc_connection_established
 
@@ -89,7 +92,7 @@ def _run_server_worker(
 
 class GenericGRPCServer:
     def __init__(
-        self, modyn_config: dict, port: str, add_servicer_callback: Callable, callback_kwargs: Optional[dict] = None
+        self, modyn_config: dict, port: str, add_servicer_callback: Callable, callback_kwargs: dict | None = None
     ) -> None:
         """Initialize the GRPC server."""
         self.port = port
@@ -143,8 +146,8 @@ class TrainerServerGRPCHandlerMixin:
         super().__init__(**kwargs)
         self.config = modyn_config
         self.connected_to_trainer_server = False
-        self.trainer_server: Optional[TrainerServerStub] = None
-        self.trainer_server_channel: Optional[grpc.Channel] = None
+        self.trainer_server: TrainerServerStub | None = None
+        self.trainer_server_channel: grpc.Channel | None = None
 
     def init_trainer_server(self) -> None:
         trainer_server_address = f"{self.config['trainer_server']['hostname']}:{self.config['trainer_server']['port']}"
@@ -184,8 +187,8 @@ class TrainerServerGRPCHandlerMixin:
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
-        previous_model_id: Optional[int],
-        num_samples_to_pass: Optional[int] = None,
+        previous_model_id: int | None,
+        num_samples_to_pass: int | None = None,
     ) -> StartTrainingRequest:
         optimizers_config = {}
         for optimizer in training_config.optimizers:
@@ -256,8 +259,8 @@ class TrainerServerGRPCHandlerMixin:
         trigger_id: int,
         training_config: TrainingConfig,
         data_config: DataConfig,
-        previous_model_id: Optional[int],
-        num_samples_to_pass: Optional[int] = None,
+        previous_model_id: int | None,
+        num_samples_to_pass: int | None = None,
     ) -> int:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:
@@ -283,7 +286,7 @@ class TrainerServerGRPCHandlerMixin:
 
     # pylint: disable=too-many-nested-blocks
     def wait_for_training_completion(
-        self, training_id: int, training_reporter: Optional[TrainingStatusReporter] = None
+        self, training_id: int, training_reporter: TrainingStatusReporter | None = None
     ) -> dict[str, Any]:
         assert self.trainer_server is not None
         if not self.connected_to_trainer_server:

@@ -1,6 +1,4 @@
-"""
-DistilBert classifier
-"""
+"""DistilBert classifier."""
 
 import os
 

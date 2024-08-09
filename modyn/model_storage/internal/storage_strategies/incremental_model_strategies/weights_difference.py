@@ -1,9 +1,10 @@
 import io
 import pathlib
-from typing import BinaryIO, Union
+from typing import BinaryIO
 
 import torch
 from bitstring import BitArray
+
 from modyn.model_storage.internal.storage_strategies.abstract_difference_operator import AbstractDifferenceOperator
 from modyn.model_storage.internal.storage_strategies.difference_operators import (
     SubDifferenceOperator,
@@ -21,9 +22,10 @@ available_difference_operators: dict[str, type[AbstractDifferenceOperator]] = {
 
 
 class WeightsDifference(AbstractIncrementalModelStrategy):
-    """
-    This incremental model strategy stores the delta between two successive model states as difference of their
-    weight tensors. It currently supports two difference operators: xor and sub.
+    """This incremental model strategy stores the delta between two successive
+    model states as difference of their weight tensors.
+
+    It currently supports two difference operators: xor and sub.
     """
 
     def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str, config: dict):
@@ -98,7 +100,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
         return prev_model_state
 
     @staticmethod
-    def reorder_buffer(buffer: Union[bytes, bytearray]) -> bytes:
+    def reorder_buffer(buffer: bytes | bytearray) -> bytes:
         bit_array = BitArray(buffer)
         array_size = len(bit_array)
 
@@ -112,8 +114,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
 
     @staticmethod
     def encode_bytes(buffer: bytes) -> bytes:
-        """
-        Perform byte-wise run-length encoding.
+        """Perform byte-wise run-length encoding.
 
         Args:
             buffer: the bytes to be encoded.
@@ -143,8 +144,7 @@ class WeightsDifference(AbstractIncrementalModelStrategy):
 
     @staticmethod
     def decode_bytes(buffer: bytes) -> bytes:
-        """
-        Decode run-length encoded bytes.
+        """Decode run-length encoded bytes.
 
         Args:
             buffer: the encoded bytes.

@@ -22,7 +22,7 @@ class ArXivDownloader(Dataset):
     drive_id = "1H5xzHHgXl8GOMonkb6ojye-Y2yIp436V"
     file_name = "arxiv.pkl"
 
-    def __init__(self,  data_dir):
+    def __init__(self, data_dir):
         super().__init__()
 
         download_if_not_exists(
@@ -51,7 +51,7 @@ class ArXivDownloader(Dataset):
 
         for year in self._dataset:
             # for simplicity, instead of using years we map each day to a year from 1970
-            year_timestamp = create_timestamp(year=1970, month=1, day=year-2006)
+            year_timestamp = create_timestamp(year=1970, month=1, day=year - 2006)
 
             def get_split_by_id(split: int) -> list[str]:
                 rows = []
@@ -83,11 +83,12 @@ class ArXivDownloader(Dataset):
                 stats[year] = {"train": len(train_year_rows)}
         with open(os.path.join(self.path, "overall_stats.json"), "w") as f:
             import json
+
             json.dump(stats, f, indent=4)
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            year_timestamp = create_timestamp(year=1970, month=1, day= dummy_year - 2006)
+            year_timestamp = create_timestamp(year=1970, month=1, day=dummy_year - 2006)
             train_dummy_file = os.path.join(train_dir, f"{dummy_year}.csv")
             with open(train_dummy_file, "w", encoding="utf-8") as f:
                 f.write("\n".join(["dummy\t0"]))
@@ -104,6 +105,7 @@ class ArXivDownloader(Dataset):
                 os.utime(test_dummy_file, (year_timestamp, year_timestamp))
 
         os.remove(os.path.join(self.path, "arxiv.pkl"))
+
 
 if __name__ == "__main__":
     main()

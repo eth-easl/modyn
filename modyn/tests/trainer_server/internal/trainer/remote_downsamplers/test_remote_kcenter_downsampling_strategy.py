@@ -1,11 +1,12 @@
 import numpy as np
 import torch
+from torch.nn import BCEWithLogitsLoss
+
 from modyn.config import ModynConfig
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import DummyModel
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_kcenter_greedy_downsampling_strategy import (
     RemoteKcenterGreedyDownsamplingStrategy,
 )
-from torch.nn import BCEWithLogitsLoss
 
 
 def get_sampler_config(modyn_config: ModynConfig, balance=False):

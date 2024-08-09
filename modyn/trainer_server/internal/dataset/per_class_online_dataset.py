@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Tuple
 
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
@@ -23,7 +22,7 @@ class PerClassOnlineDataset(OnlineDataset):
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
         shuffle: bool,
-        tokenizer: Optional[str],
+        tokenizer: str | None,
     ):
         super().__init__(
             pipeline_id,
@@ -43,9 +42,7 @@ class PerClassOnlineDataset(OnlineDataset):
         assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label
 
-    def _get_transformed_data_tuple(
-        self, key: int, sample: bytes, label: int, weight: Optional[float]
-    ) -> Optional[Tuple]:
+    def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int, weight: float | None) -> tuple | None:
         assert self.filtered_label is not None
 
         if self.filtered_label != label:

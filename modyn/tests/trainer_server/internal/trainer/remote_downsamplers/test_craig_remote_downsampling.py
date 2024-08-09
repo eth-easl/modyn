@@ -2,13 +2,14 @@
 import numpy as np
 import pytest
 import torch
+from torch.nn import BCEWithLogitsLoss
+
 from modyn.config import ModynConfig
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import (
     DummyModel,
     assert_close_matrices,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers import RemoteCraigDownsamplingStrategy
-from torch.nn import BCEWithLogitsLoss
 
 
 def get_sampler_config(modyn_config, balance=False, grad_approx="LastLayerWithEmbedding"):
@@ -30,7 +31,6 @@ def get_sampler_config(modyn_config, balance=False, grad_approx="LastLayerWithEm
 def test_inform_samples(dummy_system_config: ModynConfig):
     sampler = RemoteCraigDownsamplingStrategy(*get_sampler_config(dummy_system_config))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
-
         # Test data
         sample_ids = [1, 2, 3]
         forward_input = torch.randn(3, 5)  # 3 samples, 5 input features
@@ -429,7 +429,6 @@ def test_matching_results_with_deepcore_permutation(dummy_system_config: ModynCo
         "cpu",
     )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
-
         sample_ids = [2, 3, 4]
         dummy_model.embedding_recorder.start_recording()
         forward_output = dummy_model(samples[targets == 0]).float()

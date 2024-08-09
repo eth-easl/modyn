@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Iterable
+from collections.abc import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.config.schema.pipeline import CoresetStrategyConfig

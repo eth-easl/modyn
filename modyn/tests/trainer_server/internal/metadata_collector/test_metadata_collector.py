@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
 from modyn.trainer_server.internal.mocks.mock_metadata_processor import MockMetadataProcessorServer
 from modyn.trainer_server.internal.utils.metric_type import MetricType

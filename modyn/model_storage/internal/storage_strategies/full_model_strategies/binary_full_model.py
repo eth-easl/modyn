@@ -5,9 +5,7 @@ from modyn.utils import get_tensor_byte_size, reconstruct_tensor_from_bytes
 
 
 class BinaryFullModel(AbstractFullModelStrategy):
-    """
-    This full model strategy stores the weights as binary sequence.
-    """
+    """This full model strategy stores the weights as binary sequence."""
 
     # pylint: disable-next=unused-argument
     def __init__(self, zipping_dir: pathlib.Path, zip_activated: bool, zip_algorithm_name: str, config: dict):

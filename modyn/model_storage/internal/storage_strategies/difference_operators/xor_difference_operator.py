@@ -1,4 +1,5 @@
 import torch
+
 from modyn.model_storage.internal.storage_strategies.abstract_difference_operator import AbstractDifferenceOperator
 from modyn.utils import reconstruct_tensor_from_bytes
 

@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from modyn.config.schema.pipeline import CoresetStrategyConfig, MultiDownsamplingConfig, SingleDownsamplingConfig
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.selector_strategies.downsampling_strategies.utils import instantiate_downsampler
@@ -38,7 +36,7 @@ class DownsamplingScheduler:
         if not len(self.dowsampling_thresholds) == len(set(self.dowsampling_thresholds)):
             raise ValueError("Thresholds must be unique")
 
-    def _get_next_downsampler_and_threshold(self) -> Tuple[AbstractDownsamplingStrategy, Optional[int]]:
+    def _get_next_downsampler_and_threshold(self) -> tuple[AbstractDownsamplingStrategy, int | None]:
         next_downsampler = instantiate_downsampler(
             self.dowsampling_configs[self.downsampler_index],
             self.modyn_config,

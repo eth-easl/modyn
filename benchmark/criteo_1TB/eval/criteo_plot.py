@@ -1,7 +1,20 @@
+import os
 import sys
 
 import matplotlib.pyplot as plt
-from plotting.common import *
+
+from analytics.plotting.common.common import (
+    DOUBLE_FIG_SIZE,
+    PIPELINE_NAME,
+    hatch_width,
+    hide_borders,
+    line,
+    load_data,
+    print_plot_paths,
+    save_plot,
+    y_grid,
+)
+from benchmark.criteo_1TB.eval.plotting.common import init
 
 
 def plot_accuracy(pipelines_data, ax):
@@ -12,7 +25,7 @@ def plot_accuracy(pipelines_data, ax):
         y = pipeline_data.values()
 
         y_rounded = [round(y["auc"], 2) for y in y]
-        ax.plot(x, y_rounded, **LINE(pipeline), label=PIPELINE_NAME[pipeline])
+        ax.plot(x, y_rounded, **line(pipeline), label=PIPELINE_NAME[pipeline])
 
     ax.set_xticks(list(x))
     ax.set_xticklabels([f"{idx + 1}" for idx, _ in enumerate(x)])
@@ -25,19 +38,19 @@ def plot_accuracy(pipelines_data, ax):
     ax.set_title("Model Performance on Day 10")
 
 
-if __name__ == '__main__':
-    data_path, plot_dir = INIT(sys.argv)
-    data = LOAD_DATA(data_path)
+if __name__ == "__main__":
+    data_path, plot_dir = init(sys.argv)
+    data = load_data(data_path)
 
     fig, ax = plt.subplots(1, 1, figsize=DOUBLE_FIG_SIZE)
 
     plot_accuracy(data, ax)
 
-    HATCH_WIDTH()
-    #FIG_LEGEND(fig)
-    Y_GRID(ax)
-    HIDE_BORDERS(ax)
+    hatch_width()
+    # FIG_LEGEND(fig)
+    y_grid(ax)
+    hide_borders(ax)
 
     plot_path = os.path.join(plot_dir, "criteo_auc")
-    SAVE_PLOT(plot_path)
-    PRINT_PLOT_PATHS()
+    save_plot(plot_path)
+    print_plot_paths()

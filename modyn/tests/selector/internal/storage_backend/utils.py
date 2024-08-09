@@ -1,4 +1,5 @@
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any
 
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 
@@ -14,7 +15,7 @@ class MockStorageBackend(AbstractStorageBackend):
     ) -> dict[str, Any]:
         pass
 
-    def get_available_labels(self, next_trigger_id: int, tail_triggers: Optional[int] = None) -> list[int]:
+    def get_available_labels(self, next_trigger_id: int, tail_triggers: int | None = None) -> list[int]:
         pass
 
     def get_trigger_data(self, trigger_id: int) -> Iterable[tuple[list[int], dict[str, object]]]:

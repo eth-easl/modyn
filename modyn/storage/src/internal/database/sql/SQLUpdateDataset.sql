@@ -1,4 +1,4 @@
-R"(UPDATE datasets 
+R"(UPDATE datasets
 SET base_path = :name,
     filesystem_wrapper_type = :filesystem_wrapper_type,
     file_wrapper_type = :file_wrapper_type,

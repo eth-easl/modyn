@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-from typing import Optional
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -25,7 +24,7 @@ class TrainingInfo:
         offline_dataset_path: str,
         final_checkpoint_path: pathlib.Path,
         log_file_path: pathlib.Path,
-        pretrained_model_path: Optional[pathlib.Path] = None,
+        pretrained_model_path: pathlib.Path | None = None,
     ) -> None:
         self.pipeline_id = request.pipeline_id
         self.trigger_id = request.trigger_id

@@ -1,4 +1,5 @@
 import enlighten
+
 from modynclient.client.internal.utils.training_status_tracker import CurrentEvent, TrainingStatusTracker
 
 

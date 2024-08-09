@@ -8,9 +8,9 @@ import queue
 import threading
 from collections import defaultdict
 from threading import Lock
-from typing import Optional
 
 import grpc
+
 from modyn.common.ftp import download_trained_model
 
 # pylint: disable-next=no-name-in-module
@@ -50,8 +50,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
     """GRPC servicer for the evaluator module."""
 
     def __init__(self, config: dict, tempdir: pathlib.Path):
-        """
-        Initialize evaluator GRPC servicer.
+        """Initialize evaluator GRPC servicer.
 
         Args:
             config: configuration file for evaluator.
@@ -102,7 +101,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         logger.info("Received evaluate model request.")
         num_intervals = len(request.dataset_info.evaluation_intervals)
         with MetadataDatabaseConnection(self._config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, request.model_id)
+            trained_model: TrainedModel | None = database.session.get(TrainedModel, request.model_id)
 
             if not trained_model:
                 logger.error(f"Trained model {request.model_id} does not exist!")
@@ -265,7 +264,7 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         )
         return EvaluationStatusResponse(valid=True, is_running=False, exception=exception)
 
-    def _check_for_evaluation_exception(self, evaluation_id: int) -> Optional[str]:
+    def _check_for_evaluation_exception(self, evaluation_id: int) -> str | None:
         exception_queue = self._evaluation_process_dict[evaluation_id].exception_queue
 
         # As qsize() is unreliable and not implemented on macOS,

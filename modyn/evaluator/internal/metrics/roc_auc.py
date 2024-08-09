@@ -1,26 +1,24 @@
 import math
-from typing import Optional
 
 import torch
+
 from modyn.config.schema.pipeline import RocAucMetricConfig
 from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
 
 
 class RocAuc(AbstractHolisticMetric):
-    """
-    ROC-AUC metric implementation.
-    """
+    """ROC-AUC metric implementation."""
 
     def __init__(self, config: RocAucMetricConfig) -> None:
         super().__init__(config)
-        self.evaluation_result: Optional[float] = None
+        self.evaluation_result: float | None = None
 
     # Taken from
     # https://github.com/NVIDIA/DeepLearningExamples/blob/678b470fd78e0fdb84b3173bc25164d766e7821f/PyTorch/Recommendation/DLRM/dlrm/scripts/utils.py#L289
     # pylint: disable=unused-argument
     def _dataset_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_samples: int) -> None:
-        """
-        Calculate the ROC-AUC score for the given model output and ground truth.
+        """Calculate the ROC-AUC score for the given model output and ground
+        truth.
 
         Args:
             y_true: The true values.

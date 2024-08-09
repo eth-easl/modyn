@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+
 from modyn.config.schema.pipeline import AccuracyMetricConfig
 from modyn.evaluator.internal.metrics import Accuracy
 from modyn.evaluator.internal.metrics.abstract_decomposable_metric import AbstractDecomposableMetric

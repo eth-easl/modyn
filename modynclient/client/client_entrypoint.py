@@ -4,6 +4,7 @@ import pathlib
 from typing import Any
 
 import yaml
+
 from modynclient.client import Client
 from modynclient.config import read_client_config
 
@@ -81,7 +82,7 @@ def main() -> None:
 
     validate_args(args)
 
-    with open(args.pipeline, "r", encoding="utf-8") as pipeline_file:
+    with open(args.pipeline, encoding="utf-8") as pipeline_file:
         pipeline_config = yaml.safe_load(pipeline_file)
 
     client_config = read_client_config(args.config)

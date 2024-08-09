@@ -1,23 +1,22 @@
 import copy
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import torch
-from modyn.utils import dynamic_module_import
 from torch import nn
+
+from modyn.utils import dynamic_module_import
 
 logger = logging.getLogger(__name__)
 
 
 class RHOLOSSTwinModel:
-
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         self.model = RHOLOSSTwinModelModyn(model_configuration, device, amp)
         self.model.to(device)
 
 
 class RHOLOSSTwinModelModyn(nn.Module):
-
     def __init__(self, model_configuration: dict[str, Any], device: str, amp: bool) -> None:
         super().__init__()
         model_module = dynamic_module_import("modyn.models")
@@ -64,7 +63,7 @@ class RHOLOSSTwinModelModyn(nn.Module):
             logger.info("Finetune on a model that has been trained before. Resetting seen ids.")
             self._models_seen_ids = [set(), set()]
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: list[int] | None = None) -> torch.Tensor:
         assert sample_ids is not None
         # self.training is an internal attribute defined in nn.Module that is updated
         # whenever .eval() or .train() is called

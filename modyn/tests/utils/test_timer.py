@@ -1,5 +1,5 @@
 import time
-from typing import Generator
+from collections.abc import Generator
 
 from modyn.utils.timer import timed_generator
 

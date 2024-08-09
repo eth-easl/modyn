@@ -1,7 +1,7 @@
 # pylint: skip-file
 # pragma: no cover
-
 """Binary file wrapper."""
+
 import os
 from typing import Literal
 
@@ -9,11 +9,13 @@ from typing import Literal
 class BinaryFileWrapper:  # pragma: no cover
     """Binary file wrapper.
 
-    Binary files store raw sample data in a row-oriented format. One file can contain multiple samples.
-    This wrapper requires that each samples should start with the label followed by its set of features.
-    Each sample should also have a fixed overall width (in bytes) and a fixed width for the label,
-    both of which should be provided in the config. The file wrapper is able to read samples by
-    offsetting the required number of bytes.
+    Binary files store raw sample data in a row-oriented format. One
+    file can contain multiple samples. This wrapper requires that each
+    samples should start with the label followed by its set of features.
+    Each sample should also have a fixed overall width (in bytes) and a
+    fixed width for the label, both of which should be provided in the
+    config. The file wrapper is able to read samples by offsetting the
+    required number of bytes.
     """
 
     def __init__(
@@ -52,7 +54,6 @@ class BinaryFileWrapper:  # pragma: no cover
         return int(self.file_size / self.record_size)
 
     def get_all_labels(self) -> list[int]:  # pragma: no cover
-
         with open(self.file_path, "rb") as file:
             data = file.read()
 
@@ -66,8 +67,7 @@ class BinaryFileWrapper:  # pragma: no cover
         return labels
 
     def get_sample(self, index: int) -> bytes:  # pragma: no cover
-        """Get the sample at the given index.
-        The indices are zero based.
+        """Get the sample at the given index. The indices are zero based.
 
         Args:
             index (int): Index
@@ -81,11 +81,9 @@ class BinaryFileWrapper:  # pragma: no cover
         return self.get_samples_from_indices([index])[0]
 
     def get_samples(self, start: int, end: int) -> list[bytes]:  # pragma: no cover
-
         return self.get_samples_from_indices(list(range(start, end)))
 
     def get_samples_from_indices(self, indices: list) -> list[bytes]:  # pragma: no cover
-
         with open(self.file_path, "rb") as file:
             data = file.read()
 
