@@ -16,4 +16,4 @@ from .time import TimeTriggerConfig
 TriggerConfig = Annotated[
     TimeTriggerConfig | DataAmountTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig,
     Field(discriminator="id"),
-]  # ruff: noqa: UP007
+]
