@@ -335,6 +335,10 @@ class PytorchTrainer:
                 if self._record_loss_every > 0:
                     actual_loss.append(loss.item())
                     self._info(f"[XZM]: actual loss: {loss}; {loss.item()}")
+                    # check if loss is nan
+                    if loss != loss:
+                        self._error(f"[XZM]: Loss is NaN. {loss}")
+                        self._error(f"[XZM]: output: {output}")
                     if trained_batches % self._record_loss_every == self._record_loss_every - 1:
                         # calculate the average loss over the last record_loss_every batches
                         training_loss.append(np.mean(actual_loss))
