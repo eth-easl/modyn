@@ -334,6 +334,7 @@ class PytorchTrainer:
 
                 if self._record_loss_every > 0:
                     actual_loss.append(loss.item())
+                    self._info(f"[XZM]: actual loss: {loss.item()}")
                     if trained_batches % self._record_loss_every == self._record_loss_every - 1:
                         # calculate the average loss over the last record_loss_every batches
                         training_loss.append(np.mean(actual_loss))

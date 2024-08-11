@@ -81,7 +81,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             # lower probability, higher weight to reduce the variance
             weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
         # selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
-        return downsampled_idxs, weights
+        return downsampled_idxs.tolist(), weights
 
     @property
     def requires_grad(self) -> bool:

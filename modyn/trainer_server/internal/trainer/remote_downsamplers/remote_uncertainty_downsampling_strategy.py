@@ -139,7 +139,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # we select those with minimal negative entropy, i.e., maximum entropy
         # Margin: We look for the smallest margin. The larger the margin, the more certain the
         # model is.
-        return np.argsort(self.scores)[:target_size], torch.ones(target_size).float()
+        return np.argsort(self.scores)[:target_size].tolist(), torch.ones(target_size).float()
 
     @property
     def requires_grad(self) -> bool:
