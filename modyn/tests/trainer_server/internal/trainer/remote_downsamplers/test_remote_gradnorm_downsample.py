@@ -40,6 +40,23 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
         assert set(downsampled_indexes) <= set(range(8))
 
 
+def test_flappy(dummy_system_config: ModynConfig):
+    downsampling_ratio = 50
+    per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
+    sampler = RemoteGradNormDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
+
+        sampler.probabilities = [torch.tensor([0.0, 0.2, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0])]
+        sampler.number_of_points_seen = 8
+        downsampled_indexes, weights = sampler.select_points()
+        print(downsampled_indexes, weights)
+
+
+
 def test_sample_shape_other_losses(dummy_system_config: ModynConfig):
     model = torch.nn.Linear(10, 1)
     downsampling_ratio = 50

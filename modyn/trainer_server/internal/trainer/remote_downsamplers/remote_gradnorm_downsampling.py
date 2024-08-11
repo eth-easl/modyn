@@ -67,19 +67,27 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
+        # for whatever reason the probabilities may contain nan or inf, we replace them with 0
+        probabilities[torch.isnan(probabilities)] = 0.0
+        probabilities[torch.isinf(probabilities)] = 0.0
         sum_probability = probabilities.sum()
         if torch.isclose(sum_probability, torch.tensor(0.0)):
             logger.warning("Sum of probabilities is zero; Possibly all gradients are zero. Cannot normalize.")
             logger.warning("uniformly random select points")
             # random select without replacement
             downsampled_idxs = torch.randperm(probabilities.shape[0])[:target_size]
-            weights = torch.ones(target_size, dtype=torch.float32)
+            weights = torch.ones(target_size, dtype=torch.float32, device=probabilities.device) * 1e-6
         else:
             probabilities = probabilities / sum_probability
             downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)
-
             # lower probability, higher weight to reduce the variance
-            weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
+            # the weights are in two cases:
+            # 1. if the probability is 0, the weight is 1e-6
+            # 2. if the probability is not 0, the weight is 1 / (number_of_points_seen * probability)
+            weights = torch.ones(target_size, dtype=torch.float32, device=probabilities.device) * 1e-6
+            zero_idxs = torch.isclose(probabilities[downsampled_idxs], torch.tensor(0.0))
+            non_zero_downsampled_idxs = downsampled_idxs[~zero_idxs]
+            weights[~zero_idxs] = 1.0 / (self.number_of_points_seen * probabilities[non_zero_downsampled_idxs])
         # selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
         return downsampled_idxs.tolist(), weights
 
