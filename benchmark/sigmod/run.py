@@ -302,47 +302,50 @@ def gen_selection_strategies(
         )
     #
     # # RHOLossDownsamplingConfig
+    # training_config_dict = training_config.model_dump()
     # for use_previous_model in [False]:
     #     for use_pretrained in [False]:
-    #         il_config_options = {
-    #             "il_model_id": "ArticleNet",
-    #             "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
-    #             "use_previous_model": use_previous_model,
-    #             "drop_last_batch": False,
-    #         }
-    #         if not use_pretrained:
-    #             # delete the key
-    #             del il_config_options["il_model_config"]["use_pretrained"]
-    #         training_config_dict = training_config.model_dump()
-    #         epochs_per_trigger = training_config_dict["epochs_per_trigger"]
-    #         il_config_options["epochs_per_trigger"] = epochs_per_trigger
-    #         training_config_dict.update(il_config_options)
+    #         for epochs_per_trigger in [
+    #             # 6, 7, 10,
+    #             training_config_dict["epochs_per_trigger"],
+    #         ]:
+    #             il_config_options = {
+    #                 "il_model_id": "ArticleNet",
+    #                 "il_model_config": {"use_pretrained": use_pretrained, "num_classes": num_classes},
+    #                 "use_previous_model": use_previous_model,
+    #                 "drop_last_batch": False,
+    #             }
+    #             if not use_pretrained:
+    #                 # delete the key
+    #                 del il_config_options["il_model_config"]["use_pretrained"]
+    #             il_config_options["epochs_per_trigger"] = epochs_per_trigger
+    #             training_config_dict.update(il_config_options)
     #
-    #         use_prev_suffix = "_use_prev" if use_previous_model else ""
-    #         use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
-    #         strategy = "Simple"
-    #         holdout_set_ratio = 50 if strategy == "Twin" else 10
-    #         rho_name = f"rho_loss_bts_{strategy}_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
-    #         strategies.append(
-    #             (
-    #                 rho_name,
-    #                 CoresetStrategyConfig(
-    #                     maximum_keys_in_memory=maximum_keys_in_memory,
-    #                     storage_backend="database",
-    #                     tail_triggers=0,
-    #                     limit=-1,
-    #                     warmup_triggers=warmup_triggers,
-    #                     downsampling_config=RHOLossDownsamplingConfig(
-    #                         ratio=ratio, ratio_max=ratio_max,
-    #                         sample_then_batch=False,
-    #                         period=period,
-    #                         holdout_set_ratio=holdout_set_ratio,
-    #                         holdout_set_strategy=strategy,
-    #                         il_training_config=ILTrainingConfig(**training_config_dict),
+    #             use_prev_suffix = "_use_prev" if use_previous_model else ""
+    #             use_pretrained_suffix = "_no_pretrained" if not use_pretrained else ""
+    #             strategy = "Twin"
+    #             holdout_set_ratio = 50 if strategy == "Twin" else 10
+    #             rho_name = f"rho_loss_bts_{strategy}_{epochs_per_trigger}ep{use_prev_suffix}{use_pretrained_suffix}"
+    #             strategies.append(
+    #                 (
+    #                     rho_name,
+    #                     CoresetStrategyConfig(
+    #                         maximum_keys_in_memory=maximum_keys_in_memory,
+    #                         storage_backend="database",
+    #                         tail_triggers=0,
+    #                         limit=-1,
+    #                         warmup_triggers=warmup_triggers,
+    #                         downsampling_config=RHOLossDownsamplingConfig(
+    #                             ratio=ratio, ratio_max=ratio_max,
+    #                             sample_then_batch=False,
+    #                             period=period,
+    #                             holdout_set_ratio=holdout_set_ratio,
+    #                             holdout_set_strategy=strategy,
+    #                             il_training_config=ILTrainingConfig(**training_config_dict),
+    #                         ),
     #                     ),
-    #                 ),
+    #                 )
     #             )
-    #         )
     return strategies
 
 
@@ -400,10 +403,10 @@ def run_experiment(
     logger.info(f"Existing pipelines: {existing_pipeline_names}")
     # Pick the line you want.
     # pipeline_gen_func = gen_yearbook_config
-    # pipeline_gen_func = gen_arxiv_config
+    pipeline_gen_func = gen_arxiv_config
     # pipeline_gen_func = gen_cglm_config
     # pipeline_gen_func = gen_cifar10_config
-    pipeline_gen_func = gen_criteo_config
+    # pipeline_gen_func = gen_criteo_config
 
     dataset = "cglm_landmark_min25"  # necessary for CGLM, ignored for others
     train_gpu = f"cuda:{physical_gpu_id}"
