@@ -1,7 +1,7 @@
 import pathlib
 from abc import ABC, abstractmethod
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator
 
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
@@ -30,10 +30,11 @@ class Trigger(ABC):
         new_data: list[tuple[int, int, int]],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
-        """The supervisor informs the Trigger about new data.
-        In case the concrete Trigger implementation decides to trigger, we return a list of _indices into new_data_.
-        This list contains the indices of all data points that cause a trigger.
-        The list might be empty or only contain a single element, which concrete Triggers need to respect.
+        """The supervisor informs the Trigger about new data. In case the
+        concrete Trigger implementation decides to trigger, we return a list of
+        _indices into new_data_. This list contains the indices of all data
+        points that cause a trigger. The list might be empty or only contain a
+        single element, which concrete Triggers need to respect.
 
         Args:
             new_data: List of new data (keys, timestamps, labels)
@@ -45,4 +46,5 @@ class Trigger(ABC):
 
     # TODO: rename to "new_model"
     def inform_previous_model(self, previous_model_id: int) -> None:
-        """The supervisor informs the Trigger about the model_id of the previous trigger"""
+        """The supervisor informs the Trigger about the model_id of the
+        previous trigger."""

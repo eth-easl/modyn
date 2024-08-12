@@ -14,9 +14,8 @@ from modyn.supervisor.internal.triggers.performance.performance import (
 
 
 class DriftDecisionPolicy(ABC):
-    """
-    Decision policy that will make the binary is_drift decisions on observations of a performance metric.
-    """
+    """Decision policy that will make the binary is_drift decisions on
+    observations of a performance metric."""
 
     @abstractmethod
     def evaluate_decision(
@@ -26,8 +25,7 @@ class DriftDecisionPolicy(ABC):
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
     ) -> bool:
-        """
-        Evaluate the decision based on the given observation.
+        """Evaluate the decision based on the given observation.
 
         At the time of calling this the performance_tracker has already been updated with the new performance value
         to allow for forecast based decisions.
@@ -41,9 +39,8 @@ class DriftDecisionPolicy(ABC):
 
 
 class StaticPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
-    """
-    Decision policy that will make the binary is_drift decisions based on a static threshold.
-    """
+    """Decision policy that will make the binary is_drift decisions based on a
+    static threshold."""
 
     def __init__(self, config: StaticPerformanceThresholdCriterion):
         self.config = config
@@ -61,9 +58,8 @@ class StaticPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
 
 
 class DynamicPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
-    """
-    Decision policy that will make the binary is_drift decisions based on a dynamic threshold.
-    """
+    """Decision policy that will make the binary is_drift decisions based on a
+    dynamic threshold."""
 
     def __init__(self, config: DynamicPerformanceThresholdCriterion):
         self.config = config
@@ -81,10 +77,8 @@ class DynamicPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
 
 
 class StaticNumberAvoidableMisclassificationDecisionPolicy(DriftDecisionPolicy):
-    """
-    Decision policy that will make the binary is_drift decisions based on a static number of
-    cumulated avoidable misclassifications.
-    """
+    """Decision policy that will make the binary is_drift decisions based on a
+    static number of cumulated avoidable misclassifications."""
 
     def __init__(self, threshold: int):
         self.threshold = threshold

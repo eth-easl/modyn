@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Generator, Optional
+from collections.abc import Generator
 
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
 )
-from modyn.evaluator.internal.core_evaluation import perform_evaluation
+from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.supervisor.internal.triggers.drift.embedding.model.downloader import (
     ModelDownloader,
 )
@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 class PerformanceTrigger(Trigger):
     """Trigger based on the performance of the model.
 
-    We support a simple performance drift approach that compares the most
-    recent model performance with an expected performance value that can be static
-    or dynamic through a rolling average.
+    We support a simple performance drift approach that compares the
+    most recent model performance with an expected performance value
+    that can be static or dynamic through a rolling average.
 
-    Additionally we support a regret based approach where the number of avoidable
-    misclassifications (misclassifications that could have been avoided if we
-    would have triggered) is compared to a threshold.
+    Additionally we support a regret based approach where the number of
+    avoidable misclassifications (misclassifications that could have
+    been avoided if we would have triggered) is compared to a threshold.
     """
 
     def __init__(self, config: PerformanceTriggerConfig) -> None:
@@ -50,9 +50,9 @@ class PerformanceTrigger(Trigger):
         self.context: TriggerContext | None = None
         self.previous_model_id: int | None = None
 
-        self.dataloader_info: Optional[DataLoaderInfo] = None
-        self.model_downloader: Optional[ModelDownloader] = None
-        self.model_manager: Optional[ModelManager] = None
+        self.dataloader_info: DataLoaderInfo | None = None
+        self.model_downloader: ModelDownloader | None = None
+        self.model_manager: ModelManager | None = None
 
         self._sample_left_until_detection = (
             config.detection_interval_data_points
@@ -63,6 +63,7 @@ class PerformanceTrigger(Trigger):
         # TODO: insertion
 
         self._triggered_once = False
+        self._metrics = setup_metrics(config.evaluation.dataset.metrics)
 
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
@@ -109,8 +110,9 @@ class PerformanceTrigger(Trigger):
                 triggered = self._run_detection(new_key_ts)
 
             if triggered:
-                trigger_idx = processing_head_in_batch - 1
+                yield 1
                 # TODO
+                # trigger_idx = processing_head_in_batch - 1
                 # yield from self._handle_drift_result(
                 #     triggered, trigger_idx, drift_results, log=log
                 # )
@@ -125,6 +127,7 @@ class PerformanceTrigger(Trigger):
 
     def _run_detection(self, interval_data: list[tuple[int, int]]) -> bool:
         """Compare current data against reference data.
+
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
         Get the dataloaders, download the embedding encoder model if necessary,
@@ -152,8 +155,8 @@ class PerformanceTrigger(Trigger):
             model=self.model_manager,
             dataloader=evaluation_dataloader,
             device=self.config.evaluation.device,
-            metrics=self.config.evaluation.dataset.metrics,
-            label_transformer_function=self.config.label,
+            metrics=self._metrics,
+            label_transformer_function=self.config.evaluation.label_transformer_function,
             amp=False,  # TODO?
         )
 

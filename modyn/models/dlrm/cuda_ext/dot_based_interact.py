@@ -19,7 +19,8 @@ from torch.autograd import Function
 
 
 class DotBasedInteract(Function):
-    """Forward and Backward paths of cuda extension for dot-based feature interact."""
+    """Forward and Backward paths of cuda extension for dot-based feature
+    interact."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

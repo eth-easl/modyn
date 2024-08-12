@@ -71,7 +71,7 @@ evaluation:
       bytes_parser_function: |
         def bytes_parser_function(data: bytes) -> str:
           return str(data, "utf8")
-      tokenizer: DistilBertTokenizerTransform      
+      tokenizer: DistilBertTokenizerTransform
       batch_size: 64
       dataloader_workers: 2
       metrics:

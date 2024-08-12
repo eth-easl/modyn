@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, call, patch
 import grpc
 import pytest
 import torch
+
 from modyn.config import ModynConfig
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub

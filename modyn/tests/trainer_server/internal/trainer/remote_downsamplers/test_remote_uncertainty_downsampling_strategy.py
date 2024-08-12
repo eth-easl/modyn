@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_uncertainty_downsampling_strategy import (
     RemoteUncertaintyDownsamplingStrategy,

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Annotated, Callable, ForwardRef, Literal, Union
+from collections.abc import Callable
+from typing import Annotated, ForwardRef, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field
 
 
 class BaseEnsembleStrategy(ModynBaseModel):
-
     @property
     def aggregate_decision_func(self) -> Callable[[dict[str, bool]], bool]:
         """Returns:
@@ -46,11 +47,7 @@ class CustomEnsembleStrategy(BaseEnsembleStrategy):
 
 
 EnsembleStrategy = Annotated[
-    Union[
-        MajorityVoteEnsembleStrategy,
-        AtLeastNEnsembleStrategy,
-        CustomEnsembleStrategy,
-    ],
+    MajorityVoteEnsembleStrategy | AtLeastNEnsembleStrategy | CustomEnsembleStrategy,
     Field(discriminator="id"),
 ]
 

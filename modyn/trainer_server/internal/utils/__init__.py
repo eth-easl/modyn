@@ -1,6 +1,4 @@
-"""
-Util functions of the GPU node
-"""
+"""Util functions of the GPU node."""
 
 import os
 

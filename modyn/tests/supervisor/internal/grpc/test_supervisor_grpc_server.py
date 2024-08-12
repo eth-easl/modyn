@@ -1,12 +1,13 @@
 # pylint: disable=unused-argument,redefined-outer-name
 from unittest.mock import Mock, patch
 
+from pytest import fixture
+
 from modyn.common.grpc import GenericGRPCServer
 from modyn.config.schema.system.config import ModynConfig, SupervisorConfig
 from modyn.supervisor.internal.grpc.supervisor_grpc_server import SupervisorGRPCServer
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.supervisor import Supervisor
-from pytest import fixture
 
 
 def noop_init_metadata_db(self):

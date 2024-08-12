@@ -1,6 +1,7 @@
 # pylint: disable=redefined-outer-name
 
 import pytest
+
 from modyn.config.schema.pipeline import (
     AccuracyMetricConfig,
     CheckpointingConfig,

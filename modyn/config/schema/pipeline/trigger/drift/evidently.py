@@ -1,7 +1,8 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field
 
 
 class _EvidentlyBaseDriftMetric(ModynBaseModel):
@@ -31,10 +32,6 @@ class EvidentlySimpleDistanceDriftMetric(_EvidentlyBaseDriftMetric):
 
 
 EvidentlyDriftMetric = Annotated[
-    Union[
-        EvidentlyModelDriftMetric,
-        EvidentlyRatioDriftMetric,
-        EvidentlySimpleDistanceDriftMetric,
-    ],
+    EvidentlyModelDriftMetric | EvidentlyRatioDriftMetric | EvidentlySimpleDistanceDriftMetric,
     Field(discriminator="id"),
 ]

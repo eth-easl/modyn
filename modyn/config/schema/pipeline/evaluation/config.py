@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
+
+from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
-from pydantic import Field, field_validator
 
 from ..data import DataConfig
 from .handler import EvalHandlerConfig
@@ -15,7 +16,7 @@ class EvalDataConfig(DataConfig):
     dataloader_workers: int = Field(
         description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
     )
-    metrics: List[MetricConfig] = Field(
+    metrics: list[MetricConfig] = Field(
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
@@ -23,7 +24,7 @@ class EvalDataConfig(DataConfig):
 
 class ResultWriter(ModynBaseModel):
     name: str = Field(description="The name of the result writer.")
-    config: Optional[Dict[str, Any]] = Field(None, description="Optional configuration for the result writer.")
+    config: dict[str, Any] | None = Field(None, description="Optional configuration for the result writer.")
 
 
 ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
@@ -49,7 +50,7 @@ class EvaluationConfig(ModynBaseModel):
 
     @field_validator("datasets")
     @classmethod
-    def validate_datasets(cls, value: List[EvalDataConfig]) -> List[EvalDataConfig]:
+    def validate_datasets(cls, value: list[EvalDataConfig]) -> list[EvalDataConfig]:
         dataset_ids = [dataset.dataset_id for dataset in value]
         if len(dataset_ids) != len(set(dataset_ids)):
             raise ValueError("Dataset IDs must be unique.")

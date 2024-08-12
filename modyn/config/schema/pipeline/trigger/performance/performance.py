@@ -21,6 +21,9 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
 
     device: str = Field(description="The device the model should be put on.")
     dataset: EvalDataConfig = Field(description="The dataset on which the model is evaluated.")
+    label_transformer_function: str = Field(
+        "", description="Function used to transform the label (tensors of integers)."
+    )
 
     @field_validator("dataset")
     @classmethod
@@ -54,4 +57,6 @@ class PerformanceTriggerConfig(ModynBaseModel):
     mode: TriggerEvaluationMode = Field("hindsight", description="The evaluation mode of the trigger.")
 
     data_density_window_size: int = Field(
-        0, description="The window size for the data density estimation. Only used for Number"
+        0,
+        description="The window size for the data density estimation. Only used for Number",
+    )

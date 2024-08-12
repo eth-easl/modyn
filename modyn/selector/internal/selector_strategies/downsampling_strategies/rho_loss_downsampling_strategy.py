@@ -1,6 +1,10 @@
 import json
 import logging
-from typing import Any, Iterable, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
+
+from sqlalchemy import Select, func, select
+from sqlalchemy.orm.session import Session
 
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config.schema.pipeline import DataConfig, NewDataStrategyConfig, RHOLossDownsamplingConfig
@@ -11,8 +15,6 @@ from modyn.selector.internal.selector_strategies import AbstractSelectionStrateg
 from modyn.selector.internal.selector_strategies.downsampling_strategies import AbstractDownsamplingStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import Select, func, select
-from sqlalchemy.orm.session import Session
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +130,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         return config
 
     @staticmethod
-    def _get_latest_rho_state(rho_pipeline_id: int, modyn_config: dict) -> Optional[Tuple[int, int]]:
+    def _get_latest_rho_state(rho_pipeline_id: int, modyn_config: dict) -> tuple[int, int] | None:
         with MetadataDatabaseConnection(modyn_config) as database:
             # find the maximal trigger id
             max_trigger_id = (
@@ -148,7 +150,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
             assert il_model_id is not None
         return max_trigger_id, il_model_id
 
-    def _train_il_model(self, trigger_id: int, previous_model_id: Optional[int]) -> Tuple[int, dict[str, object]]:
+    def _train_il_model(self, trigger_id: int, previous_model_id: int | None) -> tuple[int, dict[str, object]]:
         training_id = self.grpc.start_training(
             pipeline_id=self.rho_pipeline_id,
             trigger_id=trigger_id,
@@ -161,8 +163,7 @@ class RHOLossDownsamplingStrategy(AbstractDownsamplingStrategy):
         logger.info(f"Stored trained model {model_id} for trigger {trigger_id} in rho pipeline {self.rho_pipeline_id}")
         return model_id, trainer_log
 
-    def _get_or_create_rho_pipeline_id_and_get_data_config(self) -> Tuple[int, DataConfig]:
-
+    def _get_or_create_rho_pipeline_id_and_get_data_config(self) -> tuple[int, DataConfig]:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             main_pipeline = database.session.get(Pipeline, self._pipeline_id)
             assert main_pipeline is not None

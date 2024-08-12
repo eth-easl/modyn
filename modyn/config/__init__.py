@@ -15,7 +15,7 @@ def read_modyn_config(path: Path) -> ModynConfig:
     Returns:
         The validated Modyn config as a pydantic model.
     """
-    with open(path, "r", encoding="utf-8") as config_file:
+    with open(path, encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
     return ModynConfig.model_validate(config)
 
@@ -29,6 +29,6 @@ def read_pipeline(path: Path) -> ModynPipelineConfig:
     Returns:
         The validated pipeline configuration as a pydantic model.
     """
-    with open(path, "r", encoding="utf-8") as pipeline_file:
+    with open(path, encoding="utf-8") as pipeline_file:
         pipeline = yaml.safe_load(pipeline_file)
     return ModynPipelineConfig.model_validate(pipeline)

@@ -19,13 +19,11 @@ logger = logging.getLogger(__name__)
 
 def setup_argparser() -> argparse.ArgumentParser:
     parser_ = argparse.ArgumentParser(description="MNIST Benchmark Storage Script")
-    parser_.add_argument(
-        "--dir", type=pathlib.Path, action="store", help="Path to data directory"
-    )
+    parser_.add_argument("--dir", type=pathlib.Path, action="store", help="Path to data directory")
     parser_.add_argument(
         "--evaluation",
         action="store_true",
-        help="Whether to handle training (not present) or evaluation (present) dataset."
+        help="Whether to handle training (not present) or evaluation (present) dataset.",
     )
     parser_.add_argument(
         "--timestamps",

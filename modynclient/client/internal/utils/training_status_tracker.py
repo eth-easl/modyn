@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Optional
 
 import enlighten
 
@@ -29,7 +28,7 @@ class TrainingStatusTracker:
         self.training_id = training_id
         self.current_event: CurrentEvent = CurrentEvent.IDLE
         self.progress_mgr: enlighten.Manager = progress_mgr
-        self.sample_pbar: Optional[enlighten.counter] = None
+        self.sample_pbar: enlighten.counter | None = None
 
     def progress_counter(self, samples_seen_training: int, samples_seen_downsampling: int, is_training: bool) -> None:
         if self.current_event == CurrentEvent.IDLE:
@@ -56,9 +55,7 @@ class TrainingStatusTracker:
             self._progress_counter_downsampling(samples_seen_downsampling)
 
     def close_counter(self) -> None:
-        """
-        close the last open progress bar, if any
-        """
+        """Close the last open progress bar, if any."""
         if self.current_event == CurrentEvent.IDLE:
             return
 

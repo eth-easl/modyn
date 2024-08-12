@@ -4,16 +4,11 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
-from typing import Optional
 
 import torch
 
-from modyn.evaluator.internal.core_evaluation import perform_evaluation
+from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
-from modyn.evaluator.internal.metric_factory import MetricFactory
-from modyn.evaluator.internal.metrics import (
-    AbstractEvaluationMetric,
-)
 from modyn.evaluator.internal.utils import EvaluationInfo
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
@@ -52,8 +47,8 @@ class PytorchEvaluator:
     @staticmethod
     def _prepare_dataloader(
         evaluation_info: EvaluationInfo,
-        start_timestamp: Optional[int],
-        end_timestamp: Optional[int],
+        start_timestamp: int | None,
+        end_timestamp: int | None,
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
@@ -73,20 +68,6 @@ class PytorchEvaluator:
         )
 
         return dataloader
-
-    @staticmethod
-    def _setup_metrics(
-        metric_configurations: list[str],
-    ) -> list[AbstractEvaluationMetric]:
-        metrics = []
-        # need to make sure that the metric names are unique as they are used for identification.
-        metric_names = set()
-        for configuration_json in metric_configurations:
-            metric = MetricFactory.get_evaluation_metric(configuration_json)
-            if metric.get_name() not in metric_names:
-                metrics.append(metric)
-                metric_names.add(metric.get_name())
-        return metrics
 
     def _info(self, msg: str) -> None:
         self.logger.info(f"[Evaluation {self._evaluation_id}] {msg}")
@@ -110,7 +91,7 @@ class PytorchEvaluator:
     # pylint: disable-next=too-many-locals
     def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader, interval_idx: int) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
-        metrics = self._setup_metrics(self._eval_info.raw_metrics)
+        metrics = setup_metrics(self._eval_info.raw_metrics)
 
         num_samples, metric_result = perform_evaluation(
             self._model.model,

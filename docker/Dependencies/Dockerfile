@@ -65,4 +65,3 @@ RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init b
 # Install dependencies
 COPY ./environment.yml /tmp/environment.yml
 RUN mamba env create -f /tmp/environment.yml
-

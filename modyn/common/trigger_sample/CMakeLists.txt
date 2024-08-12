@@ -8,7 +8,7 @@ set(MODYN_TRIGGERSAMPLESTORAGE_HEADERS
     ./include/trigger_sample_storage.hpp
 )
 add_library(trigger_sample_storage SHARED)
-    
+
 set_target_properties(trigger_sample_storage
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -22,5 +22,3 @@ target_sources(trigger_sample_storage PRIVATE ${MODYN_TRIGGERSAMPLESTORAGE_HEADE
 target_include_directories(trigger_sample_storage PUBLIC include)
 target_compile_options(trigger_sample_storage PRIVATE ${MODYN_COMPILE_OPTIONS} -Wno-unused-function)
 target_link_libraries(trigger_sample_storage PUBLIC modyn)
-
-

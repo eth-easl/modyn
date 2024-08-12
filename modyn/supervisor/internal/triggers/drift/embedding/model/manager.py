@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class ModelManager:
     """The ModelManager stores a model and its metadata.
-    DataDriftTrigger uses ModelManager to run the model."""
+
+    DataDriftTrigger uses ModelManager to run the model.
+    """
 
     def __init__(
         self,

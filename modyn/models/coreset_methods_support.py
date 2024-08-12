@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import torch
 from torch import nn
@@ -10,7 +9,7 @@ class EmbeddingRecorder(nn.Module):
     def __init__(self, record_embedding: bool = False):
         super().__init__()
         self.record_embedding = record_embedding
-        self.embedding: Optional[torch.Tensor] = None
+        self.embedding: torch.Tensor | None = None
 
     def forward(self, tensor: torch.Tensor) -> torch.Tensor:
         if self.record_embedding:
@@ -26,9 +25,10 @@ class EmbeddingRecorder(nn.Module):
 
 
 class CoresetSupportingModule(nn.Module, ABC):
-    """
-    This class is used to support some Coreset Methods.
-    Embeddings, here defined as the activation before the last layer, are often used to estimate the importance of
+    """This class is used to support some Coreset Methods. Embeddings, here
+    defined as the activation before the last layer, are often used to estimate
+    the importance of.
+
     a point. To implement this class correctly, it is necessary to
         - implement the get_last_layer method
         - modify the forward pass so that the last layer embedding is recorded. For example, in a simple network like
@@ -47,14 +47,15 @@ class CoresetSupportingModule(nn.Module, ABC):
         self.embedding_recorder = EmbeddingRecorder(record_embedding)
 
     @property
-    def embedding(self) -> Optional[torch.Tensor]:
+    def embedding(self) -> torch.Tensor | None:
         assert self.embedding_recorder is not None
         return self.embedding_recorder.embedding
 
     @abstractmethod
     def get_last_layer(self) -> nn.Module:
-        """
-        Returns the last layer. Used for example to obtain the pre-layer and post-layer dimensions of tensors
+        """Returns the last layer.
 
+        Used for example to obtain the pre-layer and post-layer
+        dimensions of tensors
         """
         raise NotImplementedError()

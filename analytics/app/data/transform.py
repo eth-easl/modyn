@@ -2,9 +2,16 @@ import datetime
 from typing import Any, Literal
 
 import pandas as pd
+
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs, StageLog
-from modyn.supervisor.internal.utils.time_tools import generate_real_training_end_timestamp
+from modyn.supervisor.internal.pipeline_executor.models import (
+    MultiEvaluationInfo,
+    PipelineLogs,
+    StageLog,
+)
+from modyn.supervisor.internal.utils.time_tools import (
+    generate_real_training_end_timestamp,
+)
 from modyn.utils.utils import SECONDS_PER_UNIT
 
 AGGREGATION_FUNCTION = Literal["mean", "median", "max", "min", "sum", "std"]
@@ -67,25 +74,29 @@ def pipeline_stage_parents(logs: PipelineLogs) -> pd.DataFrame:
 def dfs_models_and_evals(
     logs: PipelineLogs, max_sample_time: Any, pipeline_ref: str = "pipeline"
 ) -> tuple[pd.DataFrame, pd.DataFrame | None, pd.DataFrame | None]:
-    """Returns a dataframe with the stored models and the dataframe for evaluations"""
+    """Returns a dataframe with the stored models and the dataframe for
+    evaluations."""
 
     # ---------------------------------------------------- MODELS ---------------------------------------------------- #
 
     # PipelineStage.STORE_TRAINED_MODEL
     df_store_models = StageLog.df(
-        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.STORE_TRAINED_MODEL.name), extended=True
+        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.STORE_TRAINED_MODEL.name),
+        extended=True,
     )
     df_store_models.set_index(["trigger_idx"], inplace=True)
 
     # PipelineStage.HANDLE_SINGLE_TRIGGER
     df_single_triggers = StageLog.df(
-        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.HANDLE_SINGLE_TRIGGER.name), extended=True
+        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.HANDLE_SINGLE_TRIGGER.name),
+        extended=True,
     )[["trigger_idx", "trigger_id", "first_timestamp", "last_timestamp"]]
     df_single_triggers.set_index(["trigger_idx"], inplace=True)
 
     # PipelineStage.TRAIN
     df_single_trainings = StageLog.df(
-        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.TRAIN.name), extended=True
+        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.TRAIN.name),
+        extended=True,
     )[["trigger_idx", "num_batches", "num_samples"]]
     df_single_trainings.set_index(["trigger_idx"], inplace=True)
 
@@ -131,7 +142,7 @@ def dfs_models_and_evals(
 
     dfs_requests = MultiEvaluationInfo.requests_df(logs.supervisor_logs.stage_runs)
     dfs_metrics = MultiEvaluationInfo.results_df(
-        (run.info for run in logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo))
+        [run.info for run in logs.supervisor_logs.stage_runs if isinstance(run.info, MultiEvaluationInfo)]
     )
 
     if dfs_requests.shape[0] == 0 or dfs_metrics.shape[0] == 0:
@@ -185,10 +196,14 @@ def add_pipeline_ref(df: pd.DataFrame | None, ref: str) -> pd.DataFrame | None:
 
 
 def linearize_ids(
-    df: pd.DataFrame, group_columns: list[str], target_col: str, mapping: dict[tuple[str], dict[int, int]] | None = None
+    df: pd.DataFrame,
+    group_columns: list[str],
+    target_col: str,
+    mapping: dict[tuple[str], dict[int, int]] | None = None,
 ) -> tuple[pd.DataFrame, dict[tuple[str], dict[int, int]]]:
-    """Within certain groups of a dataframe we want to linearize the ids (model_ids, trigger_ids, ...) so that they
-    are consecutive integers starting from 1.
+    """Within certain groups of a dataframe we want to linearize the ids
+    (model_ids, trigger_ids, ...) so that they are consecutive integers
+    starting from 1.
 
     Args:
         df: DataFrame with the ids.
@@ -210,8 +225,8 @@ def linearize_ids(
             df.loc[group_df.index, target_col] = df.loc[group_df.index, target_col].map(mapping[group])
     else:
         if not mapping:
-            mapping[()] = {old_id: i + 1 for i, old_id in enumerate(sorted(df[target_col].unique()))}
-        df[target_col] = df[target_col].map(mapping[()])
+            mapping[()] = {old_id: i + 1 for i, old_id in enumerate(sorted(df[target_col].unique()))}  # type: ignore
+        df[target_col] = df[target_col].map(mapping[()])  # type: ignore
 
     return df, mapping
 
@@ -221,6 +236,7 @@ def linearize_ids(
 
 def convert_epoch_to_datetime(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """Convert epoch time to datetime in place.
+
     Args:
         df: DataFrame with epoch time.
         column: Column with epoch time.
@@ -233,6 +249,7 @@ def convert_epoch_to_datetime(df: pd.DataFrame, column: str) -> pd.DataFrame:
 
 def patch_yearbook_time(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """Patch yearbook time in place.
+
     Args:
         df: DataFrame with yearbook time.
         column: Column with yearbook time, has to be a datetime column.

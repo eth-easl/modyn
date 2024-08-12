@@ -3,21 +3,26 @@ import logging
 import multiprocessing as mp
 import pathlib
 import tempfile
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 import torch
+from pydantic import ValidationError
+from torch.utils.data import IterableDataset
+
 from modyn.config import F1ScoreMetricConfig
 from modyn.config.schema.pipeline import AccuracyMetricConfig
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import DatasetInfo, EvaluateModelRequest, EvaluationInterval
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    DatasetInfo,
+    EvaluateModelRequest,
+    EvaluationInterval,
+    PythonString,
+)
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString
 from modyn.evaluator.internal.metrics import Accuracy, F1Score
 from modyn.evaluator.internal.pytorch_evaluator import PytorchEvaluator
 from modyn.evaluator.internal.utils import EvaluationInfo
-from pydantic import ValidationError
-from torch.utils.data import IterableDataset
 
 
 def noop_constructor_mock(self, channel):
@@ -63,7 +68,6 @@ class MockModule:
 
 
 class MockEvaluationDataset(IterableDataset):
-
     def __init__(self, input_to_output_func=lambda x: 0):
         self.dataset = iter(
             [

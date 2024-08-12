@@ -1,6 +1,5 @@
-"""
-This submodule provides the functionality for the Metadata Processor server component.
-"""
+"""This submodule provides the functionality for the Metadata Processor server
+component."""
 
 import os
 

@@ -1,6 +1,5 @@
 import logging
 import pathlib
-from typing import Optional
 
 import grpc
 
@@ -28,8 +27,11 @@ logger = logging.getLogger(__name__)
 
 
 class ModelDownloader:
-    """The ModelDownloader provides a simple interface setup_manager() to the DataDriftTrigger.
-    Given a model_id and a device, it creates an ModelManager, downloads model parameters and loads model state.
+    """The ModelDownloader provides a simple interface setup_manager() to the
+    DataDriftTrigger.
+
+    Given a model_id and a device, it creates an ModelManager, downloads
+    model parameters and loads model state.
     """
 
     def __init__(
@@ -56,9 +58,9 @@ class ModelDownloader:
             )
         return ModelStorageStub(model_storage_channel)
 
-    def configure(self, model_id: int, device: str) -> Optional[ModelManager]:
+    def configure(self, model_id: int, device: str) -> ModelManager | None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
+            trained_model: TrainedModel | None = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
                 return None

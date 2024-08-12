@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
@@ -15,9 +15,10 @@ from modyn.metadata_processor.processor_strategies.processor_strategy_type impor
 
 
 class AbstractProcessorStrategy(ABC):
-    """This class is the base class for Metadata Processors. In order to extend
-    this class to perform custom processing, implement process_trigger_metadata
-    and process_sample_metadata
+    """This class is the base class for Metadata Processors.
+
+    In order to extend this class to perform custom processing,
+    implement process_trigger_metadata and process_sample_metadata
     """
 
     def __init__(self, modyn_config: dict, pipeline_id: int):
@@ -38,8 +39,8 @@ class AbstractProcessorStrategy(ABC):
     def persist_metadata(
         self,
         trigger_id: int,
-        processed_trigger_metadata: Optional[dict],
-        processed_sample_metadata: Optional[list[dict]],
+        processed_trigger_metadata: dict | None,
+        processed_sample_metadata: list[dict] | None,
     ) -> None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             if processed_trigger_metadata is not None:
@@ -69,9 +70,9 @@ class AbstractProcessorStrategy(ABC):
                 database.session.commit()
 
     @abstractmethod
-    def process_trigger_metadata(self, trigger_metadata: PerTriggerMetadata) -> Optional[dict]:
+    def process_trigger_metadata(self, trigger_metadata: PerTriggerMetadata) -> dict | None:
         raise NotImplementedError()
 
     @abstractmethod
-    def process_sample_metadata(self, sample_metadata: Iterable[PerSampleMetadata]) -> Optional[list[dict]]:
+    def process_sample_metadata(self, sample_metadata: Iterable[PerSampleMetadata]) -> list[dict] | None:
         raise NotImplementedError()

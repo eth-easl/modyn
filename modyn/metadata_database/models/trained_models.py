@@ -1,11 +1,12 @@
-"""Trained models downloaded from trainer server"""
+"""Trained models downloaded from trainer server."""
 
 from datetime import datetime
 
-from modyn.metadata_database.metadata_base import MetadataBase
-from modyn.metadata_database.models.triggers import Trigger
 from sqlalchemy import TIMESTAMP, Column, ForeignKey, ForeignKeyConstraint, Integer, String
 from sqlalchemy.orm import relationship
+
+from modyn.metadata_database.metadata_base import MetadataBase
+from modyn.metadata_database.models.triggers import Trigger
 
 
 class TrainedModel(MetadataBase):

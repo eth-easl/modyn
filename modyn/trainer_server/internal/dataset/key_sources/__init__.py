@@ -1,6 +1,4 @@
-"""
-Key sources
-"""
+"""Key sources."""
 
 import os
 

@@ -8,8 +8,6 @@ extend-exclude = '''
   | .*/.*_grpc\.py
   | .*/.*_pb2\.py
   | .*/generated/
-  | .*/benchmark/
-  | .*/analytics/plotting/
   | .*/build/
   | .*/libbuild/
   | .*/clang-tidy-build/

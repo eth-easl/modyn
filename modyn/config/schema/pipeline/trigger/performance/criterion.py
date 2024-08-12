@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -45,7 +45,7 @@ class DynamicExpectedPerformanceConfig(ModynBaseModel):
 
 
 ExpectedPerformanceConfig = Annotated[
-    Union[StaticExpectedPerformanceConfig, DynamicExpectedPerformanceConfig],
+    StaticExpectedPerformanceConfig | DynamicExpectedPerformanceConfig,
     Field(discriminator="id"),
 ]
 
@@ -78,9 +78,8 @@ class StaticPerformanceThresholdCriterion(ModynBaseModel):
 
 # TODO: warmup needed
 class DynamicPerformanceThresholdCriterion(_ExpectedPerformanceMixin):
-    """
-    Triggers after comparison of current performance with the a rolling average of historic performances after triggers.
-    """
+    """Triggers after comparison of current performance with the a rolling
+    average of historic performances after triggers."""
 
     id: Literal["DynamicPerformanceThresholdCriterion"] = Field("DynamicPerformanceThresholdCriterion")
     rolling_average_window_size: int = Field(
@@ -105,8 +104,7 @@ class DynamicPerformanceThresholdCriterion(_ExpectedPerformanceMixin):
 
 
 class _NumberAvoidableMisclassificationCriterion(_ExpectedPerformanceMixin):
-    """
-    Trigger based on the cumulated number of avoidable misclassifications.
+    """Trigger based on the cumulated number of avoidable misclassifications.
 
     An avoidable misclassification is a misclassification that would have been avoided if a trigger would have been.
     E.g. if we currency see an accuracy of 80% but expect 95% with a trigger, 15% of the samples are avoidable
@@ -170,10 +168,8 @@ class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassif
 # -------------------------------------------------------------------------------------------------------------------- #
 
 PerformanceTriggerCriterion = Annotated[
-    Union[
-        StaticPerformanceThresholdCriterion,
-        DynamicPerformanceThresholdCriterion,
-        StaticNumberAvoidableMisclassificationCriterion,
-    ],
+    StaticPerformanceThresholdCriterion
+    | DynamicPerformanceThresholdCriterion
+    | StaticNumberAvoidableMisclassificationCriterion,
     Field(discriminator="id"),
 ]

@@ -1,8 +1,8 @@
 import logging
 import pathlib
-from typing import Optional
 
 import torch
+
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 from modyn.trainer_server.internal.dataset.per_class_online_dataset import PerClassOnlineDataset
 
@@ -25,12 +25,12 @@ def prepare_dataloaders(
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
     shuffle: bool,
-    tokenizer: Optional[str],
-    log_path: Optional[pathlib.Path],
+    tokenizer: str | None,
+    log_path: pathlib.Path | None,
     drop_last: bool = True,
-) -> tuple[torch.utils.data.DataLoader, Optional[torch.utils.data.DataLoader]]:
-    """
-    Gets the proper dataset according to the dataset id, and creates the proper dataloaders.
+) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
+    """Gets the proper dataset according to the dataset id, and creates the
+    proper dataloaders.
 
     Parameters:
         pipeline_id (int): ID of the pipeline
@@ -47,7 +47,6 @@ def prepare_dataloaders(
         selector_address (str): Address of the Selector endpoint that the OnlineDataset workers connect to.
     Returns:
         tuple[Optional[torch.utils.data.DataLoader]]: Dataloaders for train and validation
-
     """
     logger.debug("Creating OnlineDataset.")
     train_set = OnlineDataset(

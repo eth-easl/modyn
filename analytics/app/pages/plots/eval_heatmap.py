@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 
 import pandas as pd
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import linearize_ids, patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import linearize_ids, patch_yearbook_time
 
 
 @dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_models: pd.DataFrame
     df_eval_single: pd.DataFrame
@@ -35,8 +35,8 @@ def gen_figure(
     dataset_id: str,
     metric: str,
 ) -> go.Figure:
-    """
-    Create the cost over time figure with barplot or histogram. Histogram has nice binning while barplot is precise.
+    """Create the cost over time figure with barplot or histogram. Histogram
+    has nice binning while barplot is precise.
 
     Args:
         page: Page name where the plot is displayed
@@ -61,7 +61,13 @@ def gen_figure(
     if patch_yearbook:
         for column in ["interval_start", "interval_center", "interval_end"]:
             patch_yearbook_time(df_adjusted, column)
-        for column in ["train_start", "train_end", "real_train_end", "usage_start", "usage_end"]:
+        for column in [
+            "train_start",
+            "train_end",
+            "real_train_end",
+            "usage_start",
+            "usage_end",
+        ]:
             patch_yearbook_time(df_logs_models, column)
 
     df_adjusted = df_adjusted.sort_values(by=["interval_center"])
@@ -83,7 +89,7 @@ def gen_figure(
         linearize_ids(df_logs_models, [], "pipeline_id", mapping)
 
         # invert the mapping
-        label_map = {v: full_refs[k] for k, v in mapping[()].items()}
+        label_map = {v: full_refs[k] for k, v in mapping[()].items()}  # type: ignore
 
     else:
         assert df_adjusted["pipeline_ref"].nunique() <= 1
@@ -100,7 +106,9 @@ def gen_figure(
 
     # build heatmap matrix dataframe:
     heatmap_data = df_adjusted.pivot(
-        index=["model_idx"] if not multi_pipeline_mode else ["pipeline_id"], columns="interval_center", values="value"
+        index=["model_idx"] if not multi_pipeline_mode else ["pipeline_id"],
+        columns="interval_center",
+        values="value",
     )
 
     fig = go.Figure(
@@ -119,7 +127,11 @@ def gen_figure(
         width=2200,
         height=1100,
         showlegend=True,
-        yaxis=dict(tickmode="array", tickvals=heatmap_data.index, ticktext=[label_map[y] for y in heatmap_data.index]),
+        yaxis=dict(
+            tickmode="array",
+            tickvals=heatmap_data.index,
+            ticktext=[label_map[y] for y in heatmap_data.index],
+        ),
         xaxis=dict(tickangle=45),
     )
     shapes = []
@@ -202,7 +214,14 @@ def section_evalheatmap(
         Input(f"{page}-evalheatmap-evaluation-metric", "value"),
     )
     def update_figure(patch_yearbook: bool, eval_handler_ref: str, dataset_id: str, metric: str) -> go.Figure:
-        return gen_figure(page, multi_pipeline_mode, patch_yearbook, eval_handler_ref, dataset_id, metric)
+        return gen_figure(
+            page,
+            multi_pipeline_mode,
+            patch_yearbook,
+            eval_handler_ref,
+            dataset_id,
+            metric,
+        )
 
     eval_handler_refs = list(df_eval_single["eval_handler"].unique())
     eval_datasets = list(df_eval_single["dataset_id"].unique())
@@ -235,7 +254,7 @@ def section_evalheatmap(
                             dcc.RadioItems(
                                 id=f"{page}-evalheatmap-evaluation-handler",
                                 options=eval_handler_refs,
-                                value=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
+                                value=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -251,7 +270,7 @@ def section_evalheatmap(
                             dcc.RadioItems(
                                 id=f"{page}-evalheatmap-dataset-id",
                                 options=eval_datasets,
-                                value=eval_datasets[0] if len(eval_datasets) > 0 else None,
+                                value=(eval_datasets[0] if len(eval_datasets) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -267,7 +286,7 @@ def section_evalheatmap(
                             dcc.RadioItems(
                                 id=f"{page}-evalheatmap-evaluation-metric",
                                 options=eval_metrics,
-                                value=eval_metrics[0] if len(eval_metrics) > 0 else None,
+                                value=(eval_metrics[0] if len(eval_metrics) > 0 else None),
                                 persistence=True,
                             ),
                         ],
@@ -283,8 +302,14 @@ def section_evalheatmap(
                             dcc.RadioItems(
                                 id=f"{page}-evalheatmap-radio-time-patch-yearbook",
                                 options=[
-                                    {"label": "yes (convert day based timestamps to years)", "value": True},
-                                    {"label": "no (use timestamps as they are)", "value": False},
+                                    {
+                                        "label": "yes (convert day based timestamps to years)",
+                                        "value": True,
+                                    },
+                                    {
+                                        "label": "no (use timestamps as they are)",
+                                        "value": False,
+                                    },
                                 ],
                                 value=False,
                                 persistence=True,
@@ -300,7 +325,7 @@ def section_evalheatmap(
                     page,
                     multi_pipeline_mode,
                     False,
-                    eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
+                    eval_handler=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
                     dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
                     metric=eval_metrics[0] if len(eval_metrics) > 0 else None,
                 ),

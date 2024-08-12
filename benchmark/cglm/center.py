@@ -3,7 +3,7 @@ import json
 import matplotlib.pyplot as plt
 
 # Load the statistics from the JSON file
-with open("hierarchy_stats.json", "r") as f:
+with open("hierarchy_stats.json") as f:
     stats = json.load(f)
 
 split = "train"

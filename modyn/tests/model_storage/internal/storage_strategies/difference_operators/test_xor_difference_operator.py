@@ -1,4 +1,5 @@
 import torch
+
 from modyn.model_storage.internal.storage_strategies import AbstractDifferenceOperator
 from modyn.model_storage.internal.storage_strategies.difference_operators import XorDifferenceOperator
 

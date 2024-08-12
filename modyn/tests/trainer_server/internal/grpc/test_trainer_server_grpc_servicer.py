@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import torch
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.utils import ModelStorageStrategyConfig
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (

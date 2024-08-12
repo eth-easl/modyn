@@ -26,7 +26,9 @@ class RegisterPipelineRequest(google.protobuf.message.Message):
         pipeline_id: builtins.int = ...,
         processor_type: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "processor_type", b"processor_type"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "processor_type", b"processor_type"]
+    ) -> None: ...
 
 global___RegisterPipelineRequest = RegisterPipelineRequest
 
@@ -53,7 +55,9 @@ class TrainingMetadataRequest(google.protobuf.message.Message):
     @property
     def trigger_metadata(self) -> global___PerTriggerMetadata: ...
     @property
-    def sample_metadata(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PerSampleMetadata]:
+    def sample_metadata(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PerSampleMetadata]:
         """TODO(#210): we will need to support large number of samples in the future. We should use a streaming RPC to support that."""
 
     def __init__(
@@ -65,7 +69,19 @@ class TrainingMetadataRequest(google.protobuf.message.Message):
         sample_metadata: collections.abc.Iterable[global___PerSampleMetadata] | None = ...,
     ) -> None: ...
     def HasField(self, field_name: typing.Literal["trigger_metadata", b"trigger_metadata"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["pipeline_id", b"pipeline_id", "sample_metadata", b"sample_metadata", "trigger_id", b"trigger_id", "trigger_metadata", b"trigger_metadata"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "pipeline_id",
+            b"pipeline_id",
+            "sample_metadata",
+            b"sample_metadata",
+            "trigger_id",
+            b"trigger_id",
+            "trigger_metadata",
+            b"trigger_metadata",
+        ],
+    ) -> None: ...
 
 global___TrainingMetadataRequest = TrainingMetadataRequest
 

@@ -1,11 +1,12 @@
 # CLOC Data
 
-In this directory, you can find the files necessary to run experiments with the CLOC dataset. 
+In this directory, you can find the files necessary to run experiments with the CLOC dataset.
 The dataset was introduced [in this paper](https://arxiv.org/pdf/2108.09020.pdf), and we make use of the [CLDatasets](https://github.com/hammoudhasan/CLDatasets) mirror.
 
 ## Data Generation
-To run the downloading script you need to install the `google-cloud-storage` package. 
-Then, you can use the `data_generation.py` script to download the data and set the timestamps accordingly. 
+
+To run the downloading script you need to install the `google-cloud-storage` package.
+Then, you can use the `data_generation.py` script to download the data and set the timestamps accordingly.
 Use the `-h` flag to find out more.
 
 ## License

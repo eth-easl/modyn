@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import torch
 
@@ -12,12 +13,24 @@ from modyn.evaluator.internal.metrics.abstract_evaluation_metric import (
 )
 
 
+def setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
+    metrics = []
+    # need to make sure that the metric names are unique as they are used for identification.
+    metric_names = set()
+    for configuration_json in metric_configurations:
+        metric = MetricFactory.get_evaluation_metric(configuration_json)
+        if metric.get_name() not in metric_names:
+            metrics.append(metric)
+            metric_names.add(metric.get_name())
+    return metrics
+
+
 def perform_evaluation(
     model: Any,
     dataloader: torch.utils.data.DataLoader,
     device: str,
     metrics: list[AbstractEvaluationMetric],
-    label_transformer_function: Optional[Callable],
+    label_transformer_function: Callable | None,
     amp: bool = False,
 ) -> tuple[int, list[tuple[str, float]]]:
     device_type = "cuda" if "cuda" in device else "cpu"
@@ -29,7 +42,7 @@ def perform_evaluation(
     num_samples = 0
     with torch.inference_mode():
         for batch in dataloader:
-            data: Union[torch.Tensor, dict]
+            data: torch.Tensor | dict
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(device)
             elif isinstance(batch[1], dict):

@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import torch
 from torch.utils.data import DataLoader
 
@@ -12,14 +10,14 @@ def get_embeddings(embedding_encoder: EmbeddingEncoder, dataloader: DataLoader) 
     output: embeddings Tensor
     """
     assert embedding_encoder._model is not None
-    all_embeddings: Optional[torch.Tensor] = None
+    all_embeddings: torch.Tensor | None = None
 
     embedding_encoder._model.model.eval()
     embedding_encoder._model.model.embedding_recorder.start_recording()
 
     with torch.no_grad():
         for batch in dataloader:
-            data: Union[torch.Tensor, dict]
+            data: torch.Tensor | dict
             if isinstance(batch[1], torch.Tensor):
                 data = batch[1].to(embedding_encoder.device)
             elif isinstance(batch[1], dict):

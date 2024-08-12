@@ -1,6 +1,4 @@
-"""
-GRPC service of the GPU node
-"""
+"""GRPC service of the GPU node."""
 
 import os
 

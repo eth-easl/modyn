@@ -1,14 +1,17 @@
-from typing import Deque, Literal
+from collections import deque
+from typing import Literal
 
 from sklearn import linear_model
 
 
 class DataDensityTracker:
-    """Observes a stream of data chunks and estimates the time density of the data.
+    """Observes a stream of data chunks and estimates the time density of the
+    data.
 
-    Assumes that the data chunks are ordered by time.
-    For the first chunks only number of samples, start and end time of a batch is considered.
-    Starting with the second batch, the time between the last sample of the previous batch and the first sample of the
+    Assumes that the data chunks are ordered by time. For the first
+    chunks only number of samples, start and end time of a batch is
+    considered. Starting with the second batch, the time between the
+    last sample of the previous batch and the first sample of the
     current batch is considered as well.
 
     Most use cases have constant batch sizes.
@@ -19,9 +22,9 @@ class DataDensityTracker:
         Args:
             window_size: How many batches the memory for the rolling average should hold.
         """
-        self.batch_memory: Deque[tuple[int, int]] = Deque(maxlen=window_size)
-        """Memory of the last `window_size` batches containing the number of samples and the 
-        time range of the batch in seconds."""
+        self.batch_memory: deque[tuple[int, int]] = deque(maxlen=window_size)
+        """Memory of the last `window_size` batches containing the number of
+        samples and the time range of the batch in seconds."""
 
         self.previous_batch_end_time: int | None = None
 

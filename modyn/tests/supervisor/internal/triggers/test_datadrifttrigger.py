@@ -1,7 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import os
 import pathlib
-from typing import Optional
 from unittest.mock import patch
 
 from pytest import fixture
@@ -19,8 +18,8 @@ from modyn.config.schema.pipeline.trigger.drift.config import (
 )
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
-from modyn.supervisor.internal.triggers.embedding_encoder import (
-    EmbeddingEncoderDownloader,
+from modyn.supervisor.internal.triggers.drift.embedding.model.downloader import (
+    ModelDownloader,
 )
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
@@ -66,7 +65,7 @@ def noop_dataloader_info_constructor_mock(
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
     shuffle: bool,
-    tokenizer: Optional[None],
+    tokenizer: None,
 ) -> None:
     pass
 
@@ -80,7 +79,7 @@ def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
 
 
 @patch.object(
-    EmbeddingEncoderDownloader,
+    ModelDownloader,
     "__init__",
     noop_embedding_encoder_downloader_constructor_mock,
 )
@@ -99,7 +98,7 @@ def test_init_trigger(
         assert trigger.context.modyn_config == dummy_system_config
         assert trigger.context.base_dir == BASEDIR
         assert isinstance(trigger.dataloader_info, DataLoaderInfo)
-        assert isinstance(trigger.model_downloader, EmbeddingEncoderDownloader)
+        assert isinstance(trigger.model_downloader, ModelDownloader)
 
 
 def test_inform_previous_model_id(drift_trigger_config: DataDriftTriggerConfig) -> None:

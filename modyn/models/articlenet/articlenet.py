@@ -1,15 +1,17 @@
 # pylint: disable=W0223
-from typing import Any, Optional
+from typing import Any
 
 import torch
-from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from transformers import DistilBertModel
 
+from modyn.models.coreset_methods_support import CoresetSupportingModule
+
 
 class ArticleNet:
-    """
-    Adapted from WildTime. This network is used for NLP tasks (Arxiv and Huffpost)
+    """Adapted from WildTime.
+
+    This network is used for NLP tasks (Arxiv and Huffpost)
     Here you can find the original implementation:
     https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/article.py
     """
@@ -37,9 +39,9 @@ class DistilBertFeaturizer(DistilBertModel):  # pylint: disable=abstract-method
         hidden_state = super().__call__(
             input_ids=input_ids,
             attention_mask=attention_mask,
-        )[
-            0
-        ]  # 0: last hidden state, 1: hiddent states, 2: attentions
+        )[0]
+        # 0: last hidden state, 1: hiddent states, 2: attentions
+
         pooled_output = hidden_state[:, 0]  # first token is the pooled output, which is the aggregated representation
         # of the entire input sequence
         return pooled_output
@@ -51,7 +53,7 @@ class ArticleNetwork(CoresetSupportingModule):
         self.featurizer = DistilBertFeaturizer.from_pretrained("distilbert-base-uncased")
         self.classifier = nn.Linear(self.featurizer.d_out, num_classes)
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: list[int] | None = None) -> torch.Tensor:
         del sample_ids
         embedding = self.featurizer(data)
         embedding = self.embedding_recorder(embedding)

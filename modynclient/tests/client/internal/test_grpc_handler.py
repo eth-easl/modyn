@@ -3,9 +3,14 @@ from unittest.mock import patch
 
 import grpc
 import pytest
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
+
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
+    PipelineResponse,
+    StartPipelineRequest,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modynclient.client.internal.grpc_handler import GRPCHandler
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor

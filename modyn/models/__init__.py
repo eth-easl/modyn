@@ -1,6 +1,4 @@
-"""Models.
-
-"""
+"""Models."""
 
 import os
 

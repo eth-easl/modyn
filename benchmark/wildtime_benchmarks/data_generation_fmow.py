@@ -60,7 +60,6 @@ class FMOWDownloader(Dataset):
             os.rename(dest_file, new_name)
 
     def store_data(self, store_daily: bool, store_all_data: bool, add_final_dummy_year: bool) -> None:
-
         for year in tqdm(self._dataset):
             splits = [0, 1] if store_all_data else [0]
             for split in splits:
@@ -72,11 +71,11 @@ class FMOWDownloader(Dataset):
                         raw_timestamp = self.metadata[index]["timestamp"]
 
                         if len(raw_timestamp) == 24:
-                            timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                            timestamp = datetime.strptime(raw_timestamp, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
                         else:
-                            timestamp = datetime.strptime(raw_timestamp, '%Y-%m-%dT%H:%M:%SZ').timestamp()
+                            timestamp = datetime.strptime(raw_timestamp, "%Y-%m-%dT%H:%M:%SZ").timestamp()
                     else:
-                        timestamp = create_timestamp(year=1970, month=1, day=year+1)
+                        timestamp = create_timestamp(year=1970, month=1, day=year + 1)
 
                     # save label
                     label_file = os.path.join(self.data_dir, f"{index}.label")
@@ -91,8 +90,8 @@ class FMOWDownloader(Dataset):
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            timestamp = create_timestamp(year=1970, month=1, day=dummy_year+1)
-            dummy_index = 1000000 #not used by any real sample (last: 99999)
+            timestamp = create_timestamp(year=1970, month=1, day=dummy_year + 1)
+            dummy_index = 1000000  # not used by any real sample (last: 99999)
 
             to_copy_image_file = os.path.join(self.data_dir, f"{index}.png")
             dummy_image_file = os.path.join(self.data_dir, f"{dummy_index}.png")
@@ -104,20 +103,19 @@ class FMOWDownloader(Dataset):
             shutil.copy(to_copy_label_file, dummy_label_file)
             os.utime(dummy_label_file, (timestamp, timestamp))
 
-
-
     @staticmethod
     def parse_metadata(data_dir: str) -> list:
         filename = os.path.join(data_dir, "fmow_v1.1", "rgb_metadata.csv")
         metadata = []
 
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
             for row in csv_reader:
                 picture_info = {"split": row[0], "timestamp": row[11]}
                 metadata.append(picture_info)
         return metadata
+
 
 if __name__ == "__main__":
     main()

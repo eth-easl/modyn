@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import enlighten
+
 from modynclient.client.internal.utils import EvaluationStatusTracker
 
 

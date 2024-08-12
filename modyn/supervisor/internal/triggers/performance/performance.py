@@ -1,14 +1,18 @@
-from typing import Deque, Literal
+from collections import deque
+from typing import Literal
 
 from sklearn import linear_model
 
 
 class PerformanceTracker:
-    """Observes a stream of performance evaluation and estimates performance on the next chunk.
+    """Observes a stream of performance evaluation and estimates performance on
+    the next chunk.
 
-    While no trigger happens, the estimated performances is calculated from the series of evaluations
-    after every of the last n-triggers. The next observed performance is also forecasted from the series
-    of evaluations since the last trigger. When a trigger happens, this series of observations evaluations is reset.
+    While no trigger happens, the estimated performances is calculated
+    from the series of evaluations after every of the last n-triggers.
+    The next observed performance is also forecasted from the series of
+    evaluations since the last trigger. When a trigger happens, this
+    series of observations evaluations is reset.
     """
 
     def __init__(self, trigger_eval_window_size: int) -> None:
@@ -16,7 +20,7 @@ class PerformanceTracker:
         Args:
             window_size: How many evaluations after triggers should be kept in memory.
         """
-        self.trigger_evaluation_memory: Deque[float] = Deque(maxlen=trigger_eval_window_size)
+        self.trigger_evaluation_memory: deque[float] = deque(maxlen=trigger_eval_window_size)
         """Memory of the last `window_size` evaluations after triggers."""
 
         self.since_last_trigger: list[float] = list()
