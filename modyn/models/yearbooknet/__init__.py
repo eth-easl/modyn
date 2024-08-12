@@ -1,6 +1,4 @@
-"""
-Custom CNN for Yearbook dataset
-"""
+"""Custom CNN for Yearbook dataset."""
 
 import os
 

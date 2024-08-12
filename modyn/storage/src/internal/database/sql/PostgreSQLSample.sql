@@ -5,5 +5,5 @@ R"(CREATE TABLE IF NOT EXISTS samples (
     sample_index BIGINT,
     label BIGINT,
     PRIMARY KEY (dataset_id, sample_id)
-    
+
 ) PARTITION BY LIST (dataset_id))"

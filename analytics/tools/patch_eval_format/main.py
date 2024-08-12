@@ -1,13 +1,14 @@
-"""
-# Motivation
+"""# Motivation
 
-Patches old logfiles to the new evaluation logfile format with batched evaluations.
+Patches old logfiles to the new evaluation logfile format with batched
+evaluations.
 """
 
 from pathlib import Path
 from typing import Annotated
 
 import typer
+
 from analytics.app.data.load import list_pipelines
 from analytics.tools.patch_eval_format.patch_eval import patch_logfile
 

@@ -3,6 +3,7 @@
 # source: selector.proto
 # Protobuf Python Version: 5.26.1
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import symbol_database as _symbol_database
@@ -13,59 +14,59 @@ from google.protobuf.internal import builder as _builder
 _sym_db = _symbol_database.Default()
 
 
-
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0eselector.proto\x12\x08selector\"\x07\n\x05\x45mpty\"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t\"\x9c\x01\n\x0eStrategyConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x03zip\x18\x02 \x01(\x08H\x00\x88\x01\x01\x12\x1a\n\rzip_algorithm\x18\x03 \x01(\tH\x01\x88\x01\x01\x12)\n\x06\x63onfig\x18\x04 \x01(\x0b\x32\x14.selector.JsonStringH\x02\x88\x01\x01\x42\x06\n\x04_zipB\x10\n\x0e_zip_algorithmB\t\n\x07_config\"Z\n\x11\x44\x61taInformRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\x03\x12\x12\n\ntimestamps\x18\x03 \x03(\x03\x12\x0e\n\x06labels\x18\x04 \x03(\x03\"7\n\x12\x44\x61taInformResponse\x12!\n\x03log\x18\x01 \x01(\x0b\x32\x14.selector.JsonString\"H\n\x0fTriggerResponse\x12\x12\n\ntrigger_id\x18\x01 \x01(\x05\x12!\n\x03log\x18\x02 \x01(\x0b\x32\x14.selector.JsonString\"e\n\x11GetSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x14\n\x0cpartition_id\x18\x03 \x01(\x05\x12\x11\n\tworker_id\x18\x04 \x01(\x05\"T\n\x0fSamplesResponse\x12\x1f\n\x17training_samples_subset\x18\x01 \x03(\x03\x12 \n\x18training_samples_weights\x18\x02 \x03(\x02\"D\n\x19GetNumberOfSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\".\n\x17NumberOfSamplesResponse\x12\x13\n\x0bnum_samples\x18\x01 \x01(\x05\"/\n\x18GetStatusBarScaleRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"2\n\x16StatusBarScaleResponse\x12\x18\n\x10status_bar_scale\x18\x01 \x01(\x05\"G\n\x1cGetNumberOfPartitionsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\"4\n\x1aNumberOfPartitionsResponse\x12\x16\n\x0enum_partitions\x18\x01 \x01(\x05\"0\n\x19GetAvailableLabelsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"3\n\x17\x41vailableLabelsResponse\x12\x18\n\x10\x61vailable_labels\x18\x01 \x03(\x03\"2\n\x1bGetSelectionStrategyRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"\x82\x01\n\x19SelectionStrategyResponse\x12\x1c\n\x14\x64ownsampling_enabled\x18\x01 \x01(\x08\x12\x15\n\rstrategy_name\x18\x02 \x01(\t\x12\x30\n\x12\x64ownsampler_config\x18\x03 \x01(\x0b\x32\x14.selector.JsonString\")\n\x12UsesWeightsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\"+\n\x13UsesWeightsResponse\x12\x14\n\x0cuses_weights\x18\x01 \x01(\x08\"#\n\x13SeedSelectorRequest\x12\x0c\n\x04seed\x18\x01 \x01(\x05\"\'\n\x14SeedSelectorResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xa0\x07\n\x08Selector\x12Y\n\x1bget_sample_keys_and_weights\x12\x1b.selector.GetSamplesRequest\x1a\x19.selector.SamplesResponse\"\x00\x30\x01\x12J\n\x0binform_data\x12\x1b.selector.DataInformRequest\x1a\x1c.selector.DataInformResponse\"\x00\x12S\n\x17inform_data_and_trigger\x12\x1b.selector.DataInformRequest\x1a\x19.selector.TriggerResponse\"\x00\x12\x61\n\x15get_number_of_samples\x12#.selector.GetNumberOfSamplesRequest\x1a!.selector.NumberOfSamplesResponse\"\x00\x12^\n\x14get_status_bar_scale\x12\".selector.GetStatusBarScaleRequest\x1a .selector.StatusBarScaleResponse\"\x00\x12j\n\x18get_number_of_partitions\x12&.selector.GetNumberOfPartitionsRequest\x1a$.selector.NumberOfPartitionsResponse\"\x00\x12`\n\x14get_available_labels\x12#.selector.GetAvailableLabelsRequest\x1a!.selector.AvailableLabelsResponse\"\x00\x12\x66\n\x16get_selection_strategy\x12%.selector.GetSelectionStrategyRequest\x1a#.selector.SelectionStrategyResponse\"\x00\x12P\n\rseed_selector\x12\x1d.selector.SeedSelectorRequest\x1a\x1e.selector.SeedSelectorResponse\"\x00\x12M\n\x0cuses_weights\x12\x1c.selector.UsesWeightsRequest\x1a\x1d.selector.UsesWeightsResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x0eselector.proto\x12\x08selector"\x07\n\x05\x45mpty"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t"\x9c\x01\n\x0eStrategyConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x10\n\x03zip\x18\x02 \x01(\x08H\x00\x88\x01\x01\x12\x1a\n\rzip_algorithm\x18\x03 \x01(\tH\x01\x88\x01\x01\x12)\n\x06\x63onfig\x18\x04 \x01(\x0b\x32\x14.selector.JsonStringH\x02\x88\x01\x01\x42\x06\n\x04_zipB\x10\n\x0e_zip_algorithmB\t\n\x07_config"Z\n\x11\x44\x61taInformRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x0c\n\x04keys\x18\x02 \x03(\x03\x12\x12\n\ntimestamps\x18\x03 \x03(\x03\x12\x0e\n\x06labels\x18\x04 \x03(\x03"7\n\x12\x44\x61taInformResponse\x12!\n\x03log\x18\x01 \x01(\x0b\x32\x14.selector.JsonString"H\n\x0fTriggerResponse\x12\x12\n\ntrigger_id\x18\x01 \x01(\x05\x12!\n\x03log\x18\x02 \x01(\x0b\x32\x14.selector.JsonString"e\n\x11GetSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x14\n\x0cpartition_id\x18\x03 \x01(\x05\x12\x11\n\tworker_id\x18\x04 \x01(\x05"T\n\x0fSamplesResponse\x12\x1f\n\x17training_samples_subset\x18\x01 \x03(\x03\x12 \n\x18training_samples_weights\x18\x02 \x03(\x02"D\n\x19GetNumberOfSamplesRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05".\n\x17NumberOfSamplesResponse\x12\x13\n\x0bnum_samples\x18\x01 \x01(\x05"/\n\x18GetStatusBarScaleRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05"2\n\x16StatusBarScaleResponse\x12\x18\n\x10status_bar_scale\x18\x01 \x01(\x05"G\n\x1cGetNumberOfPartitionsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05"4\n\x1aNumberOfPartitionsResponse\x12\x16\n\x0enum_partitions\x18\x01 \x01(\x05"0\n\x19GetAvailableLabelsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05"3\n\x17\x41vailableLabelsResponse\x12\x18\n\x10\x61vailable_labels\x18\x01 \x03(\x03"2\n\x1bGetSelectionStrategyRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05"\x82\x01\n\x19SelectionStrategyResponse\x12\x1c\n\x14\x64ownsampling_enabled\x18\x01 \x01(\x08\x12\x15\n\rstrategy_name\x18\x02 \x01(\t\x12\x30\n\x12\x64ownsampler_config\x18\x03 \x01(\x0b\x32\x14.selector.JsonString")\n\x12UsesWeightsRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05"+\n\x13UsesWeightsResponse\x12\x14\n\x0cuses_weights\x18\x01 \x01(\x08"#\n\x13SeedSelectorRequest\x12\x0c\n\x04seed\x18\x01 \x01(\x05"\'\n\x14SeedSelectorResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xa0\x07\n\x08Selector\x12Y\n\x1bget_sample_keys_and_weights\x12\x1b.selector.GetSamplesRequest\x1a\x19.selector.SamplesResponse"\x00\x30\x01\x12J\n\x0binform_data\x12\x1b.selector.DataInformRequest\x1a\x1c.selector.DataInformResponse"\x00\x12S\n\x17inform_data_and_trigger\x12\x1b.selector.DataInformRequest\x1a\x19.selector.TriggerResponse"\x00\x12\x61\n\x15get_number_of_samples\x12#.selector.GetNumberOfSamplesRequest\x1a!.selector.NumberOfSamplesResponse"\x00\x12^\n\x14get_status_bar_scale\x12".selector.GetStatusBarScaleRequest\x1a .selector.StatusBarScaleResponse"\x00\x12j\n\x18get_number_of_partitions\x12&.selector.GetNumberOfPartitionsRequest\x1a$.selector.NumberOfPartitionsResponse"\x00\x12`\n\x14get_available_labels\x12#.selector.GetAvailableLabelsRequest\x1a!.selector.AvailableLabelsResponse"\x00\x12\x66\n\x16get_selection_strategy\x12%.selector.GetSelectionStrategyRequest\x1a#.selector.SelectionStrategyResponse"\x00\x12P\n\rseed_selector\x12\x1d.selector.SeedSelectorRequest\x1a\x1e.selector.SeedSelectorResponse"\x00\x12M\n\x0cuses_weights\x12\x1c.selector.UsesWeightsRequest\x1a\x1d.selector.UsesWeightsResponse"\x00\x62\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'selector_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "selector_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_EMPTY']._serialized_start=28
-  _globals['_EMPTY']._serialized_end=35
-  _globals['_JSONSTRING']._serialized_start=37
-  _globals['_JSONSTRING']._serialized_end=64
-  _globals['_STRATEGYCONFIG']._serialized_start=67
-  _globals['_STRATEGYCONFIG']._serialized_end=223
-  _globals['_DATAINFORMREQUEST']._serialized_start=225
-  _globals['_DATAINFORMREQUEST']._serialized_end=315
-  _globals['_DATAINFORMRESPONSE']._serialized_start=317
-  _globals['_DATAINFORMRESPONSE']._serialized_end=372
-  _globals['_TRIGGERRESPONSE']._serialized_start=374
-  _globals['_TRIGGERRESPONSE']._serialized_end=446
-  _globals['_GETSAMPLESREQUEST']._serialized_start=448
-  _globals['_GETSAMPLESREQUEST']._serialized_end=549
-  _globals['_SAMPLESRESPONSE']._serialized_start=551
-  _globals['_SAMPLESRESPONSE']._serialized_end=635
-  _globals['_GETNUMBEROFSAMPLESREQUEST']._serialized_start=637
-  _globals['_GETNUMBEROFSAMPLESREQUEST']._serialized_end=705
-  _globals['_NUMBEROFSAMPLESRESPONSE']._serialized_start=707
-  _globals['_NUMBEROFSAMPLESRESPONSE']._serialized_end=753
-  _globals['_GETSTATUSBARSCALEREQUEST']._serialized_start=755
-  _globals['_GETSTATUSBARSCALEREQUEST']._serialized_end=802
-  _globals['_STATUSBARSCALERESPONSE']._serialized_start=804
-  _globals['_STATUSBARSCALERESPONSE']._serialized_end=854
-  _globals['_GETNUMBEROFPARTITIONSREQUEST']._serialized_start=856
-  _globals['_GETNUMBEROFPARTITIONSREQUEST']._serialized_end=927
-  _globals['_NUMBEROFPARTITIONSRESPONSE']._serialized_start=929
-  _globals['_NUMBEROFPARTITIONSRESPONSE']._serialized_end=981
-  _globals['_GETAVAILABLELABELSREQUEST']._serialized_start=983
-  _globals['_GETAVAILABLELABELSREQUEST']._serialized_end=1031
-  _globals['_AVAILABLELABELSRESPONSE']._serialized_start=1033
-  _globals['_AVAILABLELABELSRESPONSE']._serialized_end=1084
-  _globals['_GETSELECTIONSTRATEGYREQUEST']._serialized_start=1086
-  _globals['_GETSELECTIONSTRATEGYREQUEST']._serialized_end=1136
-  _globals['_SELECTIONSTRATEGYRESPONSE']._serialized_start=1139
-  _globals['_SELECTIONSTRATEGYRESPONSE']._serialized_end=1269
-  _globals['_USESWEIGHTSREQUEST']._serialized_start=1271
-  _globals['_USESWEIGHTSREQUEST']._serialized_end=1312
-  _globals['_USESWEIGHTSRESPONSE']._serialized_start=1314
-  _globals['_USESWEIGHTSRESPONSE']._serialized_end=1357
-  _globals['_SEEDSELECTORREQUEST']._serialized_start=1359
-  _globals['_SEEDSELECTORREQUEST']._serialized_end=1394
-  _globals['_SEEDSELECTORRESPONSE']._serialized_start=1396
-  _globals['_SEEDSELECTORRESPONSE']._serialized_end=1435
-  _globals['_SELECTOR']._serialized_start=1438
-  _globals['_SELECTOR']._serialized_end=2366
+    DESCRIPTOR._loaded_options = None
+    _globals["_EMPTY"]._serialized_start = 28
+    _globals["_EMPTY"]._serialized_end = 35
+    _globals["_JSONSTRING"]._serialized_start = 37
+    _globals["_JSONSTRING"]._serialized_end = 64
+    _globals["_STRATEGYCONFIG"]._serialized_start = 67
+    _globals["_STRATEGYCONFIG"]._serialized_end = 223
+    _globals["_DATAINFORMREQUEST"]._serialized_start = 225
+    _globals["_DATAINFORMREQUEST"]._serialized_end = 315
+    _globals["_DATAINFORMRESPONSE"]._serialized_start = 317
+    _globals["_DATAINFORMRESPONSE"]._serialized_end = 372
+    _globals["_TRIGGERRESPONSE"]._serialized_start = 374
+    _globals["_TRIGGERRESPONSE"]._serialized_end = 446
+    _globals["_GETSAMPLESREQUEST"]._serialized_start = 448
+    _globals["_GETSAMPLESREQUEST"]._serialized_end = 549
+    _globals["_SAMPLESRESPONSE"]._serialized_start = 551
+    _globals["_SAMPLESRESPONSE"]._serialized_end = 635
+    _globals["_GETNUMBEROFSAMPLESREQUEST"]._serialized_start = 637
+    _globals["_GETNUMBEROFSAMPLESREQUEST"]._serialized_end = 705
+    _globals["_NUMBEROFSAMPLESRESPONSE"]._serialized_start = 707
+    _globals["_NUMBEROFSAMPLESRESPONSE"]._serialized_end = 753
+    _globals["_GETSTATUSBARSCALEREQUEST"]._serialized_start = 755
+    _globals["_GETSTATUSBARSCALEREQUEST"]._serialized_end = 802
+    _globals["_STATUSBARSCALERESPONSE"]._serialized_start = 804
+    _globals["_STATUSBARSCALERESPONSE"]._serialized_end = 854
+    _globals["_GETNUMBEROFPARTITIONSREQUEST"]._serialized_start = 856
+    _globals["_GETNUMBEROFPARTITIONSREQUEST"]._serialized_end = 927
+    _globals["_NUMBEROFPARTITIONSRESPONSE"]._serialized_start = 929
+    _globals["_NUMBEROFPARTITIONSRESPONSE"]._serialized_end = 981
+    _globals["_GETAVAILABLELABELSREQUEST"]._serialized_start = 983
+    _globals["_GETAVAILABLELABELSREQUEST"]._serialized_end = 1031
+    _globals["_AVAILABLELABELSRESPONSE"]._serialized_start = 1033
+    _globals["_AVAILABLELABELSRESPONSE"]._serialized_end = 1084
+    _globals["_GETSELECTIONSTRATEGYREQUEST"]._serialized_start = 1086
+    _globals["_GETSELECTIONSTRATEGYREQUEST"]._serialized_end = 1136
+    _globals["_SELECTIONSTRATEGYRESPONSE"]._serialized_start = 1139
+    _globals["_SELECTIONSTRATEGYRESPONSE"]._serialized_end = 1269
+    _globals["_USESWEIGHTSREQUEST"]._serialized_start = 1271
+    _globals["_USESWEIGHTSREQUEST"]._serialized_end = 1312
+    _globals["_USESWEIGHTSRESPONSE"]._serialized_start = 1314
+    _globals["_USESWEIGHTSRESPONSE"]._serialized_end = 1357
+    _globals["_SEEDSELECTORREQUEST"]._serialized_start = 1359
+    _globals["_SEEDSELECTORREQUEST"]._serialized_end = 1394
+    _globals["_SEEDSELECTORRESPONSE"]._serialized_start = 1396
+    _globals["_SEEDSELECTORRESPONSE"]._serialized_end = 1435
+    _globals["_SELECTOR"]._serialized_start = 1438
+    _globals["_SELECTOR"]._serialized_end = 2366
 # @@protoc_insertion_point(module_scope)

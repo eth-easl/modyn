@@ -4,6 +4,7 @@ from zipfile import ZIP_LZMA
 
 import pytest
 import torch
+
 from modyn.model_storage.internal.storage_strategies.difference_operators import (
     SubDifferenceOperator,
     XorDifferenceOperator,

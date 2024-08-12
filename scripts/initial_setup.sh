@@ -33,8 +33,8 @@ fi
 if [ "$IS_MAC" = true ]; then
     echo "Detected macOS, updating dev-requirements.txt to build grpcio from source"
     export GRPC_PYTHON_LDFLAGS=" -framework CoreFoundation"
-    sed -i '' -e 's/grpcio-tools/grpcio-tools --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt 
-    sed -i '' -e 's/grpcio # Linux/grpcio --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt 
+    sed -i '' -e 's/grpcio-tools/grpcio-tools --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt
+    sed -i '' -e 's/grpcio # Linux/grpcio --no-binary :all:/g' $PARENT_DIR/dev-requirements.txt
 fi
 
 # On CI, we change the base image from CUDA to Python and stop here
@@ -83,7 +83,7 @@ if [ "$IS_MAC" != true ]; then
         startLine="$(grep -n "CUDASTART" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
         endLine="$(grep -n "CUDAEND" $PARENT_DIR/docker-compose.yml | head -n 1 | cut -d: -f1)"
         fileLines="$(wc -l $PARENT_DIR/docker-compose.yml | awk '{ print $1 }')"
-        
+
         fileBegin=$(tail -n "+1" $PARENT_DIR/docker-compose.yml | head -n $((${startLine}-1+1)))
         let tmp=$fileLines-$endLine+2
         fileEnd=$(tail -n "+${endLine}" $PARENT_DIR/docker-compose.yml | head -n $tmp)
@@ -129,7 +129,7 @@ if [ "$IS_MAC" != true ]; then
 
         runtime=$(docker info | grep "Default Runtime")
         if [[ $runtime != *"nvidia"* ]]; then
-            # Make nvidia runtime the default 
+            # Make nvidia runtime the default
             echo "Apex required CUDA during container build. This is only possible by making NVIDIA the default docker runtime. Changing."
             sudo nvidia-ctk runtime configure
             pushd $(mktemp -d)

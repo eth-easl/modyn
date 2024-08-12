@@ -8,7 +8,7 @@ from modyn.config.schema.pipeline.evaluation.metrics import MetricConfig
 class Experiment:
     name: str
     eval_handlers: list[EvalHandlerConfig]
-    time_trigger_schedules: list[int]  # in years
+    time_trigger_schedules: list[str | int]  # in years
     data_amount_triggers: list[int]  # in num samples
     drift_detection_intervals: list[int]  # every interval configures one pipeline
 

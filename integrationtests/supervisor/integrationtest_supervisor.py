@@ -3,6 +3,7 @@ import time
 
 from google.protobuf.json_format import MessageToDict
 from google.protobuf.message import Message
+
 from integrationtests.utils import (
     DUMMY_CONFIG_FILE,
     RHO_LOSS_CONFIG_FILE,
@@ -16,9 +17,12 @@ from modyn.metadata_database.models import Pipeline, TrainedModel, Trigger
 from modyn.selector.internal.grpc.generated.selector_pb2 import GetSelectionStrategyRequest
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
 from modyn.supervisor.internal.grpc.enums import PipelineStage, PipelineStatus
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
+    StartPipelineRequest,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 
 POLL_INTERVAL = 1

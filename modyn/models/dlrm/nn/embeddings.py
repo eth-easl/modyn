@@ -102,7 +102,7 @@ class MultiTableEmbeddings(Embeddings):
 
 
 class JointEmbedding(Embeddings):
-    """Buckle multiple one hot embedding together
+    """Buckle multiple one hot embedding together.
 
     Multiple one hot embedding can be done as one embedding (indexing). Use nn.Embedding to deal with sparse wgrad
     before I fully customizing it.
@@ -164,8 +164,7 @@ FUSED_JOINT_EMBEDDING_NUMBER_OF_CATEGORICAL_VARIABLES = 26
 
 
 class FusedJointEmbedding(Embeddings):
-    """
-    Buckle multiple one hot embedding together
+    """Buckle multiple one hot embedding together.
 
     Multiple one hot embedding can be done as one embedding (indexing).
     Args:

@@ -50,7 +50,7 @@ def distribute_to_buckets(sizes: Sequence[int], buckets_num: int):
 
 
 def get_device_mapping(embedding_sizes: Sequence[int], num_gpus: int = 1):
-    """Get device mappings for hybrid parallelism
+    """Get device mappings for hybrid parallelism.
 
     Bottom MLP running on device 0. Embeddings will be distributed across among all the devices.
 

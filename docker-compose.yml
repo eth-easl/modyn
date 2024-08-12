@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # By default, we disable mountain the current directory under /modyn_host. However, this might be helpful for local development.
 # For the trainer server, you additionally might want to enable the runtime and deployment option to enable the GPU in the container.
@@ -16,7 +16,7 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 24gb
+    #    shm_size: 24gb
     volumes:
       - ./metadata-postgres-data:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
@@ -36,7 +36,7 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-#    shm_size: 8gb
+    #    shm_size: 8gb
     volumes:
       - ./storage-postgres-data:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
@@ -57,8 +57,8 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
-#      - /mnt/datasets:/datasets
-#      - .:/modyn_host
+  #      - /mnt/datasets:/datasets
+  #      - .:/modyn_host
   metadata_processor:
     restart: on-failure
     depends_on:
@@ -96,20 +96,20 @@ services:
       context: .
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
-    - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
-#      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
-#      - .:/modyn_host
-#    shm_size: 4gb
-# CUDASTART (ignore/delete if enabling cuda manually)
-#    runtime: nvidia
-#    deploy:
-#      resources:
-#        reservations:
-#          devices:
-#            - driver: nvidia
-#              count: 1
-#              capabilities: [gpu, utility, compute]
-# CUDAEND (ignore/delete if enabling cuda manually)
+      - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+  #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
+  #      - .:/modyn_host
+  #    shm_size: 4gb
+  # CUDASTART (ignore/delete if enabling cuda manually)
+  #    runtime: nvidia
+  #    deploy:
+  #      resources:
+  #        reservations:
+  #          devices:
+  #            - driver: nvidia
+  #              count: 1
+  #              capabilities: [gpu, utility, compute]
+  # CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
     depends_on:
@@ -119,28 +119,28 @@ services:
       context: .
       dockerfile: docker/Selector/Dockerfile
     volumes:
-       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
-       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
-#      - /mnt/ssd/local_storage:/tmp/local_storage
-#      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
-#      - .:/modyn_host
-#    shm_size: 4gb
+      - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
+      - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
+  #      - /mnt/ssd/local_storage:/tmp/local_storage
+  #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
+  #      - .:/modyn_host
+  #    shm_size: 4gb
   supervisor:
     restart: on-failure
     depends_on:
-    - storage
-    - metadata-db
-    - storage-db
-    - selector
-    - metadata_processor
-    - trainer_server
-    - evaluator
+      - storage
+      - metadata-db
+      - storage-db
+      - selector
+      - metadata_processor
+      - trainer_server
+      - evaluator
     build:
       context: .
       dockerfile: docker/Supervisor/Dockerfile
     volumes:
       - supervisor-evaluation-data:/tmp/evaluation_results
-#      - .:/modyn_host
+    #      - .:/modyn_host
     container_name: supervisor
     ports:
       - "3000:50063"

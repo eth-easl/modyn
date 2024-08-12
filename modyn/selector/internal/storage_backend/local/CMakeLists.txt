@@ -8,7 +8,7 @@ set(MODYN_LOCALSTORAGEBACKEND_HEADERS
     ./include/local_storage_backend.hpp
 )
 add_library(local_storage_backend SHARED)
-    
+
 set_target_properties(local_storage_backend
     PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -22,5 +22,3 @@ target_sources(local_storage_backend PRIVATE ${MODYN_LOCALSTORAGEBACKEND_HEADERS
 target_include_directories(local_storage_backend PUBLIC include)
 target_compile_options(local_storage_backend PRIVATE ${MODYN_COMPILE_OPTIONS} -Wno-unused-function)
 target_link_libraries(local_storage_backend PUBLIC modyn)
-
-

@@ -7,8 +7,9 @@ from pathlib import Path
 from sys import platform
 
 import numpy as np
-from modyn.utils import get_partition_for_worker
 from numpy.ctypeslib import ndpointer
+
+from modyn.utils import get_partition_for_worker
 
 logger = logging.getLogger(__name__)
 
@@ -48,15 +49,18 @@ class ArrayWrapper:
 
 
 class TriggerSampleStorage:
-    """
-    A trigger sample is a tuple of (sample_id, sample_weight) that is used to select a sample for a trigger.
+    """A trigger sample is a tuple of (sample_id, sample_weight) that is used
+    to select a sample for a trigger.
 
-    The sample_id is the id of the sample in the database. The sample_weight is the weight of the sample in the trigger.
+    The sample_id is the id of the sample in the database. The
+    sample_weight is the weight of the sample in the trigger.
 
-    This class is used to store and retrieve trigger samples from the local file system. The trigger samples are stored
-    in the directory specified in the modyn config file. The file name is the concatenation of the pipeline id, the
-    trigger id and the partition id. The file contains one line per sample. Each line contains the sample id and the
-    sample weight separated by a comma.
+    This class is used to store and retrieve trigger samples from the
+    local file system. The trigger samples are stored in the directory
+    specified in the modyn config file. The file name is the
+    concatenation of the pipeline id, the trigger id and the partition
+    id. The file contains one line per sample. Each line contains the
+    sample id and the sample weight separated by a comma.
     """
 
     def _get_library_path(self) -> Path:
@@ -75,7 +79,7 @@ class TriggerSampleStorage:
         if not path.exists():
             raise RuntimeError(f"Cannot find TriggerSampleStorage library at {path}")
 
-    def __init__(self, trigger_sample_directory: typing.Union[str, Path]) -> None:
+    def __init__(self, trigger_sample_directory: str | Path) -> None:
         self._ensure_library_present()
         self.extension = ctypes.CDLL(str(self._get_library_path()))
 
@@ -136,21 +140,26 @@ class TriggerSampleStorage:
         total_retrieval_workers: int = -1,
         num_samples_trigger_partition: int = -1,
     ) -> ArrayWrapper:
-        """
-        Return the trigger samples for the given pipeline id, trigger id and partition id.
+        """Return the trigger samples for the given pipeline id, trigger id and
+        partition id.
 
-        If the retrieval worker id and the total retrieval workers are negative, then we are not using the parallel
-        retrieval of samples. In this case, we just return all the samples.
+        If the retrieval worker id and the total retrieval workers are
+        negative, then we are not using the parallel retrieval of
+        samples. In this case, we just return all the samples.
 
-        If the retrieval worker id and the total retrieval workers are positive, then we are using the parallel
-        retrieval of samples. In this case, we return the samples that are assigned to the retrieval worker.
+        If the retrieval worker id and the total retrieval workers are
+        positive, then we are using the parallel retrieval of samples.
+        In this case, we return the samples that are assigned to the
+        retrieval worker.
 
         :param pipeline_id: the id of the pipeline
         :param trigger_id: the id of the trigger
         :param partition_id: the id of the partition
         :param retrieval_worker_id: the id of the retrieval worker
-        :param total_retrieval_workers: the total number of retrieval workers
-        :param num_samples_trigger_partition: the total number of samples per trigger and partition
+        :param total_retrieval_workers: the total number of retrieval
+            workers
+        :param num_samples_trigger_partition: the total number of
+            samples per trigger and partition
         :return: the trigger samples
         """
         if not Path(self.trigger_sample_directory).exists():
@@ -180,16 +189,17 @@ class TriggerSampleStorage:
         total_retrieval_workers: int,
         num_samples_trigger_partition: int,
     ) -> ArrayWrapper:
-        """
-        Return the trigger samples for the given pipeline id, trigger id and partition id that are assigned to the
-        retrieval worker.
+        """Return the trigger samples for the given pipeline id, trigger id and
+        partition id that are assigned to the retrieval worker.
 
         :param pipeline_id: the id of the pipeline
         :param trigger_id: the id of the trigger
         :param partition_id: the id of the partition
         :param retrieval_worker_id: the id of the retrieval worker
-        :param total_retrieval_workers: the total number of retrieval workers
-        :param num_samples_trigger_partition: the total number of samples per trigger and partition
+        :param total_retrieval_workers: the total number of retrieval
+            workers
+        :param num_samples_trigger_partition: the total number of
+            samples per trigger and partition
         :return: the trigger samples
         """
         start_index, worker_subset_size = get_partition_for_worker(
@@ -198,14 +208,14 @@ class TriggerSampleStorage:
 
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size_ptr = (ctypes.c_int64 * 1)()
-        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
+        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode())
 
         data = self._get_worker_samples_impl(folder, size_ptr, pattern, start_index, worker_subset_size)
         return self._cbytes_to_numpy(data, size_ptr)
 
     def _get_all_samples(self, pipeline_id: int, trigger_id: int, partition_id: int) -> ArrayWrapper:
-        """
-        Return all the samples for the given pipeline id, trigger id and partition id.
+        """Return all the samples for the given pipeline id, trigger id and
+        partition id.
 
         :param pipeline_id: the id of the pipeline
         :param trigger_id: the id of the trigger
@@ -216,13 +226,15 @@ class TriggerSampleStorage:
         folder = ctypes.c_char_p(str(self.trigger_sample_directory).encode("utf-8"))
         size_ptr = (ctypes.c_int64 * 1)()
 
-        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode("utf-8"))
+        pattern = ctypes.c_char_p(f"{pipeline_id}_{trigger_id}_{partition_id}_".encode())
 
         data = self._get_all_samples_impl(folder, size_ptr, pattern)
         return self._cbytes_to_numpy(data, size_ptr)
 
     def _cbytes_to_numpy(
-        self, data: ctypes.POINTER(ctypes.c_char), size_ptr: ctypes.POINTER(ctypes.c_uint64)  # type: ignore
+        self,
+        data: ctypes.POINTER(ctypes.c_char),  # type: ignore
+        size_ptr: ctypes.POINTER(ctypes.c_uint64),  # type: ignore
     ) -> ArrayWrapper:
         """Convert ctypeslib bytes function output to numpy with dynamic size.
 
@@ -241,9 +253,8 @@ class TriggerSampleStorage:
     def save_trigger_samples(
         self, pipeline_id: int, trigger_id: int, partition_id: int, trigger_samples: np.ndarray, data_lengths: list
     ) -> None:
-        """
-        Save the trigger samples for the given pipeline id, trigger id and partition id
-        to multiple files.
+        """Save the trigger samples for the given pipeline id, trigger id and
+        partition id to multiple files.
 
         :param pipeline_id: the id of the pipeline
         :param trigger_id: the id of the trigger

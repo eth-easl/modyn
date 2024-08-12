@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import threading
-from typing import Iterable
+from collections.abc import Iterable
 
 import grpc
 

@@ -3,6 +3,7 @@ import time
 
 import grpc
 import psycopg2
+
 from integrationtests.utils import get_modyn_config
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub  # noqa: F401
 from modyn.utils import grpc_connection_established

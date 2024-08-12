@@ -4,11 +4,12 @@ import shutil
 import tempfile
 
 import pytest
+from sqlalchemy import select
+
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
 from modyn.utils.utils import flatten
-from sqlalchemy import select
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 TMP_DIR = tempfile.mkdtemp()

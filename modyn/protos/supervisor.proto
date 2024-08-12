@@ -16,7 +16,7 @@ message StartPipelineRequest {
     optional int32 maximum_triggers = 4;
 }
 
-message PipelineResponse { 
+message PipelineResponse {
     int32 pipeline_id = 1;
     optional string exception = 2;
 }
@@ -29,7 +29,7 @@ message PipelineStageIdMsg {
 }
 
 message PipelineStageDatasetMsg {
-    string id = 1;  
+    string id = 1;
 }
 
 message PipelineStageCounterCreateParams {
@@ -90,7 +90,7 @@ message TrainingStatus {
 message EvalStatusCreateTrackerParams {
     string dataset_id = 1;
     int32 dataset_size = 2;
-} 
+}
 
 message EvalStatusCreateCounterParams {
     int32 training_id = 1;

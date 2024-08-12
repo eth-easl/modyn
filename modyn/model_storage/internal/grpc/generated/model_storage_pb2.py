@@ -3,6 +3,7 @@
 # source: model_storage.proto
 # Protobuf Python Version: 5.26.1
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import symbol_database as _symbol_database
@@ -13,27 +14,27 @@ from google.protobuf.internal import builder as _builder
 _sym_db = _symbol_database.Default()
 
 
-
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13model_storage.proto\x12\x13modyn.model_storage\"\x85\x01\n\x14RegisterModelRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x10\n\x08hostname\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\x05\x12\x12\n\nmodel_path\x18\x05 \x01(\t\x12\x10\n\x08\x63hecksum\x18\x06 \x01(\x0c\":\n\x15RegisterModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x10\n\x08model_id\x18\x02 \x01(\x05\"<\n\x11\x46\x65tchModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05\x12\x15\n\rload_metadata\x18\x02 \x01(\x08\"K\n\x12\x46\x65tchModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x12\n\nmodel_path\x18\x02 \x01(\t\x12\x10\n\x08\x63hecksum\x18\x03 \x01(\x0c\"&\n\x12\x44\x65leteModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05\"&\n\x13\x44\x65leteModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xbd\x02\n\x0cModelStorage\x12h\n\rRegisterModel\x12).modyn.model_storage.RegisterModelRequest\x1a*.modyn.model_storage.RegisterModelResponse\"\x00\x12_\n\nFetchModel\x12&.modyn.model_storage.FetchModelRequest\x1a\'.modyn.model_storage.FetchModelResponse\"\x00\x12\x62\n\x0b\x44\x65leteModel\x12\'.modyn.model_storage.DeleteModelRequest\x1a(.modyn.model_storage.DeleteModelResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x13model_storage.proto\x12\x13modyn.model_storage"\x85\x01\n\x14RegisterModelRequest\x12\x13\n\x0bpipeline_id\x18\x01 \x01(\x05\x12\x12\n\ntrigger_id\x18\x02 \x01(\x05\x12\x10\n\x08hostname\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\x05\x12\x12\n\nmodel_path\x18\x05 \x01(\t\x12\x10\n\x08\x63hecksum\x18\x06 \x01(\x0c":\n\x15RegisterModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x10\n\x08model_id\x18\x02 \x01(\x05"<\n\x11\x46\x65tchModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05\x12\x15\n\rload_metadata\x18\x02 \x01(\x08"K\n\x12\x46\x65tchModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x12\x12\n\nmodel_path\x18\x02 \x01(\t\x12\x10\n\x08\x63hecksum\x18\x03 \x01(\x0c"&\n\x12\x44\x65leteModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05"&\n\x13\x44\x65leteModelResponse\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\xbd\x02\n\x0cModelStorage\x12h\n\rRegisterModel\x12).modyn.model_storage.RegisterModelRequest\x1a*.modyn.model_storage.RegisterModelResponse"\x00\x12_\n\nFetchModel\x12&.modyn.model_storage.FetchModelRequest\x1a\'.modyn.model_storage.FetchModelResponse"\x00\x12\x62\n\x0b\x44\x65leteModel\x12\'.modyn.model_storage.DeleteModelRequest\x1a(.modyn.model_storage.DeleteModelResponse"\x00\x62\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'model_storage_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "model_storage_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_REGISTERMODELREQUEST']._serialized_start=45
-  _globals['_REGISTERMODELREQUEST']._serialized_end=178
-  _globals['_REGISTERMODELRESPONSE']._serialized_start=180
-  _globals['_REGISTERMODELRESPONSE']._serialized_end=238
-  _globals['_FETCHMODELREQUEST']._serialized_start=240
-  _globals['_FETCHMODELREQUEST']._serialized_end=300
-  _globals['_FETCHMODELRESPONSE']._serialized_start=302
-  _globals['_FETCHMODELRESPONSE']._serialized_end=377
-  _globals['_DELETEMODELREQUEST']._serialized_start=379
-  _globals['_DELETEMODELREQUEST']._serialized_end=417
-  _globals['_DELETEMODELRESPONSE']._serialized_start=419
-  _globals['_DELETEMODELRESPONSE']._serialized_end=457
-  _globals['_MODELSTORAGE']._serialized_start=460
-  _globals['_MODELSTORAGE']._serialized_end=777
+    DESCRIPTOR._loaded_options = None
+    _globals["_REGISTERMODELREQUEST"]._serialized_start = 45
+    _globals["_REGISTERMODELREQUEST"]._serialized_end = 178
+    _globals["_REGISTERMODELRESPONSE"]._serialized_start = 180
+    _globals["_REGISTERMODELRESPONSE"]._serialized_end = 238
+    _globals["_FETCHMODELREQUEST"]._serialized_start = 240
+    _globals["_FETCHMODELREQUEST"]._serialized_end = 300
+    _globals["_FETCHMODELRESPONSE"]._serialized_start = 302
+    _globals["_FETCHMODELRESPONSE"]._serialized_end = 377
+    _globals["_DELETEMODELREQUEST"]._serialized_start = 379
+    _globals["_DELETEMODELREQUEST"]._serialized_end = 417
+    _globals["_DELETEMODELRESPONSE"]._serialized_start = 419
+    _globals["_DELETEMODELRESPONSE"]._serialized_end = 457
+    _globals["_MODELSTORAGE"]._serialized_start = 460
+    _globals["_MODELSTORAGE"]._serialized_end = 777
 # @@protoc_insertion_point(module_scope)

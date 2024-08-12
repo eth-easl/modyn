@@ -6,12 +6,15 @@ import pathlib
 import random
 import shutil
 import time
-from typing import Iterable, Tuple
+from collections.abc import Iterable
 
 import grpc
-import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 import torch
 import yaml
+from PIL import Image
+from torchvision import transforms
+
+import modyn.storage.internal.grpc.generated.storage_pb2 as storage_pb2
 from integrationtests.utils import (
     MODYN_CONFIG_FILE,
     MODYN_DATASET_PATH,
@@ -34,8 +37,6 @@ from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.trainer_server.internal.dataset.data_utils import prepare_dataloaders
 from modyn.utils import grpc_connection_established
 from modyn.utils.utils import flatten
-from PIL import Image
-from torchvision import transforms
 
 SCRIPT_PATH = pathlib.Path(os.path.realpath(__file__))
 
@@ -53,7 +54,7 @@ IMAGE_UPDATED_TIME_STAMPS = []
 
 
 def get_modyn_config() -> dict:
-    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config
@@ -202,7 +203,7 @@ def add_images_to_dataset(start_number: int, end_number: int, images_added: list
             label_file.write(f"{i}")
 
 
-def prepare_selector(num_dataworkers: int, keys: list[int]) -> Tuple[int, int]:
+def prepare_selector(num_dataworkers: int, keys: list[int]) -> tuple[int, int]:
     selector_channel = connect_to_selector_servicer()
     selector = SelectorStub(selector_channel)
     # We test the NewData strategy for finetuning on the new data, i.e., we reset without limit

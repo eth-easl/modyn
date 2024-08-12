@@ -3,6 +3,8 @@ from unittest.mock import MagicMock, patch
 
 import grpc
 import pytest
+from tenacity import RetryCallState
+
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     GetSamplesRequest,
     NumberOfPartitionsResponse,
@@ -10,7 +12,6 @@ from modyn.selector.internal.grpc.generated.selector_pb2 import (
     UsesWeightsResponse,
 )
 from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
-from tenacity import RetryCallState
 
 
 def test_init():

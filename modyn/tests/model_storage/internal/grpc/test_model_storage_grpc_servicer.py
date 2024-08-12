@@ -5,6 +5,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import torch
+
 from modyn.model_storage.internal import ModelStorageManager
 
 # pylint: disable-next=no-name-in-module

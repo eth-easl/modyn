@@ -1,6 +1,4 @@
-"""
-Abstract database connection class.
-"""
+"""Abstract database connection class."""
 
 import os
 

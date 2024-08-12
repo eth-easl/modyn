@@ -4,7 +4,7 @@ import os
 import pathlib
 import queue
 from threading import Lock
-from typing import Any, Optional, Tuple, Union
+from typing import Any
 
 import grpc
 import torch
@@ -43,9 +43,10 @@ logger = logging.getLogger(__name__)
 
 
 class TrainerServerGRPCServicer:
-    """Implements necessary functionality in order to communicate with the supervisor."""
+    """Implements necessary functionality in order to communicate with the
+    supervisor."""
 
-    def __init__(self, config: dict, tempdir: Union[str, pathlib.Path]) -> None:
+    def __init__(self, config: dict, tempdir: str | pathlib.Path) -> None:
         self._config = config
 
         self._next_training_id = 0
@@ -103,7 +104,7 @@ class TrainerServerGRPCServicer:
             logger.error(f"Model {model_class_name} not available!")
             return StartTrainingResponse(training_started=False)
 
-        pretrained_model_path: Optional[pathlib.Path] = None
+        pretrained_model_path: pathlib.Path | None = None
         if request.use_pretrained_model:
             fetch_request = FetchModelRequest(model_id=request.pretrained_model_id, load_metadata=True)
             fetch_resp: FetchModelResponse = self.model_storage_stub.FetchModel(fetch_request)
@@ -254,12 +255,12 @@ class TrainerServerGRPCServicer:
             logger.error(f"Log File for training {training_id} does not exist at {log_file_path}")
             return ""
 
-        with open(log_file_path, "r", encoding="utf-8") as logfile:
+        with open(log_file_path, encoding="utf-8") as logfile:
             return logfile.read()
 
     def get_values_from_queues(
         self, training_id: int
-    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+    ) -> tuple[bool | None, int | None, int | None, int | None, int | None]:
         was_training = self._training_process_dict[training_id].was_training
 
         if was_training:
@@ -292,7 +293,7 @@ class TrainerServerGRPCServicer:
 
     def _handle_was_not_training(
         self, training_id: int
-    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+    ) -> tuple[bool | None, int | None, int | None, int | None, int | None]:
         downsampling_num_batches, downsampling_num_samples, is_training = self.get_status_downsampling(
             training_id, timeout=15
         )
@@ -314,7 +315,7 @@ class TrainerServerGRPCServicer:
 
     def _handle_was_training(
         self, training_id: int
-    ) -> Tuple[Optional[bool], Optional[int], Optional[int], Optional[int], Optional[int]]:
+    ) -> tuple[bool | None, int | None, int | None, int | None, int | None]:
         training_num_batches, training_num_samples, is_training = self.get_status_training(training_id, timeout=15)
         if not is_training:
             # clean the training queue (epoch is finished)
@@ -379,7 +380,7 @@ class TrainerServerGRPCServicer:
         logger.error(f"Could not find final checkpoint of training with ID {training_id}.")
         return StoreFinalModelResponse(valid_state=False)
 
-    def _get_final_model_path(self, training_id: int) -> Optional[pathlib.Path]:
+    def _get_final_model_path(self, training_id: int) -> pathlib.Path | None:
         final_checkpoint_path = self._training_dict[training_id].final_checkpoint_path / "model_final.modyn"
         if not final_checkpoint_path.exists():
             return None
@@ -414,9 +415,7 @@ class TrainerServerGRPCServicer:
             return GetLatestModelResponse(valid_state=True, model_path=prefix_path)
         return GetLatestModelResponse(valid_state=False)
 
-    def get_status_training(
-        self, training_id: int, timeout: float = 30
-    ) -> tuple[Optional[int], Optional[int], Optional[bool]]:
+    def get_status_training(self, training_id: int, timeout: float = 30) -> tuple[int | None, int | None, bool | None]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue_training
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
@@ -438,9 +437,7 @@ class TrainerServerGRPCServicer:
             # blocks for 30 seconds
             _ = downsampling_queue.get()
 
-    def get_status_downsampling(
-        self, training_id: int, timeout: float
-    ) -> tuple[Optional[int], Optional[int], Optional[bool]]:
+    def get_status_downsampling(self, training_id: int, timeout: float) -> tuple[int | None, int | None, bool | None]:
         status_query_queue = self._training_process_dict[training_id].status_query_queue_downsampling
         status_query_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
         try:
@@ -450,7 +447,7 @@ class TrainerServerGRPCServicer:
         except queue.Empty:
             return None, None, None
 
-    def get_model_state(self, training_id: int) -> Optional[bytes]:
+    def get_model_state(self, training_id: int) -> bytes | None:
         status_query_queue = self._training_process_dict[training_id].status_query_queue_training
         status_query_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
         try:
@@ -460,7 +457,7 @@ class TrainerServerGRPCServicer:
         except queue.Empty:
             return None
 
-    def check_for_training_exception(self, training_id: int) -> Optional[str]:
+    def check_for_training_exception(self, training_id: int) -> str | None:
         exception_queue = self._training_process_dict[training_id].exception_queue
 
         # As qsize() is unreliable and not implemented on macOS,
@@ -472,7 +469,7 @@ class TrainerServerGRPCServicer:
         except queue.Empty:
             return None
 
-    def get_latest_checkpoint(self, training_id: int) -> tuple[Optional[pathlib.Path], Optional[int], Optional[int]]:
+    def get_latest_checkpoint(self, training_id: int) -> tuple[pathlib.Path | None, int | None, int | None]:
         # this might be useful in case that the training has already finished,
         # either successfully or not, and allow to access the last state
 

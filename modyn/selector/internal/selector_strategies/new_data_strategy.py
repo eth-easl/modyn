@@ -2,7 +2,7 @@
 # flake8: noqa: E712
 import logging
 import random
-from typing import Iterable
+from collections.abc import Iterable
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.config.schema.pipeline import NewDataStrategyConfig
@@ -15,8 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class NewDataStrategy(AbstractSelectionStrategy):
-    """
-    This strategy always uses the latest data to train on.
+    """This strategy always uses the latest data to train on.
 
     If we reset after trigger, we always use the data since the last trigger.
     If there is a limit, we choose a random subset from that data.
@@ -64,10 +63,10 @@ class NewDataStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, object]]]:
-        """
-        Internal function. Defined by concrete strategy implementations. Calculates the next set of data to
-        train on. Returns an iterator over lists, if next set of data consists of more than _maximum_keys_in_memory
-        keys.
+        """Internal function. Defined by concrete strategy implementations.
+        Calculates the next set of data to train on. Returns an iterator over
+        lists, if next set of data consists of more than
+        _maximum_keys_in_memory keys.
 
         Returns:
             Iterable[list[tuple[int, float]]]:
@@ -166,7 +165,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         yield from self._storage_backend.get_trigger_data(self._next_trigger_id)
 
     def _get_tail_triggers_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Returns all sample for current trigger
+        """Returns all sample for current trigger.
 
         Returns:
             list[int]: Keys of used samples
@@ -175,7 +174,7 @@ class NewDataStrategy(AbstractSelectionStrategy):
         yield from self._storage_backend.get_data_since_trigger(self._next_trigger_id - self.tail_triggers)
 
     def _get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
-        """Returns all sample
+        """Returns all sample.
 
         Returns:
             list[str]: Keys of used samples

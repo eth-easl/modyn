@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Annotated, Callable, Literal, Union
+from collections.abc import Callable
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils.utils import EVALUATION_TRANSFORMER_FUNC_NAME, deserialize_function
-from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class _BaseMetricConfig(ModynBaseModel):
@@ -66,16 +68,15 @@ class RocAucMetricConfig(_BaseMetricConfig):
     name: Literal["RocAuc"] = Field("RocAuc")
 
 
-MetricConfig = Annotated[
-    Union[AccuracyMetricConfig, F1ScoreMetricConfig, RocAucMetricConfig], Field(discriminator="name")
-]
+MetricConfig = Annotated[AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig, Field(discriminator="name")]
 
 
 class _MetricWrapper(BaseModel):
     metric: MetricConfig
-    """only used for validating the internal union type MetricConfig."""
+    """Only used for validating the internal union type MetricConfig."""
 
 
 def validate_metric_config_json(metric_config: str) -> MetricConfig:
-    """Wrapper for the pydantic model validation (as Union types don't inherit from BaseModel)."""
+    """Wrapper for the pydantic model validation (as Union types don't inherit
+    from BaseModel)."""
     return _MetricWrapper.model_validate_json('{"metric": ' + str(metric_config) + "}").metric

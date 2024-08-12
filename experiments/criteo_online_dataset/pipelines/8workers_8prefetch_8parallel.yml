@@ -1,7 +1,7 @@
 pipeline:
-    name: 8workers_8prefetch_8parallel
-    description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
-    version: 1.0.0
+  name: 8workers_8prefetch_8parallel
+  description: DLRM/Criteo Training. Finetuning, i.e., updating model over time.
+  version: 1.0.0
 model:
   id: DLRM
   config: # these parameters are consistent with the parameters used for the experiments shown in the NVIDIA repo:  https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM
@@ -116,4 +116,3 @@ trigger:
   id: DataAmountTrigger
   trigger_config:
     data_points_for_trigger: 20000000
-

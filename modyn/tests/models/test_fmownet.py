@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as func
+
 from modyn.models import FmowNet
 
 

@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import pandas as pd
+
 from analytics.app.data.transform import dfs_models_and_evals, logs_dataframe
 from analytics.tools.aggregate_runs.dir_utils import load_multiple_logfiles
 from analytics.tools.aggregate_runs.pipeline_equivalence import assert_pipeline_equivalence
@@ -10,13 +11,12 @@ from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs
 
 DEBUGGING_MODE = True
-"""if True, the the process will halt on breakpoints to allow for manual verification"""
+"""If True, the the process will halt on breakpoints to allow for manual
+verification."""
 
 
 def merge_files_for_equivalence_group(pipeline_files: list[Path], output_directory: Path) -> None:
-    """
-    Merges the logfiles of a group of equivalent pipelines into one file.
-    """
+    """Merges the logfiles of a group of equivalent pipelines into one file."""
     logs = load_multiple_logfiles(pipeline_files)
     assert_pipeline_equivalence(logs)
 
@@ -64,10 +64,8 @@ def merge_files_for_equivalence_group(pipeline_files: list[Path], output_directo
 
 
 def aggregate_eval_metrics(df_eval_single: pd.DataFrame, logs: list[PipelineLogs]) -> PipelineLogs:
-    """
-    Aggregates the evaluation metrics group-wise and updates the creates a new PipelineLogs object using
-    the first log in the list as a template.
-    """
+    """Aggregates the evaluation metrics group-wise and updates the creates a
+    new PipelineLogs object using the first log in the list as a template."""
 
     # --------------------------------------- Aggregation within eval dataframe -------------------------------------- #
     groups = df_eval_single.groupby(

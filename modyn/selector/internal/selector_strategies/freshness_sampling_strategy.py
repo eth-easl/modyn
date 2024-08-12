@@ -2,8 +2,13 @@
 # flake8: noqa: E712
 import logging
 import random
+from collections.abc import Iterable, Iterator
 from math import isclose
-from typing import Any, Iterable, Iterator
+from typing import Any
+
+from sqlalchemy import exc, func, update
+from sqlalchemy.orm.session import Session
+from sqlalchemy.sql.selectable import Select
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.config.schema.pipeline import FreshnessSamplingStrategyConfig
@@ -11,17 +16,14 @@ from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.abstract_selection_strategy import AbstractSelectionStrategy
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database import DatabaseStorageBackend
-from sqlalchemy import exc, func, update
-from sqlalchemy.orm.session import Session
-from sqlalchemy.sql.selectable import Select
 
 logger = logging.getLogger(__name__)
 
 
 class FreshnessSamplingStrategy(AbstractSelectionStrategy):
-    """
-    This class selects data from a mixture of used and unused data.
-    We can set a ratio that defines how much data in the training set per trigger should be from previously unused data (in all previous triggers).
+    """This class selects data from a mixture of used and unused data. We can
+    set a ratio that defines how much data in the training set per trigger
+    should be from previously unused data (in all previous triggers).
 
     The first trigger will always use only fresh data (up to the limit, if there is one).
     The subsequent triggers will sample a dataset that reflects the ratio of used/unused data (if data came during but was not used in a previous trigger, we still handle it as unused).
@@ -71,9 +73,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         return {"total_persist_time": swt.stop(), "persist_log": persist_log}
 
     def _on_trigger(self) -> Iterable[tuple[list[tuple[int, float]], dict[str, Any]]]:
-        """
-        Internal function. Calculates the next set of data to
-        train on.
+        """Internal function. Calculates the next set of data to train on.
 
         Returns:
             list(tuple(str, float)): Each entry is a training sample, where the first element of the tuple
@@ -172,7 +172,8 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         return num_unused_samples, num_used_samples
 
     def _get_data_sample(self, sample_size: int, used: bool) -> Iterator[list[int]]:
-        """Returns sample of data. Returns ins batches of  self._maximum_keys_in_memory / 2
+        """Returns sample of data. Returns ins batches of
+        self._maximum_keys_in_memory / 2.
 
         Returns:
             list[str]: Keys of used samples
@@ -206,7 +207,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             yield keys
 
     def _get_all_unused_data(self) -> Iterator[list[int]]:
-        """Returns all unused samples
+        """Returns all unused samples.
 
         Returns:
             list[str]: Keys of unused samples
@@ -231,7 +232,7 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
             yield keys
 
     def _get_count_of_data(self, used: bool) -> int:
-        """Returns all unused samples
+        """Returns all unused samples.
 
         Returns:
             list[str]: Keys of unused samples
@@ -241,18 +242,17 @@ class FreshnessSamplingStrategy(AbstractSelectionStrategy):
         ), "FreshnessStrategy currently only supports DatabaseBackend"
 
         def _session_callback(session: Session) -> Any:
+            # TODO(#182): Index on used?
             return (
                 session.query(SelectorStateMetadata.sample_key)
-                # TODO(#182): Index on used?
-                .filter(
-                    SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used
-                ).count()
+                .filter(SelectorStateMetadata.pipeline_id == self._pipeline_id, SelectorStateMetadata.used == used)
+                .count()
             )
 
         return self._storage_backend._execute_on_session(_session_callback)
 
     def _mark_used(self, keys: list[int]) -> None:
-        """Sets samples to used"""
+        """Sets samples to used."""
         if len(keys) == 0:
             return
         assert isinstance(

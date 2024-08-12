@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 # pylint: disable-next=no-name-in-module
 from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2 import (  # noqa: E402, E501

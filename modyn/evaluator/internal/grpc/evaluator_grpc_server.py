@@ -5,6 +5,7 @@ import pathlib
 from concurrent import futures
 
 import grpc
+
 from modyn.evaluator.internal.grpc.evaluator_grpc_servicer import EvaluatorGRPCServicer
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import add_EvaluatorServicer_to_server
 from modyn.utils import MAX_MESSAGE_SIZE
@@ -16,8 +17,7 @@ class EvaluatorGRPCServer:
     """GRPC server context manager."""
 
     def __init__(self, modyn_config: dict, tempdir: pathlib.Path) -> None:
-        """
-        Initialize the GRPC server.
+        """Initialize the GRPC server.
 
         Args:
             modyn_config (dict): Configuration of the evaluator module.
@@ -35,8 +35,7 @@ class EvaluatorGRPCServer:
         )
 
     def __enter__(self) -> grpc.Server:
-        """
-        Enter the context manager.
+        """Enter the context manager.
 
         Returns:
             grpc.Server: GRPC server
@@ -49,8 +48,7 @@ class EvaluatorGRPCServer:
         return self.server
 
     def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Exception) -> None:
-        """
-        Exit the context manager.
+        """Exit the context manager.
 
         Args:
             exc_type (type): exception type
