@@ -6,16 +6,26 @@ from typing import Generator, Optional
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.drift.alibi_detector import AlibiDriftDetector
-from modyn.supervisor.internal.triggers.drift.evidently_detector import EvidentlyDriftDetector
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
+from modyn.supervisor.internal.triggers.drift.embedding.embeddings import get_embeddings
+from modyn.supervisor.internal.triggers.drift.embedding.model.downloader import (
+    ModelDownloader,
+)
+from modyn.supervisor.internal.triggers.drift.embedding.model.manager import (
+    ModelManager,
+)
+from modyn.supervisor.internal.triggers.drift.evidently_detector import (
+    EvidentlyDriftDetector,
+)
 
 # pylint: disable-next=no-name-in-module
-from modyn.supervisor.internal.triggers.models import DriftTriggerEvalLog, TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.drift.utils import convert_tensor_to_df
+from modyn.supervisor.internal.triggers.models import (
+    DriftTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from modyn.supervisor.internal.triggers.utils import (
-    convert_tensor_to_df,
-    get_embeddings,
+from modyn.supervisor.internal.triggers.trigger_datasets.prepare_dataloader import (
     prepare_trigger_dataloader_fixed_keys,
 )
 
@@ -33,8 +43,8 @@ class DataDriftTrigger(Trigger):
         self.model_updated: bool = False
 
         self.dataloader_info: Optional[DataLoaderInfo] = None
-        self.encoder_downloader: Optional[EmbeddingEncoderDownloader] = None
-        self.embedding_encoder: Optional[EmbeddingEncoder] = None
+        self.model_downloader: Optional[ModelDownloader] = None
+        self.model_manager: Optional[ModelManager] = None
 
         self._reference_window: list[tuple[int, int]] = []
         self._current_window: list[tuple[int, int]] = []
@@ -47,7 +57,7 @@ class DataDriftTrigger(Trigger):
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
-        self._init_encoder_downloader()
+        self._init_model_downloader()
 
     def _update_curr_window(self, new_data: list[tuple[int, int]]) -> None:
         self._current_window.extend(new_data)
@@ -92,7 +102,9 @@ class DataDriftTrigger(Trigger):
             yield trigger_idx
 
     def inform(
-        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+        self,
+        new_data: list[tuple[int, int, int]],
+        log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         """Analyzes a batch of new data to determine if data drift has occurred and triggers retraining if necessary.
 
@@ -124,7 +136,8 @@ class DataDriftTrigger(Trigger):
 
         Yields:
             The index of the data point that triggered the drift detection. This is used to identify the point in the
-            data stream where the model's performance may have started to degrade due to drift."""
+            data stream where the model's performance may have started to degrade due to drift.
+        """
 
         new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
         detect_interval = self.config.detection_interval_data_points
@@ -177,7 +190,7 @@ class DataDriftTrigger(Trigger):
         """
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
-        assert self.encoder_downloader is not None
+        assert self.model_downloader is not None
         assert self.context and self.context.pipeline_config is not None
         assert len(self._reference_window) > 0
         assert len(self._current_window) > 0
@@ -193,15 +206,15 @@ class DataDriftTrigger(Trigger):
         # Download previous model as embedding encoder
         # TODO(417) Support custom model as embedding encoder
         if self.model_updated:
-            self.embedding_encoder = self.encoder_downloader.setup_encoder(
+            self.model_manager = self.model_downloader.setup_encoder(
                 self.previous_model_id, self.context.pipeline_config.training.device
             )
             self.model_updated = False
 
         # Compute embeddings
-        assert self.embedding_encoder is not None
-        reference_embeddings = get_embeddings(self.embedding_encoder, reference_dataloader)
-        current_embeddings = get_embeddings(self.embedding_encoder, current_dataloader)
+        assert self.model_manager is not None
+        reference_embeddings = get_embeddings(self.model_manager, reference_dataloader)
+        current_embeddings = get_embeddings(self.model_manager, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
         current_embeddings_df = convert_tensor_to_df(current_embeddings, "col_")
 
@@ -237,10 +250,10 @@ class DataDriftTrigger(Trigger):
             tokenizer=data_config.tokenizer,
         )
 
-    def _init_encoder_downloader(self) -> None:
+    def _init_model_downloader(self) -> None:
         assert self.context is not None
 
-        self.encoder_downloader = EmbeddingEncoderDownloader(
+        self.model_downloader = ModelDownloader(
             self.context.modyn_config,
             self.context.pipeline_id,
             self.context.base_dir,

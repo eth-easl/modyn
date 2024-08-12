@@ -9,12 +9,12 @@ class DataAmountTrigger(Trigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, config: DataAmountTriggerConfig):
+        super().__init__()
+
         self.data_points_for_trigger: int = config.num_samples
         self.remaining_data_points = 0
 
         assert self.data_points_for_trigger > 0, "data_points_for_trigger needs to be at least 1"
-
-        super().__init__()
 
     def inform(
         self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None

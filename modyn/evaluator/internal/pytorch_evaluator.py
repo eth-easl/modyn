@@ -4,15 +4,15 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
-from typing import Optional, Union
+from typing import Optional
 
 import torch
+
+from modyn.evaluator.internal.core_evaluation import perform_evaluation
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import (
-    AbstractDecomposableMetric,
     AbstractEvaluationMetric,
-    AbstractHolisticMetric,
 )
 from modyn.evaluator.internal.utils import EvaluationInfo
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
@@ -21,12 +21,19 @@ from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 class PytorchEvaluator:
     # pylint: disable=too-many-branches
 
-    def __init__(self, evaluation_info: EvaluationInfo, logger: logging.Logger, metric_result_queue: mp.Queue) -> None:
+    def __init__(
+        self,
+        evaluation_info: EvaluationInfo,
+        logger: logging.Logger,
+        metric_result_queue: mp.Queue,
+    ) -> None:
         self.logger = logger
         self._evaluation_id = evaluation_info.evaluation_id
         self._metric_result_queue = metric_result_queue
         self._model = evaluation_info.model_handler(
-            evaluation_info.model_configuration_dict, evaluation_info.device, evaluation_info.amp
+            evaluation_info.model_configuration_dict,
+            evaluation_info.device,
+            evaluation_info.amp,
         )
         self._load_state(evaluation_info.model_path)
 
@@ -44,7 +51,9 @@ class PytorchEvaluator:
 
     @staticmethod
     def _prepare_dataloader(
-        evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+        evaluation_info: EvaluationInfo,
+        start_timestamp: Optional[int],
+        end_timestamp: Optional[int],
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
@@ -66,7 +75,9 @@ class PytorchEvaluator:
         return dataloader
 
     @staticmethod
-    def _setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
+    def _setup_metrics(
+        metric_configurations: list[str],
+    ) -> list[AbstractEvaluationMetric]:
         metrics = []
         # need to make sure that the metric names are unique as they are used for identification.
         metric_names = set()
@@ -100,56 +111,16 @@ class PytorchEvaluator:
     def _single_interval_evaluate(self, dataloader: torch.utils.data.DataLoader, interval_idx: int) -> None:
         self._info(f"Process {os.getpid()} starts evaluation.")
         metrics = self._setup_metrics(self._eval_info.raw_metrics)
-        contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
-        y_true = []
-        y_score = []
 
-        self._model.model.eval()
-        num_samples = 0
-        with torch.inference_mode():
-            for batch in dataloader:
-                data: Union[torch.Tensor, dict]
-                if isinstance(batch[1], torch.Tensor):
-                    data = batch[1].to(self._device)
-                elif isinstance(batch[1], dict):
-                    data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-                    for name, tensor in batch[1].items():
-                        data[name] = tensor.to(self._device)
-                else:
-                    raise ValueError(f"data type {type(batch[1])} not supported")
+        num_samples, metric_result = perform_evaluation(
+            self._model.model,
+            dataloader,
+            self._device,
+            metrics,
+            self._label_transformer_function,
+            self._amp,
+        )
 
-                if self._label_transformer_function is None:
-                    target = batch[2].to(self._device)
-                else:
-                    target = self._label_transformer_function(batch[2]).to(self._device)
-
-                batch_size = target.shape[0]
-
-                with torch.autocast(self._device_type, enabled=self._amp):
-                    output = self._model.model(data)
-
-                    for metric in metrics:
-                        if isinstance(metric, AbstractDecomposableMetric):
-                            metric.evaluate_batch(target, output, batch_size)
-
-                    if contains_holistic_metric:
-                        y_true.append(target.detach().cpu())
-                        y_score.append(output.detach().cpu())
-
-                num_samples += batch_size
-
-        if len(y_true) > 0:
-            assert contains_holistic_metric  # We only track y_true in case of holistic metrics
-            y_true = torch.cat(y_true)
-            y_score = torch.cat(y_score)
-
-            for metric in metrics:
-                if isinstance(metric, AbstractHolisticMetric):
-                    metric.evaluate_dataset(y_true, y_score, num_samples)
-
-        metric_result = []
-        for metric in metrics:
-            metric_result.append((metric.get_name(), metric.get_evaluation_result()))
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
         self._metric_result_queue.put((interval_idx, metric_result), timeout=30)
         self._info(

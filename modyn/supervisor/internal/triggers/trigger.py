@@ -26,7 +26,9 @@ class Trigger(ABC):
 
     @abstractmethod
     def inform(
-        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+        self,
+        new_data: list[tuple[int, int, int]],
+        log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         """The supervisor informs the Trigger about new data.
         In case the concrete Trigger implementation decides to trigger, we return a list of _indices into new_data_.
@@ -41,7 +43,6 @@ class Trigger(ABC):
             triggering_indices: List of all indices that trigger training
         """
 
-    # pylint: disable=unnecessary-pass
+    # TODO: rename to "new_model"
     def inform_previous_model(self, previous_model_id: int) -> None:
         """The supervisor informs the Trigger about the model_id of the previous trigger"""
-        pass

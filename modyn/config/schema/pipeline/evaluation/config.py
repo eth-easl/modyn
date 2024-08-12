@@ -39,14 +39,6 @@ class EvaluationConfig(ModynBaseModel):
         min_length=1,
     )
     device: str = Field(description="The device the model should be put on.")
-    result_writers: List[ResultWriterType] = Field(
-        ["json"],
-        description=(
-            "List of names that specify in which formats to store the evaluation results. We currently support "
-            "json and tensorboard."
-        ),
-        min_length=1,
-    )
     datasets: list[EvalDataConfig] = Field(
         description="An array of all datasets on which the model is evaluated.",
         min_length=1,

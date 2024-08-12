@@ -68,7 +68,6 @@ evaluation:
       models: matrix
       datasets: ["yearbook_test"]
   device: "cuda:0"
-  result_writers: ["json"]
   datasets:
     - dataset_id: yearbook_test
       bytes_parser_function: |
