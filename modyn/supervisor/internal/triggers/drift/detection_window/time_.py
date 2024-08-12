@@ -9,6 +9,7 @@ from .window import DetectionWindows
 
 class TimeDetectionWindows(DetectionWindows):
     def __init__(self, config: TimeWindowingStrategy):
+        super().__init__()
         self.config = config
 
         # in overlapping mode (we need dedicated buffer to keep track of the new samples that are not in

@@ -310,7 +310,7 @@ class DataDriftTrigger(Trigger):
         # Compute embeddings
         assert self.embedding_encoder is not None
 
-        # TODO: reuse the embeddings as long as the reference window is not updated
+        # TODO(@robinholzi): reuse the embeddings as long as the reference window is not updated
         reference_embeddings = get_embeddings(self.embedding_encoder, reference_dataloader)
         current_embeddings = get_embeddings(self.embedding_encoder, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
