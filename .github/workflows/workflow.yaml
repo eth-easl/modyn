@@ -17,6 +17,7 @@ jobs:
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
+
       - name: Run pre-commit-conda
         uses: quantco/pre-commit-conda@v1
 
@@ -32,12 +33,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup mamba
         uses: ./.github/actions/mamba
+
       - name: Install repository
         run: |
           python -m pip install --no-build-isolation --no-deps --disable-pip-version-check -e .
           micromamba run -n modyn pip install -r dev-requirements.txt
+
       - name: Run mypy
         run: mypy .
 
