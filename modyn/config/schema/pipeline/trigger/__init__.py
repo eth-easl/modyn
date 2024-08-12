@@ -4,16 +4,14 @@ from typing import Annotated
 
 from pydantic import Field
 
-from .data_amount import *  # noqa
-from .data_amount import DataAmountTriggerConfig
 from .drift import *  # noqa
 from .drift import DataDriftTriggerConfig
 from .ensemble import *  # noqa
 from .ensemble import EnsembleTriggerConfig
-from .time import *  # noqa
-from .time import TimeTriggerConfig
+from .simple import *  # noqa
+from .simple import SimpleTriggerConfig
 
 TriggerConfig = Annotated[
-    TimeTriggerConfig | DataAmountTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig,
+    SimpleTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig,
     Field(discriminator="id"),
 ]

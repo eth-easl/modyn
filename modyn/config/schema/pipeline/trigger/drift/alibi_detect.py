@@ -62,9 +62,6 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
                 + "or threshold comparison for making drift decisions."
             )
 
-        if self.threshold is None and self.num_permutations is None:
-            raise ValueError("Please specify either threshold or num_permutations")
-
         return self
 
 

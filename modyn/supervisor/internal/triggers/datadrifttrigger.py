@@ -36,15 +36,14 @@ from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
     EmbeddingEncoder,
     EmbeddingEncoderDownloader,
 )
-
-# pylint: disable-next=no-name-in-module
 from modyn.supervisor.internal.triggers.models import (
     DriftTriggerEvalLog,
     TriggerPolicyEvaluationLog,
 )
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from modyn.supervisor.internal.triggers.utils import (
+from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
+from modyn.supervisor.internal.triggers.utils.utils import (
     convert_tensor_to_df,
     get_embeddings,
     prepare_trigger_dataloader_fixed_keys,
@@ -80,6 +79,14 @@ class DataDriftTrigger(Trigger):
         # and the metric's range of distance values
         self.decision_policies = _setup_decision_engines(config)
 
+        # [WARMUP CONFIGURATION]
+        self.warmup_completed = config.warmup_policy is None
+
+        # warmup policy (used as drop in replacement for the yet uncalibrated drift policy)
+        self.warmup_trigger = (
+            instantiate_trigger(config.warmup_policy.id, config.warmup_policy) if config.warmup_policy else None
+        )
+
         # list of reference windows for each warmup interval
         self.warmup_intervals: list[list[tuple[int, int]]] = []
 
@@ -87,34 +94,6 @@ class DataDriftTrigger(Trigger):
         self.context = context
         self._init_dataloader_info()
         self._init_encoder_downloader()
-
-    def _handle_drift_result(
-        self,
-        triggered: bool,
-        trigger_idx: int,
-        drift_results: dict[str, MetricResult],
-        log: TriggerPolicyEvaluationLog | None = None,
-    ) -> Generator[int, None, None]:
-        drift_eval_log = DriftTriggerEvalLog(
-            detection_interval=(
-                self._windows.current[0][1],
-                self._windows.current[-1][1],
-            ),
-            reference_interval=(
-                (self._windows.reference[0][1], self._windows.reference[-1][1]) if self._windows.reference else (-1, -1)
-            ),
-            triggered=triggered,
-            trigger_index=-1,
-            drift_results=drift_results,
-        )
-
-        if triggered:
-            self._windows.inform_trigger()
-
-            if log:
-                log.evaluations.append(drift_eval_log)
-
-            yield trigger_idx
 
     def inform(
         self,
@@ -180,21 +159,42 @@ class DataDriftTrigger(Trigger):
             # Reset for next detection
             self._sample_left_until_detection = self.config.detection_interval_data_points
 
-            # The first ever detection will always trigger
-            if not self._triggered_once or len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
-                # If we've never triggered before, always trigger
-                self._triggered_once = True
-                triggered = True
+            if (not self._triggered_once) or (
+                not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)
+            ):
+                # Warmup trigger, evaluate warmup policy while storing the reference window
+                # for later calibration with the drift policy.
+
+                # delegate to the warmup policy
+                delegated_trigger_results = (
+                    next(
+                        self.warmup_trigger.inform([(idx, time, 0) for (idx, time) in next_detection_interval]),
+                        None,
+                    )
+                    if self.warmup_trigger
+                    else None
+                )
+                triggered = (
+                    delegated_trigger_results is not None
+                    if self._triggered_once
+                    else True  # first candidate always triggers
+                )
+
                 drift_results: dict[str, MetricResult] = {}
                 if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
-                    self.warmup_intervals.append(list(self._windows.reference))
+                    # for the first detection the reference window is empty, therefore adding the current window
+                    self.warmup_intervals.append(
+                        list(self._windows.reference if self._triggered_once else self._windows.current)
+                    )
+
+                self._triggered_once = True
 
             else:
                 # Run the detection
 
                 # if this is the first non warmup detection, we inform the metrics that use decision criteria
                 # with calibration requirements about the warmup intervals so they can calibrate their thresholds
-                if len(self.warmup_intervals) > 0:
+                if len(self.warmup_intervals) > 0 or not self.warmup_completed:
                     # we can ignore the results as the decision criteria will keep track of the warmup results
                     # internally
                     if self._any_metric_needs_calibration():
@@ -222,7 +222,9 @@ class DataDriftTrigger(Trigger):
                                 )
                                 log.evaluations.append(warmup_log)
 
-                    self.warmup_intervals = []  # free the memory
+                    # free the memory, but keep filled
+                    self.warmup_completed = True
+                    self.warmup_intervals = []
                     gc.collect()
 
                 triggered, drift_results = self._run_detection(
@@ -239,7 +241,37 @@ class DataDriftTrigger(Trigger):
         self.previous_model_id = previous_model_id
         self.model_updated = True
 
-    # --------------------------------------------------- INTERNAL --------------------------------------------------- #
+    # ---------------------------------------------------------------------------------------------------------------- #
+    #                                                     INTERNAL                                                     #
+    # ---------------------------------------------------------------------------------------------------------------- #
+
+    def _handle_drift_result(
+        self,
+        triggered: bool,
+        trigger_idx: int,
+        drift_results: dict[str, MetricResult],
+        log: TriggerPolicyEvaluationLog | None = None,
+    ) -> Generator[int, None, None]:
+        drift_eval_log = DriftTriggerEvalLog(
+            detection_interval=(
+                self._windows.current[0][1],
+                self._windows.current[-1][1],
+            ),
+            reference_interval=(
+                (self._windows.reference[0][1], self._windows.reference[-1][1]) if self._windows.reference else (-1, -1)
+            ),
+            triggered=triggered,
+            trigger_index=-1,
+            drift_results=drift_results,
+        )
+
+        if triggered:
+            self._windows.inform_trigger()
+
+            if log:
+                log.evaluations.append(drift_eval_log)
+
+            yield trigger_idx
 
     def _run_detection(
         self,
@@ -278,7 +310,7 @@ class DataDriftTrigger(Trigger):
         # Compute embeddings
         assert self.embedding_encoder is not None
 
-        # tbd. reuse the embeddings as long as the reference window is not updated
+        # TODO: reuse the embeddings as long as the reference window is not updated
         reference_embeddings = get_embeddings(self.embedding_encoder, reference_dataloader)
         current_embeddings = get_embeddings(self.embedding_encoder, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
@@ -291,8 +323,8 @@ class DataDriftTrigger(Trigger):
 
         # make the final decisions with the decision engines
         for metric_name, metric_result in drift_results.items():
-            # to be able to evaluate multiple distance metrics on the same embeddings (without recalculating them
-            # in another drift trigger), we support aggregation of different metrics within one DriftTrigger
+            # some metrics return a list of distances (for every sample) instead of a single distance
+            # we take the mean of the distances to get a scalar distance value
             distance = (
                 metric_result.distance
                 if isinstance(metric_result.distance, float)
