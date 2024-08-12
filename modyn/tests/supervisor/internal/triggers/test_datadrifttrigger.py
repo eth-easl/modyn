@@ -12,10 +12,10 @@ from modyn.config.schema.pipeline.trigger.drift.aggregation import (
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.config import (
-    AmountWindowingStrategy,
+from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
 )
-from modyn.config.schema.pipeline.trigger.drift.detection_window.amount import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
