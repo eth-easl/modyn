@@ -45,8 +45,8 @@ class DataDriftTriggerConfig(ModynBaseModel):
         None,
         description=(
             "The number of intervals before starting to use the drift detection. Some "
-            "`DecisionCriteria` use this to calibrate the threshold. During the warmup, every interval will cause "
-            "a trigger."
+            "`DecisionCriteria` use this to calibrate the threshold. During the warmup, a simpler `warmup_policy` "
+            "is consulted for the triggering decision."
         ),
     )
     warmup_policy: SimpleTriggerConfig | None = Field(

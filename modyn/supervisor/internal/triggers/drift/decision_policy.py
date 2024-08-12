@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from collections import deque
 
-from modyn.config.schema.pipeline.trigger.drift.metric import DynamicThresholdCriterion, ThresholdDecisionCriterion
+from modyn.config.schema.pipeline.trigger.drift.metric import (
+    DynamicThresholdCriterion,
+    ThresholdDecisionCriterion,
+)
 
 
 class DriftDecisionPolicy(ABC):
@@ -38,7 +41,16 @@ class ThresholdDecisionPolicy(DriftDecisionPolicy):
 
 class DynamicDecisionPolicy(DriftDecisionPolicy):
     """Decision policy that will make the binary is_drift decisions based on a
-    dynamic threshold."""
+    dynamic threshold.
+
+    We compare a new distance value with the series of previous distance values
+    and decide if it's more extreme than a certain percentile of the series. Therefore we count the
+    `num_more_extreme` values that are greater than the new distance and compare it with the
+    `percentile` threshold.
+
+    TODO: we might want to also support some rolling average policy that will trigger if a distance is deviates
+    from the average by a certain amount.
+    """
 
     def __init__(self, config: DynamicThresholdCriterion):
         self.config = config

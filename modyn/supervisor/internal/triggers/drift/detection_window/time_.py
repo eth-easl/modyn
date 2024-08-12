@@ -1,17 +1,15 @@
 from collections import deque
 
-from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
+)
 
 from .window import DetectionWindows
 
 
 class TimeDetectionWindows(DetectionWindows):
     def __init__(self, config: TimeWindowingStrategy):
-        super().__init__()
         self.config = config
-        self.current: deque[tuple[int, int]] = deque()
-        self.current_reservoir: deque[tuple[int, int]] = deque()
-        self.reference: deque[tuple[int, int]] = deque()
 
         # in overlapping mode (we need dedicated buffer to keep track of the new samples that are not in
         # the reference buffer, yet). The current_ and current_reservoir_ are not enough as after

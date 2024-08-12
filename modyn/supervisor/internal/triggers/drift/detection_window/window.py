@@ -8,7 +8,7 @@ class DetectionWindows(ABC):
 
     All windows contain tuples with (sample_id, timestamp).
 
-    The manager is responsible for the following tasks:
+    This class is responsible for the following tasks:
     - Keep track of the current and reference window
     - Update the current window with new data
     - Move data from the current and reservoir window to the reference window

@@ -69,7 +69,7 @@ class DataDriftTrigger(Trigger):
         self._sample_left_until_detection = (
             config.detection_interval_data_points
         )  # allows to detect drift in a fixed interval
-        self._windows = _setup_detection_window_manager(config.windowing_strategy)
+        self._windows = _setup_detection_windows(config.windowing_strategy)
         self._triggered_once = False
 
         self.evidently_detector = EvidentlyDriftDetector(config.metrics)
@@ -77,7 +77,7 @@ class DataDriftTrigger(Trigger):
 
         # Every decision policy wraps one metric and is responsible for making decisions based on the metric's results
         # and the metric's range of distance values
-        self.decision_policies = _setup_decision_engines(config)
+        self.decision_policies = _setup_decision_policies(config)
 
         # [WARMUP CONFIGURATION]
         self.warmup_completed = config.warmup_policy is None
@@ -321,7 +321,7 @@ class DataDriftTrigger(Trigger):
             **self.alibi_detector.detect_drift(reference_embeddings, current_embeddings, is_warmup),
         }
 
-        # make the final decisions with the decision engines
+        # make the final decisions with the decision policies
         for metric_name, metric_result in drift_results.items():
             # some metrics return a list of distances (for every sample) instead of a single distance
             # we take the mean of the distances to get a scalar distance value
@@ -377,7 +377,7 @@ class DataDriftTrigger(Trigger):
         return any(metric.decision_criterion.needs_calibration for metric in self.config.metrics.values())
 
 
-def _setup_detection_window_manager(
+def _setup_detection_windows(
     windowing_strategy: DriftWindowingStrategy,
 ) -> DetectionWindows:
     if isinstance(windowing_strategy, AmountWindowingStrategy):
@@ -387,17 +387,17 @@ def _setup_detection_window_manager(
     raise ValueError(f"Unsupported windowing strategy: {windowing_strategy}")
 
 
-def _setup_decision_engines(
+def _setup_decision_policies(
     config: DataDriftTriggerConfig,
 ) -> dict[str, DriftDecisionPolicy]:
-    decision_engines: dict[str, DriftDecisionPolicy] = {}
+    policies: dict[str, DriftDecisionPolicy] = {}
     for metric_name, metric_config in config.metrics.items():
         criterion = metric_config.decision_criterion
         assert (
             metric_config.num_permutations is None
         ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
         if isinstance(criterion, ThresholdDecisionCriterion):
-            decision_engines[metric_name] = ThresholdDecisionPolicy(config)
+            policies[metric_name] = ThresholdDecisionPolicy(config)
         elif isinstance(criterion, DynamicDecisionPolicy):
-            decision_engines[metric_name] = DynamicDecisionPolicy(config)
-    return decision_engines
+            policies[metric_name] = DynamicDecisionPolicy(config)
+    return policies
