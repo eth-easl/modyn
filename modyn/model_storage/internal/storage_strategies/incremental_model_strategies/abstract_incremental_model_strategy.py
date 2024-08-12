@@ -7,15 +7,15 @@ from modyn.utils import unzip_file, zip_file
 
 
 class AbstractIncrementalModelStrategy(AbstractModelStorageStrategy, ABC):
-    """
-    This is the base class for all incremental model strategies. These strategies build on the idea of storing a delta
-    between two successive models in order to reproduce the latter one.
+    """This is the base class for all incremental model strategies.
+
+    These strategies build on the idea of storing a delta between two
+    successive models in order to reproduce the latter one.
     """
 
     @abstractmethod
     def _store_model(self, model_state: dict, prev_model_state: dict, file_path: pathlib.Path) -> None:
-        """
-        Stores the delta between two successive models.
+        """Stores the delta between two successive models.
 
         Args:
             model_state: the newer model state.
@@ -35,8 +35,7 @@ class AbstractIncrementalModelStrategy(AbstractModelStorageStrategy, ABC):
 
     @abstractmethod
     def _load_model(self, prev_model_state: dict, file_path: pathlib.Path) -> dict:
-        """
-        Loads a model state by overwriting the state of the preceding model.
+        """Loads a model state by overwriting the state of the preceding model.
 
         Args:
             prev_model_state: the state of the preceding model.

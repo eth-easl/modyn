@@ -1,21 +1,29 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import os
 import pathlib
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
+from pytest import fixture
+
 from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
-from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
-from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy
-from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.aggregation import (
+    MajorityVoteDriftAggregationStrategy,
+)
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectMmdDriftMetric,
+)
+from modyn.config.schema.pipeline.trigger.drift.config import (
+    AmountWindowingStrategy,
+)
+from modyn.config.schema.pipeline.trigger.drift.detection_window.amount import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoderDownloader
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
+    EmbeddingEncoderDownloader,
+)
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from pytest import fixture
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
@@ -64,7 +72,7 @@ def noop_dataloader_info_constructor_mock(
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
     shuffle: bool,
-    tokenizer: Optional[None],
+    tokenizer: None,
 ) -> None:
     pass
 

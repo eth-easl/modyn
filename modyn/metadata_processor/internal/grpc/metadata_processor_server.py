@@ -1,9 +1,10 @@
-"""GRPC Server Context Manager"""
+"""GRPC Server Context Manager."""
 
 import logging
 from concurrent import futures
 
 import grpc
+
 from modyn.metadata_processor.internal.grpc.generated.metadata_processor_pb2_grpc import (
     add_MetadataProcessorServicer_to_server,
 )
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class MetadataProcessorServer:
-    """GRPC Server Context Manager"""
+    """GRPC Server Context Manager."""
 
     def __init__(self, modyn_config: dict) -> None:
         self.config = modyn_config

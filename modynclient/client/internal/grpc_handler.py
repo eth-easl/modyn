@@ -1,12 +1,16 @@
 import json
 import logging
-from typing import Optional
 
 import grpc
 from google.protobuf.json_format import MessageToDict
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import GetPipelineStatusRequest, GetPipelineStatusResponse
+
+from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import (
+    GetPipelineStatusRequest,
+    GetPipelineStatusResponse,
+    PipelineResponse,
+    StartPipelineRequest,
+)
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import JsonString as SupervisorJsonString
-from modyn.supervisor.internal.grpc.generated.supervisor_pb2 import PipelineResponse, StartPipelineRequest
 from modyn.supervisor.internal.grpc.generated.supervisor_pb2_grpc import SupervisorStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_connection_established
 from modynclient.config.schema.client_config import ModynClientConfig
@@ -41,9 +45,9 @@ class GRPCHandler:
     def start_pipeline(
         self,
         pipeline_config: dict,
-        start_replay_at: Optional[int] = None,
-        stop_replay_at: Optional[int] = None,
-        maximum_triggers: Optional[int] = None,
+        start_replay_at: int | None = None,
+        stop_replay_at: int | None = None,
+        maximum_triggers: int | None = None,
     ) -> dict:
         if not self.connected_to_supervisor:
             raise ConnectionError("Tried to start pipeline at supervisor, but not there is no gRPC connection.")

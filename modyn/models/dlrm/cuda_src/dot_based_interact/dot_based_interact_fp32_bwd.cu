@@ -225,4 +225,3 @@ inline void dotBasedInteractF32Bwd(const void *input,
                                               interaction_ugrad_size);
   }
 }
-

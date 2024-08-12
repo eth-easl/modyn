@@ -5,7 +5,9 @@ import logging
 import multiprocessing as mp
 import pathlib
 from multiprocessing import Manager, Process
-from typing import Any, Optional
+from typing import Any
+
+from pydantic import ValidationError
 
 from modyn.config.schema.pipeline import ModelStrategy, ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
@@ -22,7 +24,6 @@ from modyn.supervisor.internal.pipeline_executor import execute_pipeline
 from modyn.supervisor.internal.pipeline_executor.models import PipelineExecutionParams
 from modyn.supervisor.internal.utils import PipelineInfo
 from modyn.utils import is_directory_writable, model_available, trigger_available
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -125,8 +126,7 @@ class Supervisor:
     # ----------------------------------------------- Setup & teardown ----------------------------------------------- #
 
     def register_pipeline(self, pipeline_config: ModynPipelineConfig) -> int:
-        """
-        Registers a new pipeline in the metadata database.
+        """Registers a new pipeline in the metadata database.
 
         Returns:
             The id of the newly created pipeline.
@@ -143,14 +143,14 @@ class Supervisor:
         full_model_strategy = ModelStorageStrategyConfig.from_config(
             self.get_model_strategy(model_storage_config.full_model_strategy)
         )
-        incremental_model_strategy_config: Optional[StrategyConfig] = None
-        full_model_interval: Optional[int] = None
+        incremental_model_strategy_config: StrategyConfig | None = None
+        full_model_interval: int | None = None
         incremental_strategy = model_storage_config.incremental_model_strategy
         if incremental_strategy:
             incremental_model_strategy_config = self.get_model_strategy(incremental_strategy)
             full_model_interval = incremental_strategy.full_model_interval
 
-        incremental_model_strategy: Optional[ModelStorageStrategyConfig] = None
+        incremental_model_strategy: ModelStorageStrategyConfig | None = None
         if incremental_model_strategy_config:
             incremental_model_strategy = ModelStorageStrategyConfig.from_config(incremental_model_strategy_config)
 
@@ -182,9 +182,9 @@ class Supervisor:
         self,
         pipeline_config: dict,
         eval_directory: str,
-        start_replay_at: Optional[int] = None,
-        stop_replay_at: Optional[int] = None,
-        maximum_triggers: Optional[int] = None,
+        start_replay_at: int | None = None,
+        stop_replay_at: int | None = None,
+        maximum_triggers: int | None = None,
     ) -> dict:
         # pylint: disable-msg=too-many-locals
         pipeline_config_model = self.validate_pipeline_config(pipeline_config)

@@ -3,10 +3,14 @@ import os
 import pathlib
 import shutil
 import tempfile
-from typing import Any, Callable, List, Literal, Optional, Tuple
+from collections.abc import Callable
+from typing import Any, Literal
 from unittest.mock import ANY, MagicMock, Mock, call, patch
 
 import pytest
+from pydantic import TypeAdapter
+from sqlalchemy import select
+
 from modyn.common.grpc.grpc_helpers import TrainerServerGRPCHandlerMixin
 from modyn.config import SelectionStrategy as SelectionStrategyModel
 from modyn.config.schema.pipeline import (
@@ -25,8 +29,6 @@ from modyn.selector.internal.selector_strategies.downsampling_strategies.rho_los
     RHOLossDownsamplingStrategy,
 )
 from modyn.tests.selector.internal.storage_backend.utils import MockStorageBackend
-from pydantic import TypeAdapter
-from sqlalchemy import select
 
 database_path = pathlib.Path(os.path.abspath(__file__)).parent / "test_storage.db"
 
@@ -95,7 +97,7 @@ def noop_init_trainer_server(self):
 
 
 def store_samples(
-    pipeline_id: int, trigger_id: int, key_ts_label_tuples: List[Tuple[int, int, int]], tmp_version=0
+    pipeline_id: int, trigger_id: int, key_ts_label_tuples: list[tuple[int, int, int]], tmp_version=0
 ) -> None:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         for key, timestamp, label in key_ts_label_tuples:
@@ -112,7 +114,7 @@ def store_samples(
         database.session.commit()
 
 
-def register_pipeline(auxiliary_pipeline_id: Optional[int], data_config: DataConfig) -> int:
+def register_pipeline(auxiliary_pipeline_id: int | None, data_config: DataConfig) -> int:
     with MetadataDatabaseConnection(get_minimal_modyn_config()) as database:
         pipeline_id = database.register_pipeline(
             num_workers=1,
@@ -322,7 +324,7 @@ def test__train_il_model(
     mock_start_training: MagicMock,
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
-    previous_model_id: Optional[int],
+    previous_model_id: int | None,
 ):
     pipeline_id = register_pipeline(None, data_config)
     il_training_config.use_previous_model = previous_model_id is not None
@@ -369,7 +371,7 @@ def test_inform_next_trigger_simple(
     mock__train_il_model: MagicMock,
     mock_get_latest_rho_state: MagicMock,
     mock_is_instance: MagicMock,
-    rho_state: Optional[Tuple[int, int]],
+    rho_state: tuple[int, int] | None,
     use_previous_model: bool,
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
@@ -427,7 +429,7 @@ def test_inform_next_trigger_twin(
     mock_get_latest_rho_state: MagicMock,
     mock_is_instance: MagicMock,
     use_previous_model: bool,
-    rho_state: Optional[Tuple[int, int]],
+    rho_state: tuple[int, int] | None,
     il_training_config: ILTrainingConfig,
     data_config: DataConfig,
 ):
@@ -506,7 +508,6 @@ def test__clean_tmp_version(mock_is_instance, data_config: DataConfig):
     RHOLossDownsamplingStrategy._clean_tmp_version(pipeline_id, trigger_id, mock_storage_backend)
     mock_storage_backend._execute_on_session.assert_called_once_with(ANY)
     with MetadataDatabaseConnection(modyn_config) as database:
-
         assert (
             database.session.query(SelectorStateMetadata)
             .filter(

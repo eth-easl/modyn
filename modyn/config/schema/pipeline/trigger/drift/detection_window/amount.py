@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from functools import cached_property
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import Field
 
 
 class _BaseWindowingStrategy(ModynBaseModel):
@@ -54,9 +55,6 @@ class TimeWindowingStrategy(_BaseWindowingStrategy):
 
 
 DriftWindowingStrategy = Annotated[
-    Union[
-        AmountWindowingStrategy,
-        TimeWindowingStrategy,
-    ],
+    AmountWindowingStrategy | TimeWindowingStrategy,
     Field(discriminator="id"),
 ]

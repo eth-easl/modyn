@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from modyn.config.schema.pipeline import OffsetEvalStrategyConfig
 from modyn.utils import convert_timestr_to_seconds
@@ -7,9 +7,10 @@ from .abstract import AbstractEvalStrategy, EvalInterval
 
 
 class OffsetEvalStrategy(AbstractEvalStrategy):
-    """
-    This evaluation strategy will evaluate the model on the intervals defined by the user provided offsets.
-    The offsets are defined as a list of strings, where each string represents an offset.
+    """This evaluation strategy will evaluate the model on the intervals
+    defined by the user provided offsets. The offsets are defined as a list of
+    strings, where each string represents an offset.
+
     An offset can be one of the following:
     - "-inf": the evaluation interval is from the beginning of evaluation dataset to just before this trigger.
     - "inf": the evaluation interval is from just after this trigger to the end of evaluation dataset.

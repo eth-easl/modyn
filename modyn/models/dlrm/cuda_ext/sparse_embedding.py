@@ -25,7 +25,7 @@ from torch.autograd import Function
 
 
 class EmbeddingGatherFunction(Function):
-    """Customized embedding gather with fused plain SGD"""
+    """Customized embedding gather with fused plain SGD."""
 
     @staticmethod
     def forward(ctx, embedding, indices):
@@ -48,7 +48,7 @@ class EmbeddingGatherFunction(Function):
 
 
 class JointSparseEmbedding(nn.Module):
-    """Joint multiple one hot embedding together
+    """Joint multiple one hot embedding together.
 
     Multiple one hot embedding can be done as one embedding (indexing).
 

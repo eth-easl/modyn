@@ -1,34 +1,24 @@
 runs:
   using: "composite"
-  steps: 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
 
-      - name: Install prerequisites for pystack
-        run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
-        shell: bash
+    - name: Install prerequisites for pystack
+      run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
+      shell: bash
 
-      - name: Set cache date
-        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
-        shell: bash
-      
-      # increase to reset cache manually
-      - name: Set cache number
-        run: echo "CACHE_NUMBER=2" >> $GITHUB_ENV 
-        shell: bash
+    - name: Setup micromamba
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: environment.yml
+        cache-environment: true
+        init-shell: bash
 
-      - name: Setup micromamba
-        uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: environment.yml
-          cache-environment-key: environment-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-          cache-downloads-key: downloads-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
-          init-shell: bash
-
-      - name: Install dev requirements 
-        run: | 
-          micromamba run -n modyn pip install -e .
-          micromamba run -n modyn pip install -r dev-requirements.txt
-        shell: bash -l {0}
+    - name: Install dev requirements
+      run: |
+        micromamba run -n modyn pip install -e .
+        micromamba run -n modyn pip install -r dev-requirements.txt
+      shell: bash -l {0}

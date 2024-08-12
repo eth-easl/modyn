@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 import pytest
+
 from modyn.config import CoresetStrategyConfig, MultiDownsamplingConfig
 from modyn.config.schema.pipeline.sampling.downsampling_config import (
     GradNormDownsamplingConfig,

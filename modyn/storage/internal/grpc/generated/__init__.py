@@ -1,7 +1,7 @@
-"""
-Storage module.
+"""Storage module.
 
-The storage module contains all classes and functions related the evaluation of models.
+The storage module contains all classes and functions related the
+evaluation of models.
 """
 
 import os

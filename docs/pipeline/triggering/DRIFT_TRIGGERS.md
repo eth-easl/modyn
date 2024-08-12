@@ -1,4 +1,4 @@
-# Drift Triggering 
+# Drift Triggering
 
 ## Overview
 

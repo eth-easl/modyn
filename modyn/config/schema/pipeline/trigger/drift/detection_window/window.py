@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from modyn.config.schema.base_model import ModynBaseModel
 from pydantic import Field
+
+from modyn.config.schema.base_model import ModynBaseModel
 
 
 class _BaseWindowingStrategy(ModynBaseModel):

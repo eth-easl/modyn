@@ -16,11 +16,8 @@ from modyn.config.schema.pipeline import (
     ModynPipelineConfig,
     Pipeline,
     PipelineModelStorageConfig,
-    SelectionStrategy,
     TrainingConfig,
 )
-from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
 from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 from modyn.config.schema.pipeline.trigger import DataAmountTriggerConfig
 

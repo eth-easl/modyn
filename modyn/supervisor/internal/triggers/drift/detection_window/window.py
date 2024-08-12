@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Deque
 
 
 class DetectionWindows(ABC):
-    """
-    Wrapper and manager for the drift detection windows include reference, current and reservoir window.
+    """Wrapper and manager for the drift detection windows include reference,
+    current and reservoir window.
 
     All windows contain tuples with (sample_id, timestamp).
 
@@ -21,9 +20,9 @@ class DetectionWindows(ABC):
     """
 
     def __init__(self) -> None:
-        self.current: Deque[tuple[int, int]] = deque()
-        self.current_reservoir: Deque[tuple[int, int]] = deque()
-        self.reference: Deque[tuple[int, int]] = deque()
+        self.current: deque[tuple[int, int]] = deque()
+        self.current_reservoir: deque[tuple[int, int]] = deque()
+        self.reference: deque[tuple[int, int]] = deque()
 
     @abstractmethod
     def inform_data(self, data: list[tuple[int, int]]) -> None: ...

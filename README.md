@@ -11,12 +11,12 @@ Modyn is an open-source platform for model training on growing datasets, i.e., d
 
 </div>
 
-
 ## ⚡️ Quickstart
 
 For deploying and running integration tests, you will need [Docker](https://docs.docker.com/get-docker/).
 Furthermore, we use [micromamba](https://mamba.readthedocs.io/en/latest/installation/micromamba-installation.html) for local environments and [tmuxp](https://github.com/tmux-python/tmuxp) for easily managing components panes (optional).
 For local development, run
+
 ```bash
 # In case you don't have micromamba yet
 # macos:
@@ -31,15 +31,18 @@ micromamba activate modyn
 pip install -e .
 pip install -r dev-requirements.txt
 ```
+
 and then `./scripts/python_compliance.sh` to check that your local installation of Modyn is functioning.
 
 If you want to run all Modyn components, run
+
 ```bash
 ./scripts/run_modyn.sh
 tmuxp load tmuxp.yaml # Assumes you have tmuxp, see above for link
 ```
 
 For running all integration tests, run
+
 ```bash
 ./scripts/run_integrationtests.sh
 ```
@@ -60,6 +63,7 @@ Please reach out via Github, Twitter, E-Mail, or any other channel of communicat
 How to [contribute](docs/CONTRIBUTING.md).
 
 ## 🔁 What are dynamic datasets and what is Modyn used for?
+
 ML is is often applied in use cases where training data grows over time, i.e., datasets are _growing_ instead of static.
 Training must incorporate data changes for high model quality, however this is often challenging and expensive due to large datasets and models.
 With Modyn, we are actively developing an open-source platform that manages growing datasets at scale and supports pluggable policies for when and what data to train on.
@@ -74,5 +78,6 @@ However, we strive towards usage of Modyn in practical environments as well.
 We welcome input from both research and practice.
 
 ## ✉️ About
+
 Modyn is being developed at the [Efficient Architectures and Systems Lab (EASL)](https://anakli.inf.ethz.ch/#Group) at the [ETH Zurich Systems Group](https://systems.ethz.ch/).
 Please reach out to `mboether [at] inf [­dot] ethz [dot] ch` or open an issue on Github if you have any questions or inquiry related to Modyn and its usage.

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class AbstractKeySource(ABC):
@@ -8,7 +7,7 @@ class AbstractKeySource(ABC):
         self._trigger_id = trigger_id
 
     @abstractmethod
-    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], Optional[list[float]]]:
+    def get_keys_and_weights(self, worker_id: int, partition_id: int) -> tuple[list[int], list[float] | None]:
         raise NotImplementedError()
 
     @abstractmethod

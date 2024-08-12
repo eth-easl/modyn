@@ -1,7 +1,7 @@
-"""
-Model Storage module.
+"""Model Storage module.
 
-The model storage module contains all classes and functions related to the storage and retrieval of models.
+The model storage module contains all classes and functions related to
+the storage and retrieval of models.
 """
 
 import os

@@ -1,4 +1,5 @@
-from typing import Optional
+from sqlalchemy import Select, asc, func, select
+from sqlalchemy.orm.session import Session
 
 from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -7,8 +8,6 @@ from modyn.selector.internal.selector_strategies.presampling_strategies.abstract
 )
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
-from sqlalchemy import Select, asc, func, select
-from sqlalchemy.orm.session import Session
 
 
 class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
@@ -33,9 +32,9 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
     def get_presampling_query(
         self,
         next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
+        tail_triggers: int | None,
+        limit: int | None,
+        trigger_dataset_size: int | None,
     ) -> Select:
         assert trigger_dataset_size is not None
         assert trigger_dataset_size >= 0
@@ -72,7 +71,7 @@ class RandomNoReplacementPresamplingStrategy(AbstractPresamplingStrategy):
 
         return stmt
 
-    def _get_query_sample_random(self, next_trigger_id: int, tail_triggers: Optional[int], target_size: int) -> Select:
+    def _get_query_sample_random(self, next_trigger_id: int, tail_triggers: int | None, target_size: int) -> Select:
         subq = (
             select(SelectorStateMetadata.sample_key)
             .filter(

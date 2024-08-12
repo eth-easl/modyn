@@ -1,7 +1,7 @@
 pipeline:
-    name: exp5_current_day_only
-    description: DLRM/Criteo Training. New model each day, on the day only.
-    version: 1.0.0
+  name: exp5_current_day_only
+  description: DLRM/Criteo Training. New model each day, on the day only.
+  version: 1.0.0
 model:
   id: DLRM
   config: # these parameters are consistent with the parameters used for the experiments shown in the NVIDIA repo:  https://github.com/NVIDIA/DeepLearningExamples/tree/master/PyTorch/Recommendation/DLRM

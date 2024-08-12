@@ -1,5 +1,4 @@
 from collections import deque
-from typing import Deque
 
 from modyn.config.schema.pipeline.trigger.drift.detection_window import AmountWindowingStrategy
 
@@ -12,15 +11,15 @@ class AmountDetectionWindows(DetectionWindows):
         self.config = config
 
         # using maxlen the deque will automatically remove the oldest elements if the buffers are full
-        self.current: Deque[tuple[int, int]] = deque(maxlen=config.amount_cur)
-        self.current_reservoir: Deque[tuple[int, int]] = deque(maxlen=max(0, config.amount_ref - config.amount_cur))
-        self.reference: Deque[tuple[int, int]] = deque(maxlen=config.amount_ref)
+        self.current: deque[tuple[int, int]] = deque(maxlen=config.amount_cur)
+        self.current_reservoir: deque[tuple[int, int]] = deque(maxlen=max(0, config.amount_ref - config.amount_cur))
+        self.reference: deque[tuple[int, int]] = deque(maxlen=config.amount_ref)
 
         # in overlapping mode (we need dedicated buffer to keep track of the new samples that are not in
         # the reference buffer, yet). The current_ and current_reservoir_ are not enough as after
         # a trigger they will contain the same elements as before hindering us from copying the
         # current elements to the reference buffer (creating duplicates)
-        self.exclusive_current: Deque[tuple[int, int]] = deque(
+        self.exclusive_current: deque[tuple[int, int]] = deque(
             maxlen=config.amount_ref if self.config.allow_overlap else 0
         )
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from sqlalchemy import Select, asc, func, select
 
 from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
@@ -6,7 +6,6 @@ from modyn.selector.internal.selector_strategies.presampling_strategies.abstract
     AbstractPresamplingStrategy,
 )
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
-from sqlalchemy import Select, asc, func, select
 
 
 class RandomPresamplingStrategy(AbstractPresamplingStrategy):
@@ -23,9 +22,9 @@ class RandomPresamplingStrategy(AbstractPresamplingStrategy):
     def get_presampling_query(
         self,
         next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
+        tail_triggers: int | None,
+        limit: int | None,
+        trigger_dataset_size: int | None,
     ) -> Select:
         # TODO(#224) write an efficient query using TABLESAMPLE
         assert trigger_dataset_size is not None

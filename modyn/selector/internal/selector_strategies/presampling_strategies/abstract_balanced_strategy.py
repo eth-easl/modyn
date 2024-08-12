@@ -1,6 +1,10 @@
-from typing import Any, Optional
+from typing import Any
 
 import sqlalchemy
+from sqlalchemy import Select, asc, func, select
+from sqlalchemy.orm.session import Session
+from sqlalchemy.sql.expression import func as sql_func
+
 from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
@@ -8,15 +12,13 @@ from modyn.selector.internal.selector_strategies.presampling_strategies.abstract
 )
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 from modyn.selector.internal.storage_backend.database.database_storage_backend import DatabaseStorageBackend
-from sqlalchemy import Select, asc, func, select
-from sqlalchemy.orm.session import Session
-from sqlalchemy.sql.expression import func as sql_func
 
 
 def get_fair_share(capacity: int, requests: list[int]) -> int:
-    """
-    Simple Fair Sharing algorithm.
-    Here it's used to determine how many samples gets each class/trigger (min(fair_share, num_samples)
+    """Simple Fair Sharing algorithm.
+
+    Here it's used to determine how many samples gets each class/trigger
+    (min(fair_share, num_samples)
     """
     fair_share = int(capacity / len(requests))
     below_fair_share = [requests.index(el) for el in requests if el <= fair_share]
@@ -55,9 +57,9 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
     def get_presampling_query(
         self,
         next_trigger_id: int,
-        tail_triggers: Optional[int],
-        limit: Optional[int],
-        trigger_dataset_size: Optional[int],
+        tail_triggers: int | None,
+        limit: int | None,
+        trigger_dataset_size: int | None,
     ) -> Select:
         assert self.balanced_column is not None
         samples_count = self._get_samples_count_per_balanced_column(next_trigger_id, tail_triggers)
@@ -90,9 +92,7 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
     def _get_force_column_balancing_query(
         self, fair_share: int, samples_count: list[int], subquery: Select, target_size: int
     ) -> Select:
-        """
-        Each class/trigger has exactly the same number of samples
-        """
+        """Each class/trigger has exactly the same number of samples."""
         smallest_size = min(samples_count)
         if smallest_size < fair_share:
             return (
@@ -104,20 +104,15 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
         return self._get_base_query(fair_share, subquery)
 
     def _get_base_query(self, fair_share: int, subquery: Select) -> Select:
-        """
-
-        Class/Trigger j gets min(fair_share, number_samples[j]) samples
-
-        """
+        """Class/Trigger j gets min(fair_share, number_samples[j]) samples."""
         return select(subquery.c.sample_key).where(subquery.c.row_num <= fair_share).order_by(asc(subquery.c.timestamp))
 
     def _get_force_required_target_size_query(
         self, fair_share: int, samples_count: list[int], subquery: Select, target_size: int
     ) -> Select:
-        """
+        """The returned number of samples is exactly target_size.
 
-        The returned number of samples is exactly target_size. Some classes/triggers might get more samples than others
-
+        Some classes/triggers might get more samples than others
         """
         predicted_number_of_samples = get_fair_share_predicted_total(fair_share, samples_count)
         if predicted_number_of_samples < target_size:
@@ -130,12 +125,9 @@ class AbstractBalancedPresamplingStrategy(AbstractPresamplingStrategy):
             )
         return self._get_base_query(fair_share, subquery)
 
-    def _get_samples_count_per_balanced_column(self, next_trigger_id: int, tail_triggers: Optional[int]) -> list[int]:
-        """
-
-        Performs a group_by query and returns a list with the number of samples for each group
-
-        """
+    def _get_samples_count_per_balanced_column(self, next_trigger_id: int, tail_triggers: int | None) -> list[int]:
+        """Performs a group_by query and returns a list with the number of
+        samples for each group."""
 
         def _session_callback(session: Session) -> Any:
             query = (

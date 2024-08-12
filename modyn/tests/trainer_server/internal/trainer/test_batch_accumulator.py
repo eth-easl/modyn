@@ -1,6 +1,7 @@
 import unittest
 
 import torch
+
 from modyn.trainer_server.internal.trainer.batch_accumulator import BatchAccumulator
 
 

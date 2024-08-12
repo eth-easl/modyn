@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import gc
 import logging
-from typing import Generator, Optional
+from collections.abc import Generator
+
+from numpy import mean
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
@@ -17,15 +19,29 @@ from modyn.supervisor.internal.triggers.drift.decision_policy import (
     DynamicDecisionPolicy,
     ThresholdDecisionPolicy,
 )
-from modyn.supervisor.internal.triggers.drift.detection_window.amount import AmountDetectionWindows
-from modyn.supervisor.internal.triggers.drift.detection_window.time_ import TimeDetectionWindows
-from modyn.supervisor.internal.triggers.drift.detection_window.window import DetectionWindows
+from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
+    AmountDetectionWindows,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.time_ import (
+    TimeDetectionWindows,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.window import (
+    DetectionWindows,
+)
 from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
-from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder, EmbeddingEncoderDownloader
+from modyn.supervisor.internal.triggers.drift.detector.evidently import (
+    EvidentlyDriftDetector,
+)
+from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
+    EmbeddingEncoder,
+    EmbeddingEncoderDownloader,
+)
 
 # pylint: disable-next=no-name-in-module
-from modyn.supervisor.internal.triggers.models import DriftTriggerEvalLog, TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.models import (
+    DriftTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils import (
@@ -33,7 +49,6 @@ from modyn.supervisor.internal.triggers.utils import (
     get_embeddings,
     prepare_trigger_dataloader_fixed_keys,
 )
-from numpy import mean
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +60,12 @@ class DataDriftTrigger(Trigger):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self.previous_model_id: Optional[int] = None
+        self.previous_model_id: int | None = None
         self.model_updated: bool = False
 
-        self.dataloader_info: Optional[DataLoaderInfo] = None
-        self.encoder_downloader: Optional[EmbeddingEncoderDownloader] = None
-        self.embedding_encoder: Optional[EmbeddingEncoder] = None
+        self.dataloader_info: DataLoaderInfo | None = None
+        self.encoder_downloader: EmbeddingEncoderDownloader | None = None
+        self.embedding_encoder: EmbeddingEncoder | None = None
 
         self._sample_left_until_detection = (
             config.detection_interval_data_points
@@ -106,7 +121,8 @@ class DataDriftTrigger(Trigger):
         new_data: list[tuple[int, int, int]],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
-        """Analyzes a batch of new data to determine if data drift has occurred and triggers retraining if necessary.
+        """Analyzes a batch of new data to determine if data drift has occurred
+        and triggers retraining if necessary.
 
         This method maintains a reference window and a current window of data points. The reference window contains
         data points from the period before the last detected drift, while the current window accumulates incoming data
@@ -232,6 +248,7 @@ class DataDriftTrigger(Trigger):
         is_warmup: bool,
     ) -> tuple[bool, dict[str, MetricResult]]:
         """Compare current data against reference data.
+
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
         Get the dataloaders, download the embedding encoder model if necessary,

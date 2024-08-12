@@ -1,15 +1,16 @@
-from typing import Any, Optional
+from typing import Any
 
 import torch
 import torch.nn.functional as func
-from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
 from torchvision.models import densenet121
 
+from modyn.models.coreset_methods_support import CoresetSupportingModule
+
 
 class FmowNet:
-    """
-    Adapted from WildTime.
+    """Adapted from WildTime.
+
     Here you can find the original implementation:
     https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/fmow.py
     """
@@ -27,7 +28,7 @@ class FmowNetModel(CoresetSupportingModule):
         self.enc = densenet121(pretrained=True).features
         self.classifier = nn.Linear(1024, self.num_classes)
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: list[int] | None = None) -> torch.Tensor:
         del sample_ids
         features = self.enc(data)
         out = func.relu(features, inplace=True)

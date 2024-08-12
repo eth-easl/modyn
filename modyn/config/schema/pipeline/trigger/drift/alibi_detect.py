@@ -2,11 +2,12 @@
 # the support for it in this wrapper configuration for offline experiments to still be able to
 # use the hypothesis testing.
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
+
+from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
-from pydantic import Field, model_validator
 
 
 class _AlibiDetectBaseDriftMetric(BaseMetric):
@@ -80,6 +81,6 @@ class AlibiDetectCVMDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrect
 
 
 AlibiDetectDriftMetric = Annotated[
-    Union[AlibiDetectMmdDriftMetric, AlibiDetectKSDriftMetric, AlibiDetectCVMDriftMetric],
+    AlibiDetectMmdDriftMetric | AlibiDetectKSDriftMetric | AlibiDetectCVMDriftMetric,
     Field(discriminator="id"),
 ]

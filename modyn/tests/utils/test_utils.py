@@ -8,6 +8,7 @@ import grpc
 import numpy as np
 import pytest
 import torch
+
 from modyn.common.trigger_sample import TriggerSampleStorage
 from modyn.config import ModynConfig, read_modyn_config, read_pipeline
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -251,7 +252,7 @@ def test_zip_and_unzip_file():
         assert not zip_file_path.exists()
         assert text_file_path.exists() and text_file_path.is_file()
 
-        with open(text_file_path, "r", encoding="utf-8") as file:
+        with open(text_file_path, encoding="utf-8") as file:
             assert file.read() == "This is a testfile!"
 
 

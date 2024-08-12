@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional
+from collections.abc import Callable
+
+from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils.utils import deserialize_function
-from pydantic import Field, field_validator
 
 
 class DataConfig(ModynBaseModel):
@@ -15,7 +16,7 @@ class DataConfig(ModynBaseModel):
             "(e.g. Tensors) This function is called before any other transformations are performed on the data."
         )
     )
-    transformations: List[str] = Field(
+    transformations: list[str] = Field(
         default_factory=list,
         description=(
             "Further transformations to be applied on the data after bytes_parser_function has been applied."
@@ -25,7 +26,7 @@ class DataConfig(ModynBaseModel):
     label_transformer_function: str = Field(
         "", description="Function used to transform the label (tensors of integers)."
     )
-    tokenizer: Optional[str] = Field(
+    tokenizer: str | None = Field(
         None,
         description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )

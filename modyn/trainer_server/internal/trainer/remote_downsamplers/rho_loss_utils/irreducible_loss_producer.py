@@ -3,10 +3,11 @@ import json
 import logging
 import pathlib
 import tempfile
-from typing import Any, Union
+from typing import Any
 
 import grpc
 import torch
+
 from modyn.common.ftp import download_trained_model
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 
@@ -38,7 +39,7 @@ class IrreducibleLossProducer:
         self.per_sample_loss_fct = per_sample_loss
 
     def get_irreducible_loss(
-        self, sample_ids: list[int], forward_input: Union[dict[str, torch.Tensor], torch.Tensor], target: torch.Tensor
+        self, sample_ids: list[int], forward_input: dict[str, torch.Tensor] | torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
         # The time to compute irreducible loss for cache-missing samples should be the same as compute irreducible loss
         # for the full batch. Therefore, to simplify logic as long as there is one cache miss we compute IR loss for the

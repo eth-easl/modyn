@@ -1,6 +1,5 @@
-"""
-This submodule implements functions to run gRPC servers using multiprocessing.
-"""
+"""This submodule implements functions to run gRPC servers using
+multiprocessing."""
 
 import os
 

@@ -49,7 +49,7 @@ trigger:
       num_permutations: 1000
       decision_criterion:
         id: DynamicThresholdCriterion
-        
+
   aggregation_strategy:
     id: MajorityVote
 selection_strategy:
@@ -75,7 +75,7 @@ evaluation:
       bytes_parser_function: |
         def bytes_parser_function(data: bytes) -> str:
           return str(data, "utf8")
-      tokenizer: DistilBertTokenizerTransform      
+      tokenizer: DistilBertTokenizerTransform
       batch_size: 64
       dataloader_workers: 2
       metrics:

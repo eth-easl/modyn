@@ -1,4 +1,5 @@
 import pytest
+
 from modyn.config.schema.pipeline.trigger.drift.metric import DynamicThresholdCriterion, ThresholdDecisionCriterion
 from modyn.supervisor.internal.triggers.drift.decision_policy import DynamicDecisionPolicy, ThresholdDecisionPolicy
 

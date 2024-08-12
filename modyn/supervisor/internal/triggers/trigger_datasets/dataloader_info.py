@@ -1,6 +1,3 @@
-from typing import Optional
-
-
 # TODO(415): Unify with similar classes in trainer_server and evaluator
 class DataLoaderInfo:
     def __init__(
@@ -16,7 +13,7 @@ class DataLoaderInfo:
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
         shuffle: bool,
-        tokenizer: Optional[str],
+        tokenizer: str | None,
     ):
         self.pipeline_id = pipeline_id
         self.dataset_id = dataset_id

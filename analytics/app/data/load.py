@@ -13,7 +13,8 @@ assert EVAL_DIR.exists(), f"Evaluation directory does not exist: {EVAL_DIR}"
 
 
 def list_pipelines(eval_dir: Path | None = None) -> dict[int, tuple[str, Path]]:
-    """Returns a list of tuples with pipeline_id, optional pipeline_name, and pipeline_dir"""
+    """Returns a list of tuples with pipeline_id, optional pipeline_name, and
+    pipeline_dir."""
     if not eval_dir:
         eval_dir = EVAL_DIR
 

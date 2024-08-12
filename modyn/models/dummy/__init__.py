@@ -1,6 +1,4 @@
-"""
-Dummy
-"""
+"""Dummy."""
 
 import os
 

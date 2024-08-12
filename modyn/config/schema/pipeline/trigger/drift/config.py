@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Annotated, ForwardRef, Literal, Optional, Union
+from typing import Annotated, ForwardRef, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
-from modyn.config.schema.pipeline.trigger.drift.detection_window import AmountWindowingStrategy, DriftWindowingStrategy
-from pydantic import Field
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    AmountWindowingStrategy,
+    DriftWindowingStrategy,
+)
 
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
@@ -13,10 +17,7 @@ from .evidently import EvidentlyDriftMetric
 __TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 
 DriftMetric = Annotated[
-    Union[
-        EvidentlyDriftMetric,
-        AlibiDetectDriftMetric,
-    ],
+    EvidentlyDriftMetric | AlibiDetectDriftMetric,
     Field(discriminator="id"),
 ]
 
@@ -24,15 +25,19 @@ DriftMetric = Annotated[
 class DataDriftTriggerConfig(ModynBaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
 
-    detection_interval: Optional[__TriggerConfig] = Field(  # type: ignore[valid-type]
-        None, description="The Trigger policy to determine the interval at which drift detection is performed."
+    detection_interval: __TriggerConfig | None = Field(  # type: ignore[valid-type]
+        None,
+        description="The Trigger policy to determine the interval at which drift detection is performed.",
     )  # currently not used
     detection_interval_data_points: int = Field(
-        1000, description="The number of samples in the interval after which drift detection is performed.", ge=1
+        1000,
+        description="The number of samples in the interval after which drift detection is performed.",
+        ge=1,
     )
 
     windowing_strategy: DriftWindowingStrategy = Field(
-        AmountWindowingStrategy(), description="Which windowing strategy to use for current and reference data"
+        AmountWindowingStrategy(),
+        description="Which windowing strategy to use for current and reference data",
     )
     warmup_intervals: int | None = Field(
         None,
@@ -44,7 +49,8 @@ class DataDriftTriggerConfig(ModynBaseModel):
     )
 
     metrics: dict[str, DriftMetric] = Field(
-        min_length=1, description="The metrics used for drift detection keyed by a reference."
+        min_length=1,
+        description="The metrics used for drift detection keyed by a reference.",
     )
     aggregation_strategy: DriftAggregationStrategy = Field(
         MajorityVoteDriftAggregationStrategy(),

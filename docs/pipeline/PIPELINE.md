@@ -36,7 +36,7 @@ stateDiagram-v2
             state handle_single_trigger {
             direction LR
                 [*] --> INFORM_SELECTOR_ABOUT_TRIGGER
-                INFORM_SELECTOR_ABOUT_TRIGGER --> training
+                INFORM_SELECTOR_ABOUT_TRIGGER --> train_and_store_model
                 state train_and_store_model {
                     [*] --> TRAIN
                     TRAIN --> TRAINING_COMPLETED

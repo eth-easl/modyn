@@ -1,6 +1,5 @@
-"""
-This submodule provides a backend for storing the seen samples to local storage during a pipeline.
-"""
+"""This submodule provides a backend for storing the seen samples to local
+storage during a pipeline."""
 
 import os
 

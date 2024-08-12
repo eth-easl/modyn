@@ -4,9 +4,10 @@ import dash_cytoscape as cyto
 import pandas as pd
 import plotly.express as px
 from dash import Input, Output, callback, dcc, html
+from plotly import graph_objects as go
+
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
-from plotly import graph_objects as go
 
 
 def section0_pipeline(

@@ -7,18 +7,19 @@ import logging
 import os
 import pathlib
 import threading
-from typing import Any, Callable, Generator, Iterator, Optional, Tuple
+from collections.abc import Callable, Generator, Iterator
+from typing import Any
 
-from modyn.common.benchmark.stopwatch import Stopwatch
 from PIL import Image
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
+
+from modyn.common.benchmark.stopwatch import Stopwatch
 
 logger = logging.getLogger(__name__)
 
 
 class ClocLocalDataset(IterableDataset):  # pragma: no cover
-
     # pylint: disable=too-many-instance-attributes, abstract-method
 
     def __init__(
@@ -33,10 +34,9 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
-        tokenizer: Optional[str],
-        log_path: Optional[pathlib.Path],
+        tokenizer: str | None,
+        log_path: pathlib.Path | None,
     ):  # pragma: no cover
-
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id
@@ -50,10 +50,10 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
         self._storage_address = storage_address
         self._selector_address = selector_address
         self._transform_list: list[Callable] = []
-        self._transform: Optional[Callable] = None
+        self._transform: Callable | None = None
         self._log_path = log_path
         self._log: dict[str, Any] = {"partitions": {}}
-        self._log_lock: Optional[threading.Lock] = None
+        self._log_lock: threading.Lock | None = None
         self._sw = Stopwatch()
         self._cloc_path = "/tmp/cloc"
 
@@ -64,11 +64,9 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
 
     @staticmethod
     def bytes_parser_function(data: memoryview) -> Image:  # pragma: no cover
-
         return Image.open(io.BytesIO(data)).convert("RGB")
 
     def _setup_composed_transform(self) -> None:  # pragma: no cover
-
         self._transform_list = [
             ClocLocalDataset.bytes_parser_function,
             transforms.RandomResizedCrop(224),
@@ -79,23 +77,21 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
         self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:  # pragma: no cover
-
         self._setup_composed_transform()
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
-    def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def _get_transformed_data_tuple(
-        self, key: int, sample: memoryview, label: int, weight: Optional[float]
-    ) -> Optional[Tuple]:  # pragma: no cover
-
+        self, key: int, sample: memoryview, label: int, weight: float | None
+    ) -> tuple | None:  # pragma: no cover
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
         transformed_sample = self._transform(sample)  # type: ignore
@@ -103,7 +99,6 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
         return key, transformed_sample, label
 
     def _persist_log(self, worker_id: int) -> None:  # pragma: no cover
-
         if self._log_path is None:
             return
 
@@ -124,8 +119,7 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
 
     def cloc_generator(
         self, worker_id: int, num_workers: int
-    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:  # pragma: no cover
-
+    ) -> Iterator[tuple[int, memoryview, int, float | None]]:  # pragma: no cover
         self._info("Globbing paths", worker_id)
 
         pathlist = sorted(pathlib.Path(self._cloc_path).glob("*.jpg"))
@@ -153,7 +147,6 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
             sample_idx = sample_idx + 1
 
     def __iter__(self) -> Generator:  # pragma: no cover
-
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
@@ -183,5 +176,4 @@ class ClocLocalDataset(IterableDataset):  # pragma: no cover
         self._persist_log(worker_id)
 
     def end_of_trigger_cleaning(self) -> None:  # pragma: no cover
-
         pass

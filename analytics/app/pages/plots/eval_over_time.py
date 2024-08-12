@@ -2,17 +2,17 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.express as px
-from analytics.app.data.const import CompositeModelOptions
-from analytics.app.data.transform import patch_yearbook_time
 from dash import Input, Output, callback, dcc, html
 from plotly import graph_objects as go
+
+from analytics.app.data.const import CompositeModelOptions
+from analytics.app.data.transform import patch_yearbook_time
 
 
 @dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_eval_single: pd.DataFrame
     composite_model_variant: CompositeModelOptions = "currently_active_model"
@@ -33,8 +33,7 @@ def gen_figure(
     dataset_id: str,
     metric: str,
 ) -> go.Figure:
-    """
-    Create the evaluation over time figure with a line plot.
+    """Create the evaluation over time figure with a line plot.
 
     Args:
         page: Page name where the plot is displayed
@@ -48,11 +47,7 @@ def gen_figure(
     composite_model_variant = _shared_data[page].composite_model_variant
 
     df_adjusted = _shared_data[page].df_eval_single.copy()
-    df_adjusted = df_adjusted[
-        (df_adjusted["dataset_id"] == dataset_id)
-        & (df_adjusted["eval_handler"] == eval_handler)
-        # & (df_adjusted["metric"] == metric)
-    ]
+    df_adjusted = df_adjusted[(df_adjusted["dataset_id"] == dataset_id) & (df_adjusted["eval_handler"] == eval_handler)]
 
     # Yearbook as a mapped time dimension (to display the correct timestamps we need to convert back from days to years)
     if patch_yearbook:

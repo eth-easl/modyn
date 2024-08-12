@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from modyn.trainer_server.internal.mocks.mock_metadata_processor import (
     MockMetadataProcessorServer,

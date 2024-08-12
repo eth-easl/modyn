@@ -6,9 +6,9 @@ from modyn.utils import DownsamplingMode
 
 
 class AbstractDownsamplingStrategy(ABC):
-    """
-    This abstract strategy is used to represent the common behaviour of downsampling strategies
-    like loss-based, importance downsampling (distribution-based methods) and craig&adacore (greedy-based methods).
+    """This abstract strategy is used to represent the common behaviour of
+    downsampling strategies like loss-based, importance downsampling
+    (distribution-based methods) and craig&adacore (greedy-based methods).
 
     These methods work on a uniformly-presampled version of the entire dataset (relying on AbstractPresampleStrategy),
     then the actual downsampling is done at the trainer server since all of these methods rely on the result of
@@ -67,8 +67,8 @@ class AbstractDownsamplingStrategy(ABC):
     def inform_next_trigger(
         self, next_trigger_id: int, selector_storage_backend: AbstractStorageBackend
     ) -> dict[str, object]:
-        """
-        This function is used to inform the downsampler that the next trigger is reached.
+        """This function is used to inform the downsampler that the next
+        trigger is reached.
 
         This is used for some downsamplers to implement some preparation logic before the actual downsampling
         on trainer server side happens, with the help of the argument `selector_storage_backend`.

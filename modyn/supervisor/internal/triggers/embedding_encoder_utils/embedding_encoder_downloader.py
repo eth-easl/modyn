@@ -1,8 +1,8 @@
 import logging
 import pathlib
-from typing import Optional
 
 import grpc
+
 from modyn.common.ftp import download_trained_model
 from modyn.config.schema.system.config import ModynConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingEncoderDownloader:
-    """The embedding encoder downloader provides a simple interface setup_encoder() to the DataDriftTrigger.
+    """The embedding encoder downloader provides a simple interface
+    setup_encoder() to the DataDriftTrigger.
+
     Given a model_id and a device, it creates an EmbeddingEncoder,
     downloads model parameters and loads model state.
     """
@@ -47,9 +49,9 @@ class EmbeddingEncoderDownloader:
             )
         return ModelStorageStub(model_storage_channel)
 
-    def configure(self, model_id: int, device: str) -> Optional[EmbeddingEncoder]:
+    def configure(self, model_id: int, device: str) -> EmbeddingEncoder | None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
+            trained_model: TrainedModel | None = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
                 return None

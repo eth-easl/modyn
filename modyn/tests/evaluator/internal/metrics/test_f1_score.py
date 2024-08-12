@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
 import torch
+from pydantic import ValidationError
+
 from modyn.config.schema.pipeline import F1ScoreMetricConfig
 from modyn.evaluator.internal.metrics import AbstractDecomposableMetric, F1Score
-from pydantic import ValidationError
 
 
 def get_invalid_evaluation_transformer() -> str:

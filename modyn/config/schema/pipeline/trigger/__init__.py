@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from pydantic import Field
 
@@ -14,11 +14,6 @@ from .time import *  # noqa
 from .time import TimeTriggerConfig
 
 TriggerConfig = Annotated[
-    Union[
-        TimeTriggerConfig,
-        DataAmountTriggerConfig,
-        DataDriftTriggerConfig,
-        EnsembleTriggerConfig,
-    ],
+    TimeTriggerConfig | DataAmountTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig,
     Field(discriminator="id"),
 ]

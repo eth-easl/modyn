@@ -14,6 +14,6 @@ def read_client_config(path: Path) -> ModynClientConfig:
     Returns:
         The validated modyn client config as a pydantic model.
     """
-    with open(path, "r", encoding="utf-8") as config_file:
+    with open(path, encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
     return ModynClientConfig.model_validate(config)

@@ -2,18 +2,18 @@ import dataclasses
 
 import pandas as pd
 import plotly.express as px
+from dash import Input, Output, callback, dcc, html
+from plotly import graph_objects as go
+
 from analytics.app.data.const import CompositeModelOptions
 from analytics.app.data.transform import df_aggregate_eval_metric
-from dash import Input, Output, callback, dcc, html
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from plotly import graph_objects as go
 
 
 @dataclasses.dataclass
 class _PageState:
-    """Callbacks cannot be updated after the initial rendering therefore we need to define and update state within
-    global references.
-    """
+    """Callbacks cannot be updated after the initial rendering therefore we
+    need to define and update state within global references."""
 
     df_agg: pd.DataFrame
     df_eval_single: pd.DataFrame
@@ -54,9 +54,7 @@ def gen_fig_scatter_num_triggers(
     df_agg = _shared_data[page].df_agg
     df_eval_single = _shared_data[page].df_eval_single
     df_eval_single = df_eval_single[
-        (df_eval_single["dataset_id"] == dataset_id)
-        & (df_eval_single["eval_handler"] == eval_handler)
-        # & (df_adjusted["metric"] == metric)
+        (df_eval_single["dataset_id"] == dataset_id) & (df_eval_single["eval_handler"] == eval_handler)
     ]
 
     if multi_pipeline_mode or only_active_periods:
@@ -115,7 +113,8 @@ def gen_fig_scatter_num_triggers(
             category_orders=category_orders,
         )
 
-    fig.update_yaxes(matches=None, showticklabels=True)  # y axis should be independent (different metrics)
+    # y axis should be independent (different metrics)
+    fig.update_yaxes(matches=None, showticklabels=True)
     return fig
 
 
@@ -199,7 +198,7 @@ def section3_scatter_num_triggers(
                                         dcc.RadioItems(
                                             id=f"{page}-radio-scatter-number-triggers-evaluation-handler",
                                             options=eval_handler_refs,
-                                            value=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
+                                            value=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
                                             persistence=True,
                                         ),
                                     ],
@@ -215,7 +214,7 @@ def section3_scatter_num_triggers(
                                         dcc.RadioItems(
                                             id=f"{page}-radio-scatter-number-triggers-dataset-id",
                                             options=eval_datasets,
-                                            value=eval_datasets[0] if len(eval_datasets) > 0 else None,
+                                            value=(eval_datasets[0] if len(eval_datasets) > 0 else None),
                                             persistence=True,
                                         ),
                                     ],
@@ -231,7 +230,11 @@ def section3_scatter_num_triggers(
                                         dcc.RadioItems(
                                             id=f"{page}-radio-scatter-number-triggers-metric",
                                             options=[
-                                                {"label": metric, "value": metric, "disabled": True}
+                                                {
+                                                    "label": metric,
+                                                    "value": metric,
+                                                    "disabled": True,
+                                                }
                                                 for metric in eval_metrics
                                             ],
                                             value=eval_metrics[0],
@@ -252,7 +255,10 @@ def section3_scatter_num_triggers(
                                             id=f"{page}-radio-scatter-number-triggers-agg-y",
                                             options=[
                                                 {"label": "yes (mean)", "value": True},
-                                                {"label": "no (boxplot)", "value": False},
+                                                {
+                                                    "label": "no (boxplot)",
+                                                    "value": False,
+                                                },
                                             ],
                                             value=True,
                                             persistence=True,
@@ -271,8 +277,14 @@ def section3_scatter_num_triggers(
                                         dcc.RadioItems(
                                             id=f"{page}-radio-scatter-number-triggers-agg-time-weighted",
                                             options=[
-                                                {"label": "eval interval length (time weighted mean)", "value": True},
-                                                {"label": "equal weights (simple mean)", "value": False},
+                                                {
+                                                    "label": "eval interval length (time weighted mean)",
+                                                    "value": True,
+                                                },
+                                                {
+                                                    "label": "equal weights (simple mean)",
+                                                    "value": False,
+                                                },
                                             ],
                                             value=True,
                                             persistence=True,
@@ -290,7 +302,10 @@ def section3_scatter_num_triggers(
                                         ),
                                         dcc.RadioItems(
                                             id=f"{page}-radio-scatter-number-triggers-only-active-model-periods",
-                                            options=[{"label": "Yes", "value": True}, {"label": "No", "value": False}],
+                                            options=[
+                                                {"label": "Yes", "value": True},
+                                                {"label": "No", "value": False},
+                                            ],
                                             value=True,
                                             persistence=True,
                                         ),
@@ -305,9 +320,9 @@ def section3_scatter_num_triggers(
                             figure=gen_fig_scatter_num_triggers(
                                 page,
                                 multi_pipeline_mode,
-                                eval_handler=eval_handler_refs[0] if len(eval_handler_refs) > 0 else None,
-                                dataset_id=eval_datasets[0] if len(eval_datasets) > 0 else None,
-                                metric=eval_metrics[0] if len(eval_metrics) > 0 else None,
+                                eval_handler=(eval_handler_refs[0] if len(eval_handler_refs) > 0 else None),
+                                dataset_id=(eval_datasets[0] if len(eval_datasets) > 0 else None),
+                                metric=(eval_metrics[0] if len(eval_metrics) > 0 else None),
                                 aggregate_metric=False,
                             ),
                         ),

@@ -1,8 +1,9 @@
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
-from pydantic import Field
 
 
 class DriftTriggerEvalLog(ModynBaseModel):
@@ -16,7 +17,7 @@ class DriftTriggerEvalLog(ModynBaseModel):
     is_warmup: bool = Field(False)
 
 
-TriggerEvalLog = Annotated[Union[DriftTriggerEvalLog], Field(discriminator="type")]
+TriggerEvalLog = Annotated[DriftTriggerEvalLog, Field(discriminator="type")]
 
 
 class TriggerPolicyEvaluationLog(ModynBaseModel):

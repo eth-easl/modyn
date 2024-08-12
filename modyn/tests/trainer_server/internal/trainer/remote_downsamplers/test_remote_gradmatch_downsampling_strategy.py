@@ -3,12 +3,13 @@
 import numpy as np
 import pytest
 import torch
+from torch.nn import BCEWithLogitsLoss
+
 from modyn.config import ModynConfig
 from modyn.tests.trainer_server.internal.trainer.remote_downsamplers.deepcore_comparison_tests_utils import DummyModel
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_grad_match_downsampling_strategy import (
     RemoteGradMatchDownsamplingStrategy,
 )
-from torch.nn import BCEWithLogitsLoss
 
 
 def get_sampler_config(modyn_config: ModynConfig, balance=False, grad_approx="LastLayerWithEmbedding"):
@@ -72,7 +73,6 @@ def test_select(grad_approx, dummy_system_config: ModynConfig):
 def test_select_balanced(grad_approx, dummy_system_config: ModynConfig):
     sampler = RemoteGradMatchDownsamplingStrategy(*get_sampler_config(dummy_system_config, True, grad_approx))
     with torch.inference_mode(mode=(not sampler.requires_grad)):
-
         if grad_approx == "LastLayerWithEmbedding":
             grad_feature_size = 55  # dim 5 * 10 + 5
         else:
@@ -209,7 +209,6 @@ def test_matching_results_with_deepcore(dummy_system_config: ModynConfig):
             "cpu",
         )
         with torch.inference_mode(mode=(not sampler.requires_grad)):
-
             sampler.inform_samples(sample_ids, samples, forward_output, target, embedding)
             assert sampler.index_sampleid_map == list(range(10))
             selected_samples, selected_weights = sampler.select_points()

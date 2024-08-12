@@ -1,7 +1,8 @@
 import numpy as np
 import torch
-from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
+
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class DummyModel(CoresetSupportingModule):

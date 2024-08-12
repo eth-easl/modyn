@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Self
+
+from pydantic import Field, NonNegativeInt, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils import validate_timestr
 from modyn.utils.utils import SECONDS_PER_UNIT
-from pydantic import Field, NonNegativeInt, field_validator, model_validator
-from typing_extensions import Self
 
 
 class SlicingEvalStrategyConfig(ModynBaseModel):

@@ -1,12 +1,12 @@
 import time
-from typing import Generator, TypeVar
+from collections.abc import Generator
+from typing import TypeVar
 
 X = TypeVar("X")
 
 
 def timed_generator(generator: Generator[X, None, None]) -> Generator[tuple[X, float], None, None]:
-    """
-    Wrap a lazy generator and yields tuples of (item, elapsed_time).
+    """Wrap a lazy generator and yields tuples of (item, elapsed_time).
 
     Args:
         generator: The lazy generator to wrap.

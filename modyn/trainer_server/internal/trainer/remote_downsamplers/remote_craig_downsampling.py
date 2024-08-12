@@ -1,8 +1,9 @@
 from argparse import Namespace
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
@@ -76,10 +77,10 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         # Slightly different implementation for BTS and STB since in STB points are supplied class by class while in
         # BTS are not. STB will always use the first branch, BTS will typically (might use the first if all the points
@@ -107,7 +108,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         sample_ids: list[int],
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor],
+        embedding: torch.Tensor | None,
     ) -> None:
         if self.full_grad_approximation == "LastLayerWithEmbedding":
             assert embedding is not None
