@@ -96,7 +96,9 @@ class PerformanceTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
+            self._sample_left_until_detection = (
+                self.config.detection_interval_data_points
+            )
 
             # The first ever detection will always trigger
             if not self._triggered_once:
@@ -192,3 +194,6 @@ class PerformanceTrigger(Trigger):
             self.context.base_dir,
             f"{self.context.modyn_config.modyn_model_storage.address}",
         )
+
+
+# TODO: log which of the criterions led to the trigger

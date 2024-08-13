@@ -20,7 +20,9 @@ class PerformanceTracker:
         Args:
             window_size: How many evaluations after triggers should be kept in memory.
         """
-        self.trigger_evaluation_memory: deque[float] = deque(maxlen=trigger_eval_window_size)
+        self.trigger_evaluation_memory: deque[float] = deque(
+            maxlen=trigger_eval_window_size
+        )
         """Memory of the last `window_size` evaluations after triggers."""
 
         self.since_last_trigger: list[float] = list()
@@ -32,19 +34,27 @@ class PerformanceTracker:
     def inform_trigger(self, evaluation: float) -> None:
         """Informs the tracker about a new trigger and resets the memory."""
         self.trigger_evaluation_memory.append(evaluation)
-        self.since_last_trigger = list()
 
-    def forecast_expected_performance(self, mode: Literal["hindsight", "lookahead"] = "lookahead") -> float:
-        """Forecasts the performance based on the current memory.
+        # first element in the new series is the performance right after trigger
+        self.since_last_trigger = [evaluation]
+
+    def forecast_expected_performance(
+        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
+    ) -> float:
+        """Forecasts the performance based on the current memory of evaluations right after triggers.
 
         Returns:
             The forecasted performance.
         """
 
-        assert len(self.trigger_evaluation_memory) > 0, "No trigger happened yet. Calibration needed."
+        assert (
+            len(self.trigger_evaluation_memory) > 0
+        ), "No trigger happened yet. Calibration needed."
 
         if len(self.since_last_trigger) < 5 or mode == "hindsight":
-            return sum(self.trigger_evaluation_memory) / len(self.trigger_evaluation_memory)
+            return sum(self.trigger_evaluation_memory) / len(
+                self.trigger_evaluation_memory
+            )
 
         # Ridge regression estimator for scalar time series forecasting
         reg = linear_model.Ridge(alpha=0.5)
@@ -54,8 +64,10 @@ class PerformanceTracker:
         )
         return reg.predict([[len(self.trigger_evaluation_memory)]])[0]
 
-    def forecast_next_performance(self, mode: Literal["hindsight", "lookahead"] = "lookahead") -> float:
-        """Forecasts the performance based on the current memory.
+    def forecast_next_performance(
+        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
+    ) -> float:
+        """Forecasts the next performance based on the memory of evaluations since the last trigger.
 
         Returns:
             The forecasted (observed) performance.
@@ -70,5 +82,13 @@ class PerformanceTracker:
 
         # Ridge regression estimator for scalar time series forecasting
         reg = linear_model.Ridge(alpha=0.5)
-        reg.fit([[i] for i in range(len(self.since_last_trigger))], self.since_last_trigger)
+        reg.fit(
+            [[i] for i in range(len(self.since_last_trigger))], self.since_last_trigger
+        )
         return reg.predict([[len(self.since_last_trigger)]])[0]
+
+
+# TODO: differentiate between decision mode forecast and hindsight and the forcasting method (avg, ridge regression)
+# TODO: next
+# TODO: next
+# TODO: next

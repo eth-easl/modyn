@@ -42,11 +42,18 @@ class DataDensityTracker:
         self.batch_memory.append((len(data), num_seconds))
         self.previous_batch_end_time = data[-1][1]
 
+    def previous_batch_samples(self) -> int:
+        """Returns the number of samples in the last batch."""
+        assert len(self.batch_memory) > 0, "No data in memory, calibration needed."
+        return self.batch_memory[-1][0]
+
     def needs_calibration(self) -> bool:
         """Checks if the tracker has enough data for a forecast."""
         return len(self.batch_memory) == 0
 
-    def forecast_density(self, mode: Literal["hindsight", "lookahead"] = "lookahead") -> float:
+    def forecast_density(
+        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
+    ) -> float:
         """Forecasts the data density based on the current memory.
 
         Returns:
@@ -55,7 +62,9 @@ class DataDensityTracker:
 
         assert len(self.batch_memory) > 0, "No data in memory, calibration needed."
 
-        ratio_series = [num_samples / num_seconds for num_samples, num_seconds in self.batch_memory]
+        ratio_series = [
+            num_samples / num_seconds for num_samples, num_seconds in self.batch_memory
+        ]
 
         if len(self.batch_memory) < 5 or mode == "hindsight":
             return sum(ratio_series) / len(ratio_series)
