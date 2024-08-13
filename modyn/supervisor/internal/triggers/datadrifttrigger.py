@@ -4,8 +4,6 @@ import gc
 import logging
 from collections.abc import Generator
 
-from numpy import mean
-
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
@@ -323,15 +321,10 @@ class DataDriftTrigger(Trigger):
 
         # make the final decisions with the decision policies
         for metric_name, metric_result in drift_results.items():
-            # some metrics return a list of distances (for every sample) instead of a single distance
-            # we take the mean of the distances to get a scalar distance value
-            distance = (
-                metric_result.distance
-                if isinstance(metric_result.distance, float)
-                else float(mean(metric_result.distance))
-            )
             # overwrite the raw decision from the metric that is not of interest to us.
-            drift_results[metric_name].is_drift = self.decision_policies[metric_name].evaluate_decision(distance)
+            drift_results[metric_name].is_drift = self.decision_policies[metric_name].evaluate_decision(
+                metric_result.distance
+            )
 
         logger.info(f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}")
         if is_warmup:

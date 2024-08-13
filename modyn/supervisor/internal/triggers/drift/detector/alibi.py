@@ -4,10 +4,24 @@ import alibi_detect.utils.pytorch
 import numpy as np
 import pandas as pd
 import torch
-from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDrift, MMDDrift
+from alibi_detect.cd import (
+    ChiSquareDrift,
+    CVMDrift,
+    FETDrift,
+    KSDrift,
+    LSDDDrift,
+    MMDDrift,
+)
 
-from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
+from modyn.config.schema.pipeline import (
+    AlibiDetectDriftMetric,
+    AlibiDetectMmdDriftMetric,
+    MetricResult,
+)
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectCVMDriftMetric,
+    AlibiDetectKSDriftMetric,
+)
 
 from .drift import DriftDetector
 
@@ -49,13 +63,16 @@ class AlibiDriftDetector(DriftDetector):
 
             metric = _alibi_detect_metric_factory(config, embeddings_ref)
             result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)  # type: ignore
+
+            # some metrics return a list of distances (for every sample) instead of a single distance
+            # we take the mean of the distances to get a scalar distance value
             _dist = (
-                list(result["data"]["distance"])
+                float(result["data"]["distance"].mean())
                 if isinstance(result["data"]["distance"], np.ndarray)
                 else result["data"]["distance"]
             )
             _p_val = (
-                list(result["data"]["p_val"])
+                float(result["data"]["p_val"].mean())
                 if isinstance(result["data"]["p_val"], np.ndarray)
                 else result["data"]["p_val"]
             )
