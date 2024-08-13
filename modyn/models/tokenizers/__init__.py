@@ -1,6 +1,4 @@
-"""
-Bert Tokenizer for NLP tasks
-"""
+"""Bert Tokenizer for NLP tasks."""
 
 import os
 

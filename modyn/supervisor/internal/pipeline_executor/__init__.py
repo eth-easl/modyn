@@ -1,5 +1,6 @@
-"""Supervisor module. The supervisor initiates a pipeline and coordinates all components.
+"""Supervisor module.
 
+The supervisor initiates a pipeline and coordinates all components.
 """
 
 import os

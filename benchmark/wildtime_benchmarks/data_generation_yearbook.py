@@ -8,17 +8,17 @@ We do this by converting the year to days since epoch (1970-01-01).
 import os
 import pickle
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 import torch
+from torch.utils.data import Dataset
+
 from benchmark.wildtime_benchmarks.benchmark_utils import (
     create_fake_timestamp,
     download_if_not_exists,
     setup_argparser_wildtime,
     setup_logger,
 )
-from torch.utils.data import Dataset
 
 logger = setup_logger()
 
@@ -30,7 +30,7 @@ def main() -> None:
     logger.info(f"Downloading data to {args.dir}")
 
     downloader = YearbookDownloader(args.dir)
-    downloader.store_data(args.dummyyear)
+    downloader.store_data(args.dummyyear, args.customsplit)
 
 
 class YearbookDownloader(Dataset):
@@ -51,10 +51,10 @@ class YearbookDownloader(Dataset):
         self.data_dir = data_dir
 
     def _get_year_data(self, year: int) -> tuple[dict[str, list[tuple]], dict[str, int]]:
-        def get_split_by_id(split: int) -> list[Tuple]:
+        def get_split_by_id(split: int) -> list[tuple]:
             images = torch.FloatTensor(
                 np.array(
-                    [   # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
+                    [  # transpose to transform from HWC to CHW (H=height, W=width, C=channels).
                         # Pytorch requires CHW format
                         img.transpose(2, 0, 1)
                         # _dataset has 2 dimensions [years][train=0,test=1]["images"/"labels"]
@@ -75,17 +75,35 @@ class YearbookDownloader(Dataset):
     def __len__(self) -> int:
         return len(self._dataset["labels"])
 
-    def store_data(self, add_final_dummy_year: bool) -> None:
+    def generate_custom_split(self):
+        print("Generating custom yearbook split!")
+        # Merge train and test datasets
+        merged_data = {}
+        for year in self.time_steps:
+            year_data, _ = self._get_year_data(year)
+            train_data = year_data["train"]
+            test_data = year_data["test"]
+            merged_data[year] = train_data + test_data
+            np.random.shuffle(merged_data[year])  # Shuffle the merged dataset
+
+        # Generate new train/test split
+        for year in self.time_steps:
+            year_data, _ = self._get_year_data(year)
+            original_test_size = len(year_data["test"])
+            self._dataset[year]["test"] = merged_data[year][:original_test_size]
+            self._dataset[year]["train"] = merged_data[year][original_test_size:]
+
+    def store_data(self, add_final_dummy_year: bool, custom_split: bool) -> None:
         # create directories
         if not os.path.exists(self.data_dir):
             os.mkdir(self.data_dir)
 
-        split_dirs = {
-            name: self.data_dir / name
-            for name in ["train", "test", "all"]
-        }
+        split_dirs = {name: self.data_dir / name for name in ["train", "test", "all"]}
         for dir_ in split_dirs.values():
             os.makedirs(dir_, exist_ok=True)
+
+        if custom_split:
+            self.generate_custom_split()
 
         overall_stats = {}
         for year in self.time_steps:
@@ -98,11 +116,12 @@ class YearbookDownloader(Dataset):
 
         with open(self.data_dir / "overall_stats.json", "w") as f:
             import json
+
             json.dump(overall_stats, f, indent=4)
 
         if add_final_dummy_year:
             dummy_year = year + 1
-            dummy_data = [ ds["train"][0] ] # get one sample from the previous year
+            dummy_data = [ds["train"][0]]  # get one sample from the previous year
             for split_dir in split_dirs.values():
                 self.create_binary_file(
                     dummy_data, split_dir / f"{dummy_year}.bin", create_fake_timestamp(dummy_year, base_year=1930)

@@ -4,6 +4,7 @@ import shutil
 import tempfile
 
 import pytest
+
 from modyn.config import CoresetStrategyConfig, PresamplingConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.selector.internal.selector_strategies import CoresetStrategy
@@ -52,7 +53,7 @@ def insert_data(strat, base_index=0, size=200):
     strat.inform_data(
         range(base_index, base_index + size),
         range(base_index, base_index + size),
-        [0, 1] * int((size / 2)),
+        [0, 1] * int(size / 2),
     )
 
 

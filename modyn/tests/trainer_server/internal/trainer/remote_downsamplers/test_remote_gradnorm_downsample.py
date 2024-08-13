@@ -1,4 +1,6 @@
 import torch
+from torch import nn
+
 from modyn.config import ModynConfig
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     get_tensors_subset,
@@ -6,7 +8,6 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_gradnorm_downsampling import (
     RemoteGradNormDownsampling,
 )
-from torch import nn
 
 
 def test_sample_shape_ce(dummy_system_config: ModynConfig):
@@ -19,7 +20,6 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
-
         data = torch.randn(8, 10)
         target = torch.randint(2, size=(8,))
         ids = list(range(8))
@@ -141,7 +141,6 @@ def test_sample_dict_input(dummy_system_config: ModynConfig):
         0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
     )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
-
         forward_outputs = model(data)
 
         sampler.inform_samples(ids, data, forward_outputs, target)

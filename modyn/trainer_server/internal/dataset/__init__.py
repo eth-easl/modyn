@@ -1,6 +1,4 @@
-"""
-Online dataset and utils
-"""
+"""Online dataset and utils."""
 
 import os
 

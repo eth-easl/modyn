@@ -15,7 +15,8 @@ class Supervisor(BaseModel):
 class ModynClientConfig(BaseModel):
     """Configuration file for the modyn client.
 
-    It contains the configuration for the client to connect to modyn supervisor, adapt as required.
+    It contains the configuration for the client to connect to modyn
+    supervisor, adapt as required.
     """
 
     project: Project = Field(Project(), description="The project information.")

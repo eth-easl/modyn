@@ -1,6 +1,4 @@
-"""
-DeepCore Utils
-"""
+"""DeepCore Utils."""
 
 import os
 

@@ -1,8 +1,9 @@
 """TriggerTrainingMetadata model."""
 
+from sqlalchemy import BigInteger, Column, ForeignKey, Index, Integer
+
 from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
-from sqlalchemy import BigInteger, Column, ForeignKey, Index, Integer
 
 
 class Trigger(MetadataBase):

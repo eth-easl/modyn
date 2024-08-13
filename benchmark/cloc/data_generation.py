@@ -3,7 +3,6 @@
 # This code requires the pip google-cloud-storage package
 
 import argparse
-import glob
 import logging
 import os
 import pathlib
@@ -25,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 DAY_LENGTH_SECONDS = 24 * 60 * 60
 
+
 def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
     zip_path = os.path.join(directory, zip_file)
     output_dir = os.path.join(target, os.path.splitext(zip_file)[0])
@@ -36,13 +36,12 @@ def extract_single_zip(directory: str, target: str, zip_file: str) -> None:
             zip_ref.extractall(output_dir)
     except Exception as e:
         logger.error(f"Error while extracting file {zip_path}")
-        logger.error(e) 
+        logger.error(e)
+
 
 def setup_argparser() -> argparse.ArgumentParser:
-    parser_ = argparse.ArgumentParser(description=f"CLOC Benchmark Storage Script")
-    parser_.add_argument(
-        "dir", type=pathlib.Path, action="store", help="Path to data directory"
-    )
+    parser_ = argparse.ArgumentParser(description="CLOC Benchmark Storage Script")
+    parser_.add_argument("dir", type=pathlib.Path, action="store", help="Path to data directory")
     parser_.add_argument(
         "--dummyyear",
         action="store_true",
@@ -74,7 +73,10 @@ def setup_argparser() -> argparse.ArgumentParser:
         help="Skips the labeling",
     )
     parser_.add_argument(
-        "--tmpdir", type=pathlib.Path, action="store", help="If given, use a different directory for storing temporary data"
+        "--tmpdir",
+        type=pathlib.Path,
+        action="store",
+        help="If given, use a different directory for storing temporary data",
     )
     parser_.add_argument(
         "--keep_zips",
@@ -92,7 +94,7 @@ def main():
 
     logger.info(f"Final destination is {args.dir}; download destination is {tmpdir}")
 
-    downloader = CLDatasets(str(args.dir), str(tmpdir), test_mode=args.test, keep_zips = args.keep_zips)
+    downloader = CLDatasets(str(args.dir), str(tmpdir), test_mode=args.test, keep_zips=args.keep_zips)
     if not args.skip_download:
         logger.info("Starting download")
         downloader.download_dataset()
@@ -119,13 +121,12 @@ def is_tool(name):
 
 
 class CLDatasets:
-    """
-    A class for downloading datasets from Google Cloud Storage.
-    """
+    """A class for downloading datasets from Google Cloud Storage."""
 
-    def __init__(self, directory: str, tmpdir: str, test_mode: bool = False, unzip: bool = True, keep_zips: bool = False):
-        """
-        Initialize the CLDatasets object.
+    def __init__(
+        self, directory: str, tmpdir: str, test_mode: bool = False, unzip: bool = True, keep_zips: bool = False
+    ):
+        """Initialize the CLDatasets object.
 
         Args:
             directory (str): The directory where the dataset will be saved.
@@ -147,7 +148,6 @@ class CLDatasets:
         if not os.path.exists(self.tmpdir):
             os.makedirs(self.tmpdir)
 
-
     def extract(self):
         if self.unzip:
             self.unzip_data_files(self.tmpdir + "/CLOC/data")
@@ -162,12 +162,10 @@ class CLDatasets:
         if all_data:
             logger.info("Converting all data")
             self.convert_labels_and_timestamps_impl(
-                self.tmpdir
-                + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
+                self.tmpdir + "/CLOC_torchsave_order_files/cross_val_store_loc.torchSave",
                 self.tmpdir + "/CLOC_torchsave_order_files/cross_val_labels.torchSave",
                 self.tmpdir + "/CLOC_torchsave_order_files/cross_val_time.torchSave",
             )
-
 
     def remove_images_without_label(self):
         print("Removing images without label...")
@@ -184,9 +182,7 @@ class CLDatasets:
 
         print(f"Removed {removed_files} images that do not have a label.")
 
-    def convert_labels_and_timestamps_impl(
-        self, store_loc_path, labels_path, timestamps_path
-    ):
+    def convert_labels_and_timestamps_impl(self, store_loc_path, labels_path, timestamps_path):
         logger.info("Loading labels and timestamps.")
         store_loc = torch.load(store_loc_path)
         labels = torch.load(labels_path)
@@ -199,21 +195,14 @@ class CLDatasets:
 
         logger.info("Labels and timestamps loaded, applying")
         missing_files = 0
-        for store_location, label, timestamp in tqdm(
-            zip(store_loc, labels, timestamps), total=len(store_loc)
-        ):
-            path = pathlib.Path(
-                self.directory + "/"
-                + store_location.strip().replace("\n", "")
-            )
+        for store_location, label, timestamp in tqdm(zip(store_loc, labels, timestamps), total=len(store_loc)):
+            path = pathlib.Path(self.directory + "/" + store_location.strip().replace("\n", ""))
 
             if not path.exists():
                 if not self.test_mode:
                     raise FileExistsError(f"Cannot find file {path}")
                 if not warned_once:
-                    logger.warning(
-                        f"Cannot find file {path}, but we are in test mode. Will not repeat this warning."
-                    )
+                    logger.warning(f"Cannot find file {path}, but we are in test mode. Will not repeat this warning.")
                     warned_once = True
                 missing_files += 1
                 continue
@@ -276,7 +265,9 @@ class CLDatasets:
 
         with ThreadPoolExecutor(max_workers=16) as executor, tqdm(total=len(blobs_to_download)) as pbar:
             futures_list = []
-            download_blob = lambda target, blob: blob.download_to_filename(target)
+
+            def download_blob(target, blob):
+                blob.download_to_filename(target)
 
             for blob in blobs_to_download:
                 future = executor.submit(download_blob, *blob)
@@ -288,9 +279,7 @@ class CLDatasets:
                 future.result()
 
     def download_dataset(self):
-        """
-        Download the order files from Google Cloud Storage.
-        """
+        """Download the order files from Google Cloud Storage."""
         print("Order files are being downloaded...")
         start_time = time.time()
 
@@ -300,8 +289,8 @@ class CLDatasets:
         print("Elapsed time:", elapsed_time)
 
     def unzip_data_files(self, zip_file_directory: str) -> None:
-        """
-        Extracts the contents of zip files in a directory into nested folders.
+        """Extracts the contents of zip files in a directory into nested
+        folders.
 
         Args:
             directory: The path to the directory containing the zip files.

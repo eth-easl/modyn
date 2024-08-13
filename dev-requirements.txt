@@ -1,19 +1,21 @@
-pytest
-pytest-cov
-pytest-html
-flake8
-mypy
-pylint
-pytest-console-scripts
 pillow
-ruff
-autopep8
-isort
-black
 grpcio-tools>=1.63
 grpcio>=1.63 # Linux
 mypy-protobuf
 pystack
+
+# Linting
+autopep8
+black
+mypy
+pylint
+ruff
+
+# Testing
+pytest
+pytest-console-scripts
+pytest-cov
+pytest-html
 
 # Plotting
 plotly

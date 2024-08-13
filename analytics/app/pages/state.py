@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import pandas as pd
+
 from analytics.app.data.load import list_pipelines, load_pipeline_logs
 from analytics.app.data.transform import (
     dfs_models_and_evals,

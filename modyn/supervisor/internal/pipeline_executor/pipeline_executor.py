@@ -5,11 +5,14 @@ import logging
 import sys
 import traceback
 import types
+from collections.abc import Callable, Generator
 from datetime import datetime, timedelta
 from time import sleep
-from typing import Callable, Generator, TypeVar, cast
+from typing import Concatenate, TypeVar, cast
 
 import pandas as pd
+from typing_extensions import ParamSpec
+
 from modyn.supervisor.internal.grpc.enums import CounterAction, IdType, MsgType, PipelineStage
 from modyn.supervisor.internal.grpc.template_msg import counter_submsg, dataset_submsg, id_submsg, pipeline_stage_msg
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -35,7 +38,6 @@ from modyn.supervisor.internal.utils import TrainingStatusReporter
 from modyn.utils import dynamic_module_import
 from modyn.utils.timer import timed_generator
 from modyn.utils.utils import current_time_micros
-from typing_extensions import Concatenate, ParamSpec
 
 logger = logging.getLogger(__name__)
 EXCEPTION_EXITCODE = 8
@@ -47,7 +49,7 @@ R = TypeVar("R")  # result of pipeline stage
 G = TypeVar("G")  # generator type
 
 _pipeline_stage_parents: dict[str, tuple[int, list[str]]] = {PipelineStage.MAIN.name: (-1, [])}
-"""automatically filled parent relationships for pipeline stages"""
+"""Automatically filled parent relationships for pipeline stages."""
 
 
 def pipeline_stage(  # type: ignore[no-untyped-def]
@@ -76,15 +78,17 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
     )
 
     def wrapper_outer(  # type: ignore[no-untyped-def]
-        func: Callable[Concatenate["PipelineExecutor", ExecutionState, StageLog, P], R]
+        func: Callable[Concatenate[PipelineExecutor, ExecutionState, StageLog, P], R],
     ):
         def wrapper(
-            self: "PipelineExecutor", state: ExecutionState, logs: PipelineLogs, *args: P.args, **kwargs: P.kwargs
+            self: PipelineExecutor, state: ExecutionState, logs: PipelineLogs, *args: P.args, **kwargs: P.kwargs
         ) -> R:
             """Measures the time for each stage and logs the pipeline state."""
 
             def patch_generator_timer(gen: R, stage_log: StageLog) -> R:  # type: ignore[misc]
-                """As generators will return immediate we have to add time for each yield after the decorator returned.
+                """As generators will return immediate we have to add time for
+                each yield after the decorator returned.
+
                 For doing so we wrap the generator with this function.
                 """
                 try:
@@ -95,8 +99,11 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                     report_results(stage_log)
 
             def report_results(stage_log: StageLog) -> None:
-                """For generators we should only report logs and tracking info once the generator is finalized.
-                I.e. fully iterated or garbage collected. In the non-generator case we can report immediately.
+                """For generators we should only report logs and tracking info
+                once the generator is finalized.
+
+                I.e. fully iterated or garbage collected. In the non-
+                generator case we can report immediately.
                 """
                 # if stage reported additional logs, we make the log available to the pipeline in a dataframe
                 if track and stage_log.info:
@@ -263,7 +270,8 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.SERVE_ONLINE_DATA, parent=PipelineStage.MAIN)
     def _serve_online_data(self, s: ExecutionState, log: StageLog) -> None:
-        """Run pipeline in production mode fetching new data until pipeline is stopped."""
+        """Run pipeline in production mode fetching new data until pipeline is
+        stopped."""
         logger.info(f"Running pipeline {s.pipeline_id} in online serving mode.")
         logger.info("Press CTRL+C at any time to shutdown the pipeline.")
 
@@ -308,7 +316,7 @@ class PipelineExecutor:
                 if key not in s.previous_largest_keys
             ]
             s.max_timestamp = (
-                max((timestamp for (_, timestamp, _) in fetched_data)) if len(fetched_data) > 0 else s.max_timestamp
+                max(timestamp for (_, timestamp, _) in fetched_data) if len(fetched_data) > 0 else s.max_timestamp
             )
             largest_keys.update({key for (key, timestamp, _) in fetched_data if timestamp == s.max_timestamp})
 
@@ -409,7 +417,8 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.PROCESS_NEW_DATA_BATCH, parent=PipelineStage.PROCESS_NEW_DATA, track=True)
     def _process_new_data_batch(self, s: ExecutionState, log: StageLog, batch: list[tuple[int, int, int]]) -> list[int]:
-        """Process new data in batches and evaluate trigger policies in batches.
+        """Process new data in batches and evaluate trigger policies in
+        batches.
 
         Args:
             s: Execution state of the pipeline executor.
@@ -462,7 +471,8 @@ class PipelineExecutor:
         batch: list[tuple[int, int, int]],
         lazy_trigger_indexes: Generator[int, None, None],
     ) -> list[int]:
-        """Evaluate trigger policy, start training after trigger and inform selector.
+        """Evaluate trigger policy, start training after trigger and inform
+        selector.
 
         Args:
             s: Execution state of the pipeline executor.
@@ -487,6 +497,8 @@ class PipelineExecutor:
             self._handle_single_trigger(s, self.logs, trigger_data, i, trigger_index)
             s.triggers.append(trigger_index)
             s.current_sample_index += len(trigger_data)
+
+            self.logs.materialize(s.log_directory, mode="increment")  # materialize after every trigger
 
             if s.maximum_triggers is not None and len(s.triggers) >= s.maximum_triggers:
                 break
@@ -730,7 +742,8 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.POST_EVALUATION_CHECKPOINT, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation_checkpoint(self, s: ExecutionState, log: StageLog) -> None:
-        """Stores evaluation relevant information so that the evaluator can be started on this pipeline run again."""
+        """Stores evaluation relevant information so that the evaluator can be
+        started on this pipeline run again."""
 
         if not s.pipeline_config.evaluation:
             return
@@ -741,7 +754,7 @@ class PipelineExecutor:
 
     @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.MAIN, log=False, track=False)
     def _post_pipeline_evaluation(self, s: ExecutionState, log: StageLog) -> None:
-        """Evaluate the trained model and store the results"""
+        """Evaluate the trained model and store the results."""
         if not s.pipeline_config.evaluation:
             return
 

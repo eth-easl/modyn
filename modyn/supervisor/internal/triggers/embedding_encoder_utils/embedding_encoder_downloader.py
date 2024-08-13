@@ -1,9 +1,10 @@
 import logging
 import pathlib
-from typing import Optional
 
 import grpc
+
 from modyn.common.ftp import download_trained_model
+from modyn.config.schema.system.config import ModynConfig
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import TrainedModel
 
@@ -17,19 +18,22 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingEncoderDownloader:
-    """The embedding encoder downloader provides a simple interface setup_encoder() to the DataDriftTrigger.
+    """The embedding encoder downloader provides a simple interface
+    setup_encoder() to the DataDriftTrigger.
+
     Given a model_id and a device, it creates an EmbeddingEncoder,
     downloads model parameters and loads model state.
     """
 
     def __init__(
         self,
-        modyn_config: dict,
+        modyn_config: ModynConfig,
         pipeline_id: int,
         base_dir: pathlib.Path,
         model_storage_address: str,
     ):
-        self.modyn_config = modyn_config
+        # TODO(MaxiBoether): Update this class to use the model
+        self.modyn_config = modyn_config.model_dump(by_alias=True)
         self.pipeline_id = pipeline_id
         self.base_dir = base_dir
         assert self.base_dir.exists(), f"Temporary Directory {self.base_dir} should have been created."
@@ -45,9 +49,9 @@ class EmbeddingEncoderDownloader:
             )
         return ModelStorageStub(model_storage_channel)
 
-    def configure(self, model_id: int, device: str) -> Optional[EmbeddingEncoder]:
+    def configure(self, model_id: int, device: str) -> EmbeddingEncoder | None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
-            trained_model: Optional[TrainedModel] = database.session.get(TrainedModel, model_id)
+            trained_model: TrainedModel | None = database.session.get(TrainedModel, model_id)
             if not trained_model:
                 logger.error(f"Trained model {model_id} does not exist!")
                 return None

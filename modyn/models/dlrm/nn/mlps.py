@@ -56,23 +56,17 @@ except Exception as e:
 
 
 class AbstractMlp(nn.Module):
-    """
-    MLP interface used for configuration-agnostic checkpointing (`dlrm.utils.checkpointing`)
-    and easily swappable MLP implementation
-    """
+    """MLP interface used for configuration-agnostic checkpointing
+    (`dlrm.utils.checkpointing`) and easily swappable MLP implementation."""
 
     @property
     def weights(self) -> List[torch.Tensor]:
-        """
-        Getter for all MLP layers weights (without biases)
-        """
+        """Getter for all MLP layers weights (without biases)"""
         raise NotImplementedError()
 
     @property
     def biases(self) -> List[torch.Tensor]:
-        """
-        Getter for all MLP layers biases
-        """
+        """Getter for all MLP layers biases."""
         raise NotImplementedError()
 
     def forward(self, mlp_input: torch.Tensor) -> torch.Tensor:

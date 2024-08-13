@@ -1,6 +1,6 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import pathlib
-from typing import Generator, Optional
+from collections.abc import Generator
 from unittest.mock import patch
 
 from modyn.supervisor.internal.triggers.trigger_datasets import OnlineTriggerDataset
@@ -29,8 +29,8 @@ def noop_constructor_mock(
     training_id: int,
     num_prefetched_partitions: int,
     parallel_prefetch_requests: int,
-    tokenizer: Optional[str],
-    log_path: Optional[pathlib.Path],
+    tokenizer: str | None,
+    log_path: pathlib.Path | None,
 ) -> None:
     pass
 

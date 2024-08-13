@@ -8,7 +8,6 @@ import math
 import os
 import random
 import time
-from typing import Tuple
 
 # unchanged functions are imported from the original test file
 from integrationtests.storage.integrationtest_storage import (
@@ -67,7 +66,7 @@ def add_file_to_dataset(binary_data: bytes, name: str) -> None:
     BINARY_UPDATED_TIME_STAMPS.append(int(math.floor(os.path.getmtime(DATASET_PATH / name))))
 
 
-def create_random_binary_file() -> Tuple[bytes, list[bytes]]:
+def create_random_binary_file() -> tuple[bytes, list[bytes]]:
     binary_data = b""
     samples = []
     for i in range(250):

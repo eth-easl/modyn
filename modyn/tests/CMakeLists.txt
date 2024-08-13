@@ -30,14 +30,14 @@ if (${MODYN_BUILD_STORAGE})
   message(STATUS "Storage is included in this test build.")
   list(
     APPEND MODYN_TEST_UTILS_SOURCES
-  
+
     storage/storage_test_utils.cpp
     storage/storage_test_utils.hpp
   )
 
   list(
     APPEND MODYN_TEST_SOURCES
-  
+
     storage/internal/file_watcher/file_watcher_test.cpp
     storage/internal/file_watcher/file_watcher_watchdog_test.cpp
     storage/internal/database/storage_database_connection_test.cpp
@@ -79,5 +79,3 @@ add_executable(modyn-all-test-sources-for-tidy EXCLUDE_FROM_ALL
 
 # just for the include directories
 target_link_libraries(modyn-all-test-sources-for-tidy PRIVATE modyn-test-objs modyn-test-utils-objs modyn)
-
-

@@ -1,25 +1,17 @@
 from __future__ import annotations
 
-from typing import Union
-
 import alibi_detect.utils.pytorch
 import numpy as np
 import pandas as pd
 import torch
 from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDrift, MMDDrift
+
 from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
 
 from .drift_detector import DriftDetector
 
-_AlibiMetrics = Union[
-    MMDDrift,
-    ChiSquareDrift,
-    KSDrift,
-    CVMDrift,
-    FETDrift,
-    LSDDDrift,
-]
+_AlibiMetrics = MMDDrift | ChiSquareDrift | KSDrift | CVMDrift | FETDrift | LSDDDrift
 
 
 class AlibiDriftDetector(DriftDetector):
@@ -39,16 +31,20 @@ class AlibiDriftDetector(DriftDetector):
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
     ) -> dict[str, MetricResult]:
-        assert isinstance(embeddings_ref, (np.ndarray, torch.Tensor))
-        assert isinstance(embeddings_cur, (np.ndarray, torch.Tensor))
-        embeddings_ref = embeddings_ref.numpy() if isinstance(embeddings_ref, torch.Tensor) else embeddings_ref
-        embeddings_cur = embeddings_cur.numpy() if isinstance(embeddings_cur, torch.Tensor) else embeddings_cur
+        assert isinstance(embeddings_ref, (np.ndarray | torch.Tensor))
+        assert isinstance(embeddings_cur, (np.ndarray | torch.Tensor))
+        embeddings_ref = (
+            embeddings_ref.detach().cpu().numpy() if isinstance(embeddings_ref, torch.Tensor) else embeddings_ref
+        )
+        embeddings_cur = (
+            embeddings_cur.detach().cpu().numpy() if isinstance(embeddings_cur, torch.Tensor) else embeddings_cur
+        )
 
         results: dict[str, MetricResult] = {}
 
         for metric_ref, config in self.metrics_config.items():
             metric = _alibi_detect_metric_factory(config, embeddings_ref)
-            result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)
+            result = metric.predict(embeddings_cur, return_p_val=True, return_distance=True)  # type: ignore
             _dist = (
                 list(result["data"]["distance"])
                 if isinstance(result["data"]["distance"], np.ndarray)
@@ -81,7 +77,7 @@ class AlibiDriftDetector(DriftDetector):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:
+def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:  # type: ignore
     kernel = None
     if isinstance(config, AlibiDetectMmdDriftMetric):
         kernel = getattr(alibi_detect.utils.pytorch, config.kernel)

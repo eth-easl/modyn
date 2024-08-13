@@ -32,8 +32,8 @@ training:
     activated: False
 data:
   dataset_id: mnist
-  transformations: ["transforms.ToTensor()",
-                    "transforms.Normalize((0.1307,), (0.3081,))"]
+  transformations:
+    ["transforms.ToTensor()", "transforms.Normalize((0.1307,), (0.3081,))"]
   bytes_parser_function: |
     from PIL import Image
     import io

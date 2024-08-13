@@ -1,4 +1,5 @@
 import torch
+
 from modyn.models.dlrm.dlrm import DLRM
 
 

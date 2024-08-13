@@ -1,6 +1,7 @@
+from sqlalchemy import BigInteger, Column, ForeignKey, ForeignKeyConstraint, Integer
+
 from modyn.metadata_database.metadata_base import MetadataBase
 from modyn.metadata_database.models import Pipeline
-from sqlalchemy import BigInteger, Column, ForeignKey, ForeignKeyConstraint, Integer
 
 
 class TriggerPartition(MetadataBase):

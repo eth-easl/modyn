@@ -1,7 +1,8 @@
 """Pipeline model."""
 
-from modyn.metadata_database.metadata_base import MetadataBase
 from sqlalchemy import Boolean, Column, Integer, String, Text
+
+from modyn.metadata_database.metadata_base import MetadataBase
 
 
 class Pipeline(MetadataBase):

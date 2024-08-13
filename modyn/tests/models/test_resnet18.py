@@ -1,4 +1,5 @@
 import torch
+
 from modyn.models import ResNet18
 
 

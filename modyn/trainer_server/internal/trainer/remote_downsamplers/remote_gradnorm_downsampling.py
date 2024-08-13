@@ -1,7 +1,8 @@
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
@@ -43,10 +44,10 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target

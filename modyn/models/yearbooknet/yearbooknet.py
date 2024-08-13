@@ -1,13 +1,14 @@
-from typing import Any, Optional
+from typing import Any
 
 import torch
-from modyn.models.coreset_methods_support import CoresetSupportingModule
 from torch import nn
+
+from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class YearbookNet:
-    """
-    Adapted from WildTime.
+    """Adapted from WildTime.
+
     Here you can find the original implementation:
     https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/networks/yearbook.py
     """
@@ -35,7 +36,7 @@ class YearbookNetModel(CoresetSupportingModule):
             nn.Conv2d(in_channels, out_channels, 3, padding=1), nn.BatchNorm2d(out_channels), nn.ReLU(), nn.MaxPool2d(2)
         )
 
-    def forward(self, data: torch.Tensor, sample_ids: Optional[list[int]] = None) -> torch.Tensor:
+    def forward(self, data: torch.Tensor, sample_ids: list[int] | None = None) -> torch.Tensor:
         del sample_ids
         data = self.enc(data)
         data = torch.mean(data, dim=(2, 3))

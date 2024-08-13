@@ -1,10 +1,10 @@
 # DeepCore Utils
-The content of this folder is taken from DeepCore with minor fixes. 
+
+The content of this folder is taken from DeepCore with minor fixes.
 Compared to DeepCore, the `else` branch of `orthogonal_matching_pursuit` (line 47) has been changed to support the updated version
 of `torch.linalg.lstsq`. Refer to this [issue](https://github.com/PatrickZH/DeepCore/issues/10) for the fix.
 
-
-You can find the original code [here](https://github.com/PatrickZH/DeepCore/tree/main/deepcore/methods/methods_utils) and 
+You can find the original code [here](https://github.com/PatrickZH/DeepCore/tree/main/deepcore/methods/methods_utils) and
 the MIT license [here](https://raw.githubusercontent.com/PatrickZH/DeepCore/main/LICENSE.md)
 
 ## DEEPCORE license

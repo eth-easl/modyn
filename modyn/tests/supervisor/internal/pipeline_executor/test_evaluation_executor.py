@@ -1,12 +1,14 @@
 import datetime
+from collections.abc import Iterator
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Iterator
+from typing import Any
 from unittest import mock
 from unittest.mock import ANY, MagicMock, patch
 
 import pandas as pd
 import pytest
+
 from modyn.config.schema.pipeline.config import ModynPipelineConfig
 from modyn.config.schema.pipeline.evaluation.config import EvaluationConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig

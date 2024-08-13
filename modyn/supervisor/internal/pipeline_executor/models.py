@@ -6,12 +6,16 @@ import itertools
 import logging
 import multiprocessing as mp
 import os
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Iterator, Literal, Optional, Union, cast
+from typing import Any, Literal, Union, cast
 
 import pandas as pd
+from pydantic import BaseModel, Field, model_serializer, model_validator
+from typing_extensions import override
+
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
@@ -19,17 +23,14 @@ from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
-from pydantic import BaseModel, Field, model_serializer, model_validator
-from typing_extensions import override
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class PipelineExecutionParams:
-    """
-    Wrapped initialization options for the pipeline executor, many of them are cli arguments.
-    """
+    """Wrapped initialization options for the pipeline executor, many of them
+    are cli arguments."""
 
     start_timestamp: int
     pipeline_id: int
@@ -81,7 +82,8 @@ class PipelineExecutionParams:
 
 @dataclass
 class PipelineBatchState:
-    """Pipeline artifacts shared across stages during the processing of one batch."""
+    """Pipeline artifacts shared across stages during the processing of one
+    batch."""
 
     data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
     remaining_data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
@@ -100,15 +102,18 @@ class PipelineBatchState:
 
 @dataclass
 class ExecutionState(PipelineExecutionParams):
-    """Represent the state of the pipeline executor including artifacts of pipeline stages."""
+    """Represent the state of the pipeline executor including artifacts of
+    pipeline stages."""
 
     stage: PipelineStage = PipelineStage.INIT
     """The current stage of the pipeline executor."""
 
     stage_id_seq_counters: dict[str, int] = dataclasses.field(default_factory=dict)
-    """Tracks for every stage that can be logged in StageLog how many logs have been created using this id.
-    This information can be used to uniquely identify logs over multiple pipeline runs given the pipelines use
-    a deterministic configuration.
+    """Tracks for every stage that can be logged in StageLog how many logs have
+    been created using this id.
+
+    This information can be used to uniquely identify logs over multiple
+    pipeline runs given the pipelines use a deterministic configuration.
     """
 
     # for logging
@@ -116,22 +121,24 @@ class ExecutionState(PipelineExecutionParams):
     current_batch_index: int = 0
     current_sample_index: int = 0
     current_sample_time: int = 0  # unix timestamp
-    """The unix timestamp of the last sample seen and processed by the pipeline executor."""
+    """The unix timestamp of the last sample seen and processed by the pipeline
+    executor."""
 
     # this is to store the first and last timestamp of the remaining data after handling all triggers
     remaining_data: list[tuple[int, int, int]] = dataclasses.field(default_factory=list)
-    remaining_data_range: Optional[tuple[int, int]] = None
+    remaining_data_range: tuple[int, int] | None = None
 
     triggers: list[int] = dataclasses.field(default_factory=list)
     current_training_id: int | None = None
     trained_models: list[int] = dataclasses.field(default_factory=list)
 
     tracking: dict[str, pd.DataFrame] = dataclasses.field(default_factory=dict)
-    """Pipeline stage execution info keyed by stage id made available for pipeline orchestration (e.g. policies)"""
+    """Pipeline stage execution info keyed by stage id made available for
+    pipeline orchestration (e.g. policies)"""
 
     max_timestamp: int = -1
 
-    previous_model_id: Optional[int] = None
+    previous_model_id: int | None = None
 
     previous_largest_keys: set[int] = dataclasses.field(default_factory=set)
 
@@ -153,14 +160,15 @@ class StageInfo(BaseModel):
     """
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return []
 
     @property
     def df_row(self) -> tuple:
-        """
-        While appending StageLog subclasses to `StageLog.info` is sufficient to persist additional information in the
-        logs, this method is used to provide a DataFrame representation of the data for analytical purposes.
+        """While appending StageLog subclasses to `StageLog.info` is sufficient
+        to persist additional information in the logs, this method is used to
+        provide a DataFrame representation of the data for analytical purposes.
 
         Returns:
             The dataframe rows.
@@ -173,7 +181,8 @@ class FetchDataInfo(StageInfo):
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["num_samples", "trigger_indexes"]
 
     @override
@@ -188,7 +197,8 @@ class ProcessNewDataInfo(StageInfo):
     trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["fetch_time", "num_samples"]
 
     @override
@@ -201,12 +211,14 @@ class EvaluateTriggerInfo(StageInfo):
     batch_size: int
     trigger_indexes: list[int] = Field(default_factory=list)
     trigger_eval_times: list[int] = Field(default_factory=list)
-    """Time in milliseconds that every next(...) call of the trigger.inform(...) generator took."""
+    """Time in milliseconds that every next(...) call of the
+    trigger.inform(...) generator took."""
 
     trigger_evaluation_log: TriggerPolicyEvaluationLog = Field(default_factory=TriggerPolicyEvaluationLog)
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["batch_size", "trigger_indexes"]
 
     @override
@@ -231,7 +243,8 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     num_samples_in_trigger: int
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["trigger_i", "trigger_index", "trigger_id", "num_samples_in_trigger"]
 
     @override
@@ -245,7 +258,8 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     last_timestamp: int | None
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"]
 
     @override
@@ -263,7 +277,8 @@ class TrainingInfo(_TrainInfoMixin):
     trainer_log: dict[str, Any]
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["trigger_id", "training_id", "num_batches", "num_samples"]
 
     @override
@@ -276,7 +291,8 @@ class StoreModelInfo(_TrainInfoMixin):
     id_model: int  # model_ prefix not allowed in pydantic
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["trigger_id", "training_id", "id_model"]
 
     @override
@@ -291,7 +307,8 @@ class SingleEvaluationInfo(StageInfo):
     failure_reason: str | None = None
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return [
             "trigger_id",
             "training_id",
@@ -328,7 +345,8 @@ class MultiEvaluationInfo(StageInfo):
     interval_results: list[SingleEvaluationInfo] = []
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["id_model", "dataset_id", "num_intervals"]
 
     @override
@@ -338,7 +356,8 @@ class MultiEvaluationInfo(StageInfo):
 
     @classmethod
     def results_df(cls, infos: list[MultiEvaluationInfo]) -> pd.DataFrame:
-        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        """As one evaluation can have multiple metrics, we return a DataFrame
+        with one row per metric."""
         return pd.DataFrame(
             [
                 (
@@ -380,7 +399,8 @@ class MultiEvaluationInfo(StageInfo):
 
     @classmethod
     def requests_df(cls, stage_logs: list[StageLog]) -> pd.DataFrame:
-        """As one evaluation can have multiple metrics, we return a DataFrame with one row per metric."""
+        """As one evaluation can have multiple metrics, we return a DataFrame
+        with one row per metric."""
         parent_columns: list[str] = []
         if stage_logs:
             parent_columns = stage_logs[0].df_columns(False)
@@ -429,7 +449,8 @@ class SelectorInformInfo(StageInfo):
     trigger_indexes: list[int]
 
     def df_columns(self) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["remaining_data", "trigger_indexes"]
 
     @override
@@ -438,7 +459,7 @@ class SelectorInformInfo(StageInfo):
         return (self.remaining_data, self.trigger_indexes)
 
 
-StageInfoUnion = Union[
+StageInfoUnion = Union[  # noqa: UP007
     FetchDataInfo,
     ProcessNewDataInfo,
     EvaluateTriggerInfo,
@@ -454,21 +475,28 @@ StageInfoUnion = Union[
 
 class StageLog(BaseModel):
     id: str
-    """Identifier for the pipeline stage, PipelineStage.name in most cases"""
+    """Identifier for the pipeline stage, PipelineStage.name in most cases."""
 
     id_seq_num: int
-    """Identifies the log within the group of logs with the same id (given by PipelineStage). Used for aggregation over
-    multiple pipeline runs."""
+    """Identifies the log within the group of logs with the same id (given by
+    PipelineStage).
+
+    Used for aggregation over multiple pipeline runs.
+    """
 
     # experiment time
     start: datetime.datetime
     end: datetime.datetime | None = Field(None)
-    """Timestamp when the decorated function exits. If decorated functions yields a generator, this will be the time
-    when the generator is returned, not when the generator is exhausted."""
+    """Timestamp when the decorated function exits.
+
+    If decorated functions yields a generator, this will be the time
+    when the generator is returned, not when the generator is exhausted.
+    """
 
     duration: datetime.timedelta | None = Field(None)
-    """As pipeline stages can be lazily evaluated generators where other computation steps are interleaved,
-    `end-start` is not always the actual duration this stage spent in computing."""
+    """As pipeline stages can be lazily evaluated generators where other
+    computation steps are interleaved, `end-start` is not always the actual
+    duration this stage spent in computing."""
 
     # dataset time of last seen sample
     batch_idx: int
@@ -480,7 +508,8 @@ class StageLog(BaseModel):
     info: StageInfo | None = Field(None)
 
     def df_columns(self, extended: bool = False) -> list[str]:
-        """Provide the column names of the DataFrame representation of the data."""
+        """Provide the column names of the DataFrame representation of the
+        data."""
         return ["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"] + (
             self.info.df_columns() if extended and self.info else []
         )
@@ -522,8 +551,7 @@ class StageLog(BaseModel):
 
     @classmethod
     def df(cls, stage_logs: Iterator[StageLog], extended: bool = False) -> pd.DataFrame:
-        """
-        Provides a DataFrame with the log information of this stage.
+        """Provides a DataFrame with the log information of this stage.
 
         To conveniently allow analysis of lists of log entries, this method provides a DataFrame representation of the
         log entry.
@@ -555,7 +583,8 @@ class SupervisorLogs(BaseModel):
 
     @property
     def df(self) -> pd.DataFrame:
-        """Provides a dataframe with log information of all stages which helps to easily plot pipeline run metrics.
+        """Provides a dataframe with log information of all stages which helps
+        to easily plot pipeline run metrics.
 
         Returns:
             A DataFrame with the core log information of all stages
@@ -581,8 +610,7 @@ class SupervisorLogs(BaseModel):
 
 
 class PipelineLogs(BaseModel):
-    """
-    Wrapped logs for the pipeline executor.
+    """Wrapped logs for the pipeline executor.
 
     This file maintains the log directory:
     logs
@@ -600,7 +628,8 @@ class PipelineLogs(BaseModel):
     pipeline_id: int
     commit_sha: str | None = Field(None, description="The commit SHA that the pipeline was executed on.")
     pipeline_stages: dict[str, tuple[int, list[str]]]
-    """List of all pipeline stages, their execution order index, and their parent stages."""
+    """List of all pipeline stages, their execution order index, and their
+    parent stages."""
 
     config: ConfigLogs
 

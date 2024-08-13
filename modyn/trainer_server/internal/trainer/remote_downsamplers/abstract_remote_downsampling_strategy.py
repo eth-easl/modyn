@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Union
+from typing import Any
 
 import torch
 
@@ -7,15 +7,18 @@ FULL_GRAD_APPROXIMATION = ["LastLayer", "LastLayerWithEmbedding"]
 
 
 def get_tensors_subset(
-    selected_indexes: list[int], data: Union[torch.Tensor, dict], target: torch.Tensor, sample_ids: list
-) -> tuple[Union[torch.Tensor, dict], torch.Tensor]:
-    """
-    This function is used in Batch-then-sample.
-    The downsampler returns the selected sample ids. We have to work out which index the various sample_ids correspond
-    to and then extract the selected samples from the tensors.
-    For example, from the downsampling strategy we get that the selected ids are 132 and 154 and that all the ids are
-    [102, 132, 15, 154, 188]. As a result, we get that the corresponding ids are 1 and 3 (using in_batch_index),
-    and then we get the entries of data and target only for the selected samples
+    selected_indexes: list[int], data: torch.Tensor | dict, target: torch.Tensor, sample_ids: list
+) -> tuple[torch.Tensor | dict, torch.Tensor]:
+    """This function is used in Batch-then-sample.
+
+    The downsampler returns the selected sample ids. We have to work out
+    which index the various sample_ids correspond to and then extract
+    the selected samples from the tensors. For example, from the
+    downsampling strategy we get that the selected ids are 132 and 154
+    and that all the ids are [102, 132, 15, 154, 188]. As a result, we
+    get that the corresponding ids are 1 and 3 (using in_batch_index),
+    and then we get the entries of data and target only for the selected
+    samples
     """
 
     # first of all we compute the position of each selected index within the batch
@@ -88,10 +91,10 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     def inform_samples(
         self,
         sample_ids: list[int],
-        forward_input: Union[dict[str, torch.Tensor], torch.Tensor],
+        forward_input: dict[str, torch.Tensor] | torch.Tensor,
         forward_output: torch.Tensor,
         target: torch.Tensor,
-        embedding: Optional[torch.Tensor] = None,
+        embedding: torch.Tensor | None = None,
     ) -> None:
         raise NotImplementedError
 
@@ -108,8 +111,9 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     def _compute_last_layer_gradient_wrt_loss_sum(
         per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Compute the gradient of the last layer with respect to the sum of the loss.
+        """Compute the gradient of the last layer with respect to the sum of
+        the loss.
+
         Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
         divided by the number of samples in the batch.
         """
@@ -134,8 +138,9 @@ class AbstractRemoteDownsamplingStrategy(ABC):
     def _compute_last_two_layers_gradient_wrt_loss_sum(
         per_sample_loss_fct: Any, forward_output: torch.Tensor, target: torch.Tensor, embedding: torch.Tensor
     ) -> torch.Tensor:
-        """
-        Compute the gradient of the last two layers with respect to the sum of the loss.
+        """Compute the gradient of the last two layers with respect to the sum
+        of the loss.
+
         Note: if the gradient with respect to the mean of the loss is needed, the result of this function should be
         divided by the number of samples in the batch.
         """

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import List, Literal, get_args
+from typing import Literal, get_args
+
+from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.utils import validate_timestr
-from pydantic import Field, field_validator
 
 OffsetEvalStrategyBounds = Literal["inf", "-inf"]
 
 
 class OffsetEvalStrategyConfig(ModynBaseModel):
-    """This evaluation strategy will evaluate the model on an interval around the training interval.
+    """This evaluation strategy will evaluate the model on an interval around
+    the training interval.
 
     One of the evaluation interval bounds can have an offset relative to the training interval bounds.
 
@@ -22,7 +24,7 @@ class OffsetEvalStrategyConfig(ModynBaseModel):
     """
 
     type: Literal["OffsetEvalStrategy"] = Field("OffsetEvalStrategy")
-    offsets: List[str] = Field(
+    offsets: list[str] = Field(
         description=(
             "A list of offsets that define the evaluation intervals. For valid offsets, see the class docstring of "
             "OffsetEvalStrategy."
@@ -32,7 +34,7 @@ class OffsetEvalStrategyConfig(ModynBaseModel):
 
     @field_validator("offsets")
     @classmethod
-    def validate_offsets(cls, value: List[str]) -> List[str]:
+    def validate_offsets(cls, value: list[str]) -> list[str]:
         for offset in value:
             if offset not in get_args(OffsetEvalStrategyBounds):
                 if not validate_timestr(offset):

@@ -2,6 +2,7 @@ from math import isclose
 
 import grpc
 import yaml
+
 from integrationtests.utils import MODYN_CONFIG_FILE
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SampleTrainingMetadata, TriggerTrainingMetadata
@@ -28,7 +29,7 @@ class MetadataProcessorClient:
 
 
 def get_modyn_config() -> dict:
-    with open(MODYN_CONFIG_FILE, "r", encoding="utf-8") as config_file:
+    with open(MODYN_CONFIG_FILE, encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
 
     return config

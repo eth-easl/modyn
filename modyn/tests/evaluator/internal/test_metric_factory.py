@@ -1,6 +1,7 @@
 import pytest
-from modyn.evaluator.internal.metric_factory import MetricFactory
 from pydantic import ValidationError
+
+from modyn.evaluator.internal.metric_factory import MetricFactory
 
 
 def test_metric_unavailability() -> None:

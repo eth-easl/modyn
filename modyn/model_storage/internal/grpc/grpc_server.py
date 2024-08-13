@@ -5,6 +5,7 @@ import pathlib
 from concurrent import futures
 
 import grpc
+
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import add_ModelStorageServicer_to_server
 from modyn.model_storage.internal.grpc.model_storage_grpc_servicer import ModelStorageGRPCServicer
 from modyn.utils import MAX_MESSAGE_SIZE

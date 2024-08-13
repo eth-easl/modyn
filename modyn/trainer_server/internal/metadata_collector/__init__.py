@@ -1,6 +1,4 @@
-"""
-Metadata Collector
-"""
+"""Metadata Collector."""
 
 import os
 

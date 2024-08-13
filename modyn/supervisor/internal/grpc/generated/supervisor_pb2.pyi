@@ -48,14 +48,56 @@ class StartPipelineRequest(google.protobuf.message.Message):
         stop_replay_at: builtins.int | None = ...,
         maximum_triggers: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_maximum_triggers", b"_maximum_triggers", "_start_replay_at", b"_start_replay_at", "_stop_replay_at", b"_stop_replay_at", "maximum_triggers", b"maximum_triggers", "pipeline_config", b"pipeline_config", "start_replay_at", b"start_replay_at", "stop_replay_at", b"stop_replay_at"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_maximum_triggers", b"_maximum_triggers", "_start_replay_at", b"_start_replay_at", "_stop_replay_at", b"_stop_replay_at", "maximum_triggers", b"maximum_triggers", "pipeline_config", b"pipeline_config", "start_replay_at", b"start_replay_at", "stop_replay_at", b"stop_replay_at"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_maximum_triggers",
+            b"_maximum_triggers",
+            "_start_replay_at",
+            b"_start_replay_at",
+            "_stop_replay_at",
+            b"_stop_replay_at",
+            "maximum_triggers",
+            b"maximum_triggers",
+            "pipeline_config",
+            b"pipeline_config",
+            "start_replay_at",
+            b"start_replay_at",
+            "stop_replay_at",
+            b"stop_replay_at",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_maximum_triggers",
+            b"_maximum_triggers",
+            "_start_replay_at",
+            b"_start_replay_at",
+            "_stop_replay_at",
+            b"_stop_replay_at",
+            "maximum_triggers",
+            b"maximum_triggers",
+            "pipeline_config",
+            b"pipeline_config",
+            "start_replay_at",
+            b"start_replay_at",
+            "stop_replay_at",
+            b"stop_replay_at",
+        ],
+    ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_maximum_triggers", b"_maximum_triggers"]) -> typing.Literal["maximum_triggers"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_maximum_triggers", b"_maximum_triggers"]
+    ) -> typing.Literal["maximum_triggers"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_start_replay_at", b"_start_replay_at"]) -> typing.Literal["start_replay_at"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_start_replay_at", b"_start_replay_at"]
+    ) -> typing.Literal["start_replay_at"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_stop_replay_at", b"_stop_replay_at"]) -> typing.Literal["stop_replay_at"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_stop_replay_at", b"_stop_replay_at"]
+    ) -> typing.Literal["stop_replay_at"] | None: ...
 
 global___StartPipelineRequest = StartPipelineRequest
 
@@ -73,9 +115,18 @@ class PipelineResponse(google.protobuf.message.Message):
         pipeline_id: builtins.int = ...,
         exception: builtins.str | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception", "pipeline_id", b"pipeline_id"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_exception", b"_exception"]) -> typing.Literal["exception"] | None: ...
+    def HasField(
+        self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_exception", b"_exception", "exception", b"exception", "pipeline_id", b"pipeline_id"
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_exception", b"_exception"]
+    ) -> typing.Literal["exception"] | None: ...
 
 global___PipelineResponse = PipelineResponse
 
@@ -141,9 +192,18 @@ class PipelineStageCounterCreateParams(google.protobuf.message.Message):
         title: builtins.str = ...,
         new_data_len: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len", "title", b"title"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_new_data_len", b"_new_data_len"]) -> typing.Literal["new_data_len"] | None: ...
+    def HasField(
+        self, field_name: typing.Literal["_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len"]
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_new_data_len", b"_new_data_len", "new_data_len", b"new_data_len", "title", b"title"
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_new_data_len", b"_new_data_len"]
+    ) -> typing.Literal["new_data_len"] | None: ...
 
 global___PipelineStageCounterCreateParams = PipelineStageCounterCreateParams
 
@@ -181,9 +241,28 @@ class PipelineStageCounterMsg(google.protobuf.message.Message):
         create_params: global___PipelineStageCounterCreateParams | None = ...,
         update_params: global___PipelineStageCounterUpdateParams | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["create_params", b"create_params", "params", b"params", "update_params", b"update_params"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["action", b"action", "create_params", b"create_params", "params", b"params", "update_params", b"update_params"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["params", b"params"]) -> typing.Literal["create_params", "update_params"] | None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "create_params", b"create_params", "params", b"params", "update_params", b"update_params"
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "action",
+            b"action",
+            "create_params",
+            b"create_params",
+            "params",
+            b"params",
+            "update_params",
+            b"update_params",
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["params", b"params"]
+    ) -> typing.Literal["create_params", "update_params"] | None: ...
 
 global___PipelineStageCounterMsg = PipelineStageCounterMsg
 
@@ -201,9 +280,16 @@ class PipelineStageExitMsg(google.protobuf.message.Message):
         exitcode: builtins.int = ...,
         exception: builtins.str | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception", "exitcode", b"exitcode"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_exception", b"_exception"]) -> typing.Literal["exception"] | None: ...
+    def HasField(
+        self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal["_exception", b"_exception", "exception", b"exception", "exitcode", b"exitcode"],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_exception", b"_exception"]
+    ) -> typing.Literal["exception"] | None: ...
 
 global___PipelineStageExitMsg = PipelineStageExitMsg
 
@@ -240,9 +326,45 @@ class PipelineStage(google.protobuf.message.Message):
         counter_msg: global___PipelineStageCounterMsg | None = ...,
         exit_msg: global___PipelineStageExitMsg | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["counter_msg", b"counter_msg", "dataset_msg", b"dataset_msg", "exit_msg", b"exit_msg", "id_msg", b"id_msg", "msg", b"msg"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["counter_msg", b"counter_msg", "dataset_msg", b"dataset_msg", "exit_msg", b"exit_msg", "id_msg", b"id_msg", "log", b"log", "msg", b"msg", "msg_type", b"msg_type", "stage", b"stage"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["msg", b"msg"]) -> typing.Literal["id_msg", "dataset_msg", "counter_msg", "exit_msg"] | None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "counter_msg",
+            b"counter_msg",
+            "dataset_msg",
+            b"dataset_msg",
+            "exit_msg",
+            b"exit_msg",
+            "id_msg",
+            b"id_msg",
+            "msg",
+            b"msg",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "counter_msg",
+            b"counter_msg",
+            "dataset_msg",
+            b"dataset_msg",
+            "exit_msg",
+            b"exit_msg",
+            "id_msg",
+            b"id_msg",
+            "log",
+            b"log",
+            "msg",
+            b"msg",
+            "msg_type",
+            b"msg_type",
+            "stage",
+            b"stage",
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["msg", b"msg"]
+    ) -> typing.Literal["id_msg", "dataset_msg", "counter_msg", "exit_msg"] | None: ...
 
 global___PipelineStage = PipelineStage
 
@@ -260,7 +382,9 @@ class TrainingStatusCreateTrackerParams(google.protobuf.message.Message):
         total_samples: builtins.int = ...,
         status_bar_scale: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["status_bar_scale", b"status_bar_scale", "total_samples", b"total_samples"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["status_bar_scale", b"status_bar_scale", "total_samples", b"total_samples"]
+    ) -> None: ...
 
 global___TrainingStatusCreateTrackerParams = TrainingStatusCreateTrackerParams
 
@@ -281,7 +405,17 @@ class TrainingStatusProgressCounterParams(google.protobuf.message.Message):
         downsampling_samples_seen: builtins.int = ...,
         is_training: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["downsampling_samples_seen", b"downsampling_samples_seen", "is_training", b"is_training", "samples_seen", b"samples_seen"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "downsampling_samples_seen",
+            b"downsampling_samples_seen",
+            "is_training",
+            b"is_training",
+            "samples_seen",
+            b"samples_seen",
+        ],
+    ) -> None: ...
 
 global___TrainingStatusProgressCounterParams = TrainingStatusProgressCounterParams
 
@@ -310,9 +444,37 @@ class TrainingStatus(google.protobuf.message.Message):
         training_create_tracker_params: global___TrainingStatusCreateTrackerParams | None = ...,
         training_progress_counter_params: global___TrainingStatusProgressCounterParams | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["params", b"params", "training_create_tracker_params", b"training_create_tracker_params", "training_progress_counter_params", b"training_progress_counter_params"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["action", b"action", "id", b"id", "params", b"params", "stage", b"stage", "training_create_tracker_params", b"training_create_tracker_params", "training_progress_counter_params", b"training_progress_counter_params"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["params", b"params"]) -> typing.Literal["training_create_tracker_params", "training_progress_counter_params"] | None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "params",
+            b"params",
+            "training_create_tracker_params",
+            b"training_create_tracker_params",
+            "training_progress_counter_params",
+            b"training_progress_counter_params",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "action",
+            b"action",
+            "id",
+            b"id",
+            "params",
+            b"params",
+            "stage",
+            b"stage",
+            "training_create_tracker_params",
+            b"training_create_tracker_params",
+            "training_progress_counter_params",
+            b"training_progress_counter_params",
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["params", b"params"]
+    ) -> typing.Literal["training_create_tracker_params", "training_progress_counter_params"] | None: ...
 
 global___TrainingStatus = TrainingStatus
 
@@ -330,7 +492,9 @@ class EvalStatusCreateTrackerParams(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         dataset_size: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "dataset_size", b"dataset_size"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["dataset_id", b"dataset_id", "dataset_size", b"dataset_size"]
+    ) -> None: ...
 
 global___EvalStatusCreateTrackerParams = EvalStatusCreateTrackerParams
 
@@ -378,9 +542,18 @@ class EvalStatusEndCounterParams(google.protobuf.message.Message):
         error: builtins.bool = ...,
         exception_msg: builtins.str | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_exception_msg", b"_exception_msg", "exception_msg", b"exception_msg"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_exception_msg", b"_exception_msg", "error", b"error", "exception_msg", b"exception_msg"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_exception_msg", b"_exception_msg"]) -> typing.Literal["exception_msg"] | None: ...
+    def HasField(
+        self, field_name: typing.Literal["_exception_msg", b"_exception_msg", "exception_msg", b"exception_msg"]
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_exception_msg", b"_exception_msg", "error", b"error", "exception_msg", b"exception_msg"
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_exception_msg", b"_exception_msg"]
+    ) -> typing.Literal["exception_msg"] | None: ...
 
 global___EvalStatusEndCounterParams = EvalStatusEndCounterParams
 
@@ -417,9 +590,53 @@ class EvalStatus(google.protobuf.message.Message):
         eval_progress_counter_params: global___EvalStatusProgressCounterParams | None = ...,
         eval_end_counter_params: global___EvalStatusEndCounterParams | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["eval_create_counter_params", b"eval_create_counter_params", "eval_create_tracker_params", b"eval_create_tracker_params", "eval_end_counter_params", b"eval_end_counter_params", "eval_progress_counter_params", b"eval_progress_counter_params", "params", b"params"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["action", b"action", "eval_create_counter_params", b"eval_create_counter_params", "eval_create_tracker_params", b"eval_create_tracker_params", "eval_end_counter_params", b"eval_end_counter_params", "eval_progress_counter_params", b"eval_progress_counter_params", "id", b"id", "params", b"params", "stage", b"stage"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["params", b"params"]) -> typing.Literal["eval_create_tracker_params", "eval_create_counter_params", "eval_progress_counter_params", "eval_end_counter_params"] | None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "eval_create_counter_params",
+            b"eval_create_counter_params",
+            "eval_create_tracker_params",
+            b"eval_create_tracker_params",
+            "eval_end_counter_params",
+            b"eval_end_counter_params",
+            "eval_progress_counter_params",
+            b"eval_progress_counter_params",
+            "params",
+            b"params",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "action",
+            b"action",
+            "eval_create_counter_params",
+            b"eval_create_counter_params",
+            "eval_create_tracker_params",
+            b"eval_create_tracker_params",
+            "eval_end_counter_params",
+            b"eval_end_counter_params",
+            "eval_progress_counter_params",
+            b"eval_progress_counter_params",
+            "id",
+            b"id",
+            "params",
+            b"params",
+            "stage",
+            b"stage",
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["params", b"params"]
+    ) -> (
+        typing.Literal[
+            "eval_create_tracker_params",
+            "eval_create_counter_params",
+            "eval_progress_counter_params",
+            "eval_end_counter_params",
+        ]
+        | None
+    ): ...
 
 global___EvalStatus = EvalStatus
 
@@ -433,11 +650,17 @@ class GetPipelineStatusResponse(google.protobuf.message.Message):
     EVAL_STATUS_FIELD_NUMBER: builtins.int
     status: builtins.str
     @property
-    def pipeline_stage(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PipelineStage]: ...
+    def pipeline_stage(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___PipelineStage]: ...
     @property
-    def training_status(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___TrainingStatus]: ...
+    def training_status(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___TrainingStatus]: ...
     @property
-    def eval_status(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvalStatus]: ...
+    def eval_status(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvalStatus]: ...
     def __init__(
         self,
         *,
@@ -446,6 +669,18 @@ class GetPipelineStatusResponse(google.protobuf.message.Message):
         training_status: collections.abc.Iterable[global___TrainingStatus] | None = ...,
         eval_status: collections.abc.Iterable[global___EvalStatus] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["eval_status", b"eval_status", "pipeline_stage", b"pipeline_stage", "status", b"status", "training_status", b"training_status"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "eval_status",
+            b"eval_status",
+            "pipeline_stage",
+            b"pipeline_stage",
+            "status",
+            b"status",
+            "training_status",
+            b"training_status",
+        ],
+    ) -> None: ...
 
 global___GetPipelineStatusResponse = GetPipelineStatusResponse

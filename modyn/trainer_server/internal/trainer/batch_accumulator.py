@@ -4,13 +4,11 @@ import torch
 
 
 class BatchAccumulator:
-    """
-    A class for accumulating batches of data over a specified period.
+    """A class for accumulating batches of data over a specified period.
 
     Args:
         accumulation_period (int): The number of batches to accumulate before returning the accumulated batch.
         target_device (str): The target device to move the accumulated data to.
-
     """
 
     def __init__(self, accumulation_period: int, target_device: str):
@@ -26,8 +24,7 @@ class BatchAccumulator:
         target: torch.Tensor,
         weights: torch.Tensor,
     ) -> bool:
-        """
-        Informs the accumulator about a new batch of data.
+        """Informs the accumulator about a new batch of data.
 
         Args:
             data (torch.Tensor | dict[str, torch.Tensor]): The input data for the batch.
@@ -46,8 +43,7 @@ class BatchAccumulator:
         return self._current_batch_number == 0
 
     def get_accumulated_batch(self) -> tuple[torch.Tensor | dict[str, torch.Tensor], list, torch.Tensor, torch.Tensor]:
-        """
-        Retrieves the accumulated batch of data.
+        """Retrieves the accumulated batch of data.
 
         Returns:
             tuple[torch.Tensor | dict[str, torch.Tensor], list, torch.Tensor, torch.Tensor]:

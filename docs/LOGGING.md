@@ -43,14 +43,14 @@ Every pipeline stage that wants to log additional information can define its own
 Additionally a dataframe conversion function can be implemented in the subtype to allow for easy conversion
 of the logs of this stage to a pandas dataframe.
 
-
 ## Usage
 
 ### Write new information into logs
 
-1) Define a subclass of `StageInfo` in `models.py` that contains the information you want to log.
+1. Define a subclass of `StageInfo` in `models.py` that contains the information you want to log.
 
 E.g.
+
 ```python
 class MyPipelineStageInfo(StageInfo):
     my_data: int = Field(..., description="Some measurement.")
@@ -61,9 +61,10 @@ class MyPipelineStageInfo(StageInfo):
         return pd.DataFrame([(self.my_data)], columns=["my_data"])
 ```
 
-2) If not already present, define your `pipeline_executor` stage function in `pipeline_executor.py`.
+2. If not already present, define your `pipeline_executor` stage function in `pipeline_executor.py`.
 
 E.g.
+
 ```python
     @pipeline_stage(PipelineType.<StageName>, PipelineStage.<parent_stage>)
     def _my_pipeline_stage(

@@ -1,23 +1,26 @@
 # pylint: skip-file
+# pragma: no cover
 
 import json
 import logging
 import os
 import pathlib
 import threading
+from collections.abc import Callable, Generator, Iterator
 from pathlib import Path
-from typing import Any, Callable, Generator, Iterator, Optional, Tuple
+from typing import Any, Literal
 
 import torch
-from modyn.common.benchmark.stopwatch import Stopwatch
-from modyn.trainer_server.internal.dataset.binary_file_wrapper import BinaryFileWrapper
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
+
+from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.trainer_server.internal.dataset.extra_local_eval.binary_file_wrapper import BinaryFileWrapper
 
 logger = logging.getLogger(__name__)
 
 
-class CriteoLocalDataset(IterableDataset):
+class CriteoLocalDataset(IterableDataset):  # pragma: no cover
     # pylint: disable=too-many-instance-attributes, abstract-method
 
     def __init__(
@@ -32,9 +35,10 @@ class CriteoLocalDataset(IterableDataset):
         training_id: int,
         num_prefetched_partitions: int,
         parallel_prefetch_requests: int,
-        tokenizer: Optional[str],
-        log_path: Optional[pathlib.Path],
-    ):
+        shuffle: bool,
+        tokenizer: str | None,
+        log_path: pathlib.Path | None,
+    ):  # pragma: no cover
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id
@@ -48,10 +52,10 @@ class CriteoLocalDataset(IterableDataset):
         self._storage_address = storage_address
         self._selector_address = selector_address
         self._transform_list: list[Callable] = []
-        self._transform: Optional[Callable] = None
+        self._transform: Callable | None = None
         self._log_path = log_path
         self._log: dict[str, Any] = {"partitions": {}}
-        self._log_lock: Optional[threading.Lock] = None
+        self._log_lock: threading.Lock | None = None
         self._sw = Stopwatch()
         self._criteo_path = "/tmp/criteo"
 
@@ -61,39 +65,39 @@ class CriteoLocalDataset(IterableDataset):
         logger.debug("Initialized CriteoDataset.")
 
     @staticmethod
-    def bytes_parser_function(x: memoryview) -> dict:
+    def bytes_parser_function(x: memoryview) -> dict:  # pragma: no cover
         return {
             "numerical_input": torch.frombuffer(x, dtype=torch.float32, count=13),
             "categorical_input": torch.frombuffer(x, dtype=torch.int32, offset=52).long(),
         }
 
-    def _setup_composed_transform(self) -> None:
+    def _setup_composed_transform(self) -> None:  # pragma: no cover
         self._transform_list = [CriteoLocalDataset.bytes_parser_function]
         self._transform = transforms.Compose(self._transform_list)
 
-    def _init_transforms(self) -> None:
+    def _init_transforms(self) -> None:  # pragma: no cover
         self._setup_composed_transform()
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
         pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
 
-    def _info(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: Optional[int]) -> None:  # pragma: no cover
+    def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
     def _get_transformed_data_tuple(
-        self, key: int, sample: memoryview, label: int, weight: Optional[float]
-    ) -> Optional[Tuple]:
+        self, key: int, sample: memoryview, label: int, weight: float | None
+    ) -> tuple | None:  # pragma: no cover
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
         transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
         return key, transformed_sample, label
 
-    def _persist_log(self, worker_id: int) -> None:
+    def _persist_log(self, worker_id: int) -> None:  # pragma: no cover
         if self._log_path is None:
             return
 
@@ -114,10 +118,10 @@ class CriteoLocalDataset(IterableDataset):
 
     def criteo_generator(
         self, worker_id: int, num_workers: int
-    ) -> Iterator[tuple[int, memoryview, int, Optional[float]]]:
+    ) -> Iterator[tuple[int, memoryview, int, float | None]]:  # pragma: no cover
         record_size = 160
         label_size = 4
-        byte_order = "little"
+        byte_order: Literal["little"] = "little"
         self._info("Globbing paths", worker_id)
 
         pathlist = sorted(Path(self._criteo_path).glob("**/*.bin"))
@@ -142,7 +146,7 @@ class CriteoLocalDataset(IterableDataset):
 
                 sample_idx = sample_idx + 1
 
-    def __iter__(self) -> Generator:
+    def __iter__(self) -> Generator:  # pragma: no cover
         worker_info = get_worker_info()
         if worker_info is None:
             # Non-multithreaded data loading. We use worker_id 0.
@@ -154,7 +158,7 @@ class CriteoLocalDataset(IterableDataset):
 
         if self._first_call:
             self._first_call = False
-            self._debug("This is the first run of iter, making gRPC connections.", worker_id)
+            self._debug("This is the first run of iter", worker_id)
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
@@ -172,5 +176,5 @@ class CriteoLocalDataset(IterableDataset):
 
         self._persist_log(worker_id)
 
-    def end_of_trigger_cleaning(self) -> None:
+    def end_of_trigger_cleaning(self) -> None:  # pragma: no cover
         pass

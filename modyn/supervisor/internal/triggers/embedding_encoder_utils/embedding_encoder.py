@@ -4,6 +4,7 @@ import logging
 import pathlib
 
 import torch
+
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.utils import dynamic_module_import
 
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingEncoder:
     """The EmbeddingEncoder stores a model and its metadata.
+
     DataDriftTrigger uses EmbeddingEncoder to run the model.
     """
 

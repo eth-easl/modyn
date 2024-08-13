@@ -2,15 +2,31 @@ import os
 
 from experiments.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
-from experiments.yearbook.compare_trigger_policies.pipeline_config import gen_pipeline_config
-from modyn.config.schema.pipeline import DataAmountTriggerConfig, ModynPipelineConfig, TimeTriggerConfig
+from experiments.yearbook.compare_trigger_policies.pipeline_config import (
+    gen_pipeline_config,
+)
+from modyn.config.schema.pipeline import (
+    DataAmountTriggerConfig,
+    ModynPipelineConfig,
+    TimeTriggerConfig,
+)
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import (
+    BetweenTwoTriggersEvalStrategyConfig,
+)
+from modyn.config.schema.pipeline.evaluation.strategy.periodic import (
+    PeriodicEvalStrategyConfig,
+)
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import (
+    SlicingEvalStrategyConfig,
+)
 from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
-from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.aggregation import (
+    MajorityVoteDriftAggregationStrategy,
+)
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectMmdDriftMetric,
+)
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -24,13 +40,15 @@ def construct_slicing_eval_handler() -> EvalHandlerConfig:
         execution_time="after_pipeline",
         models="matrix",
         strategy=SlicingEvalStrategyConfig(
-            eval_every="1d", eval_start_from=_FIRST_TIMESTAMP, eval_end_at=_LAST_TIMESTAMP
+            eval_every="1d",
+            eval_start_from=_FIRST_TIMESTAMP,
+            eval_end_at=_LAST_TIMESTAMP,
         ),
         datasets=["yearbook_test"],
     )
 
 
-def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> dict[EvalHandlerConfig]:
+def construct_periodic_eval_handlers(intervals: list[tuple[str, str]]) -> list[EvalHandlerConfig]:
     """
     Args:
         intervals: List of (handler_name_suffix, interval string expression)
@@ -108,7 +126,10 @@ _EXPERIMENT_REFS = {
     0: Experiment(
         # to verify online composite model determination logic
         name="yb-timetrigger-smoke-test",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         time_trigger_schedules=[1, 2, 5],
         data_amount_triggers=[],
         drift_detection_intervals=[],
@@ -119,7 +140,17 @@ _EXPERIMENT_REFS = {
         name="yb-numsamples-training-time",
         eval_handlers=[construct_between_trigger_eval_handler()],
         time_trigger_schedules=[],
-        data_amount_triggers=[100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000],
+        data_amount_triggers=[
+            100,
+            200,
+            500,
+            1_000,
+            2_500,
+            5_000,
+            10_000,
+            15_000,
+            30_000,
+        ],
         drift_detection_intervals=[],
         drift_trigger_metrics=[],
         gpu_device="cuda:1",
@@ -148,7 +179,10 @@ _EXPERIMENT_REFS = {
     ),
     3: Experiment(
         name="yb-drift-smoke-test",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         time_trigger_schedules=[],
         data_amount_triggers=[],
         drift_detection_intervals=[500],
@@ -164,7 +198,10 @@ _EXPERIMENT_REFS = {
     ),
     4: Experiment(
         name="yb-drift-p-val",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         time_trigger_schedules=[],
         data_amount_triggers=[],
         drift_detection_intervals=[100],
@@ -180,7 +217,10 @@ _EXPERIMENT_REFS = {
     ),
     5: Experiment(
         name="yb-drift-interval-cost",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         time_trigger_schedules=[],
         data_amount_triggers=[],
         drift_detection_intervals=[100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000],
@@ -199,12 +239,14 @@ _EXPERIMENT_REFS = {
 
 def run_experiment() -> None:
     host = os.getenv("MODYN_SUPERVISOR_HOST")
-    port = os.getenv("MODYN_SUPERVISOR_PORT")
+    port_str = os.getenv("MODYN_SUPERVISOR_PORT")
 
     if not host:
         host = input("Enter the supervisors host address: ") or "localhost"
-    if not port:
-        port = int(input("Enter the supervisors port: ")) or 50063
+    if port_str:
+        port = int(port_str)
+    else:
+        port = int(input("Enter the supervisors port: ") or "50063")
 
     experiment_id = int(input("Enter the id of the experiment you want to run: "))
 

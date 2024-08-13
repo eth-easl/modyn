@@ -6,19 +6,19 @@
 
 We want to be able to:
 
-1) determine how well our models are performing according to some metrics like accuracy, precision, recall, F1-score, etc.
+1. determine how well our models are performing according to some metrics like accuracy, precision, recall, F1-score, etc.
 
-2) determine how well our models are performing over time. This allows us to determine the generalization and retention capabilities of our models.
+2. determine how well our models are performing over time. This allows us to determine the generalization and retention capabilities of our models.
 
-3) analyze and compare entire pipeline runs (and not only the different models created over one pipeline run)
+3. analyze and compare entire pipeline runs (and not only the different models created over one pipeline run)
 
-4) compare the performance of different pipeline runs with the costs they incurred
+4. compare the performance of different pipeline runs with the costs they incurred
 
 We are facing two use cases that require us to run evaluations:
 
-1) **Online evaluations**: We want to run evaluations during the execution of the core pipeline so we can feed back this information into performance-aware triggering policies. For example, we may want to trigger a policy that will retrain a model if the model's performance degrades below a certain threshold.
+1. **Online evaluations**: We want to run evaluations during the execution of the core pipeline so we can feed back this information into performance-aware triggering policies. For example, we may want to trigger a policy that will retrain a model if the model's performance degrades below a certain threshold.
 
-2) **Post-hoc offline analysis**: We want to run evaluations for experiments so we determine the performance of a model **at certain points in time (3.2.1)** over the course of a whole pipeline run (also for intervals where it has long been replaced with a newer model). Orthogonally to this  we are interested in the **total pipeline performance (3.2.2)** aggregated over the whole time of the pipeline run (= pipeline performance). For this we are only interested in models trained shortly before each evaluation point as this is the model that a production system would use for inference queries.
+2. **Post-hoc offline analysis**: We want to run evaluations for experiments so we determine the performance of a model **at certain points in time (3.2.1)** over the course of a whole pipeline run (also for intervals where it has long been replaced with a newer model). Orthogonally to this we are interested in the **total pipeline performance (3.2.2)** aggregated over the whole time of the pipeline run (= pipeline performance). For this we are only interested in models trained shortly before each evaluation point as this is the model that a production system would use for inference queries.
 
 ## 2. Background
 
@@ -52,9 +52,9 @@ gantt
 
 One evaluation method consists of three main aspects:
 
-1) A set of evaluation metrics (e.g. F1, accuracy, precision, recall, etc.)
-2) The points in time when the evaluations are run
-3) The evaluation data for the different evaluation triggers (set of samples that are used for an evaluation). Note that this data can be in form of pre-determined dataset slices, or dynamically determined based on the e.g. time of evaluation in form of an interval around the evaluation time.
+1. A set of evaluation metrics (e.g. F1, accuracy, precision, recall, etc.)
+2. The points in time when the evaluations are run
+3. The evaluation data for the different evaluation triggers (set of samples that are used for an evaluation). Note that this data can be in form of pre-determined dataset slices, or dynamically determined based on the e.g. time of evaluation in form of an interval around the evaluation time.
 
 ## 3. Implementation
 
@@ -89,6 +89,7 @@ When analyzing how a single pipeline run performed over time, we can line-plot t
 Using this plot we expect to see that every model performs best at the interval it was trained in(, and hopefully also reasonably well in the interval the model was served in). Accuracy should decay in both directions from the training interval.
 
 There are two main approaches to acquire those time series of evaluation results:
+
 </details>
 
 ##### Dataset slicing (`MatrixEvaluationStrategy`)
@@ -141,6 +142,7 @@ In the currently active composite model, every evaluation window/point uses the 
 With that time series per pipeline run, we can already plot the pipelines performance over time for several pipeline runs. We can color code the pipelines to distinguish them.
 
 We expect to see spikes in the pipeline performances when a new model is trained and a stale model is replaced. For pipelines with different trigger policies we expect to see different patterns in the pipeline performance as retraining takes place at different points in time.
+
 </details>
 
 An interesting realization is that when comparing arbitrary different trigger policy pipelines, we cannot rely on equidistant triggering timestamps, as different pipeline runs could have produced evaluations centered around different points in time (currently evaluations are done after training). The Tumbling window approach partially addresses as triggering intervals can be configured independently from the evaluation intervals. However a sliding window approach feels more natural here sampling the pipeline performance at regular intervals of a certain length.
@@ -220,6 +222,7 @@ training costs cumulate over time in relation to other cost factors.
 To unify both dimensions (cost and performance) into one plot, we can plot the total cost of a pipeline run against the total performance of a pipeline run. This allows us to compare the cost/performance tradeoff from different pipelines.
 
 When a user has decided how much he is willing to sacrifice in training time to get rid of a certain amount of performance degradation, this ratio can be visualized in this plot as a straight line that cuts through origin. Policies below this line are not desirable as they overspend. The steeper gradient $y(p) / x(p)$ of a point in the plot, the more efficient the pipeline run is in terms of cost/performance tradeoff. The question remains how we acquire the total (aggregated) performance of a pipeline w.r.t. to a fixed evaluation metric.
+
 </details>
 
 ##### 3.2.2.2 Aggregated pipeline performance
@@ -235,12 +238,11 @@ Using equally sized intervals implicitly solves the problem as we would simply u
 For a more explicit way to handle this, we propose to run evaluation request for the intervals between two model trainings capturing the model performance at exactly the time it was served for inference. We can then calculate the pipeline performance as the weighted average of the model performances w.r.t. the served time.
 
 > Note: This time weighted averaging does not make much sense when using a period evaluation strategy as the intervals are equally sized. Then we would only risk misrepresenting the amount of samples periodic evaluation intervals with sliding
-windows are allowed to overlap.
+> windows are allowed to overlap.
 
 #### 3.2.3 Refined pipeline run model
 
 Accounting for the afore mentioned assumptions and the fact that training takes some time, we can visualize a pipeline run as follows:
-
 
 ```mermaid
 gantt
@@ -331,7 +333,7 @@ gantt
 
 ### Configuration
 
-To evaluate models you can configure several `EvalHandlerConfig` within the `evaluation` section of the 
+To evaluate models you can configure several `EvalHandlerConfig` within the `evaluation` section of the
 pipeline configuration file.
 
 #### Evaluation Strategy

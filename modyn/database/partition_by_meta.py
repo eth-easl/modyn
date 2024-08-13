@@ -1,7 +1,7 @@
 """Base class for metadata database."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.orm.decl_api import DeclarativeAttributeIntercept
@@ -18,8 +18,8 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
         bases: Any,
         attrs: dict[str, Any],
         *,  # This is to make this implementation of more compatible with the original, we don't use *args because pylint complains otherwise  # noqa: E501
-        partition_by: Optional[str],
-        partition_type: Optional[str],
+        partition_by: str | None,
+        partition_type: str | None,
     ) -> DeclarativeAttributeIntercept:
         @classmethod  # type: ignore # (see https://github.com/python/mypy/issues/4153)
         def get_partition_name(cls_: PartitionByMeta, suffix: str) -> str:
@@ -30,8 +30,8 @@ class PartitionByMeta(DeclarativeAttributeIntercept):
             cls_: PartitionByMeta,
             suffix: str,
             partition_stmt: str,
-            subpartition_by: Optional[str] = None,
-            subpartition_type: Optional[str] = None,
+            subpartition_by: str | None = None,
+            subpartition_type: str | None = None,
             unlogged: bool = True,
         ) -> PartitionByMeta:
             if suffix not in cls_.partitions:

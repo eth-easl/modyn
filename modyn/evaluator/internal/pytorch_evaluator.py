@@ -4,9 +4,9 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
-from typing import Optional, Union
 
 import torch
+
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import (
@@ -44,7 +44,7 @@ class PytorchEvaluator:
 
     @staticmethod
     def _prepare_dataloader(
-        evaluation_info: EvaluationInfo, start_timestamp: Optional[int], end_timestamp: Optional[int]
+        evaluation_info: EvaluationInfo, start_timestamp: int | None, end_timestamp: int | None
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
             evaluation_info.dataset_id,
@@ -108,7 +108,7 @@ class PytorchEvaluator:
         num_samples = 0
         with torch.inference_mode():
             for batch in dataloader:
-                data: Union[torch.Tensor, dict]
+                data: torch.Tensor | dict
                 if isinstance(batch[1], torch.Tensor):
                     data = batch[1].to(self._device)
                 elif isinstance(batch[1], dict):
