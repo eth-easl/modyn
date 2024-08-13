@@ -69,11 +69,12 @@ def gen_selection_strategies(
 
     if include_full:
         # Full data training
+        tail_triggers = 0
         strategies.append(
             (
-                "full",
+                f"full_tail{tail_triggers}",
                 NewDataStrategyConfig(
-                    maximum_keys_in_memory=maximum_keys_in_memory, storage_backend="database", tail_triggers=0, limit=-1
+                    maximum_keys_in_memory=maximum_keys_in_memory, storage_backend="database", tail_triggers=tail_triggers, limit=-1
                 ),
             )
         )
