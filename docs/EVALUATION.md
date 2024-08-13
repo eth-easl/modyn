@@ -84,6 +84,8 @@ Every of these $m$ models can be evaluated at any point in time (bounded by the 
   <summary><b>Plot 1: (line plot, x=time, y=eval metric, color=model)
 </b></summary>
 
+[<img src="./assets/sample_plots/eval_over_time_models.png">](./assets/sample_plots/eval_over_time_models.png)
+
 When analyzing how a single pipeline run performed over time, we can line-plot the evaluation results over time using time as the $x$ dimension, the evaluation metric value as the $y$ dimension and the model as a color coded dimension. The different evaluation metrics can be plotted in different plots using facets.
 
 Using this plot we expect to see that every model performs best at the interval it was trained in(, and hopefully also reasonably well in the interval the model was served in). Accuracy should decay in both directions from the training interval.
@@ -139,6 +141,8 @@ In the currently active composite model, every evaluation window/point uses the 
 <details>
   <summary><b>Plot 2: (line plot, x=time, y=eval metric (ensemble of all models), color=pipeline)</b></summary>
 
+[<img src="./assets/sample_plots/eval_over_time_pipelines.png">](./assets/sample_plots/eval_over_time_pipelines.png)
+
 With that time series per pipeline run, we can already plot the pipelines performance over time for several pipeline runs. We can color code the pipelines to distinguish them.
 
 We expect to see spikes in the pipeline performances when a new model is trained and a stale model is replaced. For pipelines with different trigger policies we expect to see different patterns in the pipeline performance as retraining takes place at different points in time.
@@ -188,6 +192,8 @@ gantt
 <details>
   <summary><b>Plot 4 (matrix plot, x=time up to which samples where used for training, y=model (categorical), color=accuracy of model at this point)</b></summary>
 
+[<img src="./assets/sample_plots/model_evals_over_time_heatmap.png">](./assets/sample_plots/model_evals_over_time_heatmap.png)
+
 Compared to the current approach this diagram integrates a fair representation of "time" (x-axis). As triggers aren't spaced equally in an abstract trigger policy the current assumptions don't hold anymore. Also this brings the advantage that we would see how drift / model degradation accumulates over **realtime** (not trigger indexes).
 
 </details>
@@ -208,16 +214,22 @@ For a cost/performance tradeoff comparison there are two useful plotting strateg
 <details>
   <summary><b>Plot 2 + Plot 3 (stacked barplot, x=time, y=cost | eval metric value (ensemble of all models), color=pipeline)</b></summary>
 
+[<img src="./assets/sample_plots/cost_over_time_pipelines.png">](./assets/sample_plots/cost_over_time_pipelines.png)
+
 When plotting the cost (cumulative/non-cumulative) over time using the same x-axis scale as the performance plot, we can compare the cost and performance of the different pipelines. We just have to align the plots under each other.
 
 With this plot we can nicely visualize triggering policy decisions at the points in time, where triggers occur,
 we can see spikes in training costs. Also, with a cumulative barplot we can compare how
 training costs cumulate over time in relation to other cost factors.
 
+[<img src="./assets/sample_plots/cost_over_time_pipelines_cumulative.png">](./assets/sample_plots/cost_over_time_pipelines_cumulative.png)
+
 </details>
 
 <details>
     <summary><b>Plot 5 (scatterplot, x=total cost (aggregated over time), y=total cost per pipeline run (aggregated over time), color=pipeline)</b></summary>
+
+[<img src="./assets/sample_plots/cost_performance_pipelines.png">](./assets/sample_plots/cost_performance_pipelines.png)
 
 To unify both dimensions (cost and performance) into one plot, we can plot the total cost of a pipeline run against the total performance of a pipeline run. This allows us to compare the cost/performance tradeoff from different pipelines.
 

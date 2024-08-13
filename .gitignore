@@ -53,7 +53,7 @@ src/data/*
 .mypy_cache/
 reports/
 htmlcov/
-assets/
+/assets/
 report.html
 .coverage
 # Pytest creates files that have the name of the local desktop included, so we need to wildcard here
