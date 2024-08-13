@@ -1,4 +1,4 @@
-# Modyn pevaluation framework
+# Modyn evaluation framework
 
 ## 1. Motivation
 
@@ -93,7 +93,7 @@ There are two main approaches to acquire those time series of evaluation results
 
 ##### Dataset slicing (`MatrixEvaluationStrategy`)
 
-Partitioning the dataset(s) w.r.t. to time at sufficiently small intervals will allow us to extract a time series after running evaluations for every (slice, model, metric) combination.
+Partitioning the dataset(s) w.r.t. time at sufficiently small intervals will allow us to extract a time series after running evaluations for every (slice, model, metric) combination.
 
 When plotting this there are several cases:
 
