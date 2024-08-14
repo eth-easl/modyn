@@ -10,11 +10,21 @@ runs:
       run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
       shell: bash
 
+    - name: Set cache date
+      run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      shell: bash
+
+    # increase to reset cache manually
+    - name: Set cache number
+      run: echo "CACHE_NUMBER=2" >> $GITHUB_ENV
+      shell: bash
+
     - name: Setup micromamba
       uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: environment.yml
-        cache-environment: true
+        cache-environment-key: environment-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        cache-downloads-key: downloads-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         init-shell: bash
 
     - name: Install dev requirements

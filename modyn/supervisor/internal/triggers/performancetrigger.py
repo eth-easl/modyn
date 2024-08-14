@@ -70,9 +70,7 @@ class PerformanceTrigger(Trigger):
         )  # allows to detect drift in a fixed interval
 
         self.data_density = DataDensityTracker(config.data_density_window_size)
-        self.performance_tracker = PerformanceTracker(
-            config.performance_triggers_window_size
-        )
+        self.performance_tracker = PerformanceTracker(config.performance_triggers_window_size)
 
         self.decision_policies = _setup_decision_policies(config)
         # TODO
@@ -113,9 +111,7 @@ class PerformanceTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = (
-                self.config.detection_interval_data_points
-            )
+            self._sample_left_until_detection = self.config.detection_interval_data_points
 
             # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
             self.data_density.inform_data()
@@ -129,7 +125,7 @@ class PerformanceTrigger(Trigger):
                 self._triggered_once = True
                 triggered = True
 
-                # TODO: also evaluate the dicision policy
+                # TODO: also evaluate the decision policy
 
             else:
                 # Run the detection
@@ -229,7 +225,8 @@ class PerformanceTrigger(Trigger):
 def _setup_decision_policies(
     config: PerformanceTriggerConfig,
 ) -> list[PerformanceDecisionPolicy]:
-    """Policy factory that creates the decision policies based on the given configuration."""
+    """Policy factory that creates the decision policies based on the given
+    configuration."""
     policies: list[PerformanceDecisionPolicy] = []
     for criterion in config.decision_criteria:
         if isinstance(criterion, StaticPerformanceThresholdCriterion):
@@ -237,7 +234,5 @@ def _setup_decision_policies(
         elif isinstance(criterion, DynamicPerformanceThresholdCriterion):
             policies.append(DynamicPerformanceThresholdDecisionPolicy(criterion))
         elif isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
-            policies.append(
-                StaticNumberAvoidableMisclassificationDecisionPolicy(criterion)
-            )
+            policies.append(StaticNumberAvoidableMisclassificationDecisionPolicy(criterion))
     return policies

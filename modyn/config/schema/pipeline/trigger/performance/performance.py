@@ -20,9 +20,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
     # )  # TODO: currently not yet supported by the evaluator, we use a evaluation dataset that is sufficiently small
 
     device: str = Field(description="The device the model should be put on.")
-    dataset: EvalDataConfig = Field(
-        description="The dataset on which the model is evaluated."
-    )
+    dataset: EvalDataConfig = Field(description="The dataset on which the model is evaluated.")
     label_transformer_function: str = Field(
         "", description="Function used to transform the label (tensors of integers)."
     )
@@ -31,9 +29,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
     @classmethod
     def validate_dataset(cls, value: EvalDataConfig) -> EvalDataConfig:
         if len(value.metrics) != 1:
-            raise ValueError(
-                "Only one metric is allowed for performance trigger evaluation."
-            )
+            raise ValueError("Only one metric is allowed for performance trigger evaluation.")
         return value
 
 
