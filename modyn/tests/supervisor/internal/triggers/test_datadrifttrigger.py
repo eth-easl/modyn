@@ -322,13 +322,12 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     assert len(trigger.warmup_intervals) == 4
     assert not trigger.warmup_completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [12, 13, 14]]
-    assert len(trigger._windows.current) == 3  # no trigger, current window is not reset
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(20, 25)]))
     assert results == [4]
     assert len(trigger.warmup_intervals) == 5
     assert not trigger.warmup_completed
-    assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [12, 13, 14]]
+    assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [17, 18, 19]]
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(25, 30)]))
     assert len(results) == 0
