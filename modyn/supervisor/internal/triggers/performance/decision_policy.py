@@ -14,8 +14,8 @@ from modyn.supervisor.internal.triggers.performance.performance import (
 )
 
 
-class DriftDecisionPolicy(ABC):
-    """Decision policy that will make the binary is_drift decisions on
+class PerformanceDecisionPolicy(ABC):
+    """Decision policy that will make the binary trigger decisions on
     observations of a performance metric."""
 
     @abstractmethod
@@ -43,7 +43,7 @@ class DriftDecisionPolicy(ABC):
             performance_tracker: The performance tracker, updated with the new performance value.
 
         Returns:
-            The final is_drift decision.
+            The final trigger decision.
         """
 
     def inform_trigger(self) -> None:
@@ -51,8 +51,8 @@ class DriftDecisionPolicy(ABC):
         pass
 
 
-class StaticPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
-    """Decision policy that will make the binary is_drift decisions based on a
+class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
+    """Decision policy that will make the binary trigger decisions based on a
     static threshold."""
 
     def __init__(self, config: StaticPerformanceThresholdCriterion):
@@ -75,8 +75,8 @@ class StaticPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
         )
 
 
-class DynamicPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
-    """Decision policy that will make the binary is_drift decisions based on a
+class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
+    """Decision policy that will make the binary trigger decisions based on a
     dynamic threshold.
 
     Value falls below the rolling average more than the allowed
@@ -103,8 +103,8 @@ class DynamicPerformanceThresholdDecisionPolicy(DriftDecisionPolicy):
         return (performance < threshold) or (performance_tracker.forecast_next_performance(mode) < threshold)
 
 
-class StaticNumberAvoidableMisclassificationDecisionPolicy(DriftDecisionPolicy):
-    """Decision policy that will make the binary is_drift decisions based on a
+class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPolicy):
+    """Decision policy that will make the binary trigger decisions based on a
     static number of cumulated avoidable misclassifications."""
 
     def __init__(self, config: StaticNumberAvoidableMisclassificationCriterion):

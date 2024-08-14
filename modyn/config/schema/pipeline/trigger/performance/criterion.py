@@ -11,7 +11,9 @@ from modyn.config.schema.base_model import ModynBaseModel
 
 
 class StaticPerformanceThresholdCriterion(ModynBaseModel):
-    id: Literal["StaticPerformanceThresholdCriterion"] = Field("StaticPerformanceThresholdCriterion")
+    id: Literal["StaticPerformanceThresholdCriterion"] = Field(
+        "StaticPerformanceThresholdCriterion"
+    )
     metric_threshold: float = Field(
         0.0,
         description=(
@@ -25,7 +27,9 @@ class DynamicPerformanceThresholdCriterion(ModynBaseModel):
     """Triggers after comparison of current performance with the a rolling
     average of historic performances after triggers."""
 
-    id: Literal["DynamicPerformanceThresholdCriterion"] = Field("DynamicPerformanceThresholdCriterion")
+    id: Literal["DynamicPerformanceThresholdCriterion"] = Field(
+        "DynamicPerformanceThresholdCriterion"
+    )
     allowed_deviation: float = Field(
         0.05,
         description=(
@@ -67,8 +71,12 @@ class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
     )
 
 
-class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
-    id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
+class StaticNumberAvoidableMisclassificationCriterion(
+    _NumberAvoidableMisclassificationCriterion
+):
+    id: Literal["StaticNumberMisclassificationCriterion"] = Field(
+        "StaticNumberMisclassificationCriterion"
+    )
     avoidable_misclassification_threshold: float = Field(
         description="The threshold for the misclassification rate that will invoke a trigger."
     )

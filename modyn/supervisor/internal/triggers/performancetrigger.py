@@ -17,6 +17,9 @@ from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.performance.data_density import (
     DataDensityTracker,
 )
+from modyn.supervisor.internal.triggers.performance.decision_policy import (
+    PerformanceDecisionPolicy,
+)
 from modyn.supervisor.internal.triggers.performance.performance import (
     PerformanceTracker,
 )
@@ -59,7 +62,11 @@ class PerformanceTrigger(Trigger):
         )  # allows to detect drift in a fixed interval
 
         self.data_density = DataDensityTracker(config.data_density_window_size)
-        self.performance_tracker = PerformanceTracker(config.performance_triggers_window_size)
+        self.performance_tracker = PerformanceTracker(
+            config.performance_triggers_window_size
+        )
+
+        self.decision_policies = _setup_decision_policies(config)
 
         self._triggered_once = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
@@ -95,7 +102,15 @@ class PerformanceTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
+            self._sample_left_until_detection = (
+                self.config.detection_interval_data_points
+            )
+
+            # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
+            self.data_density.inform_data()
+            self.performance_tracker.inform_evaluation()
+
+            # TODO: log which of the criterions led to the trigger
 
             # The first ever detection will always trigger
             if not self._triggered_once:
@@ -103,10 +118,15 @@ class PerformanceTrigger(Trigger):
                 self._triggered_once = True
                 triggered = True
 
+                # TODO: also evaluate the dicision policy
+
             else:
                 # Run the detection
                 # TODO: inform performance_tracker before policy call
                 triggered = self._run_detection(new_key_ts)
+
+            if triggered:
+                self.decision_policy.inform_trigger()
 
             if triggered:
                 yield 1
@@ -195,4 +215,17 @@ class PerformanceTrigger(Trigger):
         )
 
 
-# TODO: log which of the criterions led to the trigger
+def _setup_decision_policy(
+    config: PerformanceTriggerConfig,
+) -> PerformanceDecisionPolicy:
+    criterion = config.decision_criteria
+    # TODO
+    # TODO
+    # TODO
+    assert (
+        metric_config.num_permutations is None
+    ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
+    if isinstance(criterion, ThresholdDecisionCriterion):
+        policies[metric_name] = ThresholdDecisionPolicy(config)
+    elif isinstance(criterion, DynamicDecisionPolicy):
+        policies[metric_name] = DynamicDecisionPolicy(config)
