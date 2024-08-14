@@ -10,13 +10,16 @@ from typing import Literal
 from pydantic import Field
 
 from modyn.config.schema.pipeline.trigger.performance.performance import (
-    PerformanceTriggerConfig,
+    _InternalPerformanceTriggerConfig,
 )
 
 
-class CostTriggerConfig(PerformanceTriggerConfig):
+class CostTriggerConfig(_InternalPerformanceTriggerConfig):
     """Offers the same set of `decision_criteria` as `PerformanceTriggerConfig`
     but implicitly adds a cost criterion to the list.
+
+    We use the `_InternalPerformanceTriggerConfig` base class as we cannot override the `id` field of
+    `PerformanceTriggerConfig`.
 
     The cost criterion is met if:
     - `mode` is `hindsight` and the expected cost of the trigger is below the cumulated regret which

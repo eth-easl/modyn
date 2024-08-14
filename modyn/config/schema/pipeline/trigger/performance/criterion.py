@@ -10,7 +10,13 @@ from modyn.config.schema.base_model import ModynBaseModel
 # uses the evaluation results directory to derive a triggering decision
 
 
-class StaticPerformanceThresholdCriterion(ModynBaseModel):
+class _NamedMetricPerformanceCriterion(ModynBaseModel):
+    metric: str = Field(
+        description="The metric that should be used for the comparison. Name as defined in the evaluation config."
+    )
+
+
+class StaticPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
     id: Literal["StaticPerformanceThresholdCriterion"] = Field("StaticPerformanceThresholdCriterion")
     metric_threshold: float = Field(
         0.0,
@@ -21,7 +27,7 @@ class StaticPerformanceThresholdCriterion(ModynBaseModel):
     )
 
 
-class DynamicPerformanceThresholdCriterion(ModynBaseModel):
+class DynamicPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
     """Triggers after comparison of current performance with the a rolling
     average of historic performances after triggers."""
 

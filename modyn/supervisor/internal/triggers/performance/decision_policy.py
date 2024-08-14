@@ -6,10 +6,10 @@ from modyn.config.schema.pipeline.trigger.performance.criterion import (
     StaticPerformanceThresholdCriterion,
 )
 from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
-from modyn.supervisor.internal.triggers.performance.data_density import (
+from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
-from modyn.supervisor.internal.triggers.performance.performance import (
+from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
 
@@ -22,7 +22,7 @@ class PerformanceDecisionPolicy(ABC):
     def evaluate_decision(
         self,
         update_interval: int,
-        performance: float,
+        evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
         mode: TriggerEvaluationMode,
@@ -61,16 +61,16 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
     def evaluate_decision(
         self,
         update_interval: int,
-        performance: float,
+        evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
         mode: TriggerEvaluationMode,
         method: ForecastingMethod,
     ) -> bool:
         if mode == "hindsight":
-            return performance < self.config.metric_threshold
+            return evaluation_scores[self.config.metric] < self.config.metric_threshold
 
-        return (performance < self.config.metric_threshold) or (
+        return (evaluation_scores[self.config.metric] < self.config.metric_threshold) or (
             performance_tracker.forecast_next_performance(mode) < self.config.metric_threshold
         )
 
@@ -89,7 +89,7 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
     def evaluate_decision(
         self,
         update_interval: int,
-        performance: float,
+        evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
         mode: TriggerEvaluationMode,
@@ -98,9 +98,11 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         threshold = performance_tracker.forecast_expected_performance(mode) - self.config.allowed_deviation
 
         if mode == "hindsight":
-            return performance < threshold
+            return evaluation_scores[self.config.metric] < threshold
 
-        return (performance < threshold) or (performance_tracker.forecast_next_performance(mode) < threshold)
+        return (evaluation_scores[self.config.metric] < threshold) or (
+            performance_tracker.forecast_next_performance(mode) < threshold
+        )
 
 
 class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPolicy):
@@ -116,12 +118,10 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
         self.config = config
         self.cumulated_avoidable_misclassifications = 0
 
-    # TODO: allow_reduction
-
     def evaluate_decision(
         self,
         update_interval: int,
-        performance: float,
+        evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
         mode: TriggerEvaluationMode,

@@ -7,7 +7,7 @@ from modyn.config.schema.pipeline.trigger.performance.criterion import (
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
 )
-from modyn.supervisor.internal.triggers.performance.data_density import (
+from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
@@ -15,19 +15,23 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
 )
-from modyn.supervisor.internal.triggers.performance.performance import (
+from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
 
 
 @pytest.fixture
 def static_threshold_policy() -> StaticPerformanceThresholdDecisionPolicy:
-    return StaticPerformanceThresholdDecisionPolicy(config=StaticPerformanceThresholdCriterion(metric_threshold=0.8))
+    return StaticPerformanceThresholdDecisionPolicy(
+        config=StaticPerformanceThresholdCriterion(metric_threshold=0.8, metric="acc")
+    )
 
 
 @pytest.fixture
 def dynamic_threshold_policy() -> DynamicPerformanceThresholdDecisionPolicy:
-    return DynamicPerformanceThresholdDecisionPolicy(config=DynamicPerformanceThresholdCriterion(allowed_deviation=0.2))
+    return DynamicPerformanceThresholdDecisionPolicy(
+        config=DynamicPerformanceThresholdCriterion(allowed_deviation=0.2, metric="acc")
+    )
 
 
 @pytest.fixture
@@ -72,8 +76,11 @@ def test_static_performance_hindsight(
         "mode": "hindsight",
         "method": "rolling_average",
     }
-    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.79)
-    assert not static_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.81)
+    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.79})
+    assert not static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.81})
+
+    with pytest.raises(KeyError):
+        static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"NOT_ACC": 0.81})
 
 
 @patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[0.81, 0.79])
@@ -92,11 +99,11 @@ def test_static_performance_forecast(
         "method": "rolling_average",
     }
     # current performance already below threshold, trigger independent of forecast
-    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.79)
+    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.79})
 
     # current performance above threshold, trigger only if forecast is below threshold
-    assert not static_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.81)
-    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.81)
+    assert not static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.81})
+    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.81})
 
     assert mock_forecast_next_performance.call_count == 2
 
@@ -106,7 +113,7 @@ def test_static_performance_forecast(
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-@patch.object(PerformanceTracker, "forecast_expected_performance", side_effect=[0.5, 0.5])
+@patch.object(PerformanceTracker, "forecast_expected_performance", side_effect=[0.5, 0.5, -1])
 def test_dynamic_performance_hindsight(
     mock_forecast_expected_performance: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
@@ -123,12 +130,15 @@ def test_dynamic_performance_hindsight(
         "method": "rolling_average",
     }
     # current performance already below threshold, trigger independent of forecast
-    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.5 - 0.21)
+    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5 - 0.21})
     assert not dynamic_threshold_policy.evaluate_decision(
-        **eval_decision_kwargs, performance=0.5 - 0.19
+        **eval_decision_kwargs, evaluation_scores={"acc": 0.5 - 0.19}
     )  # allowed deviation not reached
 
     assert mock_forecast_expected_performance.call_count == 2
+
+    with pytest.raises(KeyError):
+        dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"NOT_ACC": 0.5})
 
 
 @patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[0.29, 0.31])
@@ -154,14 +164,14 @@ def test_dynamic_performance_forecast(
         "method": "rolling_average",
     }
     # current performance already below threshold, trigger independent of forecast
-    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.29)
+    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.29})
 
     assert mock_forecast_expected_performance.call_count == 1
     assert mock_forecast_next_performance.call_count == 0
 
     # current performance above threshold, trigger only if forecast is below threshold
-    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.5)
-    assert not dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, performance=0.5)
+    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
+    assert not dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
 
     assert mock_forecast_expected_performance.call_count == 3
     assert mock_forecast_next_performance.call_count == 2
@@ -209,18 +219,18 @@ def test_misclassification_hindsight(
     # don't trigger below the 10th misclassification
 
     # observed misclassifications=5, with expected accuracy of 1.0 every misclassification is avoidable
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5
     assert mock_previous_batch_num_misclassifications.call_count == 1
 
     # observed misclassifications=8, expected misclassifications: 5 --> 9-5=4 avoidable misclassifications
     # cumulated_avoidable_misclassifications: 5+4
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5 + 4
     assert mock_previous_batch_num_misclassifications.call_count == 2
 
     # observed misclassifications: 1, with expected accuracy of 1.0 every misclassification is avoidable
-    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 10
     assert mock_previous_batch_num_misclassifications.call_count == 3
 
@@ -228,12 +238,12 @@ def test_misclassification_hindsight(
     assert misclassification_policy.cumulated_avoidable_misclassifications == 0
 
     # observed misclassifications: 9, with expected accuracy of 1.0 every misclassification is avoidable
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 9
     assert mock_previous_batch_num_misclassifications.call_count == 4
 
     # observed misclassifications: 4, with expected accuracy of 1.0 every misclassification is avoidable
-    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 13
     assert mock_previous_batch_num_misclassifications.call_count == 5
 
@@ -266,7 +276,7 @@ def test_misclassification_static_expected_performance(
         "method": "rolling_average",
     }
     # expected misclassifications = (1-0.25)*100 = 75, observed misclassifications = 90
-    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 15
     assert mock_previous_batch_num_misclassifications.call_count == 1
     assert mock_previous_batch_samples.call_count == 1
@@ -276,14 +286,14 @@ def test_misclassification_static_expected_performance(
 
     # negative avoidable misclassifications
     # expected misclassifications = (1-0.25)*100 = 75, observed misclassifications = 70
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5
     assert mock_previous_batch_num_misclassifications.call_count == 2
     assert mock_previous_batch_samples.call_count == 2
 
     # forbid reduction: with reduction cumulated_avoidable_misclassifications reduced from 5 to 0, here constant at 5
     misclassification_policy.config.allow_reduction = False
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0)
+    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5
     assert mock_previous_batch_num_misclassifications.call_count == 3
     assert mock_previous_batch_samples.call_count == 3
@@ -328,7 +338,9 @@ def test_misclassification_forecast(
 
     # 50 expected misclassifications, 60 observed misclassifications
     # 10 past avoidable misclassifications, forecasting not needed, already exceeding
-    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0, update_interval=0)
+    assert misclassification_policy.evaluate_decision(
+        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval=0
+    )
     assert misclassification_policy.cumulated_avoidable_misclassifications == 10
     assert mock_previous_batch_num_misclassifications.call_count == 1
     assert mock_previous_batch_samples.call_count == 1
@@ -342,7 +354,9 @@ def test_misclassification_forecast(
     # 7 avoidable past misclassifications (57 observed, 50 expected)
     # 1 forecasted misclassifications: exp acc=0.5, forecasted acc=0.4, update interval 10, data density=1
     # --> 8 avoidable misclassifications --> don't trigger
-    assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0, update_interval=10)
+    assert not misclassification_policy.evaluate_decision(
+        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval=10
+    )
     # forecasted misclassifications not persisted in the counter
     assert misclassification_policy.cumulated_avoidable_misclassifications == 7
     assert mock_previous_batch_num_misclassifications.call_count == 1
@@ -360,7 +374,9 @@ def test_misclassification_forecast(
     # 7 avoidable past misclassifications (57 observed, 50 expected)
     # 3 forecasted misclassifications: exp acc=0.5, forecasted acc=0.2, update interval 10, data density=1
     # --> 10 avoidable misclassifications --> don't trigger
-    assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, performance=0, update_interval=10)
+    assert misclassification_policy.evaluate_decision(
+        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval=10
+    )
     assert misclassification_policy.cumulated_avoidable_misclassifications == 7
     assert mock_previous_batch_num_misclassifications.call_count == 1
     assert mock_previous_batch_samples.call_count == 1

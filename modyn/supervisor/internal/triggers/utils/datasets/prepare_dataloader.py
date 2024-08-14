@@ -3,9 +3,13 @@ import random
 
 from torch.utils.data import DataLoader
 
-from modyn.supervisor.internal.triggers.trigger_datasets import (
+from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
     DataLoaderInfo,
+)
+from modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset import (
     FixedKeysDataset,
+)
+from modyn.supervisor.internal.triggers.utils.datasets.online_trigger_dataset import (
     OnlineTriggerDataset,
 )
 

@@ -1,9 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 
-from modyn.supervisor.internal.triggers.drift.embedding.model.manager import (
-    ModelManager,
-)
+from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
 
 
 def get_embeddings(model_manager: ModelManager, dataloader: DataLoader) -> torch.Tensor:

@@ -3,6 +3,7 @@ from typing import Any
 
 import torch
 
+from modyn.config.schema.pipeline.evaluation.metrics import MetricConfig
 from modyn.evaluator.internal.metric_factory import MetricFactory
 from modyn.evaluator.internal.metrics import (
     AbstractDecomposableMetric,
@@ -13,12 +14,12 @@ from modyn.evaluator.internal.metrics.abstract_evaluation_metric import (
 )
 
 
-def setup_metrics(metric_configurations: list[str]) -> list[AbstractEvaluationMetric]:
+def setup_metrics(metric_configs: list[MetricConfig]) -> list[AbstractEvaluationMetric]:
     metrics = []
     # need to make sure that the metric names are unique as they are used for identification.
     metric_names = set()
-    for configuration_json in metric_configurations:
-        metric = MetricFactory.get_evaluation_metric(configuration_json)
+    for config in metric_configs:
+        metric = MetricFactory.get_evaluation_metric(config)
         if metric.get_name() not in metric_names:
             metrics.append(metric)
             metric_names.add(metric.get_name())

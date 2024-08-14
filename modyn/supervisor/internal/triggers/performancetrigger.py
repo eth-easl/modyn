@@ -12,14 +12,11 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
 )
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
-from modyn.supervisor.internal.triggers.drift.embedding.model.downloader import (
-    ModelDownloader,
+from modyn.supervisor.internal.triggers.models import (
+    PerformanceTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
 )
-from modyn.supervisor.internal.triggers.drift.embedding.model.manager import (
-    ModelManager,
-)
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
-from modyn.supervisor.internal.triggers.performance.data_density import (
+from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
@@ -28,16 +25,19 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
 )
-from modyn.supervisor.internal.triggers.performance.performance import (
+from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
-from modyn.supervisor.internal.triggers.trigger_datasets.dataloader_info import (
+from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
     DataLoaderInfo,
 )
-from modyn.supervisor.internal.triggers.trigger_datasets.prepare_dataloader import (
+from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import (
     prepare_trigger_dataloader_fixed_keys,
 )
+from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
+from modyn.utils.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 logger = logging.getLogger(__name__)
 
@@ -65,20 +65,22 @@ class PerformanceTrigger(Trigger):
         self.model_downloader: ModelDownloader | None = None
         self.model_manager: ModelManager | None = None
 
-        self._sample_left_until_detection = (
-            config.detection_interval_data_points
-        )  # allows to detect drift in a fixed interval
+        # allows to detect drift in a fixed interval
+        self._sample_left_until_detection = config.detection_interval_data_points
 
         self.data_density = DataDensityTracker(config.data_density_window_size)
         self.performance_tracker = PerformanceTracker(config.performance_triggers_window_size)
 
         self.decision_policies = _setup_decision_policies(config)
-        # TODO
-        # TODO
-        # TODO
 
         self._triggered_once = False
+        self.model_refresh_needed = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
+        self._last_data_interval: list[tuple[int, int]] = []
+
+        self._label_transformer_function = deserialize_function(
+            config.evaluation.label_transformer_function, LABEL_TRANSFORMER_FUNC_NAME
+        )
 
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
@@ -114,10 +116,18 @@ class PerformanceTrigger(Trigger):
             self._sample_left_until_detection = self.config.detection_interval_data_points
 
             # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
-            self.data_density.inform_data()
-            self.performance_tracker.inform_evaluation()
+            self.data_density.inform_data(new_key_ts)
 
-            # TODO: log which of the criterions led to the trigger
+            num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=new_key_ts)
+
+            # TODO: first call might need warmup
+            self.performance_tracker.inform_evaluation(
+                num_samples=num_samples,
+                num_misclassifications=num_misclassifications,
+                evaluation_scores=evaluation_scores,
+            )
+
+            policy_decisions: dict[str, bool] = {}
 
             # The first ever detection will always trigger
             if not self._triggered_once:
@@ -125,42 +135,70 @@ class PerformanceTrigger(Trigger):
                 self._triggered_once = True
                 triggered = True
 
-                # TODO: also evaluate the decision policy
+                # in the first interval we don't evaluate the decision policies as they might require one trigger
+                # to have happened before in order to derive forecasts
 
             else:
-                # Run the detection
-                # TODO: inform performance_tracker before policy call
-                triggered = self._run_detection(new_key_ts)
+                # evaluate the decision policies
+                any_policy_triggered = False
+                for policy_name, policy in self.decision_policies.items():
+                    policy_decisions[policy_name] = policy.evaluate_decision(
+                        update_interval=self.config.detection_interval_data_points,
+                        evaluation_scores=evaluation_scores,
+                        data_density=self.data_density,
+                        performance_tracker=self.performance_tracker,
+                        mode=self.config.mode,
+                        method=self.config.forecasting_method,
+                    )
+                    if policy_decisions[policy_name]:
+                        any_policy_triggered = True
+
+                triggered = any_policy_triggered
 
             if triggered:
-                self.decision_policy.inform_trigger()
+                for policy in self.decision_policies.values():
+                    policy.inform_trigger()  # resets the internal state (e.g. misclassification counters)
+
+            trigger_idx = processing_head_in_batch - 1
+
+            drift_eval_log = PerformanceTriggerEvalLog(
+                triggered=triggered,
+                trigger_index=trigger_idx,
+                evaluation_interval=(new_key_ts[0][1], new_key_ts[-1][1]),
+                num_samples=num_samples,
+                num_misclassifications=num_misclassifications,
+                evaluation_scores=evaluation_scores,
+                policy_decisions=policy_decisions,
+            )
+            if log:
+                log.evaluations.append(drift_eval_log)
 
             if triggered:
-                yield 1
-                # TODO
-                # trigger_idx = processing_head_in_batch - 1
-                # yield from self._handle_drift_result(
-                #     triggered, trigger_idx, drift_results, log=log
-                # )
+                self._last_data_interval = new_key_ts
+                yield trigger_idx
 
-            # TODO: dicison policy needs inform of trigger
-
-    def inform_previous_model(self, previous_model_id: int) -> None:
+    def inform_new_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
-        self.model_updated = True
+        self.model_refresh_needed = True
+
+        # Perform an evaluation of the NEW model on the last evaluation interval, we will derive expected performance
+        # forecasts from these evaluations.
+        num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
+            interval_data=self._last_data_interval
+        )
+
+        self.performance_tracker.inform_trigger(
+            num_samples=num_samples,
+            num_misclassifications=num_misclassifications,
+            evaluation_scores=evaluation_scores,
+        )
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                     Internal                                                     #
     # ---------------------------------------------------------------------------------------------------------------- #
 
-    def _run_detection(self, interval_data: list[tuple[int, int]]) -> bool:
-        """Compare current data against reference data.
-
-        current data: all untriggered samples in the sliding window in inform().
-        reference data: the training samples of the previous trigger.
-        Get the dataloaders, download the embedding encoder model if necessary,
-        compute embeddings of current and reference data, then run detection on the embeddings.
-        """
+    def _run_evaluation(self, interval_data: list[tuple[int, int]]) -> tuple[int, int, dict[str, float]]:
+        """Run the evaluation on the given interval data."""
         assert self.previous_model_id is not None
         assert self.dataloader_info is not None
         assert self.model_downloader is not None
@@ -170,12 +208,12 @@ class PerformanceTrigger(Trigger):
             self.dataloader_info, [key for key, _ in interval_data]
         )
 
-        # Download previous model as embedding encoder
-        if self.model_updated:
+        # Download previous model as model manager
+        if self.model_refresh_needed:
             self.model_manager = self.model_downloader.setup_manager(
                 self.previous_model_id, self.context.pipeline_config.training.device
             )
-            self.model_updated = False
+            self.model_refresh_needed = False
 
         # Run evaluation
         assert self.model_manager is not None
@@ -184,11 +222,14 @@ class PerformanceTrigger(Trigger):
             dataloader=evaluation_dataloader,
             device=self.config.evaluation.device,
             metrics=self._metrics,
-            label_transformer_function=self.config.evaluation.label_transformer_function,
-            amp=False,  # TODO?
+            label_transformer_function=self._label_transformer_function,
+            amp=False,
         )
 
-        return False  # TODO:
+        evaluation_scores = {metric.get_name(): metric.get_evaluation_result() for metric in self._metrics}
+
+        num_misclassifications = 0  # TODO
+        return (num_samples, num_misclassifications, evaluation_scores)
 
     def _init_dataloader_info(self) -> None:
         assert self.context
@@ -224,15 +265,15 @@ class PerformanceTrigger(Trigger):
 
 def _setup_decision_policies(
     config: PerformanceTriggerConfig,
-) -> list[PerformanceDecisionPolicy]:
+) -> dict[str, PerformanceDecisionPolicy]:
     """Policy factory that creates the decision policies based on the given
     configuration."""
-    policies: list[PerformanceDecisionPolicy] = []
-    for criterion in config.decision_criteria:
+    policies: dict[str, PerformanceDecisionPolicy] = {}
+    for name, criterion in config.decision_criteria.items():
         if isinstance(criterion, StaticPerformanceThresholdCriterion):
-            policies.append(StaticPerformanceThresholdDecisionPolicy(criterion))
+            policies[name] = StaticPerformanceThresholdDecisionPolicy(criterion)
         elif isinstance(criterion, DynamicPerformanceThresholdCriterion):
-            policies.append(DynamicPerformanceThresholdDecisionPolicy(criterion))
+            policies[name] = DynamicPerformanceThresholdDecisionPolicy(criterion)
         elif isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
-            policies.append(StaticNumberAvoidableMisclassificationDecisionPolicy(criterion))
+            policies[name] = StaticNumberAvoidableMisclassificationDecisionPolicy(criterion)
     return policies

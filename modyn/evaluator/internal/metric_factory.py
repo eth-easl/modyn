@@ -28,10 +28,8 @@ class MetricFactory:
     def get_evaluation_metric(config: str | MetricConfig) -> AbstractEvaluationMetric:
         if isinstance(config, str):
             parsed_metric_config = validate_metric_config_json(config)
-        elif isinstance(config, MetricConfig):
-            parsed_metric_config = config
         else:
-            raise ValueError("config must be either a string or a MetricConfig object")
+            parsed_metric_config = config
 
         for metric in all_metrics:
             if metric.__name__.lower() == parsed_metric_config.name.lower():

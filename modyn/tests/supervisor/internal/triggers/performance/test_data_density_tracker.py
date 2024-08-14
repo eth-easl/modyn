@@ -1,6 +1,6 @@
 import pytest
 
-from modyn.supervisor.internal.triggers.performance.data_density import (
+from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
 

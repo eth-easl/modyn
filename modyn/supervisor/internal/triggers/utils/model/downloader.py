@@ -18,9 +18,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import (
     ModelStorageStub,
 )
-from modyn.supervisor.internal.triggers.drift.embedding.model.manager import (
-    ModelManager,
-)
+from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
 from modyn.utils.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
