@@ -3,6 +3,11 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator
 
+from modyn.config.schema.pipeline.trigger.performance.criterion import (
+    DynamicPerformanceThresholdCriterion,
+    StaticNumberAvoidableMisclassificationCriterion,
+    StaticPerformanceThresholdCriterion,
+)
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
 )
@@ -18,7 +23,10 @@ from modyn.supervisor.internal.triggers.performance.data_density import (
     DataDensityTracker,
 )
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
+    DynamicPerformanceThresholdDecisionPolicy,
     PerformanceDecisionPolicy,
+    StaticNumberAvoidableMisclassificationDecisionPolicy,
+    StaticPerformanceThresholdDecisionPolicy,
 )
 from modyn.supervisor.internal.triggers.performance.performance import (
     PerformanceTracker,
@@ -67,6 +75,9 @@ class PerformanceTrigger(Trigger):
         )
 
         self.decision_policies = _setup_decision_policies(config)
+        # TODO
+        # TODO
+        # TODO
 
         self._triggered_once = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
@@ -215,17 +226,18 @@ class PerformanceTrigger(Trigger):
         )
 
 
-def _setup_decision_policy(
+def _setup_decision_policies(
     config: PerformanceTriggerConfig,
-) -> PerformanceDecisionPolicy:
-    criterion = config.decision_criteria
-    # TODO
-    # TODO
-    # TODO
-    assert (
-        metric_config.num_permutations is None
-    ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
-    if isinstance(criterion, ThresholdDecisionCriterion):
-        policies[metric_name] = ThresholdDecisionPolicy(config)
-    elif isinstance(criterion, DynamicDecisionPolicy):
-        policies[metric_name] = DynamicDecisionPolicy(config)
+) -> list[PerformanceDecisionPolicy]:
+    """Policy factory that creates the decision policies based on the given configuration."""
+    policies: list[PerformanceDecisionPolicy] = []
+    for criterion in config.decision_criteria:
+        if isinstance(criterion, StaticPerformanceThresholdCriterion):
+            policies.append(StaticPerformanceThresholdDecisionPolicy(criterion))
+        elif isinstance(criterion, DynamicPerformanceThresholdCriterion):
+            policies.append(DynamicPerformanceThresholdDecisionPolicy(criterion))
+        elif isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
+            policies.append(
+                StaticNumberAvoidableMisclassificationDecisionPolicy(criterion)
+            )
+    return policies
