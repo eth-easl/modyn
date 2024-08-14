@@ -5,8 +5,18 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import EmbeddingEncoder
-from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo, FixedKeysDataset, OnlineTriggerDataset
+from modyn.supervisor.internal.triggers.embedding_encoder_utils.embedding_encoder import (
+    EmbeddingEncoder,
+)
+from modyn.supervisor.internal.triggers.trigger_datasets.dataloader_info import (
+    DataLoaderInfo,
+)
+from modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset import (
+    FixedKeysDataset,
+)
+from modyn.supervisor.internal.triggers.trigger_datasets.online_trigger_dataset import (
+    OnlineTriggerDataset,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +48,11 @@ def prepare_trigger_dataloader_by_trigger(
     )
 
     logger.debug("Creating online trigger DataLoader.")
-    return DataLoader(train_set, batch_size=dataloader_info.batch_size, num_workers=dataloader_info.num_dataloaders)
+    return DataLoader(
+        train_set,
+        batch_size=dataloader_info.batch_size,
+        num_workers=dataloader_info.num_dataloaders,
+    )
 
 
 def prepare_trigger_dataloader_fixed_keys(
@@ -59,7 +73,11 @@ def prepare_trigger_dataloader_fixed_keys(
     )
 
     logger.debug("Creating fixed keys DataLoader.")
-    return DataLoader(train_set, batch_size=dataloader_info.batch_size, num_workers=dataloader_info.num_dataloaders)
+    return DataLoader(
+        train_set,
+        batch_size=dataloader_info.batch_size,
+        num_workers=dataloader_info.num_dataloaders,
+    )
 
 
 def get_embeddings(embedding_encoder: EmbeddingEncoder, dataloader: DataLoader) -> torch.Tensor:

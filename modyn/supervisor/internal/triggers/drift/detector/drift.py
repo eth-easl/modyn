@@ -9,7 +9,12 @@ from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 
 
 class DriftDetector(ABC):
-    # tbd.: multiple strategies to select reference data (windowing)
+    """Base class establishing an abstraction for multiple third party drift
+    detection libraries.
+
+    Used to create drift distance measurements for different distance
+    metrics.
+    """
 
     def __init__(self, metrics_config: dict[str, DriftMetric]):
         self.metrics_config = metrics_config
@@ -21,5 +26,6 @@ class DriftDetector(ABC):
         self,
         embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         raise NotImplementedError()

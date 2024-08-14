@@ -25,36 +25,36 @@ classDiagram
         class TimeTrigger {
         }
 
-        class DataAmount {
+        class DataAmountTrigger {
         }
 
     }
 
     namespace complex_triggers {
 
-        class DataDrift {
+        class DataDriftTrigger {
         }
 
-        class CostBased {
+        class CostBasedTrigger {
         }
 
         class _BatchedTrigger {
             <<Abstract>>
         }
 
-        class EnsemblePolicy {
+        class EnsembleTrigger {
         }
 
     }
 
     Trigger <|-- _BatchedTrigger
-    Trigger <|-- EnsemblePolicy
+    Trigger <|-- EnsembleTrigger
 
     Trigger <|-- TimeTrigger
-    Trigger <|-- DataAmount
+    Trigger <|-- DataAmountTrigger
 
-    _BatchedTrigger <|-- DataDrift
-    _BatchedTrigger <|-- CostBased
+    _BatchedTrigger <|-- DataDriftTrigger
+    _BatchedTrigger <|-- CostBasedTrigger
 
-    EnsemblePolicy *-- "n" Trigger
+    EnsembleTrigger *-- "n" Trigger
 ```

@@ -58,7 +58,7 @@ def gen_figure(
         # we only want the pipeline performance (composed of the models active periods stitched together)
         df_adjusted = df_adjusted[df_adjusted[composite_model_variant]]
     else:
-        assert df_adjusted["pipeline_ref"].nunique() == 1
+        assert df_adjusted["pipeline_ref"].nunique() <= 1
         # add the pipeline time series which is the performance of different models stitched together dep.
         # w.r.t which model was active
         pipeline_composite_model = df_adjusted[df_adjusted[composite_model_variant]]

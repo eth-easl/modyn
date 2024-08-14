@@ -7,7 +7,8 @@ from modyn.config.schema.pipeline import (
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
 )
-from modyn.supervisor.internal.triggers.drift.evidently_detector import EvidentlyDriftDetector
+from modyn.config.schema.pipeline.trigger.drift.metric import DynamicThresholdCriterion
+from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
 
 
 def _add_col_prefixes(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
@@ -32,19 +33,20 @@ def df_data_cur(data_cur: np.ndarray) -> pd.DataFrame:
 
 @pytest.fixture
 def model_drift_metric() -> EvidentlyModelDriftMetric:
-    return EvidentlyModelDriftMetric(bootstrap=True)
+    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicThresholdCriterion())
 
 
 @pytest.fixture
 def ratio_drift_metric() -> EvidentlyRatioDriftMetric:
-    return EvidentlyRatioDriftMetric()
+    return EvidentlyRatioDriftMetric(decision_criterion=DynamicThresholdCriterion())
 
 
 @pytest.fixture
 def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
     return EvidentlySimpleDistanceDriftMetric(
-        bootstrap=True,
+        bootstrap=False,
         distance_metric="euclidean",
+        decision_criterion=DynamicThresholdCriterion(),
     )
 
 
@@ -59,17 +61,20 @@ def test_evidently_detect_drift_metric(
     detector = [
         ("model", EvidentlyDriftDetector({"model": model_drift_metric})),
         ("ratio", EvidentlyDriftDetector({"ratio": ratio_drift_metric})),
-        ("simple_distance", EvidentlyDriftDetector({"simple_distance": simple_distance_drift_metric})),
+        (
+            "simple_distance",
+            EvidentlyDriftDetector({"simple_distance": simple_distance_drift_metric}),
+        ),
     ]
     for name, ad in detector:
         assert isinstance(ad, EvidentlyDriftDetector)
 
         # on h0
-        results = ad.detect_drift(df_data_ref, df_data_h0)
+        results = ad.detect_drift(df_data_ref, df_data_h0, False)
         assert not results[name].is_drift
 
         # on current data
-        results = ad.detect_drift(df_data_ref, df_data_cur)
+        results = ad.detect_drift(df_data_ref, df_data_cur, False)
         if name != "model":
             # model makes the wrong decision here
             assert results[name].is_drift
@@ -83,5 +88,5 @@ def test_evidently_detect_drift_metric(
             "simple_distance": simple_distance_drift_metric,
         }
     )
-    results = ad.detect_drift(df_data_ref, df_data_cur)
+    results = ad.detect_drift(df_data_ref, df_data_cur, False)
     assert len(results) == 3

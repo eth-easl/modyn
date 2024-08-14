@@ -47,6 +47,10 @@ trigger:
     ev_mmd:
       id: AlibiDetectMmdDriftMetric
       num_permutations: 1000
+      decision_criterion:
+        id: ThresholdDecisionCriterion
+        threshold: 0.7
+
   aggregation_strategy:
     id: MajorityVote
 selection_strategy:
