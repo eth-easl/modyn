@@ -530,7 +530,7 @@ def run_experiment(
 
     all_pipeline_ids = [p.pipeline.name for p in pipeline_configs]
     logger.info(f"There are {len(all_pipeline_ids)} pipelines in total")
-    logger.info("All pipelines: \n {pipelines}".format(pipelines="\n".join(all_pipeline_ids)))
+    logger.info("All pipelines: \n{pipelines}".format(pipelines="\n".join(all_pipeline_ids)))
 
     current_pipeline_configs = []
     if only_run_pipeline is not None:
