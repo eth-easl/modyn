@@ -120,7 +120,6 @@ class PerformanceTrigger(Trigger):
 
             num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=new_key_ts)
 
-            # TODO: first call might need warmup
             self.performance_tracker.inform_evaluation(
                 num_samples=num_samples,
                 num_misclassifications=num_misclassifications,
@@ -229,6 +228,9 @@ class PerformanceTrigger(Trigger):
         evaluation_scores = {metric.get_name(): metric.get_evaluation_result() for metric in self._metrics}
 
         num_misclassifications = 0  # TODO
+
+        # TODO
+
         return (num_samples, num_misclassifications, evaluation_scores)
 
     def _init_dataloader_info(self) -> None:
