@@ -231,9 +231,14 @@ class DataDriftTrigger(Trigger):
                     is_warmup=False,
                 )
 
-            if triggered:
-                trigger_idx = processing_head_in_batch - 1
-                yield from self._handle_drift_result(triggered, trigger_idx, drift_results, log=log)
+            trigger_idx = processing_head_in_batch - 1
+            yield from self._handle_drift_result(
+                triggered,
+                trigger_idx,
+                drift_results,
+                warmup=not self.warmup_completed,
+                log=log,
+            )
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id
@@ -248,6 +253,7 @@ class DataDriftTrigger(Trigger):
         triggered: bool,
         trigger_idx: int,
         drift_results: dict[str, MetricResult],
+        warmup: bool = False,
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         drift_eval_log = DriftTriggerEvalLog(
@@ -262,13 +268,14 @@ class DataDriftTrigger(Trigger):
             trigger_index=-1,
             drift_results=drift_results,
         )
+        if log:
+            log.evaluations.append(drift_eval_log)
 
-        if triggered:
+        if triggered or warmup:
+            # during the warmup phase we always want to reset the windows as if we detected drift
             self._windows.inform_trigger()
 
-            if log:
-                log.evaluations.append(drift_eval_log)
-
+        if triggered:
             yield trigger_idx
 
     def _run_detection(

@@ -200,6 +200,17 @@ Each decision policy wraps one DriftMetric (e.g. MMD, CVM, KS) and one DecisionC
 
 If a `DecisionPolicy` needs to be calibrated before being able to make a decision, we have to run the `DriftTrigger` with a warm-up period. This warm-up period is defined as a fixed number of intervals where another simple drift policy is used to make decisions while also evaluating the `DecisionPolicy` to calibrate it.
 
+<details>
+<summary><b>Dynamic Threshold Calibration</b></summary>
+
+Warmup intervals are used to calibrate our drift decision policy. While delegating the drift decision to a simple substitute policy, we use the data windows from these calibration time intervals to generate a sequence of drift distances. After finishing the warmup, we can calibrate a dynamic threshold policy on this series.
+
+To derive these warm-up distances, we don't simply use the reference/current window pairs from every warm-up interval, as one might expect. This approach would correspond to calibrating on the diagonal elements of an offline drift-distance matrix. As one might expect, the diagonal elements have distance values close to zero as they contain data from the same time frames and even the exact same data depending on the windowing setup.
+
+Hence, we need to calibrate on distance matrix elements other than the diagonal. We chose to do the distance value generation at the end of the warmup period. By then, the full lower-left submatrix will potentially be computable. We then compute the submatrix column of the warmup-end diagonal element. For that, we need to memorize the first |warmup_intervals| reference windows and compute the distance to the fixed latest current window.
+
+</details>
+
 Within one `DataDriftTrigger` the different results from different `DriftMetrics`'s `DriftDecisionPolicies` can be aggregated to a final decision using a voting mechanism (see `DataDriftTriggerConfig.aggregation_strategy`).
 
 ```mermaid
