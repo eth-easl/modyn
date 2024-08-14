@@ -4,61 +4,6 @@ from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 
-# TODO: accuracy drift detection (like on distances values for drifttrigger)
-# TODO: min_metric_value in a separate criterion class
-
-
-# -------------------------------------------------------------------------------------------------------------------- #
-#                                               ExpectedPerformanceConfig                                              #
-# -------------------------------------------------------------------------------------------------------------------- #
-
-
-class StaticExpectedPerformanceConfig(ModynBaseModel):
-    id: Literal["StaticExpectedPerformance"] = Field("StaticExpectedPerformance")
-    # TODO: assumption: higher is better
-    metric_value: float = Field(
-        description=(
-            "The expected target metric value that the model should achieve. If the performance isn't reached, "
-            "more triggers will be executed."
-        )
-    )
-
-
-class DynamicExpectedPerformanceConfig(ModynBaseModel):
-    id: Literal["DynamicExpectedPerformance"] = Field("DynamicExpectedPerformance")
-    num_warmup_evaluation: int = Field(
-        description=(
-            "For how many warmup triggers should we use a `StaticExpectedPerformanceConfig` in order to "
-            "calibrate the expected performance."
-        )
-    )
-    warmup: StaticExpectedPerformanceConfig = Field(description="The warmup configuration.")
-
-    # after warmup:
-    trigger_evaluation_averaging_window_size: int = Field(
-        3,
-        description=(
-            "How many of the historic evaluations directly after triggers should we average "
-            "to get the expected performance."
-        ),
-    )
-
-
-ExpectedPerformanceConfig = Annotated[
-    StaticExpectedPerformanceConfig | DynamicExpectedPerformanceConfig,
-    Field(discriminator="id"),
-]
-
-
-class _ExpectedPerformanceMixin(ModynBaseModel):
-    expected_performance: ExpectedPerformanceConfig = Field(
-        description=(
-            "The expected performance of the model used to calculate the avoidable misclassifications which "
-            "make up the regret of not triggering."
-        )
-    )
-
-
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                 PerformanceCriterion                                                 #
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -76,16 +21,11 @@ class StaticPerformanceThresholdCriterion(ModynBaseModel):
     )
 
 
-# TODO: warmup needed
-class DynamicPerformanceThresholdCriterion(_ExpectedPerformanceMixin):
+class DynamicPerformanceThresholdCriterion(ModynBaseModel):
     """Triggers after comparison of current performance with the a rolling
     average of historic performances after triggers."""
 
     id: Literal["DynamicPerformanceThresholdCriterion"] = Field("DynamicPerformanceThresholdCriterion")
-    rolling_average_window_size: int = Field(
-        3,
-        description="How many of the historic evaluations directly after triggers should we average.",
-    )
     allowed_deviation: float = Field(
         0.05,
         description=(
@@ -103,7 +43,7 @@ class DynamicPerformanceThresholdCriterion(_ExpectedPerformanceMixin):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-class _NumberAvoidableMisclassificationCriterion(_ExpectedPerformanceMixin):
+class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
     """Trigger based on the cumulated number of avoidable misclassifications.
 
     An avoidable misclassification is a misclassification that would have been avoided if a trigger would have been.
@@ -118,11 +58,26 @@ class _NumberAvoidableMisclassificationCriterion(_ExpectedPerformanceMixin):
     the cumulated number of misclassifications will trigger a trigger.
     """
 
+    expected_accuracy: float | None = Field(
+        None,
+        description=(
+            "The expected accuracy of the model. Used to estimate the number of avoidable misclassifications. "
+            "If not set, the expected performance will be inferred dynamically with a rolling average."
+        ),
+    )
+
 
 class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
     id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
     avoidable_misclassification_threshold: float = Field(
         description="The threshold for the misclassification rate that will invoke a trigger."
+    )
+    allow_reduction: bool = Field(
+        False,
+        description=(
+            "If True, the cumulated number of misclassifications will be lowered through evaluations that are "
+            "better than the expected performance."
+        ),
     )
 
 

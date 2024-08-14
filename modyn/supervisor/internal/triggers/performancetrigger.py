@@ -59,8 +59,7 @@ class PerformanceTrigger(Trigger):
         )  # allows to detect drift in a fixed interval
 
         self.data_density = DataDensityTracker(config.data_density_window_size)
-        self.performance_tracker = PerformanceTracker(10)  # TODO: variable
-        # TODO: insertion
+        self.performance_tracker = PerformanceTracker(config.performance_triggers_window_size)
 
         self._triggered_once = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
@@ -96,9 +95,7 @@ class PerformanceTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = (
-                self.config.detection_interval_data_points
-            )
+            self._sample_left_until_detection = self.config.detection_interval_data_points
 
             # The first ever detection will always trigger
             if not self._triggered_once:
@@ -118,6 +115,8 @@ class PerformanceTrigger(Trigger):
                 # yield from self._handle_drift_result(
                 #     triggered, trigger_idx, drift_results, log=log
                 # )
+
+            # TODO: dicison policy needs inform of trigger
 
     def inform_previous_model(self, previous_model_id: int) -> None:
         self.previous_model_id = previous_model_id

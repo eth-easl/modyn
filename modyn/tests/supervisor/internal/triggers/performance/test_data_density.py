@@ -45,9 +45,7 @@ def test_inform_data_window_rollover() -> None:
     tracker.inform_data([(1, 10), (2, 20), (3, 30)])
     tracker.inform_data([(4, 40), (5, 50), (6, 60)])
     tracker.inform_data([(7, 70), (8, 80), (9, 90)])
-    tracker.inform_data(
-        [(10, 100), (11, 110), (12, 120)]
-    )  # This should push out the first batch
+    tracker.inform_data([(10, 100), (11, 110), (12, 120)])  # This should push out the first batch
     assert len(tracker.batch_memory) == 3
     assert tracker.batch_memory[0] == (
         3,
@@ -76,8 +74,10 @@ def test_forecast_density_ridge_regression() -> None:
     tracker.inform_data([(7, 70), (8, 80), (9, 90)])
     tracker.inform_data([(10, 100), (11, 110), (12, 120)])
     tracker.inform_data([(13, 130), (14, 140), (15, 150)])
-    density = tracker.forecast_density("lookahead")
-    assert isinstance(density, float)  # Since it should run ridge regression
+    tracker.inform_data([(16, 160), (17, 170), (18, 180)])
+    density = tracker.forecast_density("ridge_regression")
+    assert isinstance(density, float)
+    density = tracker.forecast_density("rolling_average")
 
 
 def test_forecast_density_with_varied_batches() -> None:
@@ -88,6 +88,6 @@ def test_forecast_density_with_varied_batches() -> None:
     assert tracker.previous_batch_samples() == 3
     tracker.inform_data([(6, 60), (7, 70)])
     assert tracker.previous_batch_samples() == 2
-    density = tracker.forecast_density("lookahead")
+    density = tracker.forecast_density()
     assert isinstance(density, float)
     assert density > 0  # Ensure a positive density value

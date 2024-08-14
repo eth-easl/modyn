@@ -1,7 +1,8 @@
 from collections import deque
-from typing import Literal
 
 from sklearn import linear_model
+
+from modyn.const.types import ForecastingMethod
 
 
 class DataDensityTracker:
@@ -51,9 +52,7 @@ class DataDensityTracker:
         """Checks if the tracker has enough data for a forecast."""
         return len(self.batch_memory) == 0
 
-    def forecast_density(
-        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
-    ) -> float:
+    def forecast_density(self, method: ForecastingMethod = "ridge_regression") -> float:
         """Forecasts the data density based on the current memory.
 
         Returns:
@@ -62,11 +61,9 @@ class DataDensityTracker:
 
         assert len(self.batch_memory) > 0, "No data in memory, calibration needed."
 
-        ratio_series = [
-            num_samples / num_seconds for num_samples, num_seconds in self.batch_memory
-        ]
+        ratio_series = [num_samples / num_seconds for num_samples, num_seconds in self.batch_memory]
 
-        if len(self.batch_memory) < 5 or mode == "hindsight":
+        if len(self.batch_memory) < 5 or method == "rolling_average":
             return sum(ratio_series) / len(ratio_series)
 
         # Ridge regression estimator for scalar time series forecasting

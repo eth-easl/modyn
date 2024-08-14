@@ -7,7 +7,7 @@ from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
 )
-from modyn.const.types import TriggerEvaluationMode
+from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 
 
 class PerformanceTriggerEvaluationConfig(ModynBaseModel):
@@ -54,9 +54,23 @@ class PerformanceTriggerConfig(ModynBaseModel):
         min_length=1,
     )
 
-    mode: TriggerEvaluationMode = Field("hindsight", description="The evaluation mode of the trigger.")
+    mode: TriggerEvaluationMode = Field(
+        "hindsight",
+        description="Whether to also consider forecasted future performance in the drift decision.",
+    )
+    forecasting_method: ForecastingMethod = Field(
+        "ridge_regression",
+        description=(
+            "The method to generate the forecasted performance and data density estimates. "
+            "Only used for lookahead mode."
+        ),
+    )
 
     data_density_window_size: int = Field(
         0,
-        description="The window size for the data density estimation. Only used for Number",
+        description="The window size for the data density estimation. Only used for lookahead mode.",
+    )
+    performance_triggers_window_size: int = Field(
+        10,
+        description="The maximum number of evaluations after triggers to consider for computing the expect performance.",
     )

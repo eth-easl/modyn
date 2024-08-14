@@ -1,18 +1,21 @@
 from collections import deque
-from typing import Literal
 
-from sklearn import linear_model
+from modyn.const.types import ForecastingMethod
+from modyn.supervisor.internal.utils.forecast import forecast_next_performance
 
 
 class PerformanceTracker:
-    """Observes a stream of performance evaluation and estimates performance on
-    the next chunk.
+    """Observes a stream of performance evaluations and estimates performance
+    on the next chunk.
 
     While no trigger happens, the estimated performances is calculated
     from the series of evaluations after every of the last n-triggers.
     The next observed performance is also forecasted from the series of
     evaluations since the last trigger. When a trigger happens, this
     series of observations evaluations is reset.
+
+    Provides both the wrapped performance metrics as well as accuracy
+    information.
     """
 
     def __init__(self, trigger_eval_window_size: int) -> None:
@@ -20,75 +23,80 @@ class PerformanceTracker:
         Args:
             window_size: How many evaluations after triggers should be kept in memory.
         """
-        self.trigger_evaluation_memory: deque[float] = deque(
-            maxlen=trigger_eval_window_size
-        )
-        """Memory of the last `window_size` evaluations after triggers."""
+        self.trigger_evaluation_memory: deque[tuple[int, int, float]] = deque(maxlen=trigger_eval_window_size)
+        """Memory of the last `window_size` evaluations after triggers with
+        their number of samples, misclassifications and performance.
 
-        self.since_last_trigger: list[float] = list()
+        After every trigger, the memory is updated with the new
+        evaluation.
+        """
 
-    def inform_evaluation(self, evaluation: float) -> None:
+        self.since_last_trigger: list[tuple[int, int, float]] = list()
+        """Memory of the evaluations since the last trigger with their number
+        of samples, misclassifications and performance.
+
+        Upon trigger, this memory is reset.
+        """
+
+    def inform_evaluation(self, num_samples: int, num_misclassifications: int, evaluation: float) -> None:
         """Informs the tracker about a new evaluation."""
-        self.since_last_trigger.append(evaluation)
+        self.since_last_trigger.append((num_samples, num_misclassifications, evaluation))
 
-    def inform_trigger(self, evaluation: float) -> None:
+    def inform_trigger(self, num_samples: int, num_misclassifications: int, evaluation: float) -> None:
         """Informs the tracker about a new trigger and resets the memory."""
-        self.trigger_evaluation_memory.append(evaluation)
+        self.trigger_evaluation_memory.append((num_samples, num_misclassifications, evaluation))
 
         # first element in the new series is the performance right after trigger
-        self.since_last_trigger = [evaluation]
+        self.since_last_trigger = [(num_samples, num_misclassifications, evaluation)]
 
-    def forecast_expected_performance(
-        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
-    ) -> float:
-        """Forecasts the performance based on the current memory of evaluations right after triggers.
+    def previous_batch_num_misclassifications(self) -> int:
+        """Returns the number of misclassifications in the previous batch."""
+        return self.since_last_trigger[-1][1]
+
+    def forecast_expected_accuracy(self, method: ForecastingMethod = "ridge_regression") -> float:
+        """Forecasts the accuracy based on the current memory of evaluations
+        right after triggers.
+
+        Returns:
+            The forecasted accuracy.
+        """
+        return forecast_next_performance(
+            observations=[1 - p[1] / p[0] for p in self.trigger_evaluation_memory],
+            method=method,
+        )
+
+    def forecast_next_accuracy(self, method: ForecastingMethod = "ridge_regression") -> float:
+        """Forecasts the next accuracy based on the memory of evaluations since
+        the last trigger.
+
+        Returns:
+            The forecasted (observed) accuracy.
+        """
+        return max(
+            0,
+            min(
+                1,
+                forecast_next_performance(
+                    observations=[1 - p[1] / p[0] for p in self.since_last_trigger],
+                    method=method,
+                ),
+            ),
+        )
+
+    def forecast_expected_performance(self, method: ForecastingMethod = "ridge_regression") -> float:
+        """Forecasts the performance based on the current memory of evaluations
+        right after triggers.
 
         Returns:
             The forecasted performance.
         """
+        return forecast_next_performance(observations=[p[2] for p in self.trigger_evaluation_memory], method=method)
 
-        assert (
-            len(self.trigger_evaluation_memory) > 0
-        ), "No trigger happened yet. Calibration needed."
-
-        if len(self.since_last_trigger) < 5 or mode == "hindsight":
-            return sum(self.trigger_evaluation_memory) / len(
-                self.trigger_evaluation_memory
-            )
-
-        # Ridge regression estimator for scalar time series forecasting
-        reg = linear_model.Ridge(alpha=0.5)
-        reg.fit(
-            [[i] for i in range(len(self.trigger_evaluation_memory))],
-            self.trigger_evaluation_memory,
-        )
-        return reg.predict([[len(self.trigger_evaluation_memory)]])[0]
-
-    def forecast_next_performance(
-        self, mode: Literal["hindsight", "lookahead"] = "lookahead"
-    ) -> float:
-        """Forecasts the next performance based on the memory of evaluations since the last trigger.
+    def forecast_next_performance(self, method: ForecastingMethod = "ridge_regression") -> float:
+        """Forecasts the next performance based on the memory of evaluations
+        since the last trigger.
 
         Returns:
             The forecasted (observed) performance.
         """
-
-        if len(self.since_last_trigger) == 0:
-            assert self.trigger_evaluation_memory, "No trigger happened yet."
-            return self.trigger_evaluation_memory[-1]
-
-        if len(self.since_last_trigger) < 5 or mode == "hindsight":
-            return sum(self.since_last_trigger) / len(self.since_last_trigger)
-
-        # Ridge regression estimator for scalar time series forecasting
-        reg = linear_model.Ridge(alpha=0.5)
-        reg.fit(
-            [[i] for i in range(len(self.since_last_trigger))], self.since_last_trigger
-        )
-        return reg.predict([[len(self.since_last_trigger)]])[0]
-
-
-# TODO: differentiate between decision mode forecast and hindsight and the forcasting method (avg, ridge regression)
-# TODO: next
-# TODO: next
-# TODO: next
+        return forecast_next_performance(observations=[p[2] for p in self.since_last_trigger], method=method)
