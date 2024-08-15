@@ -1,4 +1,5 @@
 
+set -x
 directory=/scratch/xianma/sigmod/modyntmp
 # map the local path to /tmp/hahaha in the docker container and change permission to 777
 docker run -it --rm  -v $directory:/tmp/hahaha postgres:15.2-alpine chmod -R 777 /tmp/hahaha
