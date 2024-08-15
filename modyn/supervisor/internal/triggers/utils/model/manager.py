@@ -11,10 +11,10 @@ from modyn.utils import dynamic_module_import
 logger = logging.getLogger(__name__)
 
 
-class EmbeddingEncoder:
-    """The EmbeddingEncoder stores a model and its metadata.
+class ModelManager:
+    """The ModelManager stores a model and its metadata.
 
-    DataDriftTrigger uses EmbeddingEncoder to run the model.
+    DataDriftTrigger uses ModelManager to run the model.
     """
 
     def __init__(
