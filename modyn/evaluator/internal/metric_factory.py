@@ -37,10 +37,9 @@ class MetricFactory:
         raise NotImplementedError(f"Metric {parsed_metric_config.name} is not available!")
 
     @staticmethod
-    def prepare_metrics(metrics: list[AbstractEvaluationMetric]) -> bool:
-        contains_holistic = False
-        for metric in metrics:
+    def prepare_metrics(metrics: dict[str, AbstractEvaluationMetric]) -> bool:
+        for metric in metrics.values():
             metric.deserialize_evaluation_transformer()
             if isinstance(metric, AbstractHolisticMetric):
                 return True
-        return contains_holistic
+        return False

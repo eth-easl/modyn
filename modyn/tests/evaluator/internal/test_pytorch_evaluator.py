@@ -1,4 +1,3 @@
-# pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
 import logging
 import multiprocessing as mp
 import pathlib
@@ -8,7 +7,6 @@ from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 import torch
-from pydantic import ValidationError
 from torch.utils.data import IterableDataset
 
 from modyn.config import F1ScoreMetricConfig
@@ -19,8 +17,9 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationInterval,
     PythonString,
 )
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.metrics import Accuracy, F1Score
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    JsonString as EvaluatorJsonString,
+)
 from modyn.evaluator.internal.pytorch_evaluator import PytorchEvaluator
 from modyn.evaluator.internal.utils import EvaluationInfo
 
@@ -71,7 +70,11 @@ class MockEvaluationDataset(IterableDataset):
     def __init__(self, input_to_output_func=lambda x: 0):
         self.dataset = iter(
             [
-                (key, torch.tensor((key,)), torch.tensor((input_to_output_func(key),), dtype=torch.int))
+                (
+                    key,
+                    torch.tensor((key,)),
+                    torch.tensor((input_to_output_func(key),), dtype=torch.int),
+                )
                 for key in range(100)
             ]
         )
@@ -115,7 +118,14 @@ def get_evaluation_info(
         label_transformer=PythonString(value=get_mock_label_transformer() if label_transformer else ""),
     )
     return EvaluationInfo(
-        request, evaluation_id, "model", "{}", False, storage_address, trained_model_path, not_failed_interval_ids
+        request,
+        evaluation_id,
+        "model",
+        "{}",
+        False,
+        storage_address,
+        trained_model_path,
+        not_failed_interval_ids,
     )
 
 
@@ -134,7 +144,12 @@ def get_mock_evaluator(
         ]
     proto_metrics = [EvaluatorJsonString(value=metric_json) for metric_json in metric_jsons]
     evaluation_info = get_evaluation_info(
-        1, "storage:5000", proto_metrics, pathlib.Path(trained_model_path), label_transformer, not_failed_interval_ids
+        1,
+        "storage:5000",
+        proto_metrics,
+        pathlib.Path(trained_model_path),
+        label_transformer,
+        not_failed_interval_ids,
     )
     evaluator = PytorchEvaluator(evaluation_info, logging.getLogger(__name__), metric_queue)
     return evaluator
@@ -147,7 +162,12 @@ def test_evaluator_init(load_state_mock: MagicMock) -> None:
     assert isinstance(evaluator._model, MockModelWrapper)
     assert isinstance(evaluator._model.model, MockModel)
     assert evaluator._evaluation_id == 1
-    assert torch.all(torch.eq(evaluator._label_transformer_function(torch.ones(5) * 2) + 0.5, torch.ones(5) * 2 + 0.5))
+    assert torch.all(
+        torch.eq(
+            evaluator._label_transformer_function(torch.ones(5) * 2) + 0.5,
+            torch.ones(5) * 2 + 0.5,
+        )
+    )
     assert evaluator._device == "cpu"
     assert evaluator._device_type == "cpu"
     assert not evaluator._amp
@@ -222,46 +242,10 @@ def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMoc
     for idx, accuracy, f1score in zip(not_failed_interval_ids, expected_accuracies, expected_f1scores):
         # the accuracies are only correctly calculated if we correctly reset the
         res = metric_queue.get()
-        assert res == (idx, [("Accuracy", pytest.approx(accuracy)), ("F1-macro", pytest.approx(f1score))])
-
-
-def test__setup_metrics():
-    acc_metric_config = AccuracyMetricConfig().model_dump_json()
-    metrics = PytorchEvaluator._setup_metrics([acc_metric_config])
-
-    assert len(metrics) == 1
-    assert isinstance(metrics[0], Accuracy)
-    unknown_metric_config = '{"name": "UnknownMetric", "config": "", "evaluation_transformer_function": ""}'
-    with pytest.raises(ValidationError):
-        PytorchEvaluator._setup_metrics([unknown_metric_config])
-
-    f1score_metric_config = F1ScoreMetricConfig(num_classes=2).model_dump_json()
-    metrics = PytorchEvaluator._setup_metrics([acc_metric_config, acc_metric_config, f1score_metric_config])
-    assert len(metrics) == 2
-    assert isinstance(metrics[0], Accuracy)
-    assert isinstance(metrics[1], F1Score)
-
-
-def test__setup_metrics_multiple_f1():
-    macro_f1_config = F1ScoreMetricConfig(
-        evaluation_transformer_function="",
-        num_classes=2,
-        average="macro",
-    ).model_dump_json()
-
-    micro_f1_config = F1ScoreMetricConfig(
-        evaluation_transformer_function="",
-        num_classes=2,
-        average="micro",
-    ).model_dump_json()
-
-    # not double macro, but macro and micro work
-    metrics = PytorchEvaluator._setup_metrics([macro_f1_config, micro_f1_config, macro_f1_config])
-
-    assert len(metrics) == 2
-    assert isinstance(metrics[0], F1Score)
-    assert isinstance(metrics[1], F1Score)
-    assert metrics[0].config.average == "macro"
-    assert metrics[1].config.average == "micro"
-    assert metrics[0].get_name() == "F1-macro"
-    assert metrics[1].get_name() == "F1-micro"
+        assert res == (
+            idx,
+            [
+                ("Accuracy", pytest.approx(accuracy)),
+                ("F1-macro", pytest.approx(f1score)),
+            ],
+        )

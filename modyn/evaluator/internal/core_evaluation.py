@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import torch
@@ -14,26 +15,36 @@ from modyn.evaluator.internal.metrics.abstract_evaluation_metric import (
 )
 
 
-def setup_metrics(metric_configs: list[MetricConfig]) -> list[AbstractEvaluationMetric]:
-    metrics = []
+def setup_metrics(
+    metric_configs: list[MetricConfig],
+) -> dict[str, AbstractEvaluationMetric]:
+    metrics: dict[str, AbstractEvaluationMetric] = {}
     # need to make sure that the metric names are unique as they are used for identification.
-    metric_names = set()
     for config in metric_configs:
         metric = MetricFactory.get_evaluation_metric(config)
-        if metric.get_name() not in metric_names:
-            metrics.append(metric)
-            metric_names.add(metric.get_name())
+        if metric.get_name() not in metrics:
+            metrics[metric.get_name()] = metric
+        else:
+            raise ValueError(f"Duplicate metric name {metric.get_name()} found in the configuration")
     return metrics
 
 
+@dataclass
+class EvaluationResult:
+    num_samples: int
+    metric_results: dict[str, float]
+    metrics_data: dict[str, AbstractEvaluationMetric]
+
+
+# pylint: disable=too-many-locals, too-many-branches
 def perform_evaluation(
     model: Any,
     dataloader: torch.utils.data.DataLoader,
     device: str,
-    metrics: list[AbstractEvaluationMetric],
-    label_transformer_function: Callable | None,
+    metrics: dict[str, AbstractEvaluationMetric],
+    label_transformer_function: Callable | None = None,
     amp: bool = False,
-) -> tuple[int, list[tuple[str, float]]]:
+) -> EvaluationResult:
     device_type = "cuda" if "cuda" in device else "cpu"
     contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
 
@@ -63,7 +74,7 @@ def perform_evaluation(
             with torch.autocast(device_type, enabled=amp):
                 output = model(data)
 
-                for metric in metrics:
+                for metric in metrics.values():
                     if isinstance(metric, AbstractDecomposableMetric):
                         metric.evaluate_batch(target, output, batch_size)
 
@@ -78,12 +89,12 @@ def perform_evaluation(
         y_true = torch.cat(y_true)
         y_score = torch.cat(y_score)
 
-        for metric in metrics:
+        for metric in metrics.values():
             if isinstance(metric, AbstractHolisticMetric):
                 metric.evaluate_dataset(y_true, y_score, num_samples)
 
-    metric_result: list[tuple[str, float]] = []
-    for metric in metrics:
-        metric_result.append((metric.get_name(), metric.get_evaluation_result()))
+    metric_result: dict[str, float] = {
+        metric_name: metric.get_evaluation_result() for metric_name, metric in metrics.items()
+    }
 
-    return num_samples, metric_result
+    return EvaluationResult(num_samples=num_samples, metric_results=metric_result, metrics_data=metrics)

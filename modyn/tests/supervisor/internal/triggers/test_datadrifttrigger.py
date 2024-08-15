@@ -87,7 +87,7 @@ def noop_dataloader_info_constructor_mock(
 def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     trigger = DataDriftTrigger(drift_trigger_config)
     assert trigger.config.detection_interval_data_points == 42
-    assert trigger.previous_model_id is None
+    assert trigger.most_recent_model_id is None
     assert not trigger.model_refresh_needed
     assert trigger.config.windowing_strategy.id == "AmountWindowingStrategy"
 
@@ -120,7 +120,7 @@ def test_inform_new_model_id(drift_trigger_config: DataDriftTriggerConfig) -> No
     trigger.model_refresh_needed = False
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     trigger.inform_new_model(42)
-    assert trigger.previous_model_id == 42
+    assert trigger.most_recent_model_id == 42
     assert trigger.model_refresh_needed
 
 

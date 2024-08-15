@@ -34,7 +34,7 @@ class PerformanceTracker:
         evaluation.
         """
 
-        self.since_last_trigger: list[tuple[int, int, dict[str, float]]] = list()
+        self.since_last_trigger: list[tuple[int, int, dict[str, float]]] = []
         """Memory of the evaluations since the last trigger with their number
         of samples, misclassifications and evaluation scores for different
         metrics.

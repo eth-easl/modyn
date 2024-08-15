@@ -48,7 +48,6 @@ class PerformanceDecisionPolicy(ABC):
 
     def inform_trigger(self) -> None:
         """Inform the decision policy that a trigger has been invoked."""
-        pass
 
 
 class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
@@ -118,6 +117,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
         self.config = config
         self.cumulated_avoidable_misclassifications = 0
 
+    # pylint: disable=too-many-locals
     def evaluate_decision(
         self,
         update_interval: int,
@@ -174,7 +174,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
         if mode == "hindsight":
             return self.cumulated_avoidable_misclassifications >= self.config.avoidable_misclassification_threshold
 
-        elif mode == "lookahead":
+        if mode == "lookahead":
             # past misclassifications already exceed the threshold, forecasting not needed
             if self.cumulated_avoidable_misclassifications >= self.config.avoidable_misclassification_threshold:
                 return True
@@ -195,8 +195,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
 
             return forecasted_misclassifications >= self.config.avoidable_misclassification_threshold
 
-        else:
-            raise ValueError(f"Unknown mode: {mode}")
+        raise ValueError(f"Unknown mode: {mode}")
 
     def inform_trigger(self) -> None:
         """Resets the cumulated avoidable misclassifications."""

@@ -93,7 +93,7 @@ class PytorchEvaluator:
         self._info(f"Process {os.getpid()} starts evaluation.")
         metrics = setup_metrics(self._eval_info.raw_metrics)
 
-        num_samples, metric_result = perform_evaluation(
+        eval_result = perform_evaluation(
             self._model.model,
             dataloader,
             self._device,
@@ -103,9 +103,9 @@ class PytorchEvaluator:
         )
 
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
-        self._metric_result_queue.put((interval_idx, metric_result), timeout=30)
+        self._metric_result_queue.put((interval_idx, eval_result.metric_results.items()), timeout=30)
         self._info(
-            f"Finished evaluation of {interval_idx}: {num_samples} samples. "
+            f"Finished evaluation of {interval_idx}: {eval_result.num_samples} samples. "
             f"Queue size = {self._metric_result_queue.qsize()}"
         )
 

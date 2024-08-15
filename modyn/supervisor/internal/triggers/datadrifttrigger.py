@@ -57,7 +57,7 @@ class DataDriftTrigger(Trigger):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self.previous_model_id: int | None = None
+        self.most_recent_model_id: int | None = None
         self.model_refresh_needed: bool = False
 
         self.dataloader_info: DataLoaderInfo | None = None
@@ -240,8 +240,8 @@ class DataDriftTrigger(Trigger):
                 log=log,
             )
 
-    def inform_new_model(self, previous_model_id: int) -> None:
-        self.previous_model_id = previous_model_id
+    def inform_new_model(self, most_recent_model_id: int) -> None:
+        self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
 
     # ---------------------------------------------------------------------------------------------------------------- #
@@ -291,7 +291,7 @@ class DataDriftTrigger(Trigger):
         Get the dataloaders, download the model manager model if necessary,
         compute embeddings of current and reference data, then run detection on the embeddings.
         """
-        assert self.previous_model_id is not None
+        assert self.most_recent_model_id is not None
         assert self.dataloader_info is not None
         assert self.model_downloader is not None
         assert self.context and self.context.pipeline_config is not None
@@ -304,11 +304,11 @@ class DataDriftTrigger(Trigger):
 
         current_dataloader = prepare_trigger_dataloader_fixed_keys(self.dataloader_info, [key for key, _ in current])
 
-        # Download previous model as model manager
+        # Download most recent model as model manager
         # TODO(417) Support custom model as model manager
         if self.model_refresh_needed:
             self.model_manager = self.model_downloader.setup_manager(
-                self.previous_model_id, self.context.pipeline_config.training.device
+                self.most_recent_model_id, self.context.pipeline_config.training.device
             )
             self.model_refresh_needed = False
 

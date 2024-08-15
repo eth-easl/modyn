@@ -44,7 +44,6 @@ class Trigger(ABC):
             triggering_indices: List of all indices that trigger training
         """
 
-    # TODO: rename to "new_model"
-    def inform_new_model(self, previous_model_id: int) -> None:
-        """The supervisor informs the Trigger about the model_id of the
-        previous trigger."""
+    def inform_new_model(self, most_recent_model_id: int) -> None:
+        """The supervisor informs the Trigger about the model_id of the new
+        trigger."""

@@ -12,6 +12,7 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
 )
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
+from modyn.evaluator.internal.metrics.accuracy import Accuracy
 from modyn.supervisor.internal.triggers.models import (
     PerformanceTriggerEvalLog,
     TriggerPolicyEvaluationLog,
@@ -59,7 +60,7 @@ class PerformanceTrigger(Trigger):
 
         self.config = config
         self.context: TriggerContext | None = None
-        self.previous_model_id: int | None = None
+        self.most_recent_model_id: int | None = None
 
         self.dataloader_info: DataLoaderInfo | None = None
         self.model_downloader: ModelDownloader | None = None
@@ -92,6 +93,7 @@ class PerformanceTrigger(Trigger):
         new_data: list[tuple[int, int, int]],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
+        # pylint: disable=too-many-locals
         new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
 
         # index of the first unprocessed data point in the batch
@@ -176,8 +178,8 @@ class PerformanceTrigger(Trigger):
                 self._last_data_interval = new_key_ts
                 yield trigger_idx
 
-    def inform_new_model(self, previous_model_id: int) -> None:
-        self.previous_model_id = previous_model_id
+    def inform_new_model(self, most_recent_model_id: int) -> None:
+        self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
 
         # Perform an evaluation of the NEW model on the last evaluation interval, we will derive expected performance
@@ -198,7 +200,7 @@ class PerformanceTrigger(Trigger):
 
     def _run_evaluation(self, interval_data: list[tuple[int, int]]) -> tuple[int, int, dict[str, float]]:
         """Run the evaluation on the given interval data."""
-        assert self.previous_model_id is not None
+        assert self.most_recent_model_id is not None
         assert self.dataloader_info is not None
         assert self.model_downloader is not None
         assert self.context and self.context.pipeline_config is not None
@@ -207,16 +209,17 @@ class PerformanceTrigger(Trigger):
             self.dataloader_info, [key for key, _ in interval_data]
         )
 
-        # Download previous model as model manager
+        # Download most recent model as model manager
         if self.model_refresh_needed:
             self.model_manager = self.model_downloader.setup_manager(
-                self.previous_model_id, self.context.pipeline_config.training.device
+                self.most_recent_model_id, self.context.pipeline_config.training.device
             )
             self.model_refresh_needed = False
 
         # Run evaluation
         assert self.model_manager is not None
-        num_samples, eval_results = perform_evaluation(
+
+        eval_results = perform_evaluation(
             model=self.model_manager,
             dataloader=evaluation_dataloader,
             device=self.config.evaluation.device,
@@ -225,13 +228,15 @@ class PerformanceTrigger(Trigger):
             amp=False,
         )
 
-        evaluation_scores = {metric.get_name(): metric.get_evaluation_result() for metric in self._metrics}
+        evaluation_scores = {
+            metric_name: metric.get_evaluation_result() for metric_name, metric in self._metrics.items()
+        }
 
-        num_misclassifications = 0  # TODO
+        accuracy_metric = eval_results.metrics_data["Accuracy"]
+        assert isinstance(accuracy_metric, Accuracy)
+        num_misclassifications = accuracy_metric.samples_seen - accuracy_metric.total_correct
 
-        # TODO
-
-        return (num_samples, num_misclassifications, evaluation_scores)
+        return (eval_results.num_samples, num_misclassifications, evaluation_scores)
 
     def _init_dataloader_info(self) -> None:
         assert self.context

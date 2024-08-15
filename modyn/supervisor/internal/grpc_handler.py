@@ -24,8 +24,12 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluationStatusRequest,
     EvaluationStatusResponse,
 )
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import JsonString as EvaluatorJsonString
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import PythonString as EvaluatorPythonString
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    JsonString as EvaluatorJsonString,
+)
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    PythonString as EvaluatorPythonString,
+)
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2_grpc import EvaluatorStub
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     DataInformRequest,
@@ -163,6 +167,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         if not self.connected_to_storage:
             raise ConnectionError("Tried to fetch data from storage, but no connection was made.")
 
+        # pylint: disable=c-extension-no-member
         response: GetCurrentTimestampResponse = self.storage.GetCurrentTimestamp(
             storage_pb2.google_dot_protobuf_dot_empty__pb2.Empty()  # type: ignore
         )
@@ -284,7 +289,9 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         has_exception = False
         while True:
             for attempt in Retrying(
-                stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+                stop=stop_after_attempt(5),
+                wait=wait_random_exponential(multiplier=1, min=2, max=60),
+                reraise=True,
             ):
                 with attempt:
                     try:
