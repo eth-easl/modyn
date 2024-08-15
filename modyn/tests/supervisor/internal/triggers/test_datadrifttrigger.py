@@ -26,11 +26,11 @@ from modyn.config.schema.pipeline.trigger.simple.data_amount import (
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
-from modyn.supervisor.internal.triggers.drift.embedding.model.downloader import (
-    ModelDownloader,
-)
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
-from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
+from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
+    DataLoaderInfo,
+)
+from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42

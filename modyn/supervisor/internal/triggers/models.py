@@ -24,7 +24,7 @@ class PerformanceTriggerEvalLog(ModynBaseModel):
     evaluation_interval: tuple[int, int]  # timestamps of the current detection interval
     num_samples: int = Field(0, description="The number of data points in the evaluation interval.")
     num_misclassifications: int = Field(0, description="The number of misclassifications in the evaluation interval.")
-    evaluation_scores: dict[str, bool] = Field(
+    evaluation_scores: dict[str, float] = Field(
         default_factory=dict,
         description="The evaluation scores for the evaluation interval for different metrics keyed by their name.",
     )

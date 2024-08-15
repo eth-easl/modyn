@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
@@ -21,9 +21,17 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
 
     device: str = Field(description="The device the model should be put on.")
     dataset: EvalDataConfig = Field(description="The dataset on which the model is evaluated.")
-    label_transformer_function: str = Field(
-        "", description="Function used to transform the label (tensors of integers)."
+    label_transformer_function: str | None = Field(
+        None, description="Function used to transform the label (tensors of integers)."
     )
+
+    @field_validator("dataset")
+    @classmethod
+    def validate_metrics(cls, dataset: EvalDataConfig) -> EvalDataConfig:
+        """Assert that we have at least the accuracy metric."""
+        if not any(metric.name == "Accuracy" for metric in dataset.metrics):
+            raise ValueError("The accuracy metric is required for the performance trigger.")
+        return dataset
 
 
 class _InternalPerformanceTriggerConfig(ModynBaseModel):

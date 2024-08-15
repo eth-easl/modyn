@@ -75,7 +75,7 @@ class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
 
 class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
     id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
-    avoidable_misclassification_threshold: float = Field(
+    avoidable_misclassification_threshold: int = Field(
         description="The threshold for the misclassification rate that will invoke a trigger."
     )
     allow_reduction: bool = Field(

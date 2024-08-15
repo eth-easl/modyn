@@ -77,10 +77,19 @@ class PerformanceTrigger(Trigger):
         self._triggered_once = False
         self.model_refresh_needed = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
-        self._last_data_interval: list[tuple[int, int]] = []
+        self._last_detection_interval: list[tuple[int, int]] = []
 
-        self._label_transformer_function = deserialize_function(
-            config.evaluation.label_transformer_function, LABEL_TRANSFORMER_FUNC_NAME
+        self._leftover_data: list[tuple[int, int]] = []
+        """Stores data that was not processed in the last inform call because
+        the detection interval was not filled."""
+
+        self._label_transformer_function = (
+            deserialize_function(
+                config.evaluation.label_transformer_function,
+                LABEL_TRANSFORMER_FUNC_NAME,
+            )
+            if config.evaluation.label_transformer_function
+            else None
         )
 
     def init_trigger(self, context: TriggerContext) -> None:
@@ -94,7 +103,9 @@ class PerformanceTrigger(Trigger):
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         # pylint: disable=too-many-locals
-        new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
+        new_key_ts = self._leftover_data + [(key, timestamp) for key, timestamp, _ in new_data]
+        # reappending the leftover data to the new data requires incrementing the sample left until detection
+        self._sample_left_until_detection += len(self._leftover_data)
 
         # index of the first unprocessed data point in the batch
         processing_head_in_batch = 0
@@ -103,12 +114,12 @@ class PerformanceTrigger(Trigger):
         while True:
             if self._sample_left_until_detection - len(new_key_ts) > 0:
                 # No detection in this trigger because of too few data points to fill detection interval
+                self._leftover_data = new_key_ts
                 self._sample_left_until_detection -= len(new_key_ts)
                 return
 
             # At least one detection, fill up window up to that detection
             next_detection_interval = new_key_ts[: self._sample_left_until_detection]
-            self.data_density.inform_data(next_detection_interval)
 
             # Update the remaining data
             processing_head_in_batch += len(next_detection_interval)
@@ -118,9 +129,11 @@ class PerformanceTrigger(Trigger):
             self._sample_left_until_detection = self.config.detection_interval_data_points
 
             # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
-            self.data_density.inform_data(new_key_ts)
+            self.data_density.inform_data(next_detection_interval)
 
-            num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=new_key_ts)
+            num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
+                interval_data=next_detection_interval
+            )
 
             self.performance_tracker.inform_evaluation(
                 num_samples=num_samples,
@@ -165,7 +178,10 @@ class PerformanceTrigger(Trigger):
             drift_eval_log = PerformanceTriggerEvalLog(
                 triggered=triggered,
                 trigger_index=trigger_idx,
-                evaluation_interval=(new_key_ts[0][1], new_key_ts[-1][1]),
+                evaluation_interval=(
+                    next_detection_interval[0][1],
+                    next_detection_interval[-1][1],
+                ),
                 num_samples=num_samples,
                 num_misclassifications=num_misclassifications,
                 evaluation_scores=evaluation_scores,
@@ -174,8 +190,8 @@ class PerformanceTrigger(Trigger):
             if log:
                 log.evaluations.append(drift_eval_log)
 
+            self._last_detection_interval = next_detection_interval
             if triggered:
-                self._last_data_interval = new_key_ts
                 yield trigger_idx
 
     def inform_new_model(self, most_recent_model_id: int) -> None:
@@ -185,7 +201,7 @@ class PerformanceTrigger(Trigger):
         # Perform an evaluation of the NEW model on the last evaluation interval, we will derive expected performance
         # forecasts from these evaluations.
         num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
-            interval_data=self._last_data_interval
+            interval_data=self._last_detection_interval
         )
 
         self.performance_tracker.inform_trigger(
