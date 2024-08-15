@@ -87,43 +87,6 @@ class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassif
     )
 
 
-# class InferredNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
-#     """
-#     `misclassification_threshold` will be inferred by the given inputs according to the following scheme:
-#     - `dataset_num_samples`: The number of samples in the dataset.
-#     - `dataset_time_range`: The time range of the dataset.
-#     - `target_num_triggers`: The number of triggers that are expected over the whole dataset assuming
-#         constant gradual drift.
-#     --> through the `expected_performance` we can infer the expected misclassification rate and thus the threshold
-#     """
-
-#     id: Literal["InferredNumberMisclassificationCriterion"] = Field(
-#         "InferredNumberMisclassificationCriterion"
-#     )
-
-#     dataset_num_samples: int = Field(
-#         description="The number of samples in the dataset."
-#     )
-#     dataset_time_range: int = Field(description="The time range of the dataset in epochs.")
-#     target_num_triggers: int = Field(
-#         description="The number of triggers that are expected over the whole dataset assuming gradual drift."
-#     )
-#     expected_performance: float = Field
-#     relative_avoidable_misclassification_threshold: float = Field(
-#         description=(
-#             "The threshold for the triggering misclassification"
-#             "The relative misclassification rate is the misclassification rate that would have been avoided "
-#             "if a trigger would have been invoked."
-#         )
-#     )
-
-#     @property
-#     def misclassification_threshold(self) -> float:
-#         epochs_per_trigger = self.dataset_time_range / self.target_num_triggers
-
-#         return self..metric_value
-
-
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                         Union                                                        #
 # -------------------------------------------------------------------------------------------------------------------- #
