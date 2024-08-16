@@ -14,8 +14,6 @@ from benchmark.utils.time_resolution_binning import (
     df_to_csv_with_timestamp,
 )
 from modyn.const.types import TimeResolution
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
 
 
 class HuffpostKaggleDataGenerator:

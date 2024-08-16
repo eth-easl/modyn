@@ -1,7 +1,8 @@
 import torch
-import torch.nn as nn
+from torch import nn
 
 from modyn.models.coreset_methods_support import CoresetSupportingModule
+
 
 class YearbookNetDriftDetector(CoresetSupportingModule):
     def __init__(self, num_input_channels: int) -> None:
@@ -15,17 +16,14 @@ class YearbookNetDriftDetector(CoresetSupportingModule):
         self.hid_dim = 32
         # Binary classifier for drift detection
         # see: https://docs.seldon.io/projects/alibi-detect/en/latest/cd/methods/classifierdrift.html
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(32, 2)
-        )
+        self.classifier = nn.Sequential(nn.Flatten(), nn.Linear(32, 2))
 
     def conv_block(self, in_channels: int, out_channels: int) -> nn.Module:
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(2),
         )
 
     def forward(self, data: torch.Tensor) -> torch.Tensor:

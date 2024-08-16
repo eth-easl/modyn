@@ -34,17 +34,18 @@ class EvidentlyDriftDetector(DriftDetector):
         self,
         embeddings_ref: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         if isinstance(embeddings_ref, torch.Tensor):
             embeddings_ref = embeddings_ref.cpu().numpy()
-        
+
         if isinstance(embeddings_cur, torch.Tensor):
             embeddings_cur = embeddings_cur.cpu().numpy()
-    
+
         if isinstance(embeddings_ref, np.ndarray):
             assert len(embeddings_ref.shape) == 2
             embeddings_ref = pd.DataFrame(embeddings_ref)
-        
+
         if isinstance(embeddings_cur, np.ndarray):
             assert len(embeddings_cur.shape) == 2
             embeddings_cur = pd.DataFrame(embeddings_cur)

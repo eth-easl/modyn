@@ -1,15 +1,18 @@
 from __future__ import annotations
-from typing import Union
 
 import alibi_detect.utils.pytorch
 import numpy as np
 import pandas as pd
 import torch
-from alibi_detect.cd import ChiSquareDrift, CVMDrift, FETDrift, KSDrift, LSDDDrift, MMDDrift, ClassifierDrift
-from modyn.config.schema.pipeline import AlibiDetectDriftMetric, AlibiDetectMmdDriftMetric, MetricResult
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetecClassifierDriftMetric, AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric
-
-
+from alibi_detect.cd import (
+    ChiSquareDrift,
+    ClassifierDrift,
+    CVMDrift,
+    FETDrift,
+    KSDrift,
+    LSDDDrift,
+    MMDDrift,
+)
 
 from modyn.config.schema.pipeline import (
     AlibiDetectDriftMetric,
@@ -17,23 +20,17 @@ from modyn.config.schema.pipeline import (
     MetricResult,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetecClassifierDriftMetric,
     AlibiDetectCVMDriftMetric,
     AlibiDetectKSDriftMetric,
 )
+from modyn.supervisor.internal.triggers.drift.classifier_models import (
+    alibi_classifier_models,
+)
 from modyn.supervisor.internal.triggers.drift.detector.drift import DriftDetector
 
-from modyn.supervisor.internal.triggers.drift.classifier_models import alibi_classifier_models
+_AlibiMetrics = MMDDrift | ClassifierDrift | ChiSquareDrift | CVMDrift | FETDrift | KSDrift | LSDDDrift | MMDDrift
 
-_AlibiMetrics = Union[
-    MMDDrift,
-    ClassifierDrift,
-    ChiSquareDrift,
-    CVMDrift,
-    FETDrift,
-    KSDrift,
-    LSDDDrift,
-    MMDDrift,
-]
 
 class AlibiDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, AlibiDetectDriftMetric]):
@@ -51,6 +48,7 @@ class AlibiDriftDetector(DriftDetector):
         self,
         embeddings_ref: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
         embeddings_cur: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
+        is_warmup: bool,
     ) -> dict[str, MetricResult]:
         if isinstance(embeddings_ref, pd.DataFrame):
             embeddings_ref = embeddings_ref.to_numpy()
@@ -111,9 +109,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
 
     kwargs = {}
     if config.preprocessor:
-        kwargs.update({
-            "preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)
-        })
+        kwargs.update({"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)})
 
     if isinstance(config, AlibiDetectMmdDriftMetric):
         assert kernel is not None
@@ -126,20 +122,19 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             device=config.device,
             configure_kernel_from_x_ref=config.configure_kernel_from_x_ref,
             x_ref_preprocessed=config.x_ref_preprocessed,
-            **kwargs
+            **kwargs,
         )
-        
+
     if isinstance(config, AlibiDetecClassifierDriftMetric):
         return ClassifierDrift(
-                embeddings_ref,
-                alibi_classifier_models[config.classifier_id],
-                backend='pytorch',
-                p_val=config.p_val,
-                preds_type='logits',
-                device=config.device,
-                **kwargs
-            )
- 
+            embeddings_ref,
+            alibi_classifier_models[config.classifier_id],
+            backend="pytorch",
+            p_val=config.p_val,
+            preds_type="logits",
+            device=config.device,
+            **kwargs,
+        )
 
     if isinstance(config, AlibiDetectKSDriftMetric):
         return KSDrift(
@@ -147,7 +142,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
-            **kwargs
+            **kwargs,
         )
 
     if isinstance(config, AlibiDetectCVMDriftMetric):
@@ -156,7 +151,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
-            **kwargs
+            **kwargs,
         )
 
     raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")
