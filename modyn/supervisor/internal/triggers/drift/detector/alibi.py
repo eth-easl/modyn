@@ -53,11 +53,11 @@ class AlibiDriftDetector(DriftDetector):
         if isinstance(embeddings_ref, pd.DataFrame):
             embeddings_ref = embeddings_ref.to_numpy()
         if isinstance(embeddings_ref, torch.Tensor):
-            embeddings_ref = embeddings_ref.numpy()
+            embeddings_ref = embeddings_ref.detach().cpu().numpy()
         if isinstance(embeddings_cur, pd.DataFrame):
             embeddings_cur = embeddings_cur.to_numpy()
         if isinstance(embeddings_cur, torch.Tensor):
-            embeddings_cur = embeddings_cur.numpy()
+            embeddings_cur = embeddings_cur.detach().cpu().numpy()
 
         results: dict[str, MetricResult] = {}
 
