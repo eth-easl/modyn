@@ -402,9 +402,9 @@ def _setup_decision_policies(
             metric_config.num_permutations is None
         ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
         if isinstance(criterion, ThresholdDecisionCriterion):
-            policies[metric_name] = ThresholdDecisionPolicy(config)
+            policies[metric_name] = ThresholdDecisionPolicy(criterion)
         elif isinstance(criterion, DynamicPercentileThresholdCriterion):
-            policies[metric_name] = DynamicPercentileThresholdPolicy(config)
+            policies[metric_name] = DynamicPercentileThresholdPolicy(criterion)
         elif isinstance(criterion, DynamicRollingAverageThresholdCriterion):
-            policies[metric_name] = DynamicRollingAverageThresholdPolicy(config)
+            policies[metric_name] = DynamicRollingAverageThresholdPolicy(criterion)
     return policies
