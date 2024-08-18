@@ -2,18 +2,19 @@ from dataclasses import dataclass
 
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.metrics import MetricConfig
+from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
+from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 
 
 @dataclass
 class Experiment:
     name: str
     eval_handlers: list[EvalHandlerConfig]
-    time_trigger_schedules: list[str | int]  # in years
-    data_amount_triggers: list[int]  # in num samples
-    drift_detection_intervals: list[int]  # every interval configures one pipeline
 
-    # list of metric configuration, every list item will yield a new pipeline for every drift_detection_intervals
-    drift_trigger_metrics: list[dict[str, MetricConfig]]
+    time_triggers: dict[str, TimeTriggerConfig]
+    data_amount_triggers: dict[str, DataAmountTriggerConfig]
+    drift_detection_triggers: dict[str, DataDriftTriggerConfig]
 
     gpu_device: str
 

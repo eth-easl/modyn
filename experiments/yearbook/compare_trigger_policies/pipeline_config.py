@@ -22,17 +22,32 @@ from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 
 
 def gen_pipeline_config(
-    name: str, trigger: TriggerConfig, eval_handlers: list[EvalHandlerConfig], device: str
+    config_ref: str,
+    trigger_config: TriggerConfig,
+    eval_handlers: list[EvalHandlerConfig],
+    gpu_device: str,
+    seed: int,
 ) -> ModynPipelineConfig:
-    num_classes = 2
+    bytes_parser_function = (
+        "import torch\n"
+        "import numpy as np\n"
+        "def bytes_parser_function(data: bytes) -> torch.Tensor:\n"
+        "    return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(3, 32, 32)\n"
+    )
+    evaluation_transformer_function = (
+        "import torch\n"
+        "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
+        "    return torch.argmax(model_output, dim=-1)\n"
+    )
+    
     return ModynPipelineConfig(
-        pipeline=Pipeline(name=name, description="Yearbook pipeline for comparing trigger policies", version="0.0.1"),
-        model=ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": num_classes}),
+        pipeline=Pipeline(name=f"yearbook_{config_ref}", description="Yearbook pipeline for comparing trigger policies", version="0.0.1"),
+        model=ModelConfig(id="YearbookNet", config={"num_input_channels": 3, "num_classes": 2}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
             gpus=1,
-            device=device,
-            dataloader_workers=2,
+            device=gpu_device,
+            dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
             batch_size=64,
@@ -47,56 +62,49 @@ def gen_pipeline_config(
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
             checkpointing=CheckpointingConfig(activated=False),
+            epochs_per_trigger=5,
+            amp=False,
+            seed=seed,
         ),
         selection_strategy=NewDataStrategyConfig(
-            maximum_keys_in_memory=1000, storage_backend="database", limit=-1, tail_triggers=0
+            maximum_keys_in_memory=100000, storage_backend="database", limit=-1, tail_triggers=0
         ),
         data=DataConfig(
             dataset_id="yearbook_train",
             transformations=[],
-            bytes_parser_function=(
-                "import warnings\n"
-                "import torch\n"
-                "def bytes_parser_function(data: memoryview) -> torch.Tensor:\n"
-                "    with warnings.catch_warnings():\n"
-                "        warnings.simplefilter('ignore', category=UserWarning)\n"
-                "        return torch.frombuffer(data, dtype=torch.float32).reshape(3, 32, 32)"
-            ),
+            bytes_parser_function=bytes_parser_function,
         ),
-        trigger=trigger,
+        trigger=trigger_config,
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
-            device=device,
+            device=gpu_device,
             result_writers=["json"],
-            after_pipeline_evaluation_workers=20,
-            after_training_evaluation_workers=20,
+            after_pipeline_evaluation_workers=12,
+            after_training_evaluation_workers=12,
             datasets=[
                 EvalDataConfig(
                     dataset_id=yb_dataset_name,
-                    bytes_parser_function=(
-                        "import torch\n"
-                        "import numpy as np\n"
-                        "def bytes_parser_function(data: bytes) -> torch.Tensor:\n"
-                        "    return torch.from_numpy(np.frombuffer(data, dtype=np.float32)).reshape(3, 32, 32)\n"
-                    ),
-                    batch_size=64,
-                    dataloader_workers=2,
+                    bytes_parser_function=bytes_parser_function,
+                    batch_size=512,
+                    dataloader_workers=1,
                     metrics=[
                         AccuracyMetricConfig(
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "    return torch.argmax(model_output, dim=-1)\n"
-                            ),
+                            evaluation_transformer_function=evaluation_transformer_function
                         ),
                         F1ScoreMetricConfig(
-                            evaluation_transformer_function=(
-                                "import torch\n"
-                                "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
-                                "   return torch.argmax(model_output, dim=-1)"
-                            ),
-                            num_classes=num_classes,
+                            evaluation_transformer_function=evaluation_transformer_function,
+                            num_classes=2,
                             average="weighted",
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=evaluation_transformer_function,
+                            num_classes=2,
+                            average="macro",
+                        ),
+                        F1ScoreMetricConfig(
+                            evaluation_transformer_function=evaluation_transformer_function,
+                            num_classes=2,
+                            average="micro",
                         ),
                     ],
                 )
