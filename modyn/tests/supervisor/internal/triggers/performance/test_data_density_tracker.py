@@ -8,7 +8,7 @@ from modyn.supervisor.internal.triggers.performance.data_density_tracker import 
 def test_initial_state() -> None:
     tracker = DataDensityTracker(window_size=3)
     assert len(tracker.batch_memory) == 0
-    assert tracker.previous_batch_end_time is None
+    assert tracker._previous_batch_end_time is None
 
 
 def test_inform_data_empty_batch() -> None:
@@ -22,14 +22,14 @@ def test_inform_data_batches() -> None:
     assert tracker.needs_calibration()
 
     with pytest.raises(AssertionError):
-        tracker.previous_batch_samples()
+        tracker.previous_batch_num_samples
 
     tracker.inform_data([(1, 10), (2, 20), (3, 30)])
     assert not tracker.needs_calibration()
     assert len(tracker.batch_memory) == 1
-    assert tracker.previous_batch_end_time == 30
+    assert tracker._previous_batch_end_time == 30
     assert tracker.batch_memory[-1] == (3, 20)  # (len(data), end_time - start_time)
-    assert tracker.previous_batch_samples() == 3
+    assert tracker.previous_batch_num_samples == 3
 
     tracker.inform_data([(4, 40), (5, 50), (6, 60)])
     assert len(tracker.batch_memory) == 2
@@ -37,7 +37,7 @@ def test_inform_data_batches() -> None:
         3,
         30,
     )  # Time gap is 10 due to the interval between batches
-    assert tracker.previous_batch_samples() == 3
+    assert tracker.previous_batch_num_samples == 3
 
 
 def test_inform_data_window_rollover() -> None:
@@ -83,11 +83,11 @@ def test_forecast_density_ridge_regression() -> None:
 def test_forecast_density_with_varied_batches() -> None:
     tracker = DataDensityTracker(window_size=5)
     tracker.inform_data([(1, 10), (2, 20)])
-    assert tracker.previous_batch_samples() == 2
+    assert tracker.previous_batch_num_samples == 2
     tracker.inform_data([(3, 30), (4, 40), (5, 50)])
-    assert tracker.previous_batch_samples() == 3
+    assert tracker.previous_batch_num_samples == 3
     tracker.inform_data([(6, 60), (7, 70)])
-    assert tracker.previous_batch_samples() == 2
+    assert tracker.previous_batch_num_samples == 2
     density = tracker.forecast_density()
     assert isinstance(density, float)
     assert density > 0  # Ensure a positive density value

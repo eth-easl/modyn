@@ -153,7 +153,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
 
         # compute the number of avoidable misclassifications by retrieving the actual misclassifications
         # and the expected misclassifications through the expected accuracy for the last interval.
-        previous_interval_num_misclassifications = performance_tracker.previous_batch_num_misclassifications()
+        previous_interval_num_misclassifications = performance_tracker.previous_batch_num_misclassifications
 
         # the expected performance won't change unless there's a trigger
         expected_accuracy = (
@@ -161,8 +161,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
             if self.config.expected_accuracy is None
             else self.config.expected_accuracy
         )
-        previous_interval_num_samples = data_density.previous_batch_samples()
-        previous_expected_num_misclassifications = (1 - expected_accuracy) * previous_interval_num_samples
+        previous_expected_num_misclassifications = (1 - expected_accuracy) * data_density.previous_batch_num_samples
         new_avoidable_misclassifications = (
             previous_interval_num_misclassifications - previous_expected_num_misclassifications
         )
