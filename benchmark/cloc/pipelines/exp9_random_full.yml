@@ -65,7 +65,6 @@ trigger:
     trigger_every: "52w"
 evaluation:
   device: "cuda:0"
-  result_writers: ["json"]
   datasets:
     - dataset_id: cloc
       transformations:

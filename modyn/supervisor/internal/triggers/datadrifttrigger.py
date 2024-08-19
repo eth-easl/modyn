@@ -30,22 +30,22 @@ from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDe
 from modyn.supervisor.internal.triggers.drift.detector.evidently import (
     EvidentlyDriftDetector,
 )
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
-    EmbeddingEncoder,
-    EmbeddingEncoderDownloader,
-)
+from modyn.supervisor.internal.triggers.drift.embedding.embeddings import get_embeddings
+from modyn.supervisor.internal.triggers.drift.utils import convert_tensor_to_df
 from modyn.supervisor.internal.triggers.models import (
     DriftTriggerEvalLog,
     TriggerPolicyEvaluationLog,
 )
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
-from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
-from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
-from modyn.supervisor.internal.triggers.utils.utils import (
-    convert_tensor_to_df,
-    get_embeddings,
+from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
+    DataLoaderInfo,
+)
+from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import (
     prepare_trigger_dataloader_fixed_keys,
 )
+from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
+from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
+from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
 
 logger = logging.getLogger(__name__)
 
@@ -57,12 +57,12 @@ class DataDriftTrigger(Trigger):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self.previous_model_id: int | None = None
-        self.model_updated: bool = False
+        self.most_recent_model_id: int | None = None
+        self.model_refresh_needed: bool = False
 
         self.dataloader_info: DataLoaderInfo | None = None
-        self.encoder_downloader: EmbeddingEncoderDownloader | None = None
-        self.embedding_encoder: EmbeddingEncoder | None = None
+        self.model_downloader: ModelDownloader | None = None
+        self.model: StatefulModel | None = None
 
         self._sample_left_until_detection = (
             config.detection_interval_data_points
@@ -91,7 +91,7 @@ class DataDriftTrigger(Trigger):
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
-        self._init_encoder_downloader()
+        self._init_model_downloader()
 
     def inform(
         self,
@@ -240,9 +240,9 @@ class DataDriftTrigger(Trigger):
                 log=log,
             )
 
-    def inform_previous_model(self, previous_model_id: int) -> None:
-        self.previous_model_id = previous_model_id
-        self.model_updated = True
+    def inform_new_model(self, most_recent_model_id: int) -> None:
+        self.most_recent_model_id = most_recent_model_id
+        self.model_refresh_needed = True
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                     INTERNAL                                                     #
@@ -288,12 +288,12 @@ class DataDriftTrigger(Trigger):
 
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
-        Get the dataloaders, download the embedding encoder model if necessary,
+        Get the dataloaders, download the model manager model if necessary,
         compute embeddings of current and reference data, then run detection on the embeddings.
         """
-        assert self.previous_model_id is not None
+        assert self.most_recent_model_id is not None
         assert self.dataloader_info is not None
-        assert self.encoder_downloader is not None
+        assert self.model_downloader is not None
         assert self.context and self.context.pipeline_config is not None
         assert len(reference) > 0
         assert len(current) > 0
@@ -304,20 +304,20 @@ class DataDriftTrigger(Trigger):
 
         current_dataloader = prepare_trigger_dataloader_fixed_keys(self.dataloader_info, [key for key, _ in current])
 
-        # Download previous model as embedding encoder
-        # TODO(417) Support custom model as embedding encoder
-        if self.model_updated:
-            self.embedding_encoder = self.encoder_downloader.setup_encoder(
-                self.previous_model_id, self.context.pipeline_config.training.device
+        # Download most recent model as model manager
+        # TODO(417) Support custom model as model manager
+        if self.model_refresh_needed:
+            self.model = self.model_downloader.setup_manager(
+                self.most_recent_model_id, self.context.pipeline_config.training.device
             )
-            self.model_updated = False
+            self.model_refresh_needed = False
 
         # Compute embeddings
-        assert self.embedding_encoder is not None
+        assert self.model is not None
 
         # TODO(@robinholzi): reuse the embeddings as long as the reference window is not updated
-        reference_embeddings = get_embeddings(self.embedding_encoder, reference_dataloader)
-        current_embeddings = get_embeddings(self.embedding_encoder, current_dataloader)
+        reference_embeddings = get_embeddings(self.model, reference_dataloader)
+        current_embeddings = get_embeddings(self.model, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
         current_embeddings_df = convert_tensor_to_df(current_embeddings, "col_")
 
@@ -363,10 +363,10 @@ class DataDriftTrigger(Trigger):
             tokenizer=data_config.tokenizer,
         )
 
-    def _init_encoder_downloader(self) -> None:
+    def _init_model_downloader(self) -> None:
         assert self.context is not None
 
-        self.encoder_downloader = EmbeddingEncoderDownloader(
+        self.model_downloader = ModelDownloader(
             self.context.modyn_config,
             self.context.pipeline_id,
             self.context.base_dir,

@@ -10,7 +10,7 @@ from torchvision import transforms
 
 from modyn.models.tokenizers import DistilBertTokenizerTransform
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest, GetResponse
-from modyn.supervisor.internal.triggers.trigger_datasets import FixedKeysDataset
+from modyn.supervisor.internal.triggers.utils.datasets import FixedKeysDataset
 
 DATASET_ID = "MNIST"
 STORAGE_ADDR = "localhost:1234"
@@ -31,7 +31,9 @@ class MockStorageStub:
 
     def Get(self, request: GetRequest):  # pylint: disable=invalid-name  # noqa: N802
         yield GetResponse(
-            samples=[key.to_bytes(2, "big") for key in request.keys], keys=request.keys, labels=[1] * len(request.keys)
+            samples=[key.to_bytes(2, "big") for key in request.keys],
+            keys=request.keys,
+            labels=[1] * len(request.keys),
         )
 
 
@@ -73,9 +75,12 @@ def test_init():
     assert fixed_keys_dataset._keys == KEYS
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -93,9 +98,12 @@ def test_init_grpc(test_insecure_channel, test_grpc_connection_established):
     assert isinstance(fixed_keys_dataset._storagestub, MockStorageStub)
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -174,9 +182,12 @@ def test__setup_composed_transform(serialized_transforms, transforms_list):
     assert isinstance(fixed_keys_dataset._transform.transforms[-1], DistilBertTokenizerTransform)
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -195,9 +206,12 @@ def test_dataset_iter(test_insecure_channel, test_grpc_connection_established):
     assert [x[2] for x in all_data] == [1] * len(KEYS)
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -216,9 +230,12 @@ def test_dataset_iter_with_parsing(test_insecure_channel, test_grpc_connection_e
     assert [x[2] for x in all_data] == [1] * len(KEYS)
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -240,9 +257,12 @@ def test_dataloader_dataset(test_insecure_channel, test_grpc_connection_establis
         assert torch.equal(batch[2], torch.ones(2, dtype=torch.float64))
 
 
-@patch("modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.StorageStub", MockStorageStub)
 @patch(
-    "modyn.supervisor.internal.triggers.trigger_datasets.fixed_keys_dataset.grpc_connection_established",
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.StorageStub",
+    MockStorageStub,
+)
+@patch(
+    "modyn.supervisor.internal.triggers.utils.datasets.fixed_keys_dataset.grpc_connection_established",
     return_value=True,
 )
 @patch.object(grpc, "insecure_channel", return_value=None)
@@ -267,9 +287,15 @@ def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connec
     batch_num = -1
     for batch_num, batch in enumerate(data):
         assert len(batch) == 3
-        assert batch[0].tolist() == [4 * batch_num, 4 * batch_num + 1, 4 * batch_num + 2, 4 * batch_num + 3]
+        assert batch[0].tolist() == [
+            4 * batch_num,
+            4 * batch_num + 1,
+            4 * batch_num + 2,
+            4 * batch_num + 3,
+        ]
         assert torch.equal(
-            batch[1], torch.Tensor([4 * batch_num, 4 * batch_num + 1, 4 * batch_num + 2, 4 * batch_num + 3])
+            batch[1],
+            torch.Tensor([4 * batch_num, 4 * batch_num + 1, 4 * batch_num + 2, 4 * batch_num + 3]),
         )
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64))
 

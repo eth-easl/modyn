@@ -122,7 +122,6 @@ trigger:
     trigger_every: "1d"
 evaluation:
   device: "cuda:0"
-  result_writers: ["json"]
   datasets:
     - dataset_id: criteo
       bytes_parser_function: |

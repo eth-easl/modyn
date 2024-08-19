@@ -1,7 +1,7 @@
 from functools import cached_property
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.const.regex import REGEX_TIME_UNIT
@@ -27,3 +27,12 @@ class TimeTriggerConfig(ModynBaseModel):
         unit = str(self.every)[-1:]
         num = int(str(self.every)[:-1])
         return num * SECONDS_PER_UNIT[unit]
+
+    @field_validator("every")
+    @classmethod
+    def validate_every(cls, value: str) -> str:
+        unit = str(value)[-1:]
+        num = int(str(value)[:-1])
+        assert num * SECONDS_PER_UNIT[unit] >= 1, "trigger_every must be > 0, but is {self.config.every_seconds}"
+
+        return value

@@ -20,7 +20,7 @@ classDiagram
         <<abstract>>
         +void init_trigger(TriggerContext context)
         +Generator[Triggers] inform(new_data)
-        +void inform_previous_model(int previous_model_id)
+        +void inform_new_model(int previous_model_id)
     }
 
     class TimeTrigger {
@@ -41,7 +41,7 @@ classDiagram
 
         +void init_trigger(TriggerContext context)
         +Generator[triggers] inform(new_data)
-        +void inform_previous_model(int previous_model_id)
+        +void inform_new_model(int previous_model_id)
     }
 
     class DriftDecisionPolicy {
