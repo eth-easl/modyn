@@ -13,12 +13,12 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy
-from modyn.config.schema.pipeline.trigger.drift.detection_window import (
-    TimeWindowingStrategy,
-)
-from modyn.config.schema.pipeline.trigger.drift.metric import (
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicThresholdCriterion,
     ThresholdDecisionCriterion,
+)
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
 )
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
