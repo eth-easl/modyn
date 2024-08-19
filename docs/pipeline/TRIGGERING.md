@@ -17,7 +17,7 @@ classDiagram
         <<Abstract>>
         +init_trigger()
         +inform()
-        +inform_previous_model()
+        +inform_new_model()
     }
 
     namespace simple_triggers {

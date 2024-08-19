@@ -36,7 +36,27 @@ class EnsembleTriggerEvalLog(ModynBaseModel):
     )
 
 
-TriggerEvalLog = Annotated[DriftTriggerEvalLog, Field(discriminator="type")]
+class PerformanceTriggerEvalLog(ModynBaseModel):
+    type: Literal["performance"] = Field("performance")
+    triggered: bool
+    trigger_index: int | None = Field(None)
+    evaluation_interval: tuple[int, int]  # timestamps of the current detection interval
+    num_samples: int = Field(0, description="The number of data points in the evaluation interval.")
+    num_misclassifications: int = Field(0, description="The number of misclassifications in the evaluation interval.")
+    evaluation_scores: dict[str, float] = Field(
+        default_factory=dict,
+        description="The evaluation scores for the evaluation interval for different metrics keyed by their name.",
+    )
+    policy_decisions: dict[str, bool] = Field(
+        default_factory=dict,
+        description="The policy decisions for the evaluation interval for different metrics keyed by their name.",
+    )
+
+
+TriggerEvalLog = Annotated[
+    DriftTriggerEvalLog | EnsembleTriggerEvalLog | PerformanceTriggerEvalLog,
+    Field(discriminator="type"),
+]
 
 
 class TriggerPolicyEvaluationLog(ModynBaseModel):

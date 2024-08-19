@@ -78,7 +78,6 @@ evaluation:
       models: matrix
       datasets: ["mnist"]
   device: "cpu"
-  result_writers: ["json", "tensorboard"]
   datasets:
     - dataset_id: mnist
       transformations:

@@ -113,7 +113,6 @@ def gen_arxiv_config(
             after_pipeline_evaluation_workers=2,
             after_training_evaluation_workers=2,
             device=gpu_device,
-            result_writers=["json"],
             datasets=[
                 EvalDataConfig(
                     dataset_id=dataset,

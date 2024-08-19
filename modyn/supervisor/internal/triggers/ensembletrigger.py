@@ -95,9 +95,9 @@ class EnsembleTrigger(Trigger):
             if triggered:
                 yield trigger_idx
 
-    def inform_previous_model(self, previous_model_id: int) -> None:
+    def inform_new_model(self, previous_model_id: int) -> None:
         for trigger in self.subtriggers.values():
-            trigger.inform_previous_model(previous_model_id)
+            trigger.inform_new_model(previous_model_id)
 
     # --------------------------------------------------- Internal --------------------------------------------------- #
 

@@ -15,16 +15,15 @@ class TimeTrigger(Trigger):
     """
 
     def __init__(self, config: TimeTriggerConfig):
+        super().__init__()
+
         self.config = config
         self.next_trigger_at: int | None = None
 
-        if self.config.every_seconds < 1:
-            raise ValueError(f"trigger_every must be > 0, but is {self.config.every_seconds}")
-
-        super().__init__()
-
     def inform(
-        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+        self,
+        new_data: list[tuple[int, int, int]],
+        log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         if self.next_trigger_at is None:
             if self.config.start_timestamp is not None:

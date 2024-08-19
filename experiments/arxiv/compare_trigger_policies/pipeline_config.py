@@ -63,7 +63,6 @@ def gen_pipeline_config(
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
             device="cuda:0",
-            result_writers=["json"],
             datasets=[
                 EvalDataConfig(
                     dataset_id=yb_dataset_name,

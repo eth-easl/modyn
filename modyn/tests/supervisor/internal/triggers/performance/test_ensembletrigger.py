@@ -80,15 +80,15 @@ def test_inform_trigger(
     assert not trigger_log.evaluations[1].triggered
 
 
-@patch.object(DataAmountTrigger, "inform_previous_model")
-@patch.object(TimeTrigger, "inform_previous_model")
-def test_inform_previous_model(
-    mock_time_trigger_inform_previous_model: MagicMock,
-    mock_data_amount_inform_previous_model: MagicMock,
+@patch.object(DataAmountTrigger, "inform_new_model")
+@patch.object(TimeTrigger, "inform_new_model")
+def test_inform_new_model(
+    mock_time_trigger_inform_new_model: MagicMock,
+    mock_data_amount_inform_new_model: MagicMock,
     ensemble_trigger_config: EnsembleTriggerConfig,
 ) -> None:
     trigger = EnsembleTrigger(ensemble_trigger_config)
     mock_model_id = 99
-    trigger.inform_previous_model(mock_model_id)
-    mock_time_trigger_inform_previous_model.assert_called_once_with(mock_model_id)
-    mock_data_amount_inform_previous_model.assert_called_once_with(mock_model_id)
+    trigger.inform_new_model(mock_model_id)
+    mock_time_trigger_inform_new_model.assert_called_once_with(mock_model_id)
+    mock_data_amount_inform_new_model.assert_called_once_with(mock_model_id)
