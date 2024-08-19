@@ -69,7 +69,7 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         return self
 
 
-class AlibiDetecClassifierDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin):
+class AlibiDetectClassifierDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin):
     id: Literal["AlibiDetectClassifierDriftMetric"] = Field("AlibiDetectClassifierDriftMetric")
     classifier_id: str = Field(
         description="The model to use for classifications; has to be registered in alibi_detector.py"

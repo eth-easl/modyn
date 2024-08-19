@@ -20,7 +20,7 @@ from modyn.config.schema.pipeline import (
     MetricResult,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
-    AlibiDetecClassifierDriftMetric,
+    AlibiDetectClassifierDriftMetric,
     AlibiDetectCVMDriftMetric,
     AlibiDetectKSDriftMetric,
 )
@@ -125,7 +125,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             **kwargs,
         )
 
-    if isinstance(config, AlibiDetecClassifierDriftMetric):
+    if isinstance(config, AlibiDetectClassifierDriftMetric):
         return ClassifierDrift(
             embeddings_ref,
             alibi_classifier_models[config.classifier_id],
