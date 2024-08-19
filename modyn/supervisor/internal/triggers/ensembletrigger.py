@@ -4,15 +4,18 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator
 
+from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.ensemble import EnsembleTriggerConfig
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
 )
 from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
+from modyn.supervisor.internal.triggers.datadrifttrigger import DataDriftTrigger
 from modyn.supervisor.internal.triggers.timetrigger import TimeTrigger
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.utils.models import (
+    EnsembleTriggerEvalLog,
     TriggerPolicyEvaluationLog,
 )
 
@@ -29,7 +32,7 @@ class EnsembleTrigger(Trigger):
         # allows to evaluate triggers in a fixed interval
         self._sample_left_until_detection = config.detection_interval_data_points
 
-        self._leftover_data: list[tuple[int, int]] = []
+        self._leftover_data: list[tuple[int, int, int]] = []
         """Stores data that was not processed in the last inform call because
         the detection interval was not filled."""
 
@@ -42,15 +45,11 @@ class EnsembleTrigger(Trigger):
         new_data: list[tuple[int, int, int]],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
-        new_key_ts = self._leftover_data + [
-            (key, timestamp) for key, timestamp, _ in new_data
-        ]
+        new_key_ts = self._leftover_data + new_data
 
         # reappending the leftover data to the new data requires incrementing the sample left until detection
         self._sample_left_until_detection += len(self._leftover_data)
-        processing_head_in_batch = (
-            0  # index of the first unprocessed data point in the batch
-        )
+        processing_head_in_batch = 0  # index of the first unprocessed data point in the batch
 
         # Go through remaining data in new data in batches of `detect_interval`
         while True:
@@ -68,32 +67,32 @@ class EnsembleTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = (
-                self.config.detection_interval_data_points
-            )
+            self._sample_left_until_detection = self.config.detection_interval_data_points
 
             # Delegate the detection to the subtriggers on our batch
-            decisions = self._evaluate_subtriggers(next_detection_interval)
-            aggregated_decision = self.config.ensemble_strategy.aggregate_decision_func(
-                {trigger_id: decision[0] for trigger_id, decision in decisions.items()}
-            )
+            subtrigger_results = self._evaluate_subtriggers(next_detection_interval)
 
-            ensemble_eval_log = PerformanceTriggerEvalLog(
+            triggered = self.config.ensemble_strategy.aggregate_decision_func(
+                {trigger_id: decision[0] for trigger_id, decision in subtrigger_results.items()}
+            )
+            subtrigger_decisions = {trigger_id: decision[0] for trigger_id, decision in subtrigger_results.items()}
+            subtrigger_indexes = {trigger_id: decision[1] for trigger_id, decision in subtrigger_results.items()}
+            subtrigger_logs = {trigger_id: decision[2] for trigger_id, decision in subtrigger_results.items()}
+
+            trigger_idx = processing_head_in_batch - 1
+            ensemble_eval_log = EnsembleTriggerEvalLog(
                 triggered=triggered,
                 trigger_index=trigger_idx,
                 evaluation_interval=(
                     next_detection_interval[0][1],
                     next_detection_interval[-1][1],
                 ),
-                num_samples=num_samples,
-                num_misclassifications=num_misclassifications,
-                evaluation_scores=evaluation_scores,
-                policy_decisions=policy_decisions,
+                subtrigger_decisions=subtrigger_decisions,
+                subtrigger_indexes=subtrigger_indexes,
+                subtrigger_logs=subtrigger_logs,
             )
             if log:
                 log.evaluations.append(ensemble_eval_log)
-
-            self._last_detection_interval = next_detection_interval
             if triggered:
                 yield trigger_idx
 
@@ -105,12 +104,12 @@ class EnsembleTrigger(Trigger):
 
     def _create_subtriggers(self, config: EnsembleTriggerConfig) -> dict[str, Trigger]:
         subtriggers: dict[str, Trigger] = {}
-        for trigger_id, trigger_config in config.policies.items():
+        for trigger_id, trigger_config in config.subtriggers.items():
             if isinstance(trigger_config, TimeTriggerConfig):
                 subtriggers[trigger_id] = TimeTrigger(trigger_config)
             elif isinstance(trigger_config, DataAmountTriggerConfig):
                 subtriggers[trigger_id] = DataAmountTrigger(trigger_config)
-            elif isinstance(trigger_config, DataDriftTrigger):
+            elif isinstance(trigger_config, DataDriftTriggerConfig):
                 subtriggers[trigger_id] = DataDriftTrigger(trigger_config)
             elif isinstance(trigger_config, EnsembleTriggerConfig):
                 raise NotImplementedError("Nested ensemble triggers are not supported.")
@@ -120,9 +119,12 @@ class EnsembleTrigger(Trigger):
 
     def _evaluate_subtriggers(
         self, new_data: list[tuple[int, int, int]]
-    ) -> dict[str, tuple[bool, TriggerPolicyEvaluationLog]]:
-        decisions = {}
+    ) -> dict[str, tuple[bool, list[int], TriggerPolicyEvaluationLog]]:
+        subtrigger_results: dict[str, tuple[bool, list[int], TriggerPolicyEvaluationLog]] = {}
         for trigger_id, trigger in self.subtriggers.items():
-            log = TriggerPolicyEvaluationLog(trigger_id)
-            decisions[trigger_id] = bool(list(trigger.inform(new_data, log)))
-        return decisions
+            log = TriggerPolicyEvaluationLog()
+            sub_triggers = list(trigger.inform(new_data, log))
+            sub_decision = bool(len(sub_triggers) > 0)
+            subtrigger_results[trigger_id] = (sub_decision, sub_triggers, log)
+
+        return subtrigger_results
