@@ -8,11 +8,15 @@ from pydantic import Field, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
+from modyn.config.schema.pipeline.trigger.drift.preprocess.alibi_detect import (
+    AlibiDetectNLPreprocessor,
+)
 
 
 class _AlibiDetectBaseDriftMetric(BaseMetric):
     p_val: float = Field(0.05, description="The p-value threshold for the drift detection.")
     x_ref_preprocessed: bool = Field(False)
+    preprocessor: AlibiDetectNLPreprocessor | None = Field(None, description="Preprocessor function.")
 
 
 class AlibiDetectDeviceMixin(ModynBaseModel):
@@ -63,6 +67,13 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
             )
 
         return self
+
+
+class AlibiDetectClassifierDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin):
+    id: Literal["AlibiDetectClassifierDriftMetric"] = Field("AlibiDetectClassifierDriftMetric")
+    classifier_id: str = Field(
+        description="The model to use for classifications; has to be registered in alibi_detector.py"
+    )
 
 
 class AlibiDetectKSDriftMetric(
