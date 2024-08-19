@@ -55,7 +55,6 @@ class _InternalPerformanceTriggerConfig(ModynBaseModel):
             "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
             "the default metric that is always generated and cannot be disabled. To define a "
             "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
-            # TODO: maybe support custom aggregation functions
         ),
         min_length=1,
     )
