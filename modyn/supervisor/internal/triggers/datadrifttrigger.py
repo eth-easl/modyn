@@ -34,13 +34,13 @@ from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
     EmbeddingEncoder,
     EmbeddingEncoderDownloader,
 )
-from modyn.supervisor.internal.triggers.models import (
-    DriftTriggerEvalLog,
-    TriggerPolicyEvaluationLog,
-)
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
 from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
+from modyn.supervisor.internal.triggers.utils.models import (
+    DriftTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 from modyn.supervisor.internal.triggers.utils.utils import (
     convert_tensor_to_df,
     get_embeddings,

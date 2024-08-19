@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 
 @dataclass

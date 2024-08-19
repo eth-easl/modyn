@@ -7,6 +7,10 @@ from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                                  Ensemble Strategies                                                 #
+# -------------------------------------------------------------------------------------------------------------------- #
+
 
 class BaseEnsembleStrategy(ModynBaseModel):
     @property
@@ -27,7 +31,10 @@ class MajorityVoteEnsembleStrategy(BaseEnsembleStrategy):
 class AtLeastNEnsembleStrategy(BaseEnsembleStrategy):
     id: Literal["AtLeastN"] = Field("AtLeastN")
 
-    n: int = Field(description="The minimum number of triggers that need to trigger for the ensemble to trigger.", ge=1)
+    n: int = Field(
+        description="The minimum number of triggers that need to trigger for the ensemble to trigger.",
+        ge=1,
+    )
 
     @property
     def aggregate_decision_func(self) -> Callable[[dict[str, bool]], bool]:
@@ -51,15 +58,24 @@ EnsembleStrategy = Annotated[
     Field(discriminator="id"),
 ]
 
+# -------------------------------------------------------------------------------------------------------------------- #
+#                                                    EnsembleTrigger                                                   #
+# -------------------------------------------------------------------------------------------------------------------- #
+
 __TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 
 
 class EnsembleTriggerConfig(ModynBaseModel):
     id: Literal["EnsembleTrigger"] = Field("EnsembleTrigger")
 
-    policies: dict[str, __TriggerConfig] = Field(  # type: ignore[valid-type]
+    detection_interval_data_points: int = Field(
+        1000,
+        description="The number of samples in the interval after which drift detection is performed.",
+        ge=1,
+    )
+    subtriggers: dict[str, __TriggerConfig] = Field(  # type: ignore[valid-type]
         default_factory=dict,
-        description="The policies keyed by distinct references that will be consulted for the ensemble trigger.",
+        description="The sub-triggers keyed by distinct references that will be consulted for the ensemble trigger.",
     )
 
     ensemble_strategy: EnsembleStrategy = Field(
