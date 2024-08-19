@@ -8,10 +8,12 @@ from .drift import *  # noqa
 from .drift import DataDriftTriggerConfig
 from .ensemble import *  # noqa
 from .ensemble import EnsembleTriggerConfig
+from .performance import *  # noqa
+from .performance import PerformanceTriggerConfig
 from .simple import *  # noqa
 from .simple import SimpleTriggerConfig
 
 TriggerConfig = Annotated[
-    SimpleTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig,
+    SimpleTriggerConfig | DataDriftTriggerConfig | EnsembleTriggerConfig | PerformanceTriggerConfig,
     Field(discriminator="id"),
 ]
