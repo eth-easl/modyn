@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 from alibi_detect.cd import (
     ChiSquareDrift,
+    ClassifierDrift,
     CVMDrift,
     FETDrift,
     KSDrift,
@@ -19,13 +20,16 @@ from modyn.config.schema.pipeline import (
     MetricResult,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectClassifierDriftMetric,
     AlibiDetectCVMDriftMetric,
     AlibiDetectKSDriftMetric,
 )
+from modyn.supervisor.internal.triggers.drift.classifier_models import (
+    alibi_classifier_models,
+)
+from modyn.supervisor.internal.triggers.drift.detector.drift import DriftDetector
 
-from .drift import DriftDetector
-
-_AlibiMetrics = MMDDrift | ChiSquareDrift | KSDrift | CVMDrift | FETDrift | LSDDDrift
+_AlibiMetrics = MMDDrift | ClassifierDrift | ChiSquareDrift | CVMDrift | FETDrift | KSDrift | LSDDDrift | MMDDrift
 
 
 class AlibiDriftDetector(DriftDetector):
@@ -42,18 +46,18 @@ class AlibiDriftDetector(DriftDetector):
 
     def detect_drift(
         self,
-        embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
-        embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        embeddings_ref: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
+        embeddings_cur: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
         is_warmup: bool,
     ) -> dict[str, MetricResult]:
-        assert isinstance(embeddings_ref, (np.ndarray | torch.Tensor))
-        assert isinstance(embeddings_cur, (np.ndarray | torch.Tensor))
-        embeddings_ref = (
-            embeddings_ref.detach().cpu().numpy() if isinstance(embeddings_ref, torch.Tensor) else embeddings_ref
-        )
-        embeddings_cur = (
-            embeddings_cur.detach().cpu().numpy() if isinstance(embeddings_cur, torch.Tensor) else embeddings_cur
-        )
+        if isinstance(embeddings_ref, pd.DataFrame):
+            embeddings_ref = embeddings_ref.to_numpy()
+        if isinstance(embeddings_ref, torch.Tensor):
+            embeddings_ref = embeddings_ref.detach().cpu().numpy()
+        if isinstance(embeddings_cur, pd.DataFrame):
+            embeddings_cur = embeddings_cur.to_numpy()
+        if isinstance(embeddings_cur, torch.Tensor):
+            embeddings_cur = embeddings_cur.detach().cpu().numpy()
 
         results: dict[str, MetricResult] = {}
 
@@ -76,14 +80,18 @@ class AlibiDriftDetector(DriftDetector):
                 if isinstance(result["data"]["p_val"], np.ndarray)
                 else result["data"]["p_val"]
             )
-
+            _threshold = (
+                float(result["data"]["threshold"].mean())
+                if isinstance(result["data"]["threshold"], np.ndarray)
+                else result["data"]["threshold"]
+            )
             results[metric_ref] = MetricResult(
                 metric_id=metric_ref,
                 # will be overwritten by DecisionPolicy inside the DataDriftTrigger
                 is_drift=result["data"]["is_drift"],
                 distance=_dist,
                 p_val=_p_val,
-                threshold=result["data"].get("threshold"),
+                threshold=_threshold,
             )
 
         return results
@@ -99,6 +107,10 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
     if isinstance(config, AlibiDetectMmdDriftMetric):
         kernel = getattr(alibi_detect.utils.pytorch, config.kernel)
 
+    kwargs = {}
+    if config.preprocessor:
+        kwargs.update({"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)})
+
     if isinstance(config, AlibiDetectMmdDriftMetric):
         assert kernel is not None
         return MMDDrift(
@@ -110,6 +122,18 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             device=config.device,
             configure_kernel_from_x_ref=config.configure_kernel_from_x_ref,
             x_ref_preprocessed=config.x_ref_preprocessed,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectClassifierDriftMetric):
+        return ClassifierDrift(
+            embeddings_ref,
+            alibi_classifier_models[config.classifier_id],
+            backend="pytorch",
+            p_val=config.p_val,
+            preds_type="logits",
+            device=config.device,
+            **kwargs,
         )
 
     if isinstance(config, AlibiDetectKSDriftMetric):
@@ -118,6 +142,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
+            **kwargs,
         )
 
     if isinstance(config, AlibiDetectCVMDriftMetric):
@@ -126,6 +151,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
+            **kwargs,
         )
 
     raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")
