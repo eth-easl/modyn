@@ -5,12 +5,12 @@ import logging
 from collections.abc import Generator
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.criterion import ThresholdDecisionCriterion
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
     DriftWindowingStrategy,
     TimeWindowingStrategy,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.drift.decision_policy import (
     DriftDecisionPolicy,
