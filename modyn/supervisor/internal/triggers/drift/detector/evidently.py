@@ -32,18 +32,32 @@ class EvidentlyDriftDetector(DriftDetector):
 
     def detect_drift(
         self,
-        embeddings_ref: pd.DataFrame | np.ndarray | torch.Tensor,
-        embeddings_cur: pd.DataFrame | np.ndarray | torch.Tensor,
+        embeddings_ref: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
+        embeddings_cur: pd.DataFrame | pd.Series | np.ndarray | torch.Tensor,
         is_warmup: bool,
     ) -> dict[str, MetricResult]:
-        assert isinstance(embeddings_ref, pd.DataFrame)
-        assert isinstance(embeddings_cur, pd.DataFrame)
+        if isinstance(embeddings_ref, torch.Tensor):
+            embeddings_ref = embeddings_ref.cpu().numpy()
+
+        if isinstance(embeddings_cur, torch.Tensor):
+            embeddings_cur = embeddings_cur.cpu().numpy()
+
+        if isinstance(embeddings_ref, np.ndarray):
+            assert len(embeddings_ref.shape) == 2
+            embeddings_ref = pd.DataFrame(embeddings_ref)
+
+        if isinstance(embeddings_cur, np.ndarray):
+            assert len(embeddings_cur.shape) == 2
+            embeddings_cur = pd.DataFrame(embeddings_cur)
 
         # Run Evidently detection
         # ColumnMapping is {mapping name: column indices},
         # an Evidently way of identifying (sub)columns to use in the detection.
         # e.g. {"even columns": [0,2,4]}.
-        column_mapping = ColumnMapping(embeddings={EVIDENTLY_COLUMN_MAPPING_NAME: embeddings_ref.columns})
+        mapped_columns = list(map(str, embeddings_ref.columns))
+        embeddings_ref.columns = mapped_columns
+        embeddings_cur.columns = mapped_columns
+        column_mapping = ColumnMapping(embeddings={EVIDENTLY_COLUMN_MAPPING_NAME: mapped_columns})
 
         # https://docs.evidentlyai.com/user-guide/customization/embeddings-drift-parameters
         report = Report(
