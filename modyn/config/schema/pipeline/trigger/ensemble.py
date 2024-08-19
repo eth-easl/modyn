@@ -70,7 +70,11 @@ class EnsembleTriggerConfig(ModynBaseModel):
 
     detection_interval_data_points: int = Field(
         1000,
-        description="The number of samples in the interval after which drift detection is performed.",
+        description=(
+            "The number of samples in the interval after which drift detection is performed. "
+            "Some policies don't require this time-dicretization. However some do, e.g. therefore, this parameter "
+            "is required also here."
+        ),
         ge=1,
     )
     subtriggers: dict[str, __TriggerConfig] = Field(  # type: ignore[valid-type]
