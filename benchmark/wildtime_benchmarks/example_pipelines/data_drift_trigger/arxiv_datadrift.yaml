@@ -67,7 +67,6 @@ evaluation:
       models: matrix
       datasets: ["arxiv_test"]
   device: "cuda:0"
-  result_writers: ["json"]
   datasets:
     - dataset_id: arxiv_test
       bytes_parser_function: |

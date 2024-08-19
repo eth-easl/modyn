@@ -3,7 +3,9 @@ import pathlib
 from collections.abc import Generator
 from unittest.mock import patch
 
-from modyn.supervisor.internal.triggers.trigger_datasets import OnlineTriggerDataset
+from modyn.supervisor.internal.triggers.utils.datasets.online_trigger_dataset import (
+    OnlineTriggerDataset,
+)
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
 NUM_SAMPLES = 10

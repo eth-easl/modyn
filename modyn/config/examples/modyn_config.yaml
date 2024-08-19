@@ -48,6 +48,24 @@ storage:
       },
       # ---------------------------------- YEARBOOK ---------------------------------- #
       {
+        name: "yearbook_all",
+        description: "Yearbook Dataset from Wild-Time (full set)",
+        version: "0.0.1",
+        base_path: "/datasets/yearbook/all",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "BinaryFileWrapper",
+        file_wrapper_config:
+          {
+            byteorder: "big",
+            record_size: 12292,
+            label_size: 4,
+            file_extension: ".bin",
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 256,
+      },
+      {
         name: "yearbook_train",
         description: "Yearbook Dataset from Wild-Time (training set)",
         version: "0.0.1",
@@ -114,6 +132,39 @@ storage:
         file_watcher_interval: 5,
         selector_batch_size: 4096,
       },
+      # ------------------------------- HUFFPOST KAGGLE ------------------------------ #
+      {
+        name: "huffpost_kaggle_train",
+        description: "Original Huffpost Dataset from Kaggle (train)",
+        version: "0.0.1",
+        base_path: "/datasets/huffpost_kaggle/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since headlines contain commas and semicolons
+            label_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      {
+        name: "huffpost_kaggle_test",
+        description: "Original Huffpost Dataset from Kaggle (test)",
+        version: "0.0.1",
+        base_path: "/datasets/huffpost_kaggle/test",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since headlines contain commas and semicolons
+            label_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
       # ------------------------------------ ARXIV ----------------------------------- #
       {
         name: "arxiv_train",
@@ -136,6 +187,39 @@ storage:
         description: "Arxiv Dataset from Wild-time (test set)",
         version: "0.0.1",
         base_path: "/datasets/arxiv/test",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            label_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      # -------------------------------- ARXIV KAGGLE -------------------------------- #
+      {
+        name: "arxiv_kaggle_train",
+        description: "Original Arxiv Dataset from Kaggle (training set)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle/train",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            label_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 4096,
+      },
+      {
+        name: "arxiv_kaggle_test",
+        description: "Original Arxiv Dataset from Kaggle (test set)",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle/test",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {

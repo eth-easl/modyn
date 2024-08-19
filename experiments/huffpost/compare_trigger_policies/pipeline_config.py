@@ -64,7 +64,6 @@ def gen_pipeline_config(
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
             device="cuda:0",
-            result_writers=["json"],
             after_training_evaluation_workers=10,
             after_pipeline_evaluation_workers=10,
             datasets=[

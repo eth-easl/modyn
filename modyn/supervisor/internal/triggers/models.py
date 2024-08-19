@@ -22,5 +22,6 @@ TriggerEvalLog = Annotated[DriftTriggerEvalLog, Field(discriminator="type")]
 
 class TriggerPolicyEvaluationLog(ModynBaseModel):
     evaluations: list[TriggerEvalLog] = Field(
-        default_factory=list, description="The results of the trigger policy evaluation."
+        default_factory=list,
+        description="The results of the trigger policy evaluation.",
     )
