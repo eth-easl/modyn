@@ -16,6 +16,7 @@ class TimeResolution(str, Enum):
 
 TriggerEvaluationMode = Literal["hindsight", "lookahead"]
 """
+Some triggers like PerformanceTrigger and CostTrigger can be evaluated in two different modes:
 - hindsight: The trigger is evaluated on the data that has already been seen. Once a we are certain about a threshold
     crossing, the trigger is executed. Triggers are only performed after the threshold was crossed.
 - lookahead: The same as hindsight, but we extend the trigger metric with a forecast. The forecast is used to estimate

@@ -18,7 +18,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import (
     ModelStorageStub,
 )
-from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
+from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
 from modyn.utils.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ class ModelDownloader:
     """The ModelDownloader provides a simple interface setup_manager() to the
     DataDriftTrigger.
 
-    Given a model_id and a device, it creates an ModelManager, downloads
-    model parameters and loads model state.
+    Given a model_id and a device, it creates an StatefulModel,
+    downloads model parameters and loads model state.
     """
 
     def __init__(
@@ -56,7 +56,7 @@ class ModelDownloader:
             )
         return ModelStorageStub(model_storage_channel)
 
-    def configure(self, model_id: int, device: str) -> ModelManager | None:
+    def configure(self, model_id: int, device: str) -> StatefulModel | None:
         with MetadataDatabaseConnection(self.modyn_config) as database:
             trained_model: TrainedModel | None = database.session.get(TrainedModel, model_id)
             if not trained_model:
@@ -64,7 +64,7 @@ class ModelDownloader:
                 return None
             model_class_name, model_config, amp = database.get_model_configuration(trained_model.pipeline_id)
 
-        embedding_encoder = ModelManager(model_id, model_class_name, model_config, device, amp)
+        embedding_encoder = StatefulModel(model_id, model_class_name, model_config, device, amp)
         return embedding_encoder
 
     def download(self, model_id: int) -> pathlib.Path:
@@ -85,7 +85,7 @@ class ModelDownloader:
         assert trained_model_path is not None
         return trained_model_path
 
-    def setup_manager(self, model_id: int, device: str) -> ModelManager:
+    def setup_manager(self, model_id: int, device: str) -> StatefulModel:
         embedding_encoder = self.configure(model_id, device)
         assert embedding_encoder is not None
         trained_model_path = self.download(model_id)
