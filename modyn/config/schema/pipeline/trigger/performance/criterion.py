@@ -7,7 +7,7 @@ from modyn.config.schema.base_model import ModynBaseModel
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                                 PerformanceCriterion                                                 #
 # -------------------------------------------------------------------------------------------------------------------- #
-# uses the evaluation results directory to derive a triggering decision
+# uses the evaluation results to derive a triggering decision
 
 
 class _NamedMetricPerformanceCriterion(ModynBaseModel):
@@ -39,9 +39,6 @@ class DynamicPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
             "below the expected performance minus the allowed deviation."
         ),
     )
-
-
-# TODO: drift: rolling average + x % (instead of percentile)
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
