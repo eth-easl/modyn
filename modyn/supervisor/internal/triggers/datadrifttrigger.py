@@ -45,7 +45,7 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 )
 from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
-from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
+from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class DataDriftTrigger(Trigger):
 
         self.dataloader_info: DataLoaderInfo | None = None
         self.model_downloader: ModelDownloader | None = None
-        self.model_manager: ModelManager | None = None
+        self.model: StatefulModel | None = None
 
         self._sample_left_until_detection = (
             config.detection_interval_data_points
@@ -307,17 +307,17 @@ class DataDriftTrigger(Trigger):
         # Download most recent model as model manager
         # TODO(417) Support custom model as model manager
         if self.model_refresh_needed:
-            self.model_manager = self.model_downloader.setup_manager(
+            self.model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device
             )
             self.model_refresh_needed = False
 
         # Compute embeddings
-        assert self.model_manager is not None
+        assert self.model is not None
 
         # TODO(@robinholzi): reuse the embeddings as long as the reference window is not updated
-        reference_embeddings = get_embeddings(self.model_manager, reference_dataloader)
-        current_embeddings = get_embeddings(self.model_manager, current_dataloader)
+        reference_embeddings = get_embeddings(self.model, reference_dataloader)
+        current_embeddings = get_embeddings(self.model, current_dataloader)
         reference_embeddings_df = convert_tensor_to_df(reference_embeddings, "col_")
         current_embeddings_df = convert_tensor_to_df(current_embeddings, "col_")
 
