@@ -4,15 +4,16 @@
 
 The `PerformanceTrigger` is a trigger mechanism that evaluates the performance of a model over time and makes decisions based on performance-observing criteria. Unlike simple triggers, the `PerformanceTrigger` considers user selected performance metrics and can evaluate decisions based on static or dynamic performance thresholds, as well as the number of avoidable misclassifications.
 
-We define `avoidable misclassifications` as the misclassifications that could have been avoided if the model had triggered earlier. They can be see as the lost benefits of not triggering. We derive the avoidable misclassification estimates by observing two time series:
+We define `avoidable misclassifications` as the misclassifications that could have been avoided if the model had triggered earlier. They can be seen as the lost benefits of not triggering. We derive the avoidable misclassification estimates by observing two time series:
 
-1. The series of evaluation scores directly after the last executed triggers (with fresh models). We define those results as `expected performance`.
+1. The series of evaluation scores after each of the previous triggers. These are the evaluations that we run directly after having trained a new model. We define the performance estimates derived from these results as `expected performance`.
 
 2. The series of evaluation SINCE the last trigger on policy update points where we could have triggered but decided not to. This series is used to estimate the avoidable misclassifications. We define those results as `actual/effective performance`.
 
 The delta between the expected and the actual performance is then used to estimate the avoidable misclassifications.
 
-This mechanism relies on performance and data density tracking to observe trends. Decision policies then make binary decisions (trigger or not) based on this information.
+This mechanism relies on performance tracking and data density (queries or samples per second) tracking to observe trends. In `lookahead` mode we use data density estimates to forecast how many queries/samples will arrive in the next interval as this influences the number of expected misclassifications.
+Decision policies then make the binary decisions (trigger or not) based on this information.
 
 For the performance and misclassification estimations we can always take two approaches: `hindsight` and `lookahead`. The `hindsight` approach uses the most recent data to estimate the performance and misclassifications. The `lookahead` approach uses the forecasted performance and misclassifications to make decisions.
 
@@ -85,7 +86,7 @@ classDiagram
 
 ### `PerformanceTriggerCriterion` Hierarchy
 
-The PerformanceTriggerCriterion class is an abstract configuration base class for criteria like `StaticPerformanceThresholdCriterion` and `DynamicPerformanceThresholdCriterion`, which define how decisions are made based on drift metrics. Even if the threshold generation is somewhat different to the DecisionCriteria in the drift triggers, the concept is similar. The configuration made in those models will determine the decision process within the `PerformanceDecisionPolicy` classes.
+The PerformanceTriggerCriterion class is an abstract configuration base class for criteria like `StaticPerformanceThresholdCriterion` and `DynamicPerformanceThresholdCriterion`, which define how decisions are made. Even if the threshold generation is somewhat different to the DecisionCriteria in the drift triggers, the concept is similar. The configuration made in those models will determine the decision process within the `PerformanceDecisionPolicy` classes.
 
 ```mermaid
 classDiagram
@@ -135,7 +136,7 @@ The `PerformanceDecisionPolicy` is an abstract base class that defines the decis
 <details>
 <summary><b>What are avoidable misclassification?</b></summary>
 
-Avoidable misclassifications are the misclassifications that could have been avoided if the model had triggered earlier. They can be seen as the lost benefits of not triggering. Every evaluation point we estimate the avoidable misclassifications by comparing the expected performance (the performance of the model if we had triggered) with the actual performance (the performance of the model since the last trigger). Avoidable misclassifications are then derived from the difference between the expected and actual accuracy and the estimated query density.
+Avoidable misclassifications are the misclassifications that could have been avoided if the model had triggered earlier. They can be seen as the lost benefits of not triggering. Every evaluation point we estimate the avoidable misclassifications by comparing the expected performance (the performance of the model if we had triggered) with the actual performance (the performance of the model since the last trigger). Avoidable misclassifications are then derived from the difference between the expected and actual accuracy and the estimated query density. In forecasting mode the expected future avoidable misclassifications are included when comparing to the threshold.
 
 </details>
 
@@ -145,7 +146,9 @@ All decision work on estimates of e.g. the expected performance, next actual/obs
 
 In hindsight mode, decisions are based solely on the current observed performance metrics. This mode checks if the most recent performance falls below a predefined threshold or deviates significantly from the expected performance, based on past evaluations. It is a retrospective approach, relying on already observed data to determine if a trigger should be invoked. Triggering happens post-factum when the performance has already degraded / a threshold has been crossed.
 
-On the other hand, forecasting mode looks forward and incorporates predictions of future performance into the decision-making process. This mode not only evaluates the current performance but also forecasts future performance and data density to anticipate potential issues before they occur. For example, in the static number avoidable misclassification policy, forecasting mode predicts whether the cumulative number of avoidable misclassifications will exceed the threshold before the next evaluation. By doing so, it aims to prevent performance degradation by triggering preemptively, rather than waiting for the problem to manifest.
+On the other hand, forecasting mode looks forward and incorporates predictions of future performance into the decision-making process. This mode not only evaluates the current performance but also forecasts future performance and data density to anticipate potential issues before they occur. For example, in the static number avoidable misclassification policy, `lookahead` mode predicts whether the cumulative number of avoidable misclassifications will exceed the threshold before the next evaluation.
+We also derive the cumulated number of avoidable misclassifications like in hind-sight mode and but then add the virtual forecasted number of avoidable misclassifications. That value is then compared with the threshold instead the "past" cumulation counter only. The forecasted number of avoidable misclassifications isn't persisted in the cumulative counter, though.
+By doing so, it aims to prevent performance degradation by triggering preemptively, rather than waiting for the problem to manifest.
 
 </details>
 
@@ -178,3 +181,8 @@ classDiagram
     PerformanceDecisionPolicy <|-- DynamicPerformanceThresholdDecisionPolicy
     PerformanceDecisionPolicy <|-- StaticNumberAvoidableMisclassificationDecisionPolicy
 ```
+
+## Remark on Use Cases
+
+The `PerformanceTrigger` is useful in scenarios where the model's performance is expected to degrade gradually over time. For example, in a production environment where the data distribution slowly drifts, the model's accuracy may decrease over time. In such cases, after a certain time of performance degradation, the model should be retrained to maintain its accuracy.
+Even if a performance threshold is not crossed, the `PerformanceTrigger` can trigger a retraining based on the number of cumulated avoidable misclassifications.
