@@ -4,6 +4,8 @@ import gc
 import logging
 from collections.abc import Generator
 
+from typing_extensions import override
+
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
@@ -88,6 +90,7 @@ class DataDriftTrigger(Trigger):
         # list of reference windows for each warmup interval
         self.warmup_intervals: list[list[tuple[int, int]]] = []
 
+    @override
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
@@ -240,7 +243,13 @@ class DataDriftTrigger(Trigger):
                 log=log,
             )
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
+    @override
+    def inform_new_model(
+        self,
+        most_recent_model_id: int,
+        number_samples: int | None = None,
+        training_time: float | None = None,
+    ) -> None:
         self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
 

@@ -3,7 +3,7 @@
 measured by a regret metric like data incorporation latency or avoidable
 misclassification incorporation latency)."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -16,7 +16,8 @@ class _CostTriggerConfig(ModynBaseModel):
     """Base class for cost aware trigger policies."""
 
     cost_tracking_window_size: int = Field(
-        description="How many trigger into the past should be considered for the linear cost w.r.t. data amount model."
+        1000,
+        description="How many trigger into the past should be considered for the linear cost w.r.t. data amount model.",
     )
 
 
@@ -42,6 +43,15 @@ class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
             "per second of training time saved."
         )
     )
+
+    @property
+    def conversion_factor(self) -> float:
+        """Conversion factor between budget (training time) and regret metric
+        (incorporation latency).
+
+        Unifies names for easier downstream usage.
+        """
+        return self.incorporation_delay_per_training_second
 
 
 class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalPerformanceTriggerConfig):
@@ -72,3 +82,18 @@ class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalP
     avoidable_misclassification_latency_per_training_second: float = Field(
         description="How many seconds of unaddressed avoidable misclassifications are we willing to accept per second of training time saved."
     )
+
+    @property
+    def conversion_factor(self) -> float:
+        """Conversion factor between budget (training time) and regret metric
+        (avoidable misclassifications).
+
+        Unifies names for easier downstream usage.
+        """
+        return self.avoidable_misclassification_latency_per_training_second
+
+
+CostTriggerConfig = Annotated[
+    AvoidableMisclassificationCostTriggerConfig | DataIncorporationLatencyCostTriggerConfig,
+    Field(discriminator="id"),
+]

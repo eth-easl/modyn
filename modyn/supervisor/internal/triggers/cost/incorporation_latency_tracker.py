@@ -12,7 +12,7 @@ class IncorporationLatencyTracker:
     def cumulative_latency_regret(self) -> float:
         return self._cumulative_latency_regret
 
-    def add_latency(self, regret: float, period_duration: float) -> float:
+    def add_latency(self, regret: float, batch_duration: float) -> float:
         """Add the new regret from the last interval to the cumulative regret.
 
         Args:
@@ -23,7 +23,7 @@ class IncorporationLatencyTracker:
             Most recent cumulative regret value.
         """
         self._current_regret += regret
-        self._cumulative_latency_regret += self._current_regret * period_duration
+        self._cumulative_latency_regret += self._current_regret * batch_duration
 
         return self._cumulative_latency_regret
 
