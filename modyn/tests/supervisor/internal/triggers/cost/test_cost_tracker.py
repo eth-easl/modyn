@@ -3,15 +3,15 @@ from collections import deque
 import numpy as np
 import pytest
 
-from modyn.supervisor.internal.triggers.cost.cost_tracker import DataDensityTracker
+from modyn.supervisor.internal.triggers.cost.cost_tracker import CostTracker
 
 
 @pytest.fixture
-def tracker() -> DataDensityTracker:
-    return DataDensityTracker(window_size=3)
+def tracker() -> CostTracker:
+    return CostTracker(window_size=3)
 
 
-def test_initial_state_and_needs_calibration(tracker: DataDensityTracker) -> None:
+def test_initial_state_and_needs_calibration(tracker: CostTracker) -> None:
     assert len(tracker.measurements) == 0
     assert not tracker.needs_calibration()
 
@@ -19,7 +19,7 @@ def test_initial_state_and_needs_calibration(tracker: DataDensityTracker) -> Non
     assert tracker.needs_calibration()
 
 
-def test_inform_trigger_updates_measurements(tracker: DataDensityTracker) -> None:
+def test_inform_trigger_updates_measurements(tracker: CostTracker) -> None:
     tracker.inform_trigger(10, 0.5)
     tracker.inform_trigger(20, 1.0)
     assert tracker.measurements == deque([(10, 0.5), (20, 1.0)], maxlen=3)
@@ -32,7 +32,7 @@ def test_inform_trigger_updates_measurements(tracker: DataDensityTracker) -> Non
 
 
 def test_forecast_training_time_and_model_retraining(
-    tracker: DataDensityTracker,
+    tracker: CostTracker,
 ) -> None:
     # Inform with data points
     with pytest.raises(AssertionError, match="The tracker needs more data to make a forecast."):

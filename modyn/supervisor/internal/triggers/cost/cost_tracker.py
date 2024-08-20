@@ -4,7 +4,7 @@ import numpy as np
 from sklearn import linear_model
 
 
-class DataDensityTracker:
+class CostTracker:
     """Observes a stream trigger costs (wall clack time measurements) and
     maintains a linear model assuming a linear relationship between the number
     of samples and the time it takes to process them."""
