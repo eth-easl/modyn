@@ -11,13 +11,7 @@ from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 
 
 class PerformanceTriggerEvaluationConfig(ModynBaseModel):
-    # max_samples_per_evaluation: int = Field(
-    #     1000,
-    #     description=(
-    #         "The maximum number of samples that should be used for the evaluation. If more are available, "
-    #         "downsampling will be used"
-    #     ),
-    # )  # TODO: currently not yet supported by the evaluator, we use a evaluation dataset that is sufficiently small
+    # TODO(@robinholzi): Support sampling
 
     device: str = Field(description="The device the model should be put on.")
     dataset: EvalDataConfig = Field(description="The dataset on which the model is evaluated.")
@@ -61,7 +55,6 @@ class _InternalPerformanceTriggerConfig(ModynBaseModel):
             "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
             "the default metric that is always generated and cannot be disabled. To define a "
             "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
-            # TODO: maybe support custom aggregation functions
         ),
         min_length=1,
     )

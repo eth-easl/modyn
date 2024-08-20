@@ -8,7 +8,7 @@ from modyn.supervisor.internal.triggers.performance.performance_tracker import (
 def test_initial_state() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     with pytest.raises(IndexError):
-        tracker.previous_batch_num_misclassifications()
+        tracker.previous_batch_num_misclassifications
     assert len(tracker.trigger_evaluation_memory) == 0
     assert len(tracker.since_last_trigger) == 0
 
@@ -16,7 +16,7 @@ def test_initial_state() -> None:
 def test_inform_evaluation() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     tracker.inform_evaluation(10, 2, {"acc": 0.8})
-    assert tracker.previous_batch_num_misclassifications() == 2
+    assert tracker.previous_batch_num_misclassifications == 2
     assert len(tracker.since_last_trigger) == 1
     assert tracker.since_last_trigger[0] == (10, 2, {"acc": 0.8})
 
@@ -25,7 +25,7 @@ def test_inform_trigger() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     tracker.inform_evaluation(10, 2, {"acc": 0.8})
     tracker.inform_trigger(10, 1, {"acc": 0.9})
-    assert tracker.previous_batch_num_misclassifications() == 1
+    assert tracker.previous_batch_num_misclassifications == 1
     assert len(tracker.trigger_evaluation_memory) == 1
     assert tracker.trigger_evaluation_memory[-1] == (10, 1, {"acc": 0.9})
     assert len(tracker.since_last_trigger) == 1  # Reset after trigger
@@ -37,7 +37,7 @@ def test_inform_trigger_memory_rollover() -> None:
     tracker.inform_trigger(20, 3, {"acc": 0.85})
     tracker.inform_trigger(10, 1, {"acc": 0.9})
     tracker.inform_trigger(20, 1, {"acc": 0.95})  # This should push out the first evaluation
-    assert tracker.previous_batch_num_misclassifications() == 1
+    assert tracker.previous_batch_num_misclassifications == 1
     assert len(tracker.trigger_evaluation_memory) == 3
     # First entry should be the second trigger
     assert tracker.trigger_evaluation_memory[0] == (20, 3, {"acc": 0.85})
@@ -120,7 +120,7 @@ def test_accuracy_forecasts() -> None:
     tracker.inform_evaluation(10, 4, {"acc": 0})
     tracker.inform_evaluation(10, 5, {"acc": 0})
     performance = tracker.forecast_next_accuracy(method="rolling_average")
-    assert performance == (9 + 8 + 7 + 6 + 5) / 5 / 10
+    assert abs(performance - (9 + 8 + 7 + 6 + 5) / 5 / 10) < 1e-5
 
     tracker.inform_trigger(10, 1, {"acc": 0})
     tracker.inform_trigger(10, 2, {"acc": 0})
@@ -128,4 +128,4 @@ def test_accuracy_forecasts() -> None:
     tracker.inform_trigger(10, 4, {"acc": 0})
     tracker.inform_trigger(10, 5, {"acc": 0})
     performance = tracker.forecast_expected_accuracy("rolling_average")  # window size 2
-    assert tracker.forecast_expected_accuracy("rolling_average") == (6 + 5) / 2 / 10
+    assert abs(tracker.forecast_expected_accuracy("rolling_average") - (6 + 5) / 2 / 10) < 1e-5

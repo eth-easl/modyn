@@ -38,8 +38,9 @@ class MetricFactory:
 
     @staticmethod
     def prepare_metrics(metrics: dict[str, AbstractEvaluationMetric]) -> bool:
+        contains_holistic = False
         for metric in metrics.values():
             metric.deserialize_evaluation_transformer()
             if isinstance(metric, AbstractHolisticMetric):
-                return True
-        return False
+                contains_holistic = True
+        return contains_holistic

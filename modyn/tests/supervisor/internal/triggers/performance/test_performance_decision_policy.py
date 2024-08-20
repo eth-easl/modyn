@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -185,7 +185,12 @@ def test_dynamic_performance_forecast(
 # TODO: self.config.expected_accuracy
 
 
-@patch.object(DataDensityTracker, "previous_batch_samples", side_effect=[100, 100, 100, 100, 100])
+@patch.object(
+    DataDensityTracker,
+    "previous_batch_num_samples",
+    side_effect=[100, 100, 100, 100, 100],
+    new_callable=PropertyMock,
+)
 @patch.object(
     PerformanceTracker,
     "forecast_expected_accuracy",
@@ -195,11 +200,12 @@ def test_dynamic_performance_forecast(
     PerformanceTracker,
     "previous_batch_num_misclassifications",
     side_effect=[5, 9, 1, 9, 4],
+    new_callable=PropertyMock,
 )
 def test_misclassification_hindsight(
     mock_previous_batch_num_misclassifications: MagicMock,
     mock_forecast_expected_accuracy: MagicMock,
-    mock_previous_batch_samples: MagicMock,
+    mock_previous_batch_num_samples: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
     misclassification_policy: StaticNumberAvoidableMisclassificationDecisionPolicy,
@@ -248,17 +254,23 @@ def test_misclassification_hindsight(
     assert mock_previous_batch_num_misclassifications.call_count == 5
 
 
-@patch.object(DataDensityTracker, "previous_batch_samples", side_effect=[100, 100, 100])
+@patch.object(
+    DataDensityTracker,
+    "previous_batch_num_samples",
+    side_effect=[100, 100, 100],
+    new_callable=PropertyMock,
+)
 @patch.object(PerformanceTracker, "forecast_expected_accuracy", side_effect=[0, 0, 0])
 @patch.object(
     PerformanceTracker,
     "previous_batch_num_misclassifications",
     side_effect=[90, 70, 70],
+    new_callable=PropertyMock,
 )
 def test_misclassification_static_expected_performance(
     mock_previous_batch_num_misclassifications: MagicMock,
     mock_forecast_expected_accuracy: MagicMock,
-    mock_previous_batch_samples: MagicMock,
+    mock_previous_batch_num_samples: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
     misclassification_policy: StaticNumberAvoidableMisclassificationDecisionPolicy,
@@ -279,7 +291,7 @@ def test_misclassification_static_expected_performance(
     assert misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 15
     assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_samples.call_count == 1
+    assert mock_previous_batch_num_samples.call_count == 1
 
     misclassification_policy.inform_trigger()  # reset misclassifications
     misclassification_policy.cumulated_avoidable_misclassifications = 10
@@ -289,20 +301,25 @@ def test_misclassification_static_expected_performance(
     assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5
     assert mock_previous_batch_num_misclassifications.call_count == 2
-    assert mock_previous_batch_samples.call_count == 2
+    assert mock_previous_batch_num_samples.call_count == 2
 
     # forbid reduction: with reduction cumulated_avoidable_misclassifications reduced from 5 to 0, here constant at 5
     misclassification_policy.config.allow_reduction = False
     assert not misclassification_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0})
     assert misclassification_policy.cumulated_avoidable_misclassifications == 5
     assert mock_previous_batch_num_misclassifications.call_count == 3
-    assert mock_previous_batch_samples.call_count == 3
+    assert mock_previous_batch_num_samples.call_count == 3
 
     # not used in the case of static expected performance
     assert mock_forecast_expected_accuracy.call_count == 0
 
 
-@patch.object(DataDensityTracker, "previous_batch_samples", side_effect=[100, 100, 100])
+@patch.object(
+    DataDensityTracker,
+    "previous_batch_num_samples",
+    side_effect=[100, 100, 100],
+    new_callable=PropertyMock,
+)
 @patch.object(DataDensityTracker, "forecast_density", side_effect=[1, 1])
 @patch.object(PerformanceTracker, "forecast_expected_accuracy", side_effect=[])
 @patch.object(PerformanceTracker, "forecast_next_accuracy", side_effect=[0.4, 0.2])
@@ -311,6 +328,7 @@ def test_misclassification_static_expected_performance(
     PerformanceTracker,
     "previous_batch_num_misclassifications",
     side_effect=[60, 57, 57],
+    new_callable=PropertyMock,
 )
 def test_misclassification_forecast(
     mock_previous_batch_num_misclassifications: MagicMock,
@@ -318,7 +336,7 @@ def test_misclassification_forecast(
     mock_forecast_next_accuracy: MagicMock,
     mock_forecast_expected_accuracy: MagicMock,
     mock_forecast_density: MagicMock,
-    mock_previous_batch_samples: MagicMock,
+    mock_previous_batch_num_samples: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
     misclassification_policy: StaticNumberAvoidableMisclassificationDecisionPolicy,
@@ -343,13 +361,13 @@ def test_misclassification_forecast(
     )
     assert misclassification_policy.cumulated_avoidable_misclassifications == 10
     assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_samples.call_count == 1
+    assert mock_previous_batch_num_samples.call_count == 1
     assert mock_forecast_next_accuracy.call_count == 0
     assert mock_forecast_density.call_count == 0
 
     misclassification_policy.inform_trigger()  # reset misclassifications
     mock_previous_batch_num_misclassifications.reset_mock()
-    mock_previous_batch_samples.reset_mock()
+    mock_previous_batch_num_samples.reset_mock()
 
     # 7 avoidable past misclassifications (57 observed, 50 expected)
     # 1 forecasted misclassifications: exp acc=0.5, forecasted acc=0.4, update interval 10, data density=1
@@ -360,14 +378,14 @@ def test_misclassification_forecast(
     # forecasted misclassifications not persisted in the counter
     assert misclassification_policy.cumulated_avoidable_misclassifications == 7
     assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_samples.call_count == 1
+    assert mock_previous_batch_num_samples.call_count == 1
     assert mock_forecast_next_accuracy.call_count == 1
     assert mock_forecast_density.call_count == 1
 
     # reset
     misclassification_policy.cumulated_avoidable_misclassifications = 0
     mock_previous_batch_num_misclassifications.reset_mock()
-    mock_previous_batch_samples.reset_mock()
+    mock_previous_batch_num_samples.reset_mock()
     mock_forecast_next_accuracy.reset_mock()
     mock_forecast_density.reset_mock()
 
@@ -379,7 +397,7 @@ def test_misclassification_forecast(
     )
     assert misclassification_policy.cumulated_avoidable_misclassifications == 7
     assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_samples.call_count == 1
+    assert mock_previous_batch_num_samples.call_count == 1
     assert mock_forecast_next_accuracy.call_count == 1
     assert mock_forecast_density.call_count == 1
 

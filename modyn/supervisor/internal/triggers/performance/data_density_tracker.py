@@ -1,8 +1,7 @@
 from collections import deque
 
-from sklearn import linear_model
-
 from modyn.const.types import ForecastingMethod
+from modyn.supervisor.internal.utils.forecast import forecast_value
 
 
 class DataDensityTracker:
@@ -27,7 +26,7 @@ class DataDensityTracker:
         """Memory of the last `window_size` batches containing the number of
         samples and the time range of the batch in seconds."""
 
-        self.previous_batch_end_time: int | None = None
+        self._previous_batch_end_time: int | None = None
 
     def inform_data(self, data: list[tuple[int, int]]) -> None:
         """Informs the tracker about new data batch."""
@@ -35,15 +34,16 @@ class DataDensityTracker:
             return
 
         num_seconds = (
-            data[-1][1] - self.previous_batch_end_time
-            if self.previous_batch_end_time is not None
+            data[-1][1] - self._previous_batch_end_time
+            if self._previous_batch_end_time is not None
             else data[-1][1] - data[0][1]
         )
 
         self.batch_memory.append((len(data), num_seconds))
-        self.previous_batch_end_time = data[-1][1]
+        self._previous_batch_end_time = data[-1][1]
 
-    def previous_batch_samples(self) -> int:
+    @property
+    def previous_batch_num_samples(self) -> int:
         """Returns the number of samples in the last batch."""
         assert len(self.batch_memory) > 0, "No data in memory, calibration needed."
         return self.batch_memory[-1][0]
@@ -58,15 +58,5 @@ class DataDensityTracker:
         Returns:
             The forecasted data density as ratio of samples per second.
         """
-
-        assert len(self.batch_memory) > 0, "No data in memory, calibration needed."
-
         ratio_series = [num_samples / num_seconds for num_samples, num_seconds in self.batch_memory]
-
-        if len(self.batch_memory) < 5 or method == "rolling_average":
-            return sum(ratio_series) / len(ratio_series)
-
-        # Ridge regression estimator for scalar time series forecasting
-        reg = linear_model.Ridge(alpha=0.5)
-        reg.fit([[i] for i in range(len(ratio_series))], ratio_series)
-        return reg.predict([[len(ratio_series)]])[0]
+        return forecast_value(observations=ratio_series, method=method)
