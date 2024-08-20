@@ -37,7 +37,7 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
     prepare_trigger_dataloader_fixed_keys,
 )
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
-from modyn.supervisor.internal.triggers.utils.model.manager import ModelManager
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 from modyn.utils.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class PerformanceTrigger(Trigger):
 
         self.dataloader_info: DataLoaderInfo | None = None
         self.model_downloader: ModelDownloader | None = None
-        self.model_manager: ModelManager | None = None
+        self.model: StatefulModel | None = None
 
         # allows to detect drift in a fixed interval
         self._sample_left_until_detection = config.detection_interval_data_points
@@ -227,16 +227,16 @@ class PerformanceTrigger(Trigger):
 
         # Download most recent model as model manager
         if self.model_refresh_needed:
-            self.model_manager = self.model_downloader.setup_manager(
+            self.model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device
             )
             self.model_refresh_needed = False
 
         # Run evaluation
-        assert self.model_manager is not None
+        assert self.model is not None
 
         eval_results = perform_evaluation(
-            model=self.model_manager,
+            model=self.model,
             dataloader=evaluation_dataloader,
             device=self.config.evaluation.device,
             metrics=self._metrics,

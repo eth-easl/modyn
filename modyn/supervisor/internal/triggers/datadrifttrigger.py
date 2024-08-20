@@ -45,7 +45,7 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 )
 from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
-from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 
 logger = logging.getLogger(__name__)
 
