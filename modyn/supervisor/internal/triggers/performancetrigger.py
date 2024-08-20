@@ -154,7 +154,7 @@ class PerformanceTrigger(Trigger):
 
             else:
                 # evaluate the decision policies
-                any_policy_triggered = False
+                triggered = False
                 for policy_name, policy in self.decision_policies.items():
                     policy_decisions[policy_name] = policy.evaluate_decision(
                         update_interval=self.config.detection_interval_data_points,
@@ -165,9 +165,7 @@ class PerformanceTrigger(Trigger):
                         method=self.config.forecasting_method,
                     )
                     if policy_decisions[policy_name]:
-                        any_policy_triggered = True
-
-                triggered = any_policy_triggered
+                        triggered |= True
 
             if triggered:
                 for policy in self.decision_policies.values():
@@ -225,7 +223,7 @@ class PerformanceTrigger(Trigger):
             self.dataloader_info, [key for key, _ in interval_data]
         )
 
-        # Download most recent model as model manager
+        # Download most recent model as stateful model
         if self.model_refresh_needed:
             self.model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device

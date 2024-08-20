@@ -288,7 +288,7 @@ class DataDriftTrigger(Trigger):
 
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
-        Get the dataloaders, download the model manager model if necessary,
+        Get the dataloaders, download the stateful model if necessary,
         compute embeddings of current and reference data, then run detection on the embeddings.
         """
         assert self.most_recent_model_id is not None
@@ -304,8 +304,8 @@ class DataDriftTrigger(Trigger):
 
         current_dataloader = prepare_trigger_dataloader_fixed_keys(self.dataloader_info, [key for key, _ in current])
 
-        # Download most recent model as model manager
-        # TODO(417) Support custom model as model manager
+        # Download most recent model as stateful model
+        # TODO(417) Support custom model as stateful model
         if self.model_refresh_needed:
             self.model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device
