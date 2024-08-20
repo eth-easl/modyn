@@ -1,7 +1,7 @@
 from collections import deque
 
 from modyn.const.types import ForecastingMethod
-from modyn.supervisor.internal.utils.forecast import forecast_next_time_series_value
+from modyn.supervisor.internal.utils.forecast import forecast_value
 
 
 class PerformanceTracker:
@@ -79,7 +79,7 @@ class PerformanceTracker:
         Returns:
             The forecasted accuracy.
         """
-        return forecast_next_time_series_value(
+        return forecast_value(
             observations=[1 - p[1] / p[0] for p in self.trigger_evaluation_memory],
             method=method,
         )
@@ -95,7 +95,7 @@ class PerformanceTracker:
             0,
             min(
                 1,
-                forecast_next_time_series_value(
+                forecast_value(
                     observations=[1 - p[1] / p[0] for p in self.since_last_trigger],
                     method=method,
                 ),
@@ -113,7 +113,7 @@ class PerformanceTracker:
         Returns:
             The forecasted performance.
         """
-        return forecast_next_time_series_value(
+        return forecast_value(
             observations=[p[2][metric] for p in self.trigger_evaluation_memory],
             method=method,
         )
@@ -129,6 +129,4 @@ class PerformanceTracker:
         Returns:
             The forecasted (observed) performance.
         """
-        return forecast_next_time_series_value(
-            observations=[p[2][metric] for p in self.since_last_trigger], method=method
-        )
+        return forecast_value(observations=[p[2][metric] for p in self.since_last_trigger], method=method)

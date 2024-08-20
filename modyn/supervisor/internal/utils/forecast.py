@@ -5,7 +5,7 @@ from sklearn import linear_model
 from modyn.const.types import ForecastingMethod
 
 
-def forecast_next_time_series_value(
+def forecast_value(
     observations: list[float],
     method: ForecastingMethod = "ridge_regression",
     min_observations_for_ridge: int = 5,

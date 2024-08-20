@@ -1,7 +1,7 @@
 from collections import deque
 
 from modyn.const.types import ForecastingMethod
-from modyn.supervisor.internal.utils.forecast import forecast_next_time_series_value
+from modyn.supervisor.internal.utils.forecast import forecast_value
 
 
 class DataDensityTracker:
@@ -59,4 +59,4 @@ class DataDensityTracker:
             The forecasted data density as ratio of samples per second.
         """
         ratio_series = [num_samples / num_seconds for num_samples, num_seconds in self.batch_memory]
-        return forecast_next_time_series_value(observations=ratio_series, method=method)
+        return forecast_value(observations=ratio_series, method=method)
