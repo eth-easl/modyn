@@ -13,10 +13,10 @@ def tracker() -> CostTracker:
 
 def test_initial_state_and_needs_calibration(tracker: CostTracker) -> None:
     assert len(tracker.measurements) == 0
-    assert not tracker.needs_calibration()
+    assert tracker.needs_calibration()
 
     tracker.inform_trigger(10, 0.5)
-    assert tracker.needs_calibration()
+    assert not tracker.needs_calibration()
 
 
 def test_inform_trigger_updates_measurements(tracker: CostTracker) -> None:
