@@ -69,11 +69,12 @@ class DynamicPercentileThresholdPolicy(DynamicDecisionPolicy):
             min(
                 max(
                     0,
-                    int(len(sorted_observations) * (1.0 - self.config.percentile)) - 1,
+                    int(round(len(sorted_observations) * (1.0 - self.config.percentile)))
+                    - 1,  # from length to index space
                 ),
                 len(sorted_observations) - 1,
             )
-        ]  # - 1 from length to index space
+        ]
         self.score_observations.append(distance)
 
         return distance > threshold
