@@ -7,12 +7,20 @@ from typing import Literal
 
 from pydantic import Field
 
-from ..performance.performance import (
-    _InternalPerformanceTriggerConfig,
-)
+from modyn.config.schema.base_model import ModynBaseModel
+
+from ..performance.performance import _InternalPerformanceTriggerConfig
 
 
-class DataIncorporationLatencyCostTriggerConfig(_InternalPerformanceTriggerConfig):
+class _CostTriggerConfig(ModynBaseModel):
+    """Base class for cost aware trigger policies."""
+
+    cost_tracking_window_size: int = Field(
+        description="How many trigger into the past should be considered for the linear cost w.r.t. data amount model."
+    )
+
+
+class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
     """Cost aware trigger policy configuration that uses the data incorporation
     latency as a regret metric.
 
@@ -36,7 +44,7 @@ class DataIncorporationLatencyCostTriggerConfig(_InternalPerformanceTriggerConfi
     )
 
 
-class AvoidableMisclassificationCostTriggerConfig(_InternalPerformanceTriggerConfig):
+class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalPerformanceTriggerConfig):
     """Cost aware trigger policy configuration that using the number of
     avoidable misclassifications integration latency as a regret metric.
 
