@@ -7,7 +7,7 @@ from modyn.config.schema.pipeline import (
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import (
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicPercentileThresholdCriterion,
 )
 from modyn.supervisor.internal.triggers.drift.detector.evidently import (

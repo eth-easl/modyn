@@ -1,6 +1,6 @@
 import pytest
 
-from modyn.config.schema.pipeline.trigger.drift.metric import (
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicPercentileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
