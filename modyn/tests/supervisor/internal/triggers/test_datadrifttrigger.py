@@ -13,12 +13,12 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy
-from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicThresholdCriterion,
-    ThresholdDecisionCriterion,
-)
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     TimeWindowingStrategy,
+)
+from modyn.config.schema.pipeline.trigger.drift.metric import (
+    DynamicPercentileThresholdCriterion,
+    ThresholdDecisionCriterion,
 )
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
@@ -265,7 +265,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
         detection_interval_data_points=5,
         metrics={
             "mmd": AlibiDetectMmdDriftMetric(
-                decision_criterion=DynamicThresholdCriterion(percentile=50, window_size=3),
+                decision_criterion=DynamicPercentileThresholdCriterion(percentile=50, window_size=3),
             )
         },
         aggregation_strategy=MajorityVoteDriftAggregationStrategy(),

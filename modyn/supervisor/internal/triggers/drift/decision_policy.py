@@ -38,27 +38,59 @@ class ThresholdDecisionPolicy(DriftDecisionPolicy):
 
 class DynamicDecisionPolicy(DriftDecisionPolicy):
     """Decision policy that will make the binary is_drift decisions based on a
-    dynamic threshold.
-
-    We compare a new distance value with the series of previous distance values
-    and decide if it's more extreme than a certain percentile of the series. Therefore we count the
-    `num_more_extreme` values that are greater than the new distance and compare it with the
-    `percentile` threshold.
-
-    TODO: we might want to also support some rolling average policy that will trigger if a distance is deviates
-    from the average by a certain amount.
-    """
+    dynamic threshold."""
 
     def __init__(self, config: DynamicThresholdCriterion):
         self.config = config
         self.score_observations: deque = deque(maxlen=self.config.window_size)
 
+
+class DynamicPercentileThresholdPolicy(DynamicDecisionPolicy):
+    """Dynamic threshold based on a extremeness percentile of the previous
+    distance values.
+
+    We compare a new distance value with the series of previous distance values
+    and decide if it's more extreme than a certain percentile of the series. Therefore we count the
+    `num_more_extreme` values that are greater than the new distance and compare it with the
+    `percentile` threshold.
+    """
+
     def evaluate_decision(self, distance: float) -> bool:
-        num_more_extreme = sum(1 for score in self.score_observations if score >= distance)
-        trigger = True
-        if len(self.score_observations) > 0:
-            perc = num_more_extreme / len(self.score_observations)
-            trigger = perc < self.config.percentile
+        if len(self.score_observations) == 0:
+            self.score_observations.append(distance)
+            return True
+
+        sorted_observations = list(sorted(self.score_observations))
+
+        threshold = sorted_observations[
+            min(
+                max(
+                    0,
+                    int(round(len(sorted_observations) * (1.0 - self.config.percentile)))
+                    - 1,  # from length to index space
+                ),
+                len(sorted_observations) - 1,
+            )
+        ]
+        self.score_observations.append(distance)
+
+        return distance > threshold
+
+
+class DynamicRollingAverageThresholdPolicy(DynamicDecisionPolicy):
+    """Triggers when a new distance value deviates from the rolling average by
+    a certain amount or percentage."""
+
+    def evaluate_decision(self, distance: float) -> bool:
+        if not self.score_observations:
+            self.score_observations.append(distance)
+            return True
+
+        rolling_average = sum(self.score_observations) / len(self.score_observations)
+        deviation = distance - rolling_average
 
         self.score_observations.append(distance)
-        return trigger
+
+        if self.config.absolute:
+            return deviation >= self.config.deviation
+        return deviation >= self.config.deviation * rolling_average

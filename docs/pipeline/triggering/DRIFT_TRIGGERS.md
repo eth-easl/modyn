@@ -240,6 +240,7 @@ classDiagram
 
     class DynamicDecisionPolicy {
         <<abstract>>
+        +DynamicThresholdCriterion config
         +Deque~float~ score_observations
     }
 
@@ -260,6 +261,8 @@ classDiagram
 
     DriftDecisionPolicy <|-- ThresholdDecisionPolicy
     DriftDecisionPolicy <|-- DynamicDecisionPolicy
+    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
+    DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
     DriftDecisionPolicy <|-- HypothesisTestDecisionPolicy
 
     DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
