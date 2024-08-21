@@ -10,11 +10,16 @@ from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     DriftWindowingStrategy,
     TimeWindowingStrategy,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
+from modyn.config.schema.pipeline.trigger.drift.metric import (
+    DynamicPercentileThresholdCriterion,
+    DynamicRollingAverageThresholdCriterion,
+    ThresholdDecisionCriterion,
+)
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.drift.decision_policy import (
     DriftDecisionPolicy,
-    DynamicDecisionPolicy,
+    DynamicPercentileThresholdPolicy,
+    DynamicRollingAverageThresholdPolicy,
     ThresholdDecisionPolicy,
 )
 from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
@@ -397,7 +402,9 @@ def _setup_decision_policies(
             metric_config.num_permutations is None
         ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
         if isinstance(criterion, ThresholdDecisionCriterion):
-            policies[metric_name] = ThresholdDecisionPolicy(config)
-        elif isinstance(criterion, DynamicDecisionPolicy):
-            policies[metric_name] = DynamicDecisionPolicy(config)
+            policies[metric_name] = ThresholdDecisionPolicy(criterion)
+        elif isinstance(criterion, DynamicPercentileThresholdCriterion):
+            policies[metric_name] = DynamicPercentileThresholdPolicy(criterion)
+        elif isinstance(criterion, DynamicRollingAverageThresholdCriterion):
+            policies[metric_name] = DynamicRollingAverageThresholdPolicy(criterion)
     return policies
