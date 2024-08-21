@@ -6,7 +6,7 @@ The `PerformanceTrigger` is a trigger mechanism that evaluates the performance o
 
 We define `avoidable misclassifications` as the misclassifications that could have been avoided if the model had triggered earlier. They can be seen as the lost benefits of not triggering. We derive the avoidable misclassification estimates by observing two time series:
 
-1. The series of evaluation scores after each of the previous triggers. These are the evaluations that we run directly after having trained a new model. We define the performance estimates derived from these results as `expected performance`.
+1. The series of evaluation scores after each of the triggers. We evaluate the fresh model on the last evaluation interval. We define the performance estimates derived from these results as `expected performance`.
 
 2. The series of evaluation SINCE the last trigger on policy update points where we could have triggered but decided not to. This series is used to estimate the avoidable misclassifications. We define those results as `actual/effective performance`.
 
@@ -15,7 +15,9 @@ The delta between the expected and the actual performance is then used to estima
 This mechanism relies on performance tracking and data density (queries or samples per second) tracking to observe trends. In `lookahead` mode we use data density estimates to forecast how many queries/samples will arrive in the next interval as this influences the number of expected misclassifications.
 Decision policies then make the binary decisions (trigger or not) based on this information.
 
-For the performance and misclassification estimations we can always take two approaches: `hindsight` and `lookahead`. The `hindsight` approach uses the most recent data to estimate the performance and misclassifications. The `lookahead` approach uses the forecasted performance and misclassifications to make decisions.
+For the performance and misclassification estimations we can always take two approaches: `hindsight` and `lookahead`. The `hindsight` approach uses the most recent data to estimate the performance and misclassifications that have already happened.
+
+The `lookahead` approach uses the forecasted performance and misclassifications to make decisions.
 
 ### Main Architecture
 
