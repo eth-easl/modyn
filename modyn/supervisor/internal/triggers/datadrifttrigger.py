@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataDriftTrigger(Trigger):
-    """Triggers when a certain number of data points have been used."""
+    """Triggers when a we detect drift in the embedding space of a dataset."""
 
     def __init__(self, config: DataDriftTriggerConfig):
         self.config = config
@@ -67,7 +67,7 @@ class DataDriftTrigger(Trigger):
         self.model: StatefulModel | None = None
 
         self._sample_left_until_detection = (
-            config.detection_interval_data_points
+            config.evaluation_interval_data_points
         )  # allows to detect drift in a fixed interval
         self._windows = _setup_detection_windows(config.windowing_strategy)
         self._triggered_once = False
@@ -158,7 +158,7 @@ class DataDriftTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
+            self._sample_left_until_detection = self.config.evaluation_interval_data_points
 
             if (not self._triggered_once) or (
                 not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)

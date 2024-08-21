@@ -21,13 +21,14 @@ logger = logging.getLogger(__name__)
 
 
 class CostTrigger(Trigger):
-    """Triggers when a certain number of data points have been used."""
+    """Triggers when a cumulated regret metric exceeds the estimated training
+    time."""
 
     def __init__(self, config: CostTriggerConfig):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self._sample_left_until_detection = config.detection_interval_data_points
+        self._sample_left_until_detection = config.evaluation_interval_data_points
         self._triggered_once = False
         self._previous_batch_end_time: int | None = None
         self._leftover_data: list[tuple[int, int]] = []
@@ -49,7 +50,9 @@ class CostTrigger(Trigger):
         new_data: list[tuple[int, int, int]],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
-        new_key_ts = self._leftover_data + [(key, timestamp) for key, timestamp, _ in new_data]
+        new_key_ts = self._leftover_data + [
+            (key, timestamp) for key, timestamp, _ in new_data
+        ]
         # reappending the leftover data to the new data requires incrementing the sample left until detection
         self._sample_left_until_detection += len(self._leftover_data)
 
@@ -72,7 +75,9 @@ class CostTrigger(Trigger):
             new_key_ts = new_key_ts[len(next_detection_interval) :]
 
             # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
+            self._sample_left_until_detection = (
+                self.config.evaluation_interval_data_points
+            )
 
             # Updates
             batch_duration = next_detection_interval[-1][1] - (
@@ -82,12 +87,18 @@ class CostTrigger(Trigger):
             self._unincorporated_samples += len(next_detection_interval)
 
             # ----------------------------------------------- decision ----------------------------------------------- #
-            regret_metric = self._compute_regret_metric(next_detection_interval, batch_duration)
+            regret_metric = self._compute_regret_metric(
+                next_detection_interval, batch_duration
+            )
 
             if not self._triggered_once:
-                triggered = True
+                traintime_estimate = -1
+                regret_in_traintime_unit = -1
+                triggered = self._triggered_once = True
             else:
-                traintime_estimate = self._cost_tracker.forecast_training_time(self._unincorporated_samples)
+                traintime_estimate = self._cost_tracker.forecast_training_time(
+                    self._unincorporated_samples
+                )
 
                 regret_in_traintime_unit = regret_metric * self.config.conversion_factor
 
@@ -136,7 +147,9 @@ class CostTrigger(Trigger):
     # ---------------------------------------------------------------------------------------------------------------- #
 
     @abstractmethod
-    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_duration: float) -> float:
+    def _compute_regret_metric(
+        self, batch: list[tuple[int, int]], batch_duration: float
+    ) -> float:
         """Compute the regret metric for the current state of the trigger.
 
         This method will update the _incorporation_latency_tracker.

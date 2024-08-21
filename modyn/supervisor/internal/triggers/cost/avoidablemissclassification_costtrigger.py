@@ -14,13 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 class AvoidableMisclassificationCostTrigger(CostTrigger):
-    """Triggers when a certain number of data points have been used."""
+    """Triggers when the avoidable misclassification cost incorporation latency
+    (regret) exceeds the estimated training time."""
 
     def __init__(self, config: AvoidableMisclassificationCostTriggerConfig):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self._sample_left_until_detection = config.detection_interval_data_points
+        self._sample_left_until_detection = config.evaluation_interval_data_points
         self._triggered_once = False
 
     @override

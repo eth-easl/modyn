@@ -9,6 +9,8 @@ from modyn.config.schema.pipeline.trigger.performance.criterion import (
 )
 from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 
+from ..common.mixins import TriggerEvaluationIntervalMixin
+
 
 class PerformanceTriggerEvaluationConfig(ModynBaseModel):
     # TODO(@robinholzi): Support sampling
@@ -28,13 +30,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
         return dataset
 
 
-class _InternalPerformanceTriggerConfig(ModynBaseModel):
-    detection_interval_data_points: int = Field(
-        description=(
-            "Specifies after how many samples another believe update (query density "
-            "estimation, accuracy evaluation) should be performed."
-        )
-    )
+class _InternalPerformanceTriggerConfig(TriggerEvaluationIntervalMixin):
     data_density_window_size: int = Field(
         0,
         description="The window size for the data density estimation. Only used for lookahead mode.",
