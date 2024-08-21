@@ -24,13 +24,13 @@ class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
     """Cost aware trigger policy configuration that uses the data incorporation
     latency as a regret metric.
 
-    While no trigger occurs the un-integrated data is cumulated and the sum of all seconds of every unincorporated data
-    point is added up.
-
-    `incorporation_delay_per_training_second` servers as a conversion rate between budget (training time) and regret
+    While no trigger occurs samples are cumulated into to a number of un-integrated samples over time curve.
+    Rather than using this metric directly, we build an area-under-the-curve metric.
+    The area under the un-integrated samples curve measures the time samples have spent in the incorporation queue.
+    `incorporation_delay_per_training_second` is as a conversion rate between cost budget (training time) and regret
     metric (incorporation latency).
 
-    When the regret metric exceeds the training-time based budget metric, a trigger is fired.
+    When the cumulated regret (area under the curve) exceeds the training-time budget, a trigger is fired.
     """
 
     id: Literal["DataIncorporationLatencyCostTrigger"] = Field("DataIncorporationLatencyCostTrigger")
@@ -48,14 +48,15 @@ class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalP
     """Cost aware trigger policy configuration that using the number of
     avoidable misclassifications integration latency as a regret metric.
 
+    This policy can be seen a combination of data incorporation latency based cost triggers and performance aware
+    triggers.
+
     `avoidable_misclassification_latency_per_training_second` servers as a conversion rate between budget (training time)
     and regret metric (misclassifications).
 
     When a the regret metric exceeds the budget, a trigger is fired.
 
-    This policy is an extension of performance aware triggers.
-
-    Offers the same set of `decision_criteria` as `PerformanceTriggerConfig`
+    Like for performance aware triggers the same set of `decision_criteria` as `PerformanceTriggerConfig`
     but implicitly adds a cost criterion to the list.
 
     Not only evaluates data density and model performance but also
