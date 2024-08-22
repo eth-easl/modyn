@@ -20,7 +20,7 @@ classDiagram
         <<abstract>>
         +void init_trigger(TriggerContext context)
         +Generator[Triggers] inform(new_data)
-        +void inform_new_model(int previous_model_id)
+        +void inform_new_model(int most_recent_model_id)
     }
 
     class TimeTrigger {
@@ -41,7 +41,7 @@ classDiagram
 
         +void init_trigger(TriggerContext context)
         +Generator[triggers] inform(new_data)
-        +void inform_new_model(int previous_model_id)
+        +void inform_new_model(int most_recent_model_id)
     }
 
     class DriftDecisionPolicy {
@@ -59,7 +59,7 @@ classDiagram
     Trigger <|-- DataAmountTrigger
 ```
 
-### DetectionWindows Hierarchy
+### `DetectionWindows` Hierarchy
 
 The `DetectionWindows` class serves as the abstract base for specific windowing strategies like `AmountDetectionWindows` and `TimeDetectionWindows`. These classes are responsible for both storing the actual data windows for reference and current data and for defining a strategy for updating and managing these windows.
 
@@ -90,7 +90,7 @@ classDiagram
     DetectionWindows <|-- TimeDetectionWindows
 ```
 
-### DriftDetector Hierarchy
+### `DriftDetector` Hierarchy
 
 The `DriftDetector` class is an abstract base class for detectors like `AlibiDriftDetector` and `EvidentlyDriftDetector`, which use different metrics to measure the distance between the current and reference data distributions.
 Both the underlying drift detection packages generate their own binary drift decision through hypothesis testing or threshold. In the `DriftDetector` we only use the distance metric
@@ -110,7 +110,7 @@ classDiagram
     class AlibiDriftDetector
     class EvidentlyDriftDetector
     class BaseMetric {
-        decision_criterion: DecisionCriterion
+        decision_criterion: DriftDecisionCriterion
     }
 
     DriftDetector <|-- AlibiDriftDetector
@@ -169,13 +169,13 @@ classDiagram
 
 ```
 
-### DecisionCriterion Hierarchy
+### `DriftDecisionCriterion` Hierarchy
 
 The `DecisionCriterion` class is an abstract configuration base class for criteria like `ThresholdDecisionCriterion` and `DynamicThresholdCriterion`, which define how decisions are made based on drift metrics.
 
 ```mermaid
 classDiagram
-    class DecisionCriterion {
+    class DriftDecisionCriterion {
         <<abstract>>
     }
 
@@ -184,6 +184,7 @@ classDiagram
     }
 
     class DynamicThresholdCriterion {
+        <<abstract>>
         int window_size = 10
     }
 
@@ -192,23 +193,23 @@ classDiagram
     }
 
     class DynamicRollingAverageThresholdCriterion {
-        float alpha = 0.1
+        float deviation = 0.05
+        bool absolute = False
     }
 
-    DecisionCriterion <|-- ThresholdDecisionCriterion
-    DecisionCriterion <|-- DynamicThresholdCriterion
+
+    DriftDecisionCriterion <|-- ThresholdDecisionCriterion
+    DriftDecisionCriterion <|-- DynamicThresholdCriterion
 
     DynamicThresholdCriterion <|-- DynamicPercentileThresholdCriterion
     DynamicThresholdCriterion <|-- DynamicRollingAverageThresholdCriterion
-
-
 ```
 
-### DriftDecisionPolicy Hierarchy
+### `DriftDecisionPolicy` Hierarchy
 
 The `DriftDecisionPolicy` class is an abstract base class for policies like `ThresholdDecisionPolicy`, `DynamicDecisionPolicy`, and `HypothesisTestDecisionPolicy`.
 
-Each decision policy wraps one DriftMetric (e.g. MMD, CVM, KS) and one DecisionCriterion (e.g. Threshold, DynamicThreshold, HypothesisTest) to make a decision based on the distance metric. It e.g. observes the series of distance value measurements from it's `DriftMetric` and makes a decision after having calibrated on the seen distances.
+Each decision policy wraps one DriftMetric (e.g. MMD, CVM, KS) and one DriftDecisionCriterion (e.g. Threshold, DynamicThreshold, HypothesisTest) to make a decision based on the distance metric. It e.g. observes the series of distance value measurements from it's `DriftMetric` and makes a decision after having calibrated on the seen distances.
 
 If a `DecisionPolicy` needs to be calibrated before being able to make a decision, we have to run the `DriftTrigger` with a warm-up period. This warm-up period is defined as a fixed number of intervals where another simple drift policy is used to make decisions while also evaluating the `DecisionPolicy` to calibrate it.
 
@@ -244,10 +245,12 @@ classDiagram
     }
 
     class DynamicPercentileThresholdPolicy {
+        +DynamicPercentileThresholdCriterion config
         +bool evaluate_decision(float distance)
     }
 
     class DynamicRollingAverageThresholdPolicy {
+        +DynamicRollingAverageThresholdCriterion config
         +bool evaluate_decision(float distance)
     }
 
@@ -262,6 +265,8 @@ classDiagram
     DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
     DriftDecisionPolicy <|-- HypothesisTestDecisionPolicy
 
+    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
+    DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
 
     style HypothesisTestDecisionPolicy fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
 ```

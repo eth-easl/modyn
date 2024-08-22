@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import deque
 
-from modyn.config.schema.pipeline.trigger.drift.metric import (
-    DynamicThresholdCriterion,
-    ThresholdDecisionCriterion,
-)
+from modyn.config.schema.pipeline.trigger.drift.criterion import DynamicThresholdCriterion, ThresholdDecisionCriterion
 
 
 class DriftDecisionPolicy(ABC):
