@@ -26,18 +26,12 @@ def test_initialization(
     dummy_trigger_context: TriggerContext,
 ) -> None:
     trigger = DataIncorporationLatencyCostTrigger(latency_trigger_config)
-    assert (
-        trigger._sample_left_until_detection
-        == latency_trigger_config.evaluation_interval_data_points
-    )
+    assert trigger._sample_left_until_detection == latency_trigger_config.evaluation_interval_data_points
     assert not trigger._triggered_once
     assert trigger._previous_batch_end_time is None
     assert trigger._unincorporated_samples == 0
 
-    assert (
-        trigger._cost_tracker.measurements.maxlen
-        == latency_trigger_config.cost_tracking_window_size
-    )
+    assert trigger._cost_tracker.measurements.maxlen == latency_trigger_config.cost_tracking_window_size
     assert trigger._incorporation_latency_tracker.cumulative_latency_regret == 0.0
 
     assert trigger.context is None
@@ -67,9 +61,7 @@ def test_inform_and_new_model(
     assert trigger_results == [3]
     assert trigger._triggered_once
     assert mock_compute_regret.call_count == 1
-    assert (
-        mock_forecast_training_time.call_count == 0
-    )  # first trigger is forced, not training time forecast possible
+    assert mock_forecast_training_time.call_count == 0  # first trigger is forced, not training time forecast possible
     assert trigger._leftover_data == [(i, 100 + i) for i in range(4, 6)]
 
     trigger.inform_new_model(1, number_samples=4, training_time=10.0)
