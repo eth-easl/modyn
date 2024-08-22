@@ -7,8 +7,12 @@ from modyn.config.schema.pipeline import (
     EvidentlyRatioDriftMetric,
     EvidentlySimpleDistanceDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import DynamicPercentileThresholdCriterion
-from modyn.supervisor.internal.triggers.drift.detector.evidently import EvidentlyDriftDetector
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
+    DynamicPercentileThresholdCriterion,
+)
+from modyn.supervisor.internal.triggers.drift.detector.evidently import (
+    EvidentlyDriftDetector,
+)
 
 
 def _add_col_prefixes(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
