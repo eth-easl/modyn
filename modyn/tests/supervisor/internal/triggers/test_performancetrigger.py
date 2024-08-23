@@ -177,13 +177,6 @@ def test_inform_new_model(
     )
 
 
-# TODO: tests:
-# - initial trigger + _last_data_interval
-# - one criterion no trigger & one criterion trigger
-# - multiple criteria no trigger & multiple criteria trigger
-# - evaluation dispatch: _run_evaluation
-
-
 @patch.object(PerformanceTrigger, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
 @patch.object(DataDensityTracker, "inform_data", return_value=None)
 @patch.object(
@@ -206,6 +199,7 @@ def test_inform(
     # detection interval 1: at sample (3, 103) --> forced trigger
     trigger_results = list(trigger.inform([(i, 100 + i, 0) for i in range(6)]))
     assert len(trigger_results) == 1
+    assert trigger_results == [3]
     assert trigger._triggered_once
     trigger.inform_new_model(1)
     assert len(trigger._leftover_data) == 2
@@ -229,6 +223,7 @@ def test_inform(
     # detection interval 2: at sample (7, 107) --> optional trigger, 3 samples leftover
     trigger_results = list(trigger.inform([(i, 100 + i, 0) for i in range(6, 11)]))
     assert len(trigger_results) == 1
+    assert trigger_results == [1]
     assert trigger._triggered_once
     trigger.inform_new_model(2)
     assert len(trigger._leftover_data) == 3
