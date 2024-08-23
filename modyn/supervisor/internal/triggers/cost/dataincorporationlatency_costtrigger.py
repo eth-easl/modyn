@@ -24,8 +24,11 @@ class DataIncorporationLatencyCostTrigger(CostTrigger):
     # ---------------------------------------------------------------------------------------------------------------- #
 
     @override
-    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_duration: float) -> float:
+    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int) -> float:
         """Compute the regret metric for the current state of the trigger."""
 
-        regret = len(batch)
-        return self._incorporation_latency_tracker.add_latency(regret, batch_duration)
+        return self._incorporation_latency_tracker.add_latencies(
+            regrets=[(time, 1.0) for _, time in batch],
+            start_timestamp=batch_start,
+            period_duration=batch_duration,
+        )

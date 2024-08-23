@@ -76,14 +76,13 @@ class CostTrigger(Trigger):
             self._sample_left_until_detection = self.config.evaluation_interval_data_points
 
             # Updates
-            batch_duration = next_detection_interval[-1][1] - (
-                self._previous_batch_end_time or next_detection_interval[0][1]
-            )
+            batch_start = self._previous_batch_end_time or next_detection_interval[0][1]
+            batch_duration = next_detection_interval[-1][1] - batch_start
             self._previous_batch_end_time = next_detection_interval[-1][1]
             self._unincorporated_samples += len(next_detection_interval)
 
             # ----------------------------------------------- decision ----------------------------------------------- #
-            regret_metric = self._compute_regret_metric(next_detection_interval, batch_duration)
+            regret_metric = self._compute_regret_metric(next_detection_interval, batch_start, batch_duration)
 
             if not self._triggered_once:
                 traintime_estimate = -1.0
@@ -139,7 +138,7 @@ class CostTrigger(Trigger):
     # ---------------------------------------------------------------------------------------------------------------- #
 
     @abstractmethod
-    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_duration: float) -> float:
+    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int) -> float:
         """Compute the regret metric for the current state of the trigger.
 
         This method will update the _incorporation_latency_tracker.
