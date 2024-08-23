@@ -95,7 +95,7 @@ def test_inform_and_new_model(
     # no trigger (because of decision policy), 0 samples leftover
     trigger_results = list(trigger.inform([(i, 100 + i, 0) for i in range(11, 12)]))
     assert len(trigger_results) == 1
-    assert trigger_results == [11]
+    assert trigger_results == [0]
     assert len(trigger._leftover_data) == 0
     assert trigger._sample_left_until_detection == 4
     assert mock_compute_regret.call_count == 1

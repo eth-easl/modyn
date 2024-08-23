@@ -97,7 +97,14 @@ class CostTrigger(Trigger):
 
             # -------------------------------------------------- Log ------------------------------------------------- #
 
-            trigger_idx = processing_head_in_batch - 1
+            # we need to return an index in the `new_data`. Therefore, we need to subtract number of samples in the
+            # leftover data from the processing head in batch; -1 is required as the head points to the first
+            # unprocessed data point
+            trigger_idx = min(
+                max(processing_head_in_batch - len(self._leftover_data) - 1, 0),
+                len(new_data) - 1,
+            )
+
             drift_eval_log = CostAwareTriggerEvalLog(
                 triggered=triggered,
                 trigger_index=trigger_idx,
