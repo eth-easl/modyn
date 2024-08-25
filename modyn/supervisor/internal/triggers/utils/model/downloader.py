@@ -18,7 +18,7 @@ from modyn.model_storage.internal.grpc.generated.model_storage_pb2 import (
 from modyn.model_storage.internal.grpc.generated.model_storage_pb2_grpc import (
     ModelStorageStub,
 )
-from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 from modyn.utils.utils import grpc_connection_established
 
 logger = logging.getLogger(__name__)

@@ -5,16 +5,21 @@ import logging
 from collections.abc import Generator
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
+    DynamicPercentileThresholdCriterion,
+    DynamicRollingAverageThresholdCriterion,
+    ThresholdDecisionCriterion,
+)
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
     DriftWindowingStrategy,
     TimeWindowingStrategy,
 )
-from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.drift.decision_policy import (
     DriftDecisionPolicy,
-    DynamicDecisionPolicy,
+    DynamicPercentileThresholdPolicy,
+    DynamicRollingAverageThresholdPolicy,
     ThresholdDecisionPolicy,
 )
 from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
@@ -41,7 +46,7 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 )
 from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
-from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 from modyn.supervisor.internal.triggers.utils.models import (
     DriftTriggerEvalLog,
     TriggerPolicyEvaluationLog,
@@ -288,7 +293,7 @@ class DataDriftTrigger(Trigger):
 
         current data: all untriggered samples in the sliding window in inform().
         reference data: the training samples of the previous trigger.
-        Get the dataloaders, download the model manager model if necessary,
+        Get the dataloaders, download the stateful model if necessary,
         compute embeddings of current and reference data, then run detection on the embeddings.
         """
         assert self.most_recent_model_id is not None
@@ -304,8 +309,8 @@ class DataDriftTrigger(Trigger):
 
         current_dataloader = prepare_trigger_dataloader_fixed_keys(self.dataloader_info, [key for key, _ in current])
 
-        # Download most recent model as model manager
-        # TODO(417) Support custom model as model manager
+        # Download most recent model as stateful model
+        # TODO(417) Support custom model as stateful model
         if self.model_refresh_needed:
             self.model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device
@@ -397,7 +402,9 @@ def _setup_decision_policies(
             metric_config.num_permutations is None
         ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
         if isinstance(criterion, ThresholdDecisionCriterion):
-            policies[metric_name] = ThresholdDecisionPolicy(config)
-        elif isinstance(criterion, DynamicDecisionPolicy):
-            policies[metric_name] = DynamicDecisionPolicy(config)
+            policies[metric_name] = ThresholdDecisionPolicy(criterion)
+        elif isinstance(criterion, DynamicPercentileThresholdCriterion):
+            policies[metric_name] = DynamicPercentileThresholdPolicy(criterion)
+        elif isinstance(criterion, DynamicRollingAverageThresholdCriterion):
+            policies[metric_name] = DynamicRollingAverageThresholdPolicy(criterion)
     return policies

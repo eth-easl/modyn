@@ -3,8 +3,14 @@ import statistics
 import numpy as np
 import pytest
 
-from modyn.config.schema.pipeline import AlibiDetectCVMDriftMetric, AlibiDetectKSDriftMetric, AlibiDetectMmdDriftMetric
-from modyn.config.schema.pipeline.trigger.drift.metric import ThresholdDecisionCriterion
+from modyn.config.schema.pipeline import (
+    AlibiDetectCVMDriftMetric,
+    AlibiDetectKSDriftMetric,
+    AlibiDetectMmdDriftMetric,
+)
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
+    ThresholdDecisionCriterion,
+)
 from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
 
 

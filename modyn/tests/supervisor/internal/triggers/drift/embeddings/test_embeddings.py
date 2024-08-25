@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 
 from modyn.models.yearbooknet.yearbooknet import YearbookNet
 from modyn.supervisor.internal.triggers.drift.embedding.embeddings import get_embeddings
-from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 
 
 @pytest.fixture

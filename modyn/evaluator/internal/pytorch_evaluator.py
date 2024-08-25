@@ -103,7 +103,7 @@ class PytorchEvaluator:
         )
 
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
-        self._metric_result_queue.put((interval_idx, eval_result.metric_results.items()), timeout=30)
+        self._metric_result_queue.put((interval_idx, list(eval_result.metric_results.items())), timeout=30)
         self._info(
             f"Finished evaluation of {interval_idx}: {eval_result.num_samples} samples. "
             f"Queue size = {self._metric_result_queue.qsize()}"
