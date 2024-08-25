@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated, ForwardRef, Literal, Self
+from typing import Annotated, Any, ForwardRef, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
@@ -26,6 +26,7 @@ DriftMetric = Annotated[
 class DataDriftTriggerConfig(ModynBaseModel):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
 
+    reset_current_window_on_trigger: Any = None
     detection_interval: __TriggerConfig | None = Field(  # type: ignore[valid-type]
         None,
         description="The Trigger policy to determine the interval at which drift detection is performed.",
@@ -66,11 +67,16 @@ class DataDriftTriggerConfig(ModynBaseModel):
         description="The strategy to aggregate the decisions of the individual drift metrics.",
     )
 
-    @model_validator(mode="after")
-    def warmup_policy_requirement(self) -> Self:
-        """Assert whether the warmup policy is set when a metric needs
-        calibration."""
-        for metric in self.metrics.values():
-            if metric.decision_criterion.needs_calibration and self.warmup_policy is None:
-                raise ValueError("A warmup policy is required for metrics that need calibration.")
-        return self
+    # @model_validator(mode="after")
+    # def warmup_policy_requirement(self) -> Self:
+    #     """Assert whether the warmup policy is set when a metric needs
+    #     calibration."""
+    #     for metric in self.metrics.values():
+    #         if (
+    #             metric.decision_criterion.needs_calibration
+    #             and self.warmup_policy is None
+    #         ):
+    #             raise ValueError(
+    #                 "A warmup policy is required for metrics that need calibration."
+    #             )
+    #     return self

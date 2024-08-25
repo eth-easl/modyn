@@ -5,7 +5,6 @@ from typing import Literal
 
 from pydantic import Field
 
-from modyn.const.regex import REGEX_TIME_UNIT
 from modyn.utils.utils import SECONDS_PER_UNIT
 
 from .window import _BaseWindowingStrategy
@@ -13,14 +12,9 @@ from .window import _BaseWindowingStrategy
 
 class TimeWindowingStrategy(_BaseWindowingStrategy):
     id: Literal["TimeWindowingStrategy"] = Field("TimeWindowingStrategy")
-    limit_ref: str = Field(
-        description="Window size as an integer followed by a time unit: s, m, h, d, w, y",
-        pattern=rf"^\d+{REGEX_TIME_UNIT}$",
-    )
-    limit_cur: str = Field(
-        description="Window size as an integer followed by a time unit: s, m, h, d, w, y",
-        pattern=rf"^\d+{REGEX_TIME_UNIT}$",
-    )
+    limit_ref: str | None = None
+    limit_cur: str | None = None
+    limit: str | None = None
 
     @cached_property
     def limit_seconds_ref(self) -> int:

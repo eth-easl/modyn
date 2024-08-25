@@ -20,8 +20,9 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,9 @@ class PipelineExecutionParams:
     @model_validator(mode="after")
     def validate_replay(self) -> PipelineExecutionParams:
         if self.start_replay_at is None and self.stop_replay_at is not None:
-            raise ValueError("`stop_replay_at` can only be used in conjunction with `start_replay_at`.")
+            raise ValueError(
+                "`stop_replay_at` can only be used in conjunction with `start_replay_at`."
+            )
         return self
 
     @property
@@ -97,7 +100,9 @@ class PipelineBatchState:
     trigger_id: int = -1
     """The identifier of the trigger received from the selector."""
 
-    evaluations: dict[int, EvaluationStatusReporter] = dataclasses.field(default_factory=dict)
+    evaluations: dict[int, EvaluationStatusReporter] = dataclasses.field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -144,11 +149,14 @@ class ExecutionState(PipelineExecutionParams):
 
     @property
     def maximum_triggers_reached(self) -> bool:
-        return self.maximum_triggers is not None and len(self.triggers) >= self.maximum_triggers
+        return (
+            self.maximum_triggers is not None
+            and len(self.triggers) >= self.maximum_triggers
+        )
 
 
 class ConfigLogs(BaseModel):
-    system: ModynConfig
+    system: dict
     pipeline: ModynPipelineConfig
 
 
@@ -177,8 +185,12 @@ class StageInfo(BaseModel):
 
 
 class FetchDataInfo(StageInfo):
-    num_samples: int = Field(..., description="Number of samples processed in the new data.")
-    trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
+    num_samples: int = Field(
+        ..., description="Number of samples processed in the new data."
+    )
+    trigger_indexes: list[int] = Field(
+        ..., description="Indices of triggers in the new data."
+    )
 
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
@@ -194,7 +206,9 @@ class FetchDataInfo(StageInfo):
 class ProcessNewDataInfo(StageInfo):
     fetch_time: int = Field(..., description="Time in milliseconds the fetch took")
     num_samples: int = Field(..., description="Number of samples processed")
-    trigger_indexes: list[int] = Field(..., description="Indices of triggers in the new data.")
+    trigger_indexes: list[int] = Field(
+        ..., description="Indices of triggers in the new data."
+    )
 
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
@@ -214,7 +228,7 @@ class EvaluateTriggerInfo(StageInfo):
     """Time in milliseconds that every next(...) call of the
     trigger.inform(...) generator took."""
 
-    trigger_evaluation_log: TriggerPolicyEvaluationLog = Field(default_factory=TriggerPolicyEvaluationLog)
+    trigger_evaluation_log: dict
 
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
@@ -250,7 +264,12 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)
+        return (
+            self.trigger_i,
+            self.trigger_index,
+            self.trigger_i,
+            self.num_samples_in_trigger,
+        )
 
 
 class TriggerExecutionInfo(_TriggerLogMixin):
@@ -260,12 +279,24 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"]
+        return [
+            "trigger_i",
+            "trigger_index",
+            "trigger_id",
+            "first_timestamp",
+            "last_timestamp",
+        ]
 
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)
+        return (
+            self.trigger_i,
+            self.trigger_index,
+            self.trigger_id,
+            self.first_timestamp,
+            self.last_timestamp,
+        )
 
 
 class _TrainInfoMixin(StageInfo):
@@ -284,7 +315,12 @@ class TrainingInfo(_TrainInfoMixin):
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])
+        return (
+            self.trigger_id,
+            self.training_id,
+            self.trainer_log["num_batches"],
+            self.trainer_log["num_samples"],
+        )
 
 
 class StoreModelInfo(_TrainInfoMixin):
@@ -379,7 +415,9 @@ class MultiEvaluationInfo(StageInfo):
                 for multi_info in infos
                 for single_info in multi_info.interval_results
                 if single_info.failure_reason is None and single_info.eval_request
-                for metric in single_info.results["metrics"]  # pylint: disable=unsubscriptable-object
+                for metric in single_info.results[
+                    "metrics"
+                ]  # pylint: disable=unsubscriptable-object
             ],
             columns=[
                 "trigger_id",
@@ -510,9 +548,16 @@ class StageLog(BaseModel):
     def df_columns(self, extended: bool = False) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"] + (
-            self.info.df_columns() if extended and self.info else []
-        )
+        return [
+            "id",
+            "start",
+            "end",
+            "duration",
+            "batch_idx",
+            "sample_idx",
+            "sample_time",
+            "trigger_idx",
+        ] + (self.info.df_columns() if extended and self.info else [])
 
     def df_row(self, extended: bool = False) -> tuple:
         return (
@@ -605,7 +650,16 @@ class SupervisorLogs(BaseModel):
                 )
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
+            columns=[
+                "id",
+                "start",
+                "end",
+                "duration",
+                "batch_idx",
+                "sample_idx",
+                "sample_time",
+                "trigger_idx",
+            ],
         )
 
 
@@ -626,7 +680,9 @@ class PipelineLogs(BaseModel):
     # static logs
 
     pipeline_id: int
-    commit_sha: str | None = Field(None, description="The commit SHA that the pipeline was executed on.")
+    commit_sha: str | None = Field(
+        None, description="The commit SHA that the pipeline was executed on."
+    )
     pipeline_stages: dict[str, tuple[int, list[str]]]
     """List of all pipeline stages, their execution order index, and their
     parent stages."""
@@ -644,7 +700,11 @@ class PipelineLogs(BaseModel):
     # metadata
     partial_idx: int = Field(0)
 
-    def materialize(self, log_dir_path: Path, mode: Literal["initial", "increment", "final"] = "increment") -> None:
+    def materialize(
+        self,
+        log_dir_path: Path,
+        mode: Literal["initial", "increment", "final"] = "increment",
+    ) -> None:
         """Materialize the logs to log files.
 
         If run with pytest, log_file_path and mode will be ignored.
@@ -663,7 +723,10 @@ class PipelineLogs(BaseModel):
 
         if mode == "initial" and pipeline_logdir.exists():
             # if not empty move the previous content to .backup_timestamp directory
-            backup_dir = log_dir_path / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
+            backup_dir = (
+                log_dir_path
+                / f"pipeline_{self.pipeline_id}.backup_{datetime.datetime.now().isoformat()}"
+            )
             pipeline_logdir.rename(backup_dir)
 
         pipeline_logdir.mkdir(parents=True, exist_ok=True)
@@ -677,13 +740,25 @@ class PipelineLogs(BaseModel):
             except Exception as e:  # pylint: disable=broad-except
                 logger.warning(f"Failed to get commit SHA: {e}")
 
-            with open(pipeline_logdir / "pipeline.part.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.model_dump_json(indent=2, exclude={"supervisor", "partial_idx"}, by_alias=True))
+            with open(
+                pipeline_logdir / "pipeline.part.log", "w", encoding="utf-8"
+            ) as logfile:
+                logfile.write(
+                    self.model_dump_json(
+                        indent=2, exclude={"supervisor", "partial_idx"}, by_alias=True
+                    )
+                )
             return
 
         if mode == "increment":
-            with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
-                logfile.write(self.supervisor_logs.model_dump_json(by_alias=True, indent=2))
+            with open(
+                pipeline_logdir / f"supervisor_part_{self.partial_idx}.log",
+                "w",
+                encoding="utf-8",
+            ) as logfile:
+                logfile.write(
+                    self.supervisor_logs.model_dump_json(by_alias=True, indent=2)
+                )
 
             self.supervisor_logs.clear()
             self.partial_idx += 1
@@ -692,10 +767,15 @@ class PipelineLogs(BaseModel):
         # final: merge increment logs
         supervisor_files = sorted(pipeline_logdir.glob("supervisor_part_*.log"))
         partial_supervisor_logs = [
-            SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8")) for file in supervisor_files
+            SupervisorLogs.model_validate_json(file.read_text(encoding="utf-8"))
+            for file in supervisor_files
         ]
         self.supervisor_logs = self.supervisor_logs.merge(
-            [stage_log for sv_logs in partial_supervisor_logs for stage_log in sv_logs.stage_runs]
+            [
+                stage_log
+                for sv_logs in partial_supervisor_logs
+                for stage_log in sv_logs.stage_runs
+            ]
         )
 
         with open(pipeline_logdir / "pipeline.log", "w", encoding="utf-8") as logfile:

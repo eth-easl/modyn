@@ -12,9 +12,12 @@ from .metrics import MetricConfig
 
 
 class EvalDataConfig(DataConfig):
-    batch_size: int = Field(description="The batch size to be used during evaluation.", ge=1)
+    batch_size: int = Field(
+        description="The batch size to be used during evaluation.", ge=1
+    )
     dataloader_workers: int = Field(
-        description="The number of data loader workers on the evaluation node that fetch data from storage.", ge=1
+        description="The number of data loader workers on the evaluation node that fetch data from storage.",
+        ge=1,
     )
     metrics: list[MetricConfig] = Field(
         description="All metrics used to evaluate the model on the given dataset.",
@@ -24,7 +27,9 @@ class EvalDataConfig(DataConfig):
 
 class ResultWriter(ModynBaseModel):
     name: str = Field(description="The name of the result writer.")
-    config: dict[str, Any] | None = Field(None, description="Optional configuration for the result writer.")
+    config: dict[str, Any] | None = Field(
+        None, description="Optional configuration for the result writer."
+    )
 
 
 ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
@@ -35,6 +40,7 @@ ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
 
 
 class EvaluationConfig(ModynBaseModel):
+    result_writers: Any = None
     handlers: list[EvalHandlerConfig] = Field(
         description="An array of all evaluation handlers that should be used to evaluate the model.",
         min_length=1,
@@ -45,8 +51,12 @@ class EvaluationConfig(ModynBaseModel):
         min_length=1,
     )
 
-    after_training_evaluation_workers: int = Field(5, description="Number of workers for after training evaluation.")
-    after_pipeline_evaluation_workers: int = Field(5, description="Number of workers for post pipeline evaluation.")
+    after_training_evaluation_workers: int = Field(
+        5, description="Number of workers for after training evaluation."
+    )
+    after_pipeline_evaluation_workers: int = Field(
+        5, description="Number of workers for post pipeline evaluation."
+    )
 
     @field_validator("datasets")
     @classmethod

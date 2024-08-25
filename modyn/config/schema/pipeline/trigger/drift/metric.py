@@ -4,4 +4,4 @@ from .criterion import DriftDecisionCriterion
 
 
 class BaseMetric(ModynBaseModel):
-    decision_criterion: DriftDecisionCriterion
+    decision_criterion: DriftDecisionCriterion | None = None
