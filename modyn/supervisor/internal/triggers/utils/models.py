@@ -20,19 +20,11 @@ class DriftTriggerEvalLog(ModynBaseModel):
 class EnsembleTriggerEvalLog(ModynBaseModel):
     type: Literal["ensemble"] = Field("ensemble")
     triggered: bool
-    trigger_index: int | None = Field(None)
-    evaluation_interval: tuple[int, int]
+    trigger_index: int | None = Field(None)  # in inform(..) batch
+    evaluation_interval: tuple[tuple[int, int], tuple[int, int]]
     subtrigger_decisions: dict[str, bool] = Field(
         default_factory=dict,
         description="The policy decisions for the evaluation interval for different metrics keyed by their name.",
-    )
-    subtrigger_indexes: dict[str, list[int]] = Field(
-        default_factory=dict,
-        description="The triggering indexes for all subtriggers for the evaluation interval.",
-    )
-    subtrigger_logs: dict[str, "TriggerPolicyEvaluationLog"] = Field(
-        default_factory=dict,
-        description="The logs of the subtriggers for the evaluation interval.",
     )
 
 

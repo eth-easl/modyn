@@ -68,15 +68,6 @@ __TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 class EnsembleTriggerConfig(ModynBaseModel):
     id: Literal["EnsembleTrigger"] = Field("EnsembleTrigger")
 
-    detection_interval_data_points: int = Field(
-        1000,
-        description=(
-            "The number of samples in the interval after which drift detection is performed. "
-            "Some policies don't require this time-dicretization. However some do, e.g. therefore, this parameter "
-            "is required also here."
-        ),
-        ge=1,
-    )
     subtriggers: dict[str, __TriggerConfig] = Field(  # type: ignore[valid-type]
         default_factory=dict,
         description="The sub-triggers keyed by distinct references that will be consulted for the ensemble trigger.",
