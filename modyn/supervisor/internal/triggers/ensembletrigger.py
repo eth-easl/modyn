@@ -66,32 +66,25 @@ class EnsembleTrigger(Trigger):
         subtrigger_generators = {
             trigger_name: trigger.inform(new_data, log) for trigger_name, trigger in self.subtriggers.items()
         }
+
+        # Indicates whether the ensemble trigger has passed a triggering index
+        # with processing_head for a subtrigger since the last trigger.
+        # Will be reset after every trigger.
         subtrigger_decision_cache = dict(
-            {trigger_name: False for trigger_name in self.subtriggers.keys()},
+            {trigger_name: False for trigger_name in self.subtriggers},
             **self.last_inform_decisions,
         )
-        """Indicates whether the ensemble trigger has passed a triggering index
-        with processing_head for a subtrigger since the last trigger.
 
-        Will be reset after every trigger.
-        """
+        # Cache for the next trigger index of each subtrigger.
+        # None indicates that the subtrigger has no more triggers because the generator is exhausted.
+        # -1 indicates that the last triggering index was in the last batch or there was no trigger yet.
+        next_subtrigger_index_cache: dict[str, int | None] = {trigger_name: -1 for trigger_name in self.subtriggers}
 
-        next_subtrigger_index_cache: dict[str, int | None] = {
-            trigger_name: -1 for trigger_name in self.subtriggers.keys()
-        }
-        """Cache for the next trigger index of each subtrigger.
-
-        None indicates that the subtrigger has no more triggers because the generator is exhausted.
-        -1 indicates that the last triggering index was in the last batch or there was no trigger yet.
-        """
-
+        # The current candidate index for the next trigger.
+        # If the aggregation function returns True, we trigger. If not,
+        # the processing head is still increased to the next triggering
+        # index of a subtrigger. Indexes are based on the new_data batch.
         processing_head = -1
-        """The current candidate index for the next trigger.
-
-        If the aggregation function returns True, we trigger. If not,
-        the processing head is still increased to the next triggering
-        index of a subtrigger. Indexes are based on the new_data batch.
-        """
 
         self._update_outdated_next_trigger_indexes(
             processing_head,
@@ -103,7 +96,6 @@ class EnsembleTrigger(Trigger):
             next_trigger_idx = self._find_next_trigger_index(
                 processing_head,
                 new_data,
-                subtrigger_generators,
                 subtrigger_decision_cache,
                 next_subtrigger_index_cache,
                 log,
@@ -151,7 +143,7 @@ class EnsembleTrigger(Trigger):
 
     def _reset_subtrigger_decision_cache(self, subtrigger_decision_cache: dict[str, bool]) -> None:
         subtrigger_decision_cache.clear()
-        subtrigger_decision_cache.update({trigger_name: False for trigger_name in self.subtriggers.keys()})
+        subtrigger_decision_cache.update({trigger_name: False for trigger_name in self.subtriggers})
 
     def _update_outdated_next_trigger_indexes(
         self,
@@ -180,7 +172,6 @@ class EnsembleTrigger(Trigger):
         self,
         processing_head: int,
         new_data: list[tuple[int, int, int]],
-        subtrigger_generators: dict[str, Generator[int, None, None]],
         subtrigger_decision_cache: dict[str, bool],
         next_subtrigger_index_cache: dict[str, int | None],
         log: TriggerPolicyEvaluationLog | None = None,

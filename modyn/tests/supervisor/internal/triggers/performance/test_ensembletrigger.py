@@ -143,12 +143,6 @@ def test_find_next_trigger_index(
 ) -> None:
     trigger = EnsembleTrigger(ensemble_trigger_config)
 
-    subtrigger_generators = {
-        "t1": iter([]),
-        "t2": iter([]),
-        "t3": iter([]),
-        "t4": iter([]),
-    }
     subtrigger_decision_cache = {"t1": False, "t2": False, "t3": False, "t4": False}
     next_subtrigger_index_cache = {"t1": None, "t2": 10, "t3": 5, "t4": 3}
 
@@ -162,7 +156,6 @@ def test_find_next_trigger_index(
     result = trigger._find_next_trigger_index(
         processing_head=0,
         new_data=new_data,
-        subtrigger_generators=subtrigger_generators,
         subtrigger_decision_cache=subtrigger_decision_cache,
         next_subtrigger_index_cache=next_subtrigger_index_cache,
         log=trigger_log,
@@ -182,7 +175,6 @@ def test_find_next_trigger_index(
     result = trigger._find_next_trigger_index(
         processing_head=0,
         new_data=new_data,
-        subtrigger_generators=subtrigger_generators,
         subtrigger_decision_cache=subtrigger_decision_cache,
         next_subtrigger_index_cache=next_subtrigger_index_cache,
         log=trigger_log,
@@ -200,7 +192,6 @@ def test_find_next_trigger_index(
     result = trigger._find_next_trigger_index(
         processing_head=0,
         new_data=new_data,
-        subtrigger_generators=subtrigger_generators,
         subtrigger_decision_cache=subtrigger_decision_cache,
         next_subtrigger_index_cache=next_subtrigger_index_cache,
         log=trigger_log,
