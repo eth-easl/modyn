@@ -11,11 +11,11 @@ from modyn.supervisor.internal.triggers.cost.cost_tracker import CostTracker
 from modyn.supervisor.internal.triggers.cost.incorporation_latency_tracker import (
     IncorporationLatencyTracker,
 )
-from modyn.supervisor.internal.triggers.models import (
+from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
+from modyn.supervisor.internal.triggers.utils.models import (
     CostAwareTriggerEvalLog,
     TriggerPolicyEvaluationLog,
 )
-from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 
 logger = logging.getLogger(__name__)
 
@@ -154,4 +154,3 @@ class CostTrigger(Trigger):
             batch: The batch of data points to compute the regret metric for.
             batch_duration: The duration of the last period in seconds.
         """
-        ...

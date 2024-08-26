@@ -109,8 +109,8 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 For doing so we wrap the generator with this function.
                 """
                 try:
-                    for item, time in timed_generator(gen):  # type: ignore
-                        stage_log.duration = (stage_log.duration or timedelta(0)) + timedelta(milliseconds=time)
+                    for item, time_ in timed_generator(gen):  # type: ignore
+                        stage_log.duration = (stage_log.duration or timedelta(0)) + timedelta(milliseconds=time_)
                         yield item
                 finally:
                     report_results(stage_log)
