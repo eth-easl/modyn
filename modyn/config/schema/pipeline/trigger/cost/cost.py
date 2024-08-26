@@ -48,8 +48,14 @@ class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalP
     """Cost aware trigger policy configuration that using the number of
     avoidable misclassifications integration latency as a regret metric.
 
-    This policy can be seen a combination of data incorporation latency based cost triggers and performance aware
-    triggers.
+    We suspect the cumulated number of misclassifications is very unstable and badly conditioned on user input as
+    it's a linear function with respect to the amount of data. As the training cost is also linear with respect to the
+    amount of data, this likely lead to a very brittle trigger policy.
+    That's why we penalize every second that an avoidable misclassification remains unaddressed (no trigger).
+
+    It's a result of combining this data incorporation latency idea with the static number of misclassification
+    performance trigger. This policy can be seen a combination of data incorporation latency based cost triggers
+    and performance aware triggers.
 
     `avoidable_misclassification_latency_per_training_second` servers as a conversion rate between budget (training time)
     and regret metric (misclassifications).
