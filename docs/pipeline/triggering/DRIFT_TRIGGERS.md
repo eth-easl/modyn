@@ -197,7 +197,6 @@ classDiagram
         bool absolute = False
     }
 
-
     DriftDecisionCriterion <|-- ThresholdDecisionCriterion
     DriftDecisionCriterion <|-- DynamicThresholdCriterion
 
