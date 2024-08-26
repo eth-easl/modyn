@@ -72,9 +72,6 @@ class DataDriftTrigger(BatchedTrigger):
         self.model_downloader: ModelDownloader | None = None
         self.model: StatefulModel | None = None
 
-        self._sample_left_until_detection = (
-            config.evaluation_interval_data_points
-        )  # allows to detect drift in a fixed interval
         self._windows = _setup_detection_windows(config.windowing_strategy)
         self._triggered_once = False
 
