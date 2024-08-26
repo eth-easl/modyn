@@ -168,7 +168,15 @@ class PerformanceTrigger(Trigger):
                 for policy in self.decision_policies.values():
                     policy.inform_trigger()  # resets the internal state (e.g. misclassification counters)
 
-            trigger_idx = processing_head_in_batch - 1
+            # we need to return an index in the `new_data`. Therefore, we need to subtract number of samples in the
+            # leftover data from the processing head in batch; -1 is required as the head points to the first
+            # unprocessed data point
+            trigger_idx = min(
+                max(processing_head_in_batch - len(self._leftover_data) - 1, 0),
+                len(new_data) - 1,
+            )
+
+            # -------------------------------------------------- Log ------------------------------------------------- #
 
             drift_eval_log = PerformanceTriggerEvalLog(
                 triggered=triggered,
@@ -184,6 +192,8 @@ class PerformanceTrigger(Trigger):
             )
             if log:
                 log.evaluations.append(drift_eval_log)
+
+            # ----------------------------------------------- Response ----------------------------------------------- #
 
             self._last_detection_interval = next_detection_interval
             if triggered:
