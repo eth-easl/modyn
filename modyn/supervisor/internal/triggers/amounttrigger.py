@@ -3,8 +3,8 @@ from collections.abc import Generator
 from typing_extensions import override
 
 from modyn.config.schema.pipeline import DataAmountTriggerConfig
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 
 class DataAmountTrigger(Trigger):

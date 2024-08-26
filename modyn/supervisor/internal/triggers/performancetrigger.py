@@ -15,10 +15,6 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.metrics.accuracy import Accuracy
 from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
-from modyn.supervisor.internal.triggers.models import (
-    PerformanceTriggerEvalLog,
-    TriggerPolicyEvaluationLog,
-)
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
@@ -40,6 +36,10 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 )
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
+from modyn.supervisor.internal.triggers.utils.models import (
+    PerformanceTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 from modyn.utils.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 logger = logging.getLogger(__name__)
