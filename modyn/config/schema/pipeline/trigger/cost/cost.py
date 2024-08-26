@@ -27,7 +27,12 @@ class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
     While no trigger occurs samples are cumulated into to a number of un-integrated samples over time curve.
     Rather than using this metric directly, we build an area-under-the-curve metric.
     The area under the un-integrated samples curve measures the time samples have spent in the incorporation queue.
-    `incorporation_delay_per_training_second` is as a conversion rate between cost budget (training time) and regret
+
+    As this policy operates the two metrics `time` (cost) and `incorporation_delay` (regret) we need
+    a way to express the tradeoff between the two. A user e.g. has to specify how many seconds of training time he is
+    willing to eradicate a certain amount of cumulative regret (here `incorporation delay`).
+
+    `incorporation_delay_per_training_second` is this conversion rate between cost budget (training time) and regret
     metric (incorporation latency).
 
     When the cumulated regret (area under the curve) exceeds the training-time budget, a trigger is fired.
@@ -57,8 +62,12 @@ class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalP
     performance trigger. This policy can be seen a combination of data incorporation latency based cost triggers
     and performance aware triggers.
 
-    `avoidable_misclassification_latency_per_training_second` servers as a conversion rate between budget (training time)
-    and regret metric (misclassifications).
+    As this policy operates the two metrics `time` (cost) and `misclassification_incorporation_latency` (regret) we need
+    a way to express the tradeoff between the two. A user e.g. has to specify how many seconds of training time he is
+    willing to eradicate a certain amount of cumulative regret (here `incorporation delay`).
+
+    `avoidable_misclassification_latency_per_training_second` is this conversion rate between cost budget
+    (training time) and regret metric (misclassifications).
 
     When a the regret metric exceeds the budget, a trigger is fired.
 
