@@ -73,7 +73,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"timetrigger_{time}",
-                trigger=TimeTriggerConfig(
+                trigger_config=TimeTriggerConfig(
                     every=f"{time}",
                     start_timestamp=experiment.warmup_until or _FIRST_TIMESTAMP,
                 ),
@@ -85,7 +85,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"dataamounttrigger_{count}",
-                trigger=DataAmountTriggerConfig(num_samples=count),
+                trigger_config=DataAmountTriggerConfig(num_samples=count),
                 eval_handlers=experiment.eval_handlers,
             )
         )
@@ -94,7 +94,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         pipeline_configs.append(
             gen_pipeline_config(
                 name=f"datadrifttrigger_{interval}",
-                trigger=DataDriftTriggerConfig(
+                trigger_config=DataDriftTriggerConfig(
                     detection_interval_data_points=interval,
                     metrics=experiment.drift_trigger_metrics,
                     aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
