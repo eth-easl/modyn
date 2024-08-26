@@ -81,7 +81,7 @@ def test_reset_subtrigger_decision_cache(
     }
 
 
-def test_update_outdated_next_trigger_indexes(
+def test_update_next_subtrigger_index_cache(
     ensemble_trigger_config: EnsembleTriggerConfig,
 ) -> None:
     trigger = EnsembleTrigger(ensemble_trigger_config)
@@ -91,50 +91,54 @@ def test_update_outdated_next_trigger_indexes(
         "data_amount_trigger": iter([6, 20]),
     }
     next_subtrigger_index_cache = {
-        "time_trigger": -1,
-        "data_amount_trigger": -1,
+        "time_trigger": EnsembleTrigger.TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET,
+        "data_amount_trigger": EnsembleTrigger.TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET,
     }
 
     # initial update
-    trigger._update_outdated_next_trigger_indexes(-1, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(
+        EnsembleTrigger.TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET,
+        subtrigger_generators,
+        next_subtrigger_index_cache,
+    )
     assert next_subtrigger_index_cache == {
         "time_trigger": 4,
         "data_amount_trigger": 6,
     }
 
     # update one
-    trigger._update_outdated_next_trigger_indexes(4, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(4, subtrigger_generators, next_subtrigger_index_cache)
     assert next_subtrigger_index_cache == {
         "time_trigger": 5,
         "data_amount_trigger": 6,
     }
 
     # update one
-    trigger._update_outdated_next_trigger_indexes(5, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(5, subtrigger_generators, next_subtrigger_index_cache)
     assert next_subtrigger_index_cache == {
         "time_trigger": 12,
         "data_amount_trigger": 6,
     }
 
     # update both
-    trigger._update_outdated_next_trigger_indexes(14, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(14, subtrigger_generators, next_subtrigger_index_cache)
     assert next_subtrigger_index_cache == {
         "time_trigger": 21,
         "data_amount_trigger": 20,
     }
 
     # exhaust second generator, leave first untouched
-    trigger._update_outdated_next_trigger_indexes(20, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(20, subtrigger_generators, next_subtrigger_index_cache)
     assert next_subtrigger_index_cache == {
         "time_trigger": 21,
-        "data_amount_trigger": None,
+        "data_amount_trigger": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
     }
 
     # exhaust second
-    trigger._update_outdated_next_trigger_indexes(21, subtrigger_generators, next_subtrigger_index_cache)
+    trigger._update_next_subtrigger_index_cache(21, subtrigger_generators, next_subtrigger_index_cache)
     assert next_subtrigger_index_cache == {
-        "time_trigger": None,
-        "data_amount_trigger": None,
+        "time_trigger": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "data_amount_trigger": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
     }
 
 
@@ -144,7 +148,12 @@ def test_find_next_trigger_index(
     trigger = EnsembleTrigger(ensemble_trigger_config)
 
     subtrigger_decision_cache = {"t1": False, "t2": False, "t3": False, "t4": False}
-    next_subtrigger_index_cache = {"t1": None, "t2": 10, "t3": 5, "t4": 3}
+    next_subtrigger_index_cache = {
+        "t1": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t2": 10,
+        "t3": 5,
+        "t4": 3,
+    }
 
     trigger.config.ensemble_strategy = AtLeastNEnsembleStrategy(n=2)
 
@@ -170,7 +179,12 @@ def test_find_next_trigger_index(
 
     # no trigger case, not 3 subtriggers
     subtrigger_decision_cache = {"t1": False, "t2": False, "t3": False, "t4": False}
-    next_subtrigger_index_cache = {"t1": None, "t2": 10, "t3": 5, "t4": None}
+    next_subtrigger_index_cache = {
+        "t1": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t2": 10,
+        "t3": 5,
+        "t4": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+    }
     trigger.config.ensemble_strategy = AtLeastNEnsembleStrategy(n=3)
     result = trigger._find_next_trigger_index(
         processing_head=0,
@@ -188,7 +202,9 @@ def test_find_next_trigger_index(
 
     # no subtrigger
     subtrigger_decision_cache = {"t1": False, "t2": False, "t3": False, "t4": False}
-    next_subtrigger_index_cache = {"t1": None, "t2": None, "t3": None, "t4": None}
+    next_subtrigger_index_cache = {
+        t: EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED for t in ["t1", "t2", "t3", "t4"]
+    }
     result = trigger._find_next_trigger_index(
         processing_head=0,
         new_data=new_data,
@@ -198,6 +214,45 @@ def test_find_next_trigger_index(
     )
     assert result is None
     assert len(trigger_log.evaluations) == 0
+
+    # Test that previous batch's decision is used
+    subtrigger_decision_cache = {"t1": True, "t2": True, "t3": False, "t4": False}
+    next_subtrigger_index_cache = {
+        "t1": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t2": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t3": 10,
+        "t4": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+    }
+    trigger.config.ensemble_strategy = AtLeastNEnsembleStrategy(n=3)
+    result = trigger._find_next_trigger_index(
+        processing_head=0,
+        new_data=new_data,
+        subtrigger_decision_cache=subtrigger_decision_cache,
+        next_subtrigger_index_cache=next_subtrigger_index_cache,
+        log=trigger_log,
+    )
+    assert result == 10
+    assert len(trigger_log.evaluations) == 1
+
+    # Test that previous batch's decision is used, but not sufficient if no new trigger is found
+    subtrigger_decision_cache = {"t1": True, "t2": True, "t3": False, "t4": False}
+    # t1 is already triggered
+    next_subtrigger_index_cache = {
+        "t1": 10,
+        "t2": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t3": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+        "t4": EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED,
+    }
+    trigger_log = TriggerPolicyEvaluationLog()
+    result = trigger._find_next_trigger_index(
+        processing_head=0,
+        new_data=new_data,
+        subtrigger_decision_cache=subtrigger_decision_cache,
+        next_subtrigger_index_cache=next_subtrigger_index_cache,
+        log=trigger_log,
+    )
+    assert result is None
+    assert len(trigger_log.evaluations) == 1
 
 
 def test_inform_trigger(ensemble_trigger_config: EnsembleTriggerConfig) -> None:
@@ -248,7 +303,8 @@ def test_inform_multi_batch(ensemble_trigger_config: EnsembleTriggerConfig) -> N
     assert len(trigger_log.evaluations) == 1
 
     trigger_log = TriggerPolicyEvaluationLog()
-    # second inform contains 7
+
+    # second inform contains 7, timetrigger remains in triggered state from index 4
     results = list(trigger.inform([(i, i + 100, 1) for i in range(6, 9)], log=trigger_log))
 
     assert len(results) == 1

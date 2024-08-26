@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from collections.abc import Generator
-from typing import cast
 
 from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.ensemble import EnsembleTriggerConfig
@@ -31,13 +31,8 @@ class EnsembleTrigger(Trigger):
         from the generators of each subtrigger. The evaluations of all subsequent subtrigger indexes are
         deferred in a lazy manner.
 
-        We assume that after a subtrigger will always like to see a trigger after the next index in the generator.
-        Thus, we are sure that we can trigger for certain at the maximum of all next trigger indexes of the subtriggers
-        as all subtriggers requested a trigger until this index.
-
-        For the potential triggering indexes up until this maximum, we evaluate the aggregation function at every
-        index where one policy first decided to do a trigger. We have those indexes cached after fetching the next
-        trigger index from the subtriggers.
+        We consider all next subtrigger indexes of the subtriggers in the cache as potential triggering indexes for
+        the ensemble trigger and evaluate the aggregation function at each of them in chronological order.
 
         We have to ensure though that every trigger consumes / evaluates all data eventually as some triggers
         need the data to maintain their state.
@@ -45,6 +40,13 @@ class EnsembleTrigger(Trigger):
         in the future wr.t. our current trigger index. We can simply do that by fetching the next trigger indexes
         from the subtriggers until all subtriggers have a next trigger index in the future.
     """
+
+    TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET = -1
+    """Indicates that the subtrigger hasn't triggered yet in this batch."""
+
+    TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED = -2
+    """Indicates that the subtrigger has no more triggers because the generator
+    is exhausted."""
 
     def __init__(self, config: EnsembleTriggerConfig):
         self.config = config
@@ -70,23 +72,22 @@ class EnsembleTrigger(Trigger):
         # Indicates whether the ensemble trigger has passed a triggering index
         # with processing_head for a subtrigger since the last trigger.
         # Will be reset after every trigger.
-        subtrigger_decision_cache = dict(
-            {trigger_name: False for trigger_name in self.subtriggers},
-            **self.last_inform_decisions,
-        )
+        subtrigger_decision_cache = defaultdict(lambda: False, self.last_inform_decisions)
 
         # Cache for the next trigger index of each subtrigger.
         # None indicates that the subtrigger has no more triggers because the generator is exhausted.
         # -1 indicates that the last triggering index was in the last batch or there was no trigger yet.
-        next_subtrigger_index_cache: dict[str, int | None] = {trigger_name: -1 for trigger_name in self.subtriggers}
+        next_subtrigger_index_cache: dict[str, int] = {
+            trigger_name: EnsembleTrigger.TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET for trigger_name in self.subtriggers
+        }
 
-        # The current candidate index for the next trigger.
+        # The current candidate index within `new_data` for the next trigger.
         # If the aggregation function returns True, we trigger. If not,
         # the processing head is still increased to the next triggering
         # index of a subtrigger. Indexes are based on the new_data batch.
-        processing_head = -1
+        processing_head = EnsembleTrigger.TRIGGER_SUBTRIGGER_NOT_TRIGGERED_YET
 
-        self._update_outdated_next_trigger_indexes(
+        self._update_next_subtrigger_index_cache(
             processing_head,
             subtrigger_generators,
             next_subtrigger_index_cache,
@@ -101,16 +102,23 @@ class EnsembleTrigger(Trigger):
                 log,
             )
             if next_trigger_idx is None:
+                # we have to ensure that all subtriggers have consumed all data up
+                # to the last index of the batch, as they it impacts their state
                 # complete remaining inform calls regardless of the decision, any of the decision will lead to a
                 # non triggering aggregation result
-
+                processing_head = len(new_data) - 1
+                self._update_next_subtrigger_index_cache(
+                    processing_head,
+                    subtrigger_generators,
+                    next_subtrigger_index_cache,
+                )
                 break
 
             processing_head = next_trigger_idx
 
             # reset state for next detection pass;
             self._reset_subtrigger_decision_cache(subtrigger_decision_cache)
-            self._update_outdated_next_trigger_indexes(
+            self._update_next_subtrigger_index_cache(
                 processing_head,
                 subtrigger_generators,
                 next_subtrigger_index_cache,
@@ -145,14 +153,14 @@ class EnsembleTrigger(Trigger):
         subtrigger_decision_cache.clear()
         subtrigger_decision_cache.update({trigger_name: False for trigger_name in self.subtriggers})
 
-    def _update_outdated_next_trigger_indexes(
+    def _update_next_subtrigger_index_cache(
         self,
         processing_head: int,
         subtrigger_generators: dict[str, Generator[int, None, None]],
-        next_subtrigger_index_cache: dict[str, int | None],
+        next_subtrigger_index_cache: dict[str, int],
     ) -> None:
         """Updates the next trigger indexes in the cache to be in the future
-        w.r.t. the current trigger index.
+        w.r.t. the processing head.
 
         Supposed to be called after a new trigger index was found or at the beginning of the inform method to
         sync. with the new data batch.
@@ -161,19 +169,19 @@ class EnsembleTrigger(Trigger):
         """
         for trigger_name, generator in subtrigger_generators.items():
             # generator is not exhausted
-            if next_subtrigger_index_cache[trigger_name] is not None:
+            if next_subtrigger_index_cache[trigger_name] != EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED:
                 try:
-                    while cast(dict[str, int], next_subtrigger_index_cache)[trigger_name] <= processing_head:
+                    while next_subtrigger_index_cache[trigger_name] <= processing_head:
                         next_subtrigger_index_cache[trigger_name] = next(generator)
                 except StopIteration:
-                    next_subtrigger_index_cache[trigger_name] = None
+                    next_subtrigger_index_cache[trigger_name] = EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED
 
     def _find_next_trigger_index(
         self,
         processing_head: int,
         new_data: list[tuple[int, int, int]],
         subtrigger_decision_cache: dict[str, bool],
-        next_subtrigger_index_cache: dict[str, int | None],
+        next_subtrigger_index_cache: dict[str, int],
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> int | None:
         """Fetches the next trigger index from the subtriggers and caches
@@ -190,23 +198,19 @@ class EnsembleTrigger(Trigger):
         unfinished_index_cache = {
             trigger_name: generator
             for trigger_name, generator in next_subtrigger_index_cache.items()
-            if next_subtrigger_index_cache[trigger_name] is not None
+            if next_subtrigger_index_cache[trigger_name] != EnsembleTrigger.TRIGGER_SUBTRIGGER_GENERATOR_EXHAUSTED
         }
         if len(unfinished_index_cache) == 0:
             return None
 
         # assert that all subtrigger indexes are in the future
         assert all(
-            cast(dict[str, int], unfinished_index_cache)[trigger_name] > processing_head
-            for trigger_name in unfinished_index_cache.keys()
+            unfinished_index_cache[trigger_name] > processing_head for trigger_name in unfinished_index_cache.keys()
         ), "Subtrigger indexes are not in the future."
 
         # find next trigger candidate: use the minimum of all next trigger indexes;
         # sort subtriggers by next trigger index
-        next_trigger_candidates = sorted(
-            cast(dict[str, int], unfinished_index_cache).items(),
-            key=lambda item: item[1],
-        )
+        next_trigger_candidates = sorted(unfinished_index_cache.items(), key=lambda item: item[1])
 
         for subtrigger_name, next_subtrigger_index in next_trigger_candidates:
             processing_head = next_subtrigger_index
