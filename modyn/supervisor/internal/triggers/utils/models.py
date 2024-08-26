@@ -21,7 +21,18 @@ class DriftTriggerEvalLog(_BaseTriggerEvalLog):
     is_warmup: bool = Field(False)
 
 
-class PerformanceTriggerEvalLog(_BaseTriggerEvalLog):
+class EnsembleTriggerEvalLog(ModynBaseModel):
+    type: Literal["ensemble"] = Field("ensemble")
+    triggered: bool
+    trigger_index: int | None = Field(None)  # in inform(..) batch
+    evaluation_interval: tuple[tuple[int, int], tuple[int, int]]
+    subtrigger_decisions: dict[str, bool] = Field(
+        default_factory=dict,
+        description="The policy decisions for the evaluation interval for different metrics keyed by their name.",
+    )
+
+
+class PerformanceTriggerEvalLog(ModynBaseModel):
     type: Literal["performance"] = Field("performance")
     num_misclassifications: int = Field(0, description="The number of misclassifications in the evaluation interval.")
     evaluation_scores: dict[str, float] = Field(
@@ -42,7 +53,7 @@ class CostAwareTriggerEvalLog(_BaseTriggerEvalLog):
 
 
 TriggerEvalLog = Annotated[
-    CostAwareTriggerEvalLog | DriftTriggerEvalLog | PerformanceTriggerEvalLog,
+    CostAwareTriggerEvalLog | DriftTriggerEvalLog | EnsembleTriggerEvalLog | PerformanceTriggerEvalLog,
     Field(discriminator="type"),
 ]
 

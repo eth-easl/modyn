@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 
-from modyn.supervisor.internal.triggers.utils.model.manager import StatefulModel
+from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 
 
 def get_embeddings(stateful_model: StatefulModel, dataloader: DataLoader) -> torch.Tensor:

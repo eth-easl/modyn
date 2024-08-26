@@ -20,7 +20,7 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
 
