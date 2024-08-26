@@ -13,12 +13,12 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.config import AmountWindowingStrategy
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
+    DynamicPercentileThresholdCriterion,
+    ThresholdDecisionCriterion,
+)
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     TimeWindowingStrategy,
-)
-from modyn.config.schema.pipeline.trigger.drift.metric import (
-    DynamicThresholdCriterion,
-    ThresholdDecisionCriterion,
 )
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
@@ -26,11 +26,11 @@ from modyn.config.schema.pipeline.trigger.simple.data_amount import (
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
-from modyn.supervisor.internal.triggers.embedding_encoder_utils import (
-    EmbeddingEncoderDownloader,
-)
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
-from modyn.supervisor.internal.triggers.trigger_datasets import DataLoaderInfo
+from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
+    DataLoaderInfo,
+)
+from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 
 BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 PIPELINE_ID = 42
@@ -87,13 +87,13 @@ def noop_dataloader_info_constructor_mock(
 def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     trigger = DataDriftTrigger(drift_trigger_config)
     assert trigger.config.detection_interval_data_points == 42
-    assert trigger.previous_model_id is None
-    assert not trigger.model_updated
+    assert trigger.most_recent_model_id is None
+    assert not trigger.model_refresh_needed
     assert trigger.config.windowing_strategy.id == "AmountWindowingStrategy"
 
 
 @patch.object(
-    EmbeddingEncoderDownloader,
+    ModelDownloader,
     "__init__",
     noop_embedding_encoder_downloader_constructor_mock,
 )
@@ -112,16 +112,16 @@ def test_init_trigger(
         assert trigger.context.modyn_config == dummy_system_config
         assert trigger.context.base_dir == BASEDIR
         assert isinstance(trigger.dataloader_info, DataLoaderInfo)
-        assert isinstance(trigger.encoder_downloader, EmbeddingEncoderDownloader)
+        assert isinstance(trigger.model_downloader, ModelDownloader)
 
 
-def test_inform_previous_model_id(drift_trigger_config: DataDriftTriggerConfig) -> None:
+def test_inform_new_model_id(drift_trigger_config: DataDriftTriggerConfig) -> None:
     trigger = DataDriftTrigger(drift_trigger_config)
-    trigger.model_updated = False
+    trigger.model_refresh_needed = False
     # pylint: disable-next=use-implicit-booleaness-not-comparison
-    trigger.inform_previous_model(42)
-    assert trigger.previous_model_id == 42
-    assert trigger.model_updated
+    trigger.inform_new_model(42)
+    assert trigger.most_recent_model_id == 42
+    assert trigger.model_refresh_needed
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
@@ -131,7 +131,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 5
 
@@ -140,7 +140,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 2
 
@@ -149,7 +149,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 1
 
@@ -161,7 +161,7 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     assert num_triggers == 1
 
     drift_trigger_config.detection_interval_data_points = 2
@@ -169,7 +169,7 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     assert num_triggers == 1
 
     drift_trigger_config.detection_interval_data_points = 5
@@ -177,7 +177,7 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
         num_triggers += 1
-        trigger.inform_previous_model(num_triggers)
+        trigger.inform_new_model(num_triggers)
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 1
 
@@ -265,7 +265,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
         detection_interval_data_points=5,
         metrics={
             "mmd": AlibiDetectMmdDriftMetric(
-                decision_criterion=DynamicThresholdCriterion(percentile=50, window_size=3),
+                decision_criterion=DynamicPercentileThresholdCriterion(percentile=50, window_size=3),
             )
         },
         aggregation_strategy=MajorityVoteDriftAggregationStrategy(),

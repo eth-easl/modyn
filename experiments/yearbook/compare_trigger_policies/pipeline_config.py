@@ -78,7 +78,6 @@ def gen_pipeline_config(
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
             device=gpu_device,
-            result_writers=["json"],
             after_pipeline_evaluation_workers=12,
             after_training_evaluation_workers=12,
             datasets=[

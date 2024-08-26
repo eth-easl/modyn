@@ -11,10 +11,11 @@ from modyn.utils import dynamic_module_import
 logger = logging.getLogger(__name__)
 
 
-class EmbeddingEncoder:
-    """The EmbeddingEncoder stores a model and its metadata.
+class StatefulModel:
+    """The StatefulModel stores a model and loads its state and metadata.
 
-    DataDriftTrigger uses EmbeddingEncoder to run the model.
+    DataDriftTrigger uses StatefulModel to create embeddings through a
+    forward-pass on the wrapped model.
     """
 
     def __init__(

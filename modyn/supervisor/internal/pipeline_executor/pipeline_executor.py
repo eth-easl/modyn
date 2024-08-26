@@ -641,7 +641,7 @@ class PipelineExecutor:
             first_timestamp, last_timestamp = PipelineExecutor._get_trigger_timespan(s, trigger_i == 0, trigger_data)
             s.remaining_data_range = None
             training_id, model_id = self._train_and_store_model(s, self.logs, trigger_id)
-            self.trigger.inform_previous_model(model_id)
+            self.trigger.inform_new_model(model_id)
 
             if s.pipeline_config.evaluation:
                 self._evaluate_and_store_results(
@@ -897,7 +897,7 @@ class PipelineExecutor:
             )
         )
         if self.state.previous_model_id is not None:
-            trigger.inform_previous_model(self.state.previous_model_id)
+            trigger.inform_new_model(self.state.previous_model_id)
 
         return trigger
 
