@@ -17,6 +17,17 @@ class DriftTriggerEvalLog(ModynBaseModel):
     is_warmup: bool = Field(False)
 
 
+class EnsembleTriggerEvalLog(ModynBaseModel):
+    type: Literal["ensemble"] = Field("ensemble")
+    triggered: bool
+    trigger_index: int | None = Field(None)  # in inform(..) batch
+    evaluation_interval: tuple[tuple[int, int], tuple[int, int]]
+    subtrigger_decisions: dict[str, bool] = Field(
+        default_factory=dict,
+        description="The policy decisions for the evaluation interval for different metrics keyed by their name.",
+    )
+
+
 class PerformanceTriggerEvalLog(ModynBaseModel):
     type: Literal["performance"] = Field("performance")
     triggered: bool
@@ -34,7 +45,10 @@ class PerformanceTriggerEvalLog(ModynBaseModel):
     )
 
 
-TriggerEvalLog = Annotated[DriftTriggerEvalLog | PerformanceTriggerEvalLog, Field(discriminator="type")]
+TriggerEvalLog = Annotated[
+    DriftTriggerEvalLog | EnsembleTriggerEvalLog | PerformanceTriggerEvalLog,
+    Field(discriminator="type"),
+]
 
 
 class TriggerPolicyEvaluationLog(ModynBaseModel):

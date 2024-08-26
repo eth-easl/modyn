@@ -24,13 +24,18 @@ class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
     """Cost aware trigger policy configuration that uses the data incorporation
     latency as a regret metric.
 
-    While no trigger occurs the un-integrated data is cumulated and the sum of all seconds of every unincorporated data
-    point is added up.
+    While no trigger occurs samples are cumulated into to a number of un-integrated samples over time curve.
+    Rather than using this metric directly, we build an area-under-the-curve metric.
+    The area under the un-integrated samples curve measures the time samples have spent in the incorporation queue.
 
-    `incorporation_delay_per_training_second` servers as a conversion rate between budget (training time) and regret
+    As this policy operates the two metrics `time` (cost) and `incorporation_delay` (regret) we need
+    a way to express the tradeoff between the two. A user e.g. has to specify how many seconds of training time he is
+    willing to eradicate a certain amount of cumulative regret (here `incorporation delay`).
+
+    `incorporation_delay_per_training_second` is this conversion rate between cost budget (training time) and regret
     metric (incorporation latency).
 
-    When the regret metric exceeds the training-time based budget metric, a trigger is fired.
+    When the cumulated regret (area under the curve) exceeds the training-time budget, a trigger is fired.
     """
 
     id: Literal["DataIncorporationLatencyCostTrigger"] = Field("DataIncorporationLatencyCostTrigger")
@@ -48,14 +53,25 @@ class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalP
     """Cost aware trigger policy configuration that using the number of
     avoidable misclassifications integration latency as a regret metric.
 
-    `avoidable_misclassification_latency_per_training_second` servers as a conversion rate between budget (training time)
-    and regret metric (misclassifications).
+    We suspect the cumulated number of misclassifications is very unstable and badly conditioned on user input as
+    it's a linear function with respect to the amount of data. As the training cost is also linear with respect to the
+    amount of data, this likely lead to a very brittle trigger policy.
+    That's why we penalize every second that an avoidable misclassification remains unaddressed (no trigger).
+
+    It's a result of combining this data incorporation latency idea with the static number of misclassification
+    performance trigger. This policy can be seen a combination of data incorporation latency based cost triggers
+    and performance aware triggers.
+
+    As this policy operates the two metrics `time` (cost) and `misclassification_incorporation_latency` (regret) we need
+    a way to express the tradeoff between the two. A user e.g. has to specify how many seconds of training time he is
+    willing to eradicate a certain amount of cumulative regret (here `incorporation delay`).
+
+    `avoidable_misclassification_latency_per_training_second` is this conversion rate between cost budget
+    (training time) and regret metric (misclassifications).
 
     When a the regret metric exceeds the budget, a trigger is fired.
 
-    This policy is an extension of performance aware triggers.
-
-    Offers the same set of `decision_criteria` as `PerformanceTriggerConfig`
+    Like for performance aware triggers the same set of `decision_criteria` as `PerformanceTriggerConfig`
     but implicitly adds a cost criterion to the list.
 
     Not only evaluates data density and model performance but also
