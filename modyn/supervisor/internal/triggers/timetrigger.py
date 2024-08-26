@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Generator
 
 from modyn.config.schema.pipeline import TimeTriggerConfig
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 
 class TimeTrigger(Trigger):

@@ -37,10 +37,6 @@ from modyn.supervisor.internal.triggers.drift.detector.evidently import (
 )
 from modyn.supervisor.internal.triggers.drift.embedding.embeddings import get_embeddings
 from modyn.supervisor.internal.triggers.drift.utils import convert_tensor_to_df
-from modyn.supervisor.internal.triggers.models import (
-    DriftTriggerEvalLog,
-    TriggerPolicyEvaluationLog,
-)
 from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
 from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
     DataLoaderInfo,
@@ -51,6 +47,10 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
+from modyn.supervisor.internal.triggers.utils.models import (
+    DriftTriggerEvalLog,
+    TriggerPolicyEvaluationLog,
+)
 
 logger = logging.getLogger(__name__)
 
