@@ -7,10 +7,8 @@ from collections.abc import Generator
 from typing_extensions import override
 
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
-from modyn.supervisor.internal.triggers.models import (
-    TriggerPolicyEvaluationLog,
-)
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 logger = logging.getLogger(__name__)
 
