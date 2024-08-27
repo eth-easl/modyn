@@ -147,10 +147,7 @@ class PerformanceTrigger(BatchedTrigger):
         drift_eval_log = PerformanceTriggerEvalLog(
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
-            evaluation_interval=(
-                batch[0][1],
-                batch[-1][1],
-            ),
+            evaluation_interval=(batch[0][1], batch[-1][1]),
             num_samples=num_samples,
             num_misclassifications=num_misclassifications,
             evaluation_scores=evaluation_scores,

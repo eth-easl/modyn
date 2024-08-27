@@ -189,6 +189,9 @@ class DataDriftTrigger(BatchedTrigger):
                         )
                         if log:
                             warmup_log = DriftTriggerEvalLog(
+                                triggered=_warmup_triggered,
+                                trigger_index=-1,
+                                evaluation_interval=(batch[0][1], batch[-1][1]),
                                 detection_interval=(
                                     self._windows.current[0][1],
                                     self._windows.current[-1][1],
@@ -197,8 +200,6 @@ class DataDriftTrigger(BatchedTrigger):
                                     self._windows.reference[0][1],
                                     self._windows.reference[-1][1],
                                 ),
-                                triggered=_warmup_triggered,
-                                trigger_index=-1,
                                 drift_results=_warmup_results,
                             )
                             log.evaluations.append(warmup_log)
@@ -215,15 +216,16 @@ class DataDriftTrigger(BatchedTrigger):
             )
 
         drift_eval_log = DriftTriggerEvalLog(
-            evaluation_interval=(
+            triggered=triggered,
+            trigger_index=-1,
+            evaluation_interval=(batch[0][1], batch[-1][1]),
+            detection_interval=(
                 self._windows.current[0][1],
                 self._windows.current[-1][1],
             ),
             reference_interval=(
                 (self._windows.reference[0][1], self._windows.reference[-1][1]) if self._windows.reference else (-1, -1)
             ),
-            triggered=triggered,
-            trigger_index=-1,
             drift_results=drift_results,
         )
 

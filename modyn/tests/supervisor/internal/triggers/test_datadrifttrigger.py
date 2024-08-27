@@ -178,7 +178,6 @@ def test_update_current_window_amount_strategy(
 ) -> None:
     drift_trigger_config.evaluation_interval_data_points = 2
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount_cur=3, amount_ref=3)
-    drift_trigger_config.evaluation_interval_data_points = 100
     trigger = DataDriftTrigger(drift_trigger_config)
 
     # Inform with less data than the window amount
