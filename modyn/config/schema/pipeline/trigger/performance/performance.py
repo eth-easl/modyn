@@ -4,12 +4,11 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
 )
 from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
-
-from ..common.mixins import TriggerEvaluationIntervalMixin
 
 
 class PerformanceTriggerEvaluationConfig(ModynBaseModel):
@@ -30,7 +29,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
         return dataset
 
 
-class _InternalPerformanceTriggerConfig(TriggerEvaluationIntervalMixin):
+class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
     data_density_window_size: int = Field(
         0,
         description="The window size for the data density estimation. Only used for lookahead mode.",

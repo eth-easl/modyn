@@ -7,11 +7,12 @@ from collections.abc import Generator
 from typing_extensions import override
 
 from modyn.config.schema.pipeline.trigger.cost.cost import CostTriggerConfig
+from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
 from modyn.supervisor.internal.triggers.cost.cost_tracker import CostTracker
 from modyn.supervisor.internal.triggers.cost.incorporation_latency_tracker import (
     IncorporationLatencyTracker,
 )
-from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
+from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.utils.models import (
     CostAwareTriggerEvalLog,
     TriggerPolicyEvaluationLog,
@@ -20,7 +21,7 @@ from modyn.supervisor.internal.triggers.utils.models import (
 logger = logging.getLogger(__name__)
 
 
-class CostTrigger(Trigger):
+class CostTrigger(BatchedTrigger):
     """Triggers when a cumulated regret metric exceeds the estimated training
     time."""
 

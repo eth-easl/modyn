@@ -4,13 +4,13 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
     DriftWindowingStrategy,
 )
 from modyn.config.schema.pipeline.trigger.simple import SimpleTriggerConfig
 
-from ..common.mixins import TriggerEvaluationIntervalMixin
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
 from .evidently import EvidentlyDriftMetric
@@ -21,7 +21,7 @@ DriftMetric = Annotated[
 ]
 
 
-class DataDriftTriggerConfig(TriggerEvaluationIntervalMixin):
+class DataDriftTriggerConfig(BatchedTriggerConfig):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
 
     windowing_strategy: DriftWindowingStrategy = Field(

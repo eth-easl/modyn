@@ -7,14 +7,12 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from modyn.config.schema.pipeline.trigger.common.mixins import (
-    TriggerEvaluationIntervalMixin,
-)
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 
 from ..performance.performance import _InternalPerformanceTriggerConfig
 
 
-class _CostTriggerConfig(TriggerEvaluationIntervalMixin):
+class _CostTriggerConfig(BatchedTriggerConfig):
     """Base class for cost aware trigger policies."""
 
     cost_tracking_window_size: int = Field(

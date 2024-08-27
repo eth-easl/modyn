@@ -30,5 +30,5 @@ class DataIncorporationLatencyCostTrigger(CostTrigger):
         return self._incorporation_latency_tracker.add_latencies(
             regrets=[(time, 1.0) for _, time in batch],
             start_timestamp=batch_start,
-            period_duration=batch_duration,
+            batch_duration=batch_duration,
         )

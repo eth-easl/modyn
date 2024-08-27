@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Generator
 
 from typing_extensions import override
 
@@ -15,6 +14,7 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 )
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.metrics.accuracy import Accuracy
+from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
@@ -27,7 +27,7 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
 from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
-from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
+from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
     DataLoaderInfo,
 )
@@ -45,7 +45,7 @@ from modyn.utils.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 logger = logging.getLogger(__name__)
 
 
-class PerformanceTrigger(Trigger):
+class PerformanceTrigger(BatchedTrigger):
     """Trigger based on the performance of the model.
 
     We support a simple performance drift approach that compares the
@@ -58,7 +58,7 @@ class PerformanceTrigger(Trigger):
     """
 
     def __init__(self, config: PerformanceTriggerConfig) -> None:
-        super().__init__()
+        super().__init__(config)
 
         self.config = config
         self.context: TriggerContext | None = None
@@ -67,9 +67,6 @@ class PerformanceTrigger(Trigger):
         self.dataloader_info: DataLoaderInfo | None = None
         self.model_downloader: ModelDownloader | None = None
         self.model: StatefulModel | None = None
-
-        # allows to detect drift in a fixed interval
-        self._sample_left_until_detection = config.detection_interval_data_points
 
         self.data_density = DataDensityTracker(config.data_density_window_size)
         self.performance_tracker = PerformanceTracker(config.performance_triggers_window_size)
@@ -80,10 +77,6 @@ class PerformanceTrigger(Trigger):
         self.model_refresh_needed = False
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
         self._last_detection_interval: list[tuple[int, int]] = []
-
-        self._leftover_data: list[tuple[int, int]] = []
-        """Stores data that was not processed in the last inform call because
-        the detection interval was not filled."""
 
         self._label_transformer_function = (
             deserialize_function(
@@ -101,110 +94,72 @@ class PerformanceTrigger(Trigger):
         self._init_model_downloader()
 
     @override
-    def inform(
+    def _evaluate_batch(
         self,
-        new_data: list[tuple[int, int, int]],
+        batch: list[tuple[int, int]],
+        trigger_candidate_idx: int,
         log: TriggerPolicyEvaluationLog | None = None,
-    ) -> Generator[int, None, None]:
-        # pylint: disable=too-many-locals
-        new_key_ts = self._leftover_data + [(key, timestamp) for key, timestamp, _ in new_data]
-        # reappending the leftover data to the new data requires incrementing the sample left until detection
-        self._sample_left_until_detection += len(self._leftover_data)
+    ) -> bool:
+        # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
+        self._last_detection_interval = batch
+        self.data_density.inform_data(batch)
 
-        # index of the first unprocessed data point in the batch
-        processing_head_in_batch = 0
+        num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=batch)
 
-        # Go through remaining data in new data in batches of `detect_interval`
-        while True:
-            if self._sample_left_until_detection - len(new_key_ts) > 0:
-                # No detection in this trigger because of too few data points to fill detection interval
-                self._leftover_data = new_key_ts
-                self._sample_left_until_detection -= len(new_key_ts)
-                return
+        self.performance_tracker.inform_evaluation(
+            num_samples=num_samples,
+            num_misclassifications=num_misclassifications,
+            evaluation_scores=evaluation_scores,
+        )
 
-            # At least one detection, fill up window up to that detection
-            next_detection_interval = new_key_ts[: self._sample_left_until_detection]
+        policy_decisions: dict[str, bool] = {}
 
-            # Update the remaining data
-            processing_head_in_batch += len(next_detection_interval)
-            new_key_ts = new_key_ts[len(next_detection_interval) :]
+        # The first ever detection will always trigger
+        if not self._triggered_once:
+            # If we've never triggered before, always trigger
+            self._triggered_once = True
+            triggered = True
 
-            # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
+            # in the first interval we don't evaluate the decision policies as they might require one trigger
+            # to have happened before in order to derive forecasts
 
-            # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
-            self.data_density.inform_data(next_detection_interval)
+        else:
+            # evaluate the decision policies
+            triggered = False
+            for policy_name, policy in self.decision_policies.items():
+                policy_decisions[policy_name] = policy.evaluate_decision(
+                    update_interval=self.config.evaluation_interval_data_points,
+                    evaluation_scores=evaluation_scores,
+                    data_density=self.data_density,
+                    performance_tracker=self.performance_tracker,
+                    mode=self.config.mode,
+                    method=self.config.forecasting_method,
+                )
+                if policy_decisions[policy_name]:
+                    triggered |= True
 
-            num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
-                interval_data=next_detection_interval
-            )
+        if triggered:
+            for policy in self.decision_policies.values():
+                policy.inform_trigger()  # resets the internal state (e.g. misclassification counters)
 
-            self.performance_tracker.inform_evaluation(
-                num_samples=num_samples,
-                num_misclassifications=num_misclassifications,
-                evaluation_scores=evaluation_scores,
-            )
+        # -------------------------------------------------- Log ------------------------------------------------- #
 
-            policy_decisions: dict[str, bool] = {}
+        drift_eval_log = PerformanceTriggerEvalLog(
+            triggered=triggered,
+            trigger_index=trigger_candidate_idx,
+            evaluation_interval=(
+                batch[0][1],
+                batch[-1][1],
+            ),
+            num_samples=num_samples,
+            num_misclassifications=num_misclassifications,
+            evaluation_scores=evaluation_scores,
+            policy_decisions=policy_decisions,
+        )
+        if log:
+            log.evaluations.append(drift_eval_log)
 
-            # The first ever detection will always trigger
-            if not self._triggered_once:
-                # If we've never triggered before, always trigger
-                self._triggered_once = True
-                triggered = True
-
-                # in the first interval we don't evaluate the decision policies as they might require one trigger
-                # to have happened before in order to derive forecasts
-
-            else:
-                # evaluate the decision policies
-                triggered = False
-                for policy_name, policy in self.decision_policies.items():
-                    policy_decisions[policy_name] = policy.evaluate_decision(
-                        update_interval=self.config.detection_interval_data_points,
-                        evaluation_scores=evaluation_scores,
-                        data_density=self.data_density,
-                        performance_tracker=self.performance_tracker,
-                        mode=self.config.mode,
-                        method=self.config.forecasting_method,
-                    )
-                    if policy_decisions[policy_name]:
-                        triggered |= True
-
-            if triggered:
-                for policy in self.decision_policies.values():
-                    policy.inform_trigger()  # resets the internal state (e.g. misclassification counters)
-
-            # we need to return an index in the `new_data`. Therefore, we need to subtract number of samples in the
-            # leftover data from the processing head in batch; -1 is required as the head points to the first
-            # unprocessed data point
-            trigger_idx = min(
-                max(processing_head_in_batch - len(self._leftover_data) - 1, 0),
-                len(new_data) - 1,
-            )
-
-            # -------------------------------------------------- Log ------------------------------------------------- #
-
-            drift_eval_log = PerformanceTriggerEvalLog(
-                triggered=triggered,
-                trigger_index=trigger_idx,
-                evaluation_interval=(
-                    next_detection_interval[0][1],
-                    next_detection_interval[-1][1],
-                ),
-                num_samples=num_samples,
-                num_misclassifications=num_misclassifications,
-                evaluation_scores=evaluation_scores,
-                policy_decisions=policy_decisions,
-            )
-            if log:
-                log.evaluations.append(drift_eval_log)
-
-            # ----------------------------------------------- Response ----------------------------------------------- #
-
-            self._last_detection_interval = next_detection_interval
-            if triggered:
-                yield trigger_idx
+        return triggered
 
     @override
     def inform_new_model(

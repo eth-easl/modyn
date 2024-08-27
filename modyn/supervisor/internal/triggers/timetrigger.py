@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Generator
 
+from typing_extensions import override
+
 from modyn.config.schema.pipeline import TimeTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
@@ -20,6 +22,7 @@ class TimeTrigger(Trigger):
         self.config = config
         self.next_trigger_at: int | None = None
 
+    @override
     def inform(
         self,
         new_data: list[tuple[int, int, int]],
