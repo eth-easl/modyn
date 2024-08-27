@@ -214,7 +214,7 @@ class DataDriftTrigger(Trigger):
                             )
                             if log:
                                 warmup_log = DriftTriggerEvalLog(
-                                    detection_interval=(
+                                    evaluation_interval=(
                                         self._windows.current[0][1],
                                         self._windows.current[-1][1],
                                     ),
@@ -271,7 +271,7 @@ class DataDriftTrigger(Trigger):
         log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         drift_eval_log = DriftTriggerEvalLog(
-            detection_interval=(
+            evaluation_interval=(
                 self._windows.current[0][1],
                 self._windows.current[-1][1],
             ),
