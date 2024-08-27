@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from abc import abstractmethod
-from collections.abc import Generator
 
 from typing_extensions import override
 
@@ -26,6 +25,7 @@ class CostTrigger(BatchedTrigger):
     time."""
 
     def __init__(self, config: CostTriggerConfig):
+        super().__init__(config)
         self.config = config
         self.context: TriggerContext | None = None
 
@@ -46,85 +46,49 @@ class CostTrigger(BatchedTrigger):
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
 
-    def inform(
+    @override
+    def _evaluate_batch(
         self,
-        new_data: list[tuple[int, int, int]],
+        batch: list[tuple[int, int]],
+        trigger_candidate_idx: int,
         log: TriggerPolicyEvaluationLog | None = None,
-    ) -> Generator[int, None, None]:
-        new_key_ts = self._leftover_data + [(key, timestamp) for key, timestamp, _ in new_data]
-        # reappending the leftover data to the new data requires incrementing the sample left until detection
-        self._sample_left_until_detection += len(self._leftover_data)
+    ) -> bool:
+        # Updates
+        batch_start = self._previous_batch_end_time or batch[0][1]
+        batch_duration = batch[-1][1] - batch_start
+        self._previous_batch_end_time = batch[-1][1]
+        self._unincorporated_samples += len(batch)
 
-        # index of the first unprocessed data point in the batch
-        processing_head_in_batch = 0
+        # ----------------------------------------------- decision ----------------------------------------------- #
+        regret_metric = self._compute_regret_metric(batch, batch_start, batch_duration)
 
-        # Go through remaining data in new data in batches of `detect_interval`
-        while True:
-            if self._sample_left_until_detection - len(new_key_ts) > 0:
-                # No detection in this trigger because of too few data points to fill detection interval
-                self._leftover_data = new_key_ts
-                self._sample_left_until_detection -= len(new_key_ts)
-                return
+        if not self._triggered_once:
+            traintime_estimate = -1.0
+            regret_in_traintime_unit = -1.0
+            triggered = self._triggered_once = True
+        else:
+            traintime_estimate = self._cost_tracker.forecast_training_time(self._unincorporated_samples)
+            regret_in_traintime_unit = regret_metric * self.config.conversion_factor
+            triggered = regret_in_traintime_unit >= traintime_estimate
 
-            # At least one detection, fill up window up to that detection
-            next_detection_interval = new_key_ts[: self._sample_left_until_detection]
+        # -------------------------------------------------- Log ------------------------------------------------- #
 
-            # Update the remaining data
-            processing_head_in_batch += len(next_detection_interval)
-            new_key_ts = new_key_ts[len(next_detection_interval) :]
+        drift_eval_log = CostAwareTriggerEvalLog(
+            triggered=triggered,
+            trigger_index=trigger_candidate_idx,
+            num_samples=len(batch),
+            evaluation_interval=(
+                batch[0][1],
+                batch[-1][1],
+            ),
+            regret_metric=regret_metric,
+            traintime_estimate=traintime_estimate,
+            regret_in_traintime_unit=regret_in_traintime_unit,
+        )
+        if log:
+            log.evaluations.append(drift_eval_log)
 
-            # Reset for next detection
-            self._sample_left_until_detection = self.config.evaluation_interval_data_points
-
-            # Updates
-            batch_start = self._previous_batch_end_time or next_detection_interval[0][1]
-            batch_duration = next_detection_interval[-1][1] - batch_start
-            self._previous_batch_end_time = next_detection_interval[-1][1]
-            self._unincorporated_samples += len(next_detection_interval)
-
-            # ----------------------------------------------- decision ----------------------------------------------- #
-            regret_metric = self._compute_regret_metric(next_detection_interval, batch_start, batch_duration)
-
-            if not self._triggered_once:
-                traintime_estimate = -1.0
-                regret_in_traintime_unit = -1.0
-                triggered = self._triggered_once = True
-            else:
-                traintime_estimate = self._cost_tracker.forecast_training_time(self._unincorporated_samples)
-
-                regret_in_traintime_unit = regret_metric * self.config.conversion_factor
-
-                triggered = regret_in_traintime_unit >= traintime_estimate
-
-            # -------------------------------------------------- Log ------------------------------------------------- #
-
-            # we need to return an index in the `new_data`. Therefore, we need to subtract number of samples in the
-            # leftover data from the processing head in batch; -1 is required as the head points to the first
-            # unprocessed data point
-            trigger_idx = min(
-                max(processing_head_in_batch - len(self._leftover_data) - 1, 0),
-                len(new_data) - 1,
-            )
-
-            drift_eval_log = CostAwareTriggerEvalLog(
-                triggered=triggered,
-                trigger_index=trigger_idx,
-                num_samples=len(next_detection_interval),
-                evaluation_interval=(
-                    next_detection_interval[0][1],
-                    next_detection_interval[-1][1],
-                ),
-                regret_metric=regret_metric,
-                traintime_estimate=traintime_estimate,
-                regret_in_traintime_unit=regret_in_traintime_unit,
-            )
-            if log:
-                log.evaluations.append(drift_eval_log)
-
-            # ----------------------------------------------- Response ----------------------------------------------- #
-
-            if triggered:
-                yield trigger_idx
+        return triggered
 
     @override
     def inform_new_model(
