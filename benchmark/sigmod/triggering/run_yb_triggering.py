@@ -5,13 +5,17 @@ import os
 import sys
 from pathlib import Path
 
-from benchmark.sigmod.triggering.yearbook_triggering_config import gen_yearbook_triggering_config
+from benchmark.sigmod.triggering.yearbook_triggering_config import (
+    gen_yearbook_triggering_config,
+)
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
 from modyn.config.schema.pipeline.trigger.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectMmdDriftMetric,
+)
 from modyn.config.schema.pipeline.trigger.drift.config import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.time import TimeTriggerConfig
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
@@ -42,18 +46,18 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
     # DriftTriggers
-    for detection_interval_data_points in [250, 500, 100]:
+    for evaluation_interval_data_points in [250, 500, 100]:
         for threshold in [0.05, 0.07, 0.09]:
             for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
                 conf = DataDriftTriggerConfig(
-                    detection_interval_data_points=detection_interval_data_points,
+                    evaluation_interval_data_points=evaluation_interval_data_points,
                     windowing_strategy=TimeWindowingStrategy(limit=window_size),
                     reset_current_window_on_trigger=False,
                     metrics={
                         "mmd_alibi": AlibiDetectMmdDriftMetric(device="cpu", num_permutations=None, threshold=threshold)
                     },
                 )
-                name = f"mmdalibi_{detection_interval_data_points}_{threshold}_{window_size}"
+                name = f"mmdalibi_{evaluation_interval_data_points}_{threshold}_{window_size}"
                 strategies.append((name, conf))
 
     return strategies

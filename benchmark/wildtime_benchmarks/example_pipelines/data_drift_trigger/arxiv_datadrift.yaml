@@ -41,7 +41,7 @@ data:
   tokenizer: DistilBertTokenizerTransform
 trigger:
   id: DataDriftTrigger
-  detection_interval_data_points: 100000
+  evaluation_interval_data_points: 100000
   metrics:
     ev_mmd:
       id: EvidentlyModelDriftMetric

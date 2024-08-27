@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import gc
 import logging
-from collections.abc import Generator
+
+from typing_extensions import override
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
@@ -16,6 +17,7 @@ from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     TimeWindowingStrategy,
 )
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
+from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
 from modyn.supervisor.internal.triggers.drift.decision_policy import (
     DriftDecisionPolicy,
     DynamicPercentileThresholdPolicy,
@@ -37,7 +39,7 @@ from modyn.supervisor.internal.triggers.drift.detector.evidently import (
 )
 from modyn.supervisor.internal.triggers.drift.embedding.embeddings import get_embeddings
 from modyn.supervisor.internal.triggers.drift.utils import convert_tensor_to_df
-from modyn.supervisor.internal.triggers.trigger import Trigger, TriggerContext
+from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
     DataLoaderInfo,
 )
@@ -55,10 +57,11 @@ from modyn.supervisor.internal.triggers.utils.models import (
 logger = logging.getLogger(__name__)
 
 
-class DataDriftTrigger(Trigger):
+class DataDriftTrigger(BatchedTrigger):
     """Triggers when a certain number of data points have been used."""
 
     def __init__(self, config: DataDriftTriggerConfig):
+        super().__init__(config)
         self.config = config
         self.context: TriggerContext | None = None
 
@@ -69,9 +72,6 @@ class DataDriftTrigger(Trigger):
         self.model_downloader: ModelDownloader | None = None
         self.model: StatefulModel | None = None
 
-        self._sample_left_until_detection = (
-            config.detection_interval_data_points
-        )  # allows to detect drift in a fixed interval
         self._windows = _setup_detection_windows(config.windowing_strategy)
         self._triggered_once = False
 
@@ -98,11 +98,13 @@ class DataDriftTrigger(Trigger):
         self._init_dataloader_info()
         self._init_model_downloader()
 
-    def inform(
+    @override
+    def _evaluate_batch(
         self,
-        new_data: list[tuple[int, int, int]],
+        batch: list[tuple[int, int]],
+        trigger_candidate_idx: int,
         log: TriggerPolicyEvaluationLog | None = None,
-    ) -> Generator[int, None, None]:
+    ) -> bool:
         """Analyzes a batch of new data to determine if data drift has occurred
         and triggers retraining if necessary.
 
@@ -132,135 +134,85 @@ class DataDriftTrigger(Trigger):
                 where each data point is a tuple containing a key, a timestamp, and a label.
             log: An optional log object to store the results of the trigger policy evaluation.
 
-        Yields:
-            The index of the data point that triggered the drift detection. This is used to identify the point in the
-            data stream where the model's performance may have started to degrade due to drift.
+        Returns:
+            Whether this batch resulted in a trigger.
         """
-        # pylint: disable=too-many-nested-blocks
+        self._windows.inform_data(batch)
 
-        new_key_ts = [(key, timestamp) for key, timestamp, _ in new_data]
+        if (not self._triggered_once) or (
+            not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)
+        ):
+            # Warmup trigger, evaluate warmup policy while storing the reference window
+            # for later calibration with the drift policy.
 
-        # index of the first unprocessed data point in the batch
-        processing_head_in_batch = 0
-
-        # Go through remaining data in new data in batches of `detect_interval`
-        while True:
-            if self._sample_left_until_detection - len(new_key_ts) > 0:
-                # No detection in this trigger because of too few data points to fill detection interval
-                self._windows.inform_data(new_key_ts)  # update current window
-                self._sample_left_until_detection -= len(new_key_ts)
-                return
-
-            # At least one detection, fill up window up to that detection
-            next_detection_interval = new_key_ts[: self._sample_left_until_detection]
-            self._windows.inform_data(next_detection_interval)
-
-            # Update the remaining data
-            processing_head_in_batch += len(next_detection_interval)
-            new_key_ts = new_key_ts[len(next_detection_interval) :]
-
-            # Reset for next detection
-            self._sample_left_until_detection = self.config.detection_interval_data_points
-
-            if (not self._triggered_once) or (
-                not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)
-            ):
-                # Warmup trigger, evaluate warmup policy while storing the reference window
-                # for later calibration with the drift policy.
-
-                # delegate to the warmup policy
-                delegated_trigger_results = (
-                    next(
-                        self.warmup_trigger.inform([(idx, time, 0) for (idx, time) in next_detection_interval]),
-                        None,
-                    )
-                    if self.warmup_trigger
-                    else None
+            # delegate to the warmup policy
+            delegated_trigger_results = (
+                next(
+                    self.warmup_trigger.inform([(idx, time, 0) for (idx, time) in batch]),
+                    None,
                 )
-                triggered = (
-                    delegated_trigger_results is not None
-                    if self._triggered_once
-                    else True  # first candidate always triggers
-                )
-
-                drift_results: dict[str, MetricResult] = {}
-                if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
-                    # for the first detection the reference window is empty, therefore adding the current window
-                    self.warmup_intervals.append(
-                        list(self._windows.reference if self._triggered_once else self._windows.current)
-                    )
-
-                self._triggered_once = True
-
-            else:
-                # Run the detection
-
-                # if this is the first non warmup detection, we inform the metrics that use decision criteria
-                # with calibration requirements about the warmup intervals so they can calibrate their thresholds
-                if len(self.warmup_intervals) > 0 or not self.warmup_completed:
-                    # we can ignore the results as the decision criteria will keep track of the warmup results
-                    # internally
-                    if self._any_metric_needs_calibration():
-                        for warmup_interval in self.warmup_intervals:
-                            # we generate the calibration with different reference windows, the latest model and
-                            # the current window
-                            _warmup_triggered, _warmup_results = self._run_detection(
-                                warmup_interval,
-                                list(self._windows.current),
-                                is_warmup=True,
-                            )
-                            if log:
-                                warmup_log = DriftTriggerEvalLog(
-                                    detection_interval=(
-                                        self._windows.current[0][1],
-                                        self._windows.current[-1][1],
-                                    ),
-                                    reference_interval=(
-                                        self._windows.reference[0][1],
-                                        self._windows.reference[-1][1],
-                                    ),
-                                    triggered=_warmup_triggered,
-                                    trigger_index=-1,
-                                    drift_results=_warmup_results,
-                                )
-                                log.evaluations.append(warmup_log)
-
-                    # free the memory, but keep filled
-                    self.warmup_completed = True
-                    self.warmup_intervals = []
-                    gc.collect()
-
-                triggered, drift_results = self._run_detection(
-                    list(self._windows.reference),
-                    list(self._windows.current),
-                    is_warmup=False,
-                )
-
-            trigger_idx = processing_head_in_batch - 1
-            yield from self._handle_drift_result(
-                triggered,
-                trigger_idx,
-                drift_results,
-                warmup=not self.warmup_completed,
-                log=log,
+                if self.warmup_trigger
+                else None
+            )
+            triggered = (
+                delegated_trigger_results is not None
+                if self._triggered_once
+                else True  # first candidate always triggers
             )
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
-        self.most_recent_model_id = most_recent_model_id
-        self.model_refresh_needed = True
+            drift_results: dict[str, MetricResult] = {}
+            if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
+                # for the first detection the reference window is empty, therefore adding the current window
+                self.warmup_intervals.append(
+                    list(self._windows.reference if self._triggered_once else self._windows.current)
+                )
 
-    # ---------------------------------------------------------------------------------------------------------------- #
-    #                                                     INTERNAL                                                     #
-    # ---------------------------------------------------------------------------------------------------------------- #
+            self._triggered_once = True
 
-    def _handle_drift_result(
-        self,
-        triggered: bool,
-        trigger_idx: int,
-        drift_results: dict[str, MetricResult],
-        warmup: bool = False,
-        log: TriggerPolicyEvaluationLog | None = None,
-    ) -> Generator[int, None, None]:
+        else:
+            # Run the detection
+
+            # if this is the first non warmup detection, we inform the metrics that use decision criteria
+            # with calibration requirements about the warmup intervals so they can calibrate their thresholds
+            if len(self.warmup_intervals) > 0 or not self.warmup_completed:
+                # we can ignore the results as the decision criteria will keep track of the warmup results
+                # internally
+                if self._any_metric_needs_calibration():
+                    for warmup_interval in self.warmup_intervals:
+                        # we generate the calibration with different reference windows, the latest model and
+                        # the current window
+                        _warmup_triggered, _warmup_results = self._run_detection(
+                            warmup_interval,
+                            list(self._windows.current),
+                            is_warmup=True,
+                        )
+                        if log:
+                            warmup_log = DriftTriggerEvalLog(
+                                detection_interval=(
+                                    self._windows.current[0][1],
+                                    self._windows.current[-1][1],
+                                ),
+                                reference_interval=(
+                                    self._windows.reference[0][1],
+                                    self._windows.reference[-1][1],
+                                ),
+                                triggered=_warmup_triggered,
+                                trigger_index=-1,
+                                drift_results=_warmup_results,
+                            )
+                            log.evaluations.append(warmup_log)
+
+                # free the memory, but keep filled
+                self.warmup_completed = True
+                self.warmup_intervals = []
+                gc.collect()
+
+            triggered, drift_results = self._run_detection(
+                list(self._windows.reference),
+                list(self._windows.current),
+                is_warmup=False,
+            )
+
         drift_eval_log = DriftTriggerEvalLog(
             detection_interval=(
                 self._windows.current[0][1],
@@ -273,15 +225,26 @@ class DataDriftTrigger(Trigger):
             trigger_index=-1,
             drift_results=drift_results,
         )
+
         if log:
             log.evaluations.append(drift_eval_log)
 
-        if triggered or warmup:
-            # during the warmup phase we always want to reset the windows as if we detected drift
+        if not self.warmup_completed:
+            # during the warmup phase we always want to reset the windows as if we detected drift;
+            # we can call `inform_trigger` here and again in `inform_new_model` if `trigger=True`
+            # as the call is idempotent
             self._windows.inform_trigger()
 
-        if triggered:
-            yield trigger_idx
+        return triggered
+
+    def inform_new_model(self, most_recent_model_id: int) -> None:
+        self.most_recent_model_id = most_recent_model_id
+        self.model_refresh_needed = True
+        self._windows.inform_trigger()
+
+    # ---------------------------------------------------------------------------------------------------------------- #
+    #                                                     INTERNAL                                                     #
+    # ---------------------------------------------------------------------------------------------------------------- #
 
     def _run_detection(
         self,

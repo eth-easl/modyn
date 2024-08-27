@@ -40,7 +40,7 @@ SAMPLE = (10, 1, 1)
 @fixture
 def drift_trigger_config() -> DataDriftTriggerConfig:
     return DataDriftTriggerConfig(
-        detection_interval_data_points=42,
+        evaluation_interval_data_points=42,
         metrics={
             "mmd": AlibiDetectMmdDriftMetric(
                 decision_criterion=ThresholdDecisionCriterion(threshold=0.5),
@@ -86,7 +86,7 @@ def noop_dataloader_info_constructor_mock(
 
 def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     trigger = DataDriftTrigger(drift_trigger_config)
-    assert trigger.config.detection_interval_data_points == 42
+    assert trigger.config.evaluation_interval_data_points == 42
     assert trigger.most_recent_model_id is None
     assert not trigger.model_refresh_needed
     assert trigger.config.windowing_strategy.id == "AmountWindowingStrategy"
@@ -126,7 +126,7 @@ def test_inform_new_model_id(drift_trigger_config: DataDriftTriggerConfig) -> No
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(True, {}))
 def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config: DataDriftTriggerConfig) -> None:
-    drift_trigger_config.detection_interval_data_points = 1
+    drift_trigger_config.evaluation_interval_data_points = 1
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -135,7 +135,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 5
 
-    drift_trigger_config.detection_interval_data_points = 2
+    drift_trigger_config.evaluation_interval_data_points = 2
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -144,7 +144,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     assert num_triggers == 2
 
-    drift_trigger_config.detection_interval_data_points = 5
+    drift_trigger_config.evaluation_interval_data_points = 5
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -156,7 +156,7 @@ def test_inform_always_drift(test_detect_drift: MagicMock, drift_trigger_config:
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
 def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: DataDriftTriggerConfig) -> None:
-    drift_trigger_config.detection_interval_data_points = 1
+    drift_trigger_config.evaluation_interval_data_points = 1
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -164,7 +164,7 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
         trigger.inform_new_model(num_triggers)
     assert num_triggers == 1
 
-    drift_trigger_config.detection_interval_data_points = 2
+    drift_trigger_config.evaluation_interval_data_points = 2
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -172,7 +172,7 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
         trigger.inform_new_model(num_triggers)
     assert num_triggers == 1
 
-    drift_trigger_config.detection_interval_data_points = 5
+    drift_trigger_config.evaluation_interval_data_points = 5
     trigger = DataDriftTrigger(drift_trigger_config)
     num_triggers = 0
     for _ in trigger.inform([SAMPLE, SAMPLE, SAMPLE, SAMPLE, SAMPLE]):
@@ -182,26 +182,36 @@ def test_inform_no_drift(test_detect_no_drift: MagicMock, drift_trigger_config: 
     assert num_triggers == 1
 
 
+@patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
 def test_update_current_window_amount_strategy(
+    mock_drift_trigger: MagicMock,
     drift_trigger_config: DataDriftTriggerConfig,
 ) -> None:
+    drift_trigger_config.evaluation_interval_data_points = 2
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount_cur=3, amount_ref=3)
-    drift_trigger_config.detection_interval_data_points = 100
     trigger = DataDriftTrigger(drift_trigger_config)
 
     # Inform with less data than the window amount
-    list(trigger.inform([(1, 100, 1), (2, 101, 1)]))
+    list(trigger.inform([(1, 102, 1), (2, 103, 1)]))
     assert len(trigger._windows.current) == 2, "Current window should contain 2 data points."
 
+    trigger.inform_new_model(42)
+
     # Inform with additional data points to exceed the window size
-    list(trigger.inform([(3, 102, 1), (4, 103, 1)]))
-    assert len(trigger._windows.current) == 3, "Current window should not exceed 3 data points."
-    assert trigger._windows.current[0][0] == 2, "Oldest data point should be dropped."
+    # idx=5: doesn't fill up whole batch --> unprocessed leftover
+    list(trigger.inform([(3, 103, 1), (4, 104, 1), (5, 105, 1)]))
+    assert len(trigger._windows.current) == 2, "Current window should not exceed 3 data points."
+    assert trigger._windows.current[0][0] == 3, "Oldest data point should be dropped."
+    assert trigger._leftover_data == [(5, 105)], "Unprocessed data should be stored."
 
 
+@patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
 def test_time_windowing_strategy_update(
+    mock_drift_trigger: MagicMock,
     drift_trigger_config: DataDriftTriggerConfig,
 ) -> None:
+    drift_trigger_config.evaluation_interval_data_points = 1
+    drift_trigger_config.warmup_intervals = 0
     drift_trigger_config.windowing_strategy = TimeWindowingStrategy(limit_cur="10s", limit_ref="10s")
     trigger = DataDriftTrigger(drift_trigger_config)
 
@@ -218,41 +228,48 @@ def test_time_windowing_strategy_update(
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
 def test_update_current_window_amount_strategy_cross_inform(
-    drift_trigger: DataDriftTrigger,
+    mock_drift_trigger: MagicMock,
     drift_trigger_config: DataDriftTriggerConfig,
 ) -> None:
     drift_trigger_config.warmup_intervals = 0
     drift_trigger_config.windowing_strategy = AmountWindowingStrategy(amount_cur=5, amount_ref=5)
-    drift_trigger_config.detection_interval_data_points = 3
+    drift_trigger_config.evaluation_interval_data_points = 3
     trigger = DataDriftTrigger(drift_trigger_config)
 
-    assert (
-        len(
-            list(
-                trigger.inform(
-                    [
-                        (1, 100, 1),
-                        (2, 100, 1),
-                        (3, 100, 1),
-                        (4, 100, 1),
-                        (5, 100, 1),
-                        (6, 100, 1),
-                        (7, 100, 1),
-                    ]
-                )
-            )
-        )
-        == 1
-    ), "Only the first batch should trigger."
-    assert len(trigger._windows.current) == 4
+    trigger_indexes = list()
+    for idx in trigger.inform(
+        [
+            (0, 100, 1),
+            (1, 100, 1),
+            (2, 100, 1),
+            (3, 100, 1),
+            (4, 100, 1),
+            (5, 100, 1),
+            (6, 100, 1),
+        ]
+    ):
+        trigger_indexes.append(idx)
+        trigger.inform_new_model(idx)  # use the idx as dummy model id
 
-    assert len(list(trigger.inform([(8, 100, 1)]))) == 0
+    assert len(trigger_indexes) == 1, "Only the first batch should trigger."
+    assert trigger_indexes == [2]
+
+    # batch 2: no trigger -> remains in current window
+    # index 6 remains int the leftover data as it doesn't fill up a batch
+    assert len(trigger._windows.current) == 3
+    assert list(trigger._windows.current) == [(3, 100), (4, 100), (5, 100)]
+    assert trigger._leftover_data == [(6, 100)]
+
+    # fill batch 3 --> no trigger
+    assert len(list(trigger.inform([(7, 100, 1), (8, 100, 1)]))) == 0
     assert len(trigger._windows.current) == 5
     assert trigger._windows.current[0][0] == 4
+    assert trigger._leftover_data == []
 
     assert len(list(trigger.inform([(9, 100, 1)]))) == 0, "Only the first batch should trigger."
     assert len(trigger._windows.current) == 5
-    assert trigger._windows.current[0][0] == 5
+    assert trigger._windows.current[0][0] == 4
+    assert trigger._leftover_data == [(9, 100)]
 
 
 @patch.object(
@@ -262,7 +279,7 @@ def test_update_current_window_amount_strategy_cross_inform(
 )
 def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     trigger_config = DataDriftTriggerConfig(
-        detection_interval_data_points=5,
+        evaluation_interval_data_points=5,
         metrics={
             "mmd": AlibiDetectMmdDriftMetric(
                 decision_criterion=DynamicPercentileThresholdCriterion(percentile=50, window_size=3),
@@ -281,7 +298,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
 
     # Test: We add samples from 0 to 40 in 8 batches of 5 samples each and inspect the trigger state after each batch.
 
-    # with `detection_interval_data_points=5` we will detect drift every 5 samples at
+    # with `evaluation_interval_data_points=5` we will detect drift every 5 samples at
     # the following indices: 5, 10, 15, 20, 25, 30, 35
 
     # Here are the reasons for the decisions we make at each of these points:

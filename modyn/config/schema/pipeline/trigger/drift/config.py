@@ -4,7 +4,7 @@ from typing import Annotated, ForwardRef, Literal, Self
 
 from pydantic import Field, model_validator
 
-from modyn.config.schema.base_model import ModynBaseModel
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
     DriftWindowingStrategy,
@@ -23,18 +23,8 @@ DriftMetric = Annotated[
 ]
 
 
-class DataDriftTriggerConfig(ModynBaseModel):
+class DataDriftTriggerConfig(BatchedTriggerConfig):
     id: Literal["DataDriftTrigger"] = Field("DataDriftTrigger")
-
-    detection_interval: __TriggerConfig | None = Field(  # type: ignore[valid-type]
-        None,
-        description="The Trigger policy to determine the interval at which drift detection is performed.",
-    )  # currently not used
-    detection_interval_data_points: int = Field(
-        1000,
-        description="The number of samples in the interval after which drift detection is performed.",
-        ge=1,
-    )
 
     windowing_strategy: DriftWindowingStrategy = Field(
         AmountWindowingStrategy(),

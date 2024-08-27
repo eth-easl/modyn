@@ -1,5 +1,9 @@
-from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
-from modyn.supervisor.internal.triggers.drift.detection_window.time_ import TimeDetectionWindows
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    TimeWindowingStrategy,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.time_ import (
+    TimeDetectionWindows,
+)
 
 
 def test_time_detection_window_manager_no_overlap() -> None:
@@ -40,19 +44,21 @@ def test_time_detection_window_manager_no_overlap() -> None:
     assert list(windows.current_reservoir) == [(2, 30), (3, 45), (4, 60)]
 
     # trigger: reset current_ and move data to reference_
-    windows.inform_trigger()
-    assert len(windows.current) == 0
-    assert len(windows.current_reservoir) == 0
-    assert len(windows.reference) == 6
-    assert len(windows.exclusive_current) == 0
-    assert list(windows.reference) == [
-        (2, 30),
-        (3, 45),
-        (4, 60),
-        (5, 75),
-        (6, 90),
-        (7, 120),
-    ]
+    for _ in range(0, 3):
+        # idempotency test
+        windows.inform_trigger()
+        assert len(windows.current) == 0
+        assert len(windows.current_reservoir) == 0
+        assert len(windows.reference) == 6
+        assert len(windows.exclusive_current) == 0
+        assert list(windows.reference) == [
+            (2, 30),
+            (3, 45),
+            (4, 60),
+            (5, 75),
+            (6, 90),
+            (7, 120),
+        ]
 
     windows.inform_data([(8, 135)])
     assert len(windows.current) == 1

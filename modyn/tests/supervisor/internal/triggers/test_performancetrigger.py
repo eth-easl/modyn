@@ -46,7 +46,7 @@ BASEDIR = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 @fixture
 def performance_trigger_config() -> PerformanceTriggerConfig:
     return PerformanceTriggerConfig(
-        detection_interval_data_points=42,
+        evaluation_interval_data_points=42,
         data_density_window_size=100,
         performance_triggers_window_size=10,
         evaluation=PerformanceTriggerEvaluationConfig(
@@ -97,7 +97,7 @@ def misclassifications_criterion() -> StaticNumberAvoidableMisclassificationCrit
 
 def test_initialization(performance_trigger_config: PerformanceTriggerConfig) -> None:
     trigger = PerformanceTrigger(performance_trigger_config)
-    assert trigger._sample_left_until_detection == performance_trigger_config.detection_interval_data_points
+    assert trigger._sample_left_until_detection == performance_trigger_config.evaluation_interval_data_points
     assert trigger.data_density.batch_memory.maxlen == performance_trigger_config.data_density_window_size
 
     assert len(trigger.decision_policies) == 1
@@ -192,7 +192,7 @@ def test_inform(
     mock_evaluation: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
 ) -> None:
-    performance_trigger_config.detection_interval_data_points = 4
+    performance_trigger_config.evaluation_interval_data_points = 4
     trigger = PerformanceTrigger(performance_trigger_config)
     assert not trigger._triggered_once
 
