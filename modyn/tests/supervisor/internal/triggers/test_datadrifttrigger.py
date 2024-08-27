@@ -1,11 +1,10 @@
 # pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
-import os
 import pathlib
 from unittest.mock import MagicMock, patch
 
 from pytest import fixture
 
-from modyn.config.schema.pipeline import DataDriftTriggerConfig, ModynPipelineConfig
+from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.aggregation import (
     MajorityVoteDriftAggregationStrategy,
 )
@@ -23,7 +22,6 @@ from modyn.config.schema.pipeline.trigger.drift.detection_window import (
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
 )
-from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers import DataDriftTrigger
 from modyn.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
@@ -32,8 +30,6 @@ from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
 )
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 
-BASEDIR: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
-PIPELINE_ID = 42
 SAMPLE = (10, 1, 1)
 
 
@@ -98,19 +94,12 @@ def test_initialization(drift_trigger_config: DataDriftTriggerConfig) -> None:
     noop_embedding_encoder_downloader_constructor_mock,
 )
 @patch.object(DataLoaderInfo, "__init__", noop_dataloader_info_constructor_mock)
-def test_init_trigger(
-    dummy_pipeline_config: ModynPipelineConfig,
-    dummy_system_config: ModynConfig,
-    drift_trigger_config: DataDriftTriggerConfig,
-) -> None:
+def test_init_trigger(drift_trigger_config: DataDriftTriggerConfig, dummy_trigger_context: TriggerContext) -> None:
     trigger = DataDriftTrigger(drift_trigger_config)
     # pylint: disable-next=use-implicit-booleaness-not-comparison
     with patch("os.makedirs", return_value=None):
-        trigger.init_trigger(TriggerContext(PIPELINE_ID, dummy_pipeline_config, dummy_system_config, BASEDIR))
-        assert trigger.context.pipeline_id == PIPELINE_ID
-        assert trigger.context.pipeline_config == dummy_pipeline_config
-        assert trigger.context.modyn_config == dummy_system_config
-        assert trigger.context.base_dir == BASEDIR
+        trigger.init_trigger(dummy_trigger_context)
+        assert trigger.context == dummy_trigger_context
         assert isinstance(trigger.dataloader_info, DataLoaderInfo)
         assert isinstance(trigger.model_downloader, ModelDownloader)
 

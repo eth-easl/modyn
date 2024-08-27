@@ -87,6 +87,7 @@ class PerformanceTrigger(BatchedTrigger):
             else None
         )
 
+    @override
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
@@ -146,10 +147,7 @@ class PerformanceTrigger(BatchedTrigger):
         drift_eval_log = PerformanceTriggerEvalLog(
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
-            evaluation_interval=(
-                batch[0][1],
-                batch[-1][1],
-            ),
+            evaluation_interval=(batch[0][1], batch[-1][1]),
             num_samples=num_samples,
             num_misclassifications=num_misclassifications,
             evaluation_scores=evaluation_scores,
@@ -160,7 +158,13 @@ class PerformanceTrigger(BatchedTrigger):
 
         return triggered
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
+    @override
+    def inform_new_model(
+        self,
+        most_recent_model_id: int,
+        number_samples: int | None = None,
+        training_time: float | None = None,
+    ) -> None:
         self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
 

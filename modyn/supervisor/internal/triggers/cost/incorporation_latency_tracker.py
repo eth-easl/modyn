@@ -12,7 +12,7 @@ class IncorporationLatencyTracker:
     def cumulative_latency_regret(self) -> float:
         return self._cumulative_latency_regret
 
-    def add_latency(self, regret: float, period_duration: float) -> float:
+    def add_latency(self, regret: float, batch_duration: float) -> float:
         """Add the new regret from the last interval to the cumulative regret.
 
         Applicable if the regret can uniformly be aggregated to a scalar for every reporting data
@@ -32,7 +32,7 @@ class IncorporationLatencyTracker:
             Most recent cumulative regret value.
         """
         self._current_regret += regret
-        self._cumulative_latency_regret += self._current_regret * period_duration
+        self._cumulative_latency_regret += self._current_regret * batch_duration
 
         return self._cumulative_latency_regret
 
@@ -40,7 +40,7 @@ class IncorporationLatencyTracker:
         self,
         regrets: list[tuple[int, float]],
         start_timestamp: int,
-        period_duration: float,
+        batch_duration: float,
     ) -> float:
         """Add the new regret after computing the regret sum from a list of
         per-sample regrets.
@@ -51,6 +51,7 @@ class IncorporationLatencyTracker:
             regrets: List of regrets for each sample in the last period with their timestamps.
             start_timestamp: The timestamp of the start of the last period.
             end_timestamp: The timestamp of the end of the last period.
+            batch_duration: The duration of the last period in seconds.
 
         Returns:
             Most recent cumulative regret value.
@@ -59,7 +60,7 @@ class IncorporationLatencyTracker:
         # around for longer. In the latency cumulation (area under curve), the first make up a triangular shape,
         # while the second contribute to the rectangle.
 
-        end_timestamp = start_timestamp + period_duration
+        end_timestamp = start_timestamp + batch_duration
         regrets_durations = [(end_timestamp - timestamp, regret) for timestamp, regret in regrets]
         new_regret = sum(regret for _, regret in regrets)
 
@@ -67,7 +68,7 @@ class IncorporationLatencyTracker:
         new_regret_latency = sum(duration * regret for duration, regret in regrets_durations)
 
         # old regret units that still contribute to area under curve (rectangular shape)
-        old_regret_latency = self._current_regret * period_duration
+        old_regret_latency = self._current_regret * batch_duration
 
         self._current_regret += new_regret
         self._cumulative_latency_regret += old_regret_latency + new_regret_latency

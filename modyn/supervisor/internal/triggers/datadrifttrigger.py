@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 
 class DataDriftTrigger(BatchedTrigger):
-    """Triggers when a certain number of data points have been used."""
+    """Triggers when a we detect drift in the embedding space of a dataset."""
 
     def __init__(self, config: DataDriftTriggerConfig):
         super().__init__(config)
@@ -93,6 +93,7 @@ class DataDriftTrigger(BatchedTrigger):
         # list of reference windows for each warmup interval
         self.warmup_intervals: list[list[tuple[int, int]]] = []
 
+    @override
     def init_trigger(self, context: TriggerContext) -> None:
         self.context = context
         self._init_dataloader_info()
@@ -188,6 +189,9 @@ class DataDriftTrigger(BatchedTrigger):
                         )
                         if log:
                             warmup_log = DriftTriggerEvalLog(
+                                triggered=_warmup_triggered,
+                                trigger_index=-1,
+                                evaluation_interval=(batch[0][1], batch[-1][1]),
                                 detection_interval=(
                                     self._windows.current[0][1],
                                     self._windows.current[-1][1],
@@ -196,8 +200,6 @@ class DataDriftTrigger(BatchedTrigger):
                                     self._windows.reference[0][1],
                                     self._windows.reference[-1][1],
                                 ),
-                                triggered=_warmup_triggered,
-                                trigger_index=-1,
                                 drift_results=_warmup_results,
                             )
                             log.evaluations.append(warmup_log)
@@ -214,6 +216,9 @@ class DataDriftTrigger(BatchedTrigger):
             )
 
         drift_eval_log = DriftTriggerEvalLog(
+            triggered=triggered,
+            trigger_index=-1,
+            evaluation_interval=(batch[0][1], batch[-1][1]),
             detection_interval=(
                 self._windows.current[0][1],
                 self._windows.current[-1][1],
@@ -221,8 +226,6 @@ class DataDriftTrigger(BatchedTrigger):
             reference_interval=(
                 (self._windows.reference[0][1], self._windows.reference[-1][1]) if self._windows.reference else (-1, -1)
             ),
-            triggered=triggered,
-            trigger_index=-1,
             drift_results=drift_results,
         )
 
@@ -237,7 +240,13 @@ class DataDriftTrigger(BatchedTrigger):
 
         return triggered
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
+    @override
+    def inform_new_model(
+        self,
+        most_recent_model_id: int,
+        number_samples: int | None = None,
+        training_time: float | None = None,
+    ) -> None:
         self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
         self._windows.inform_trigger()

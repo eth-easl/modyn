@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, ForwardRef, Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, model_validator
 
@@ -14,8 +14,6 @@ from modyn.config.schema.pipeline.trigger.simple import SimpleTriggerConfig
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
 from .evidently import EvidentlyDriftMetric
-
-__TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
 
 DriftMetric = Annotated[
     EvidentlyDriftMetric | AlibiDetectDriftMetric,
