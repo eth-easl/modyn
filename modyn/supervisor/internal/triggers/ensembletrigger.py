@@ -233,7 +233,7 @@ class EnsembleTrigger(Trigger):
                 ensemble_eval_log = EnsembleTriggerEvalLog(
                     triggered=aggregation_result,
                     trigger_index=processing_head,
-                    evaluation_interval=(new_data[0][0:2], new_data[-1][0:2]),
+                    evaluation_interval=(new_data[0][1], new_data[-1][1]),
                     subtrigger_decisions=dict(subtrigger_decision_cache),
                 )
                 log.evaluations.append(ensemble_eval_log)
