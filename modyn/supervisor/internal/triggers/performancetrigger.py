@@ -44,7 +44,8 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
     """
 
     def __init__(self, config: PerformanceTriggerConfig) -> None:
-        super().__init__(config)
+        BatchedTrigger.__init__(self, config)
+        PerformanceTriggerMixin.__init__(self, config)
 
         self.config = config
         self.context: TriggerContext | None = None

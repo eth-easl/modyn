@@ -24,7 +24,9 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
     (regret) exceeds the estimated training time."""
 
     def __init__(self, config: AvoidableMisclassificationCostTriggerConfig):
-        super().__init__(config)
+        CostTrigger.__init__(self, config)
+        PerformanceTriggerMixin.__init__(self, config)
+
         self.config = config
         self.context: TriggerContext | None = None
 
