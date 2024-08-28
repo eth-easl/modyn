@@ -4,67 +4,89 @@
 
 Cost-based triggers evaluate the trade-off between the cost of triggering (e.g., training time) and the benefits gained from triggering (e.g., reducing regret metrics like data incorporation latency or avoidable misclassification latency). The `CostTrigger` class serves as the base class for specific implementations, such as `DataIncorporationLatencyCostTrigger` and `AvoidableMisclassificationCostTrigger`, which utilize different regret metrics.
 
+While no trigger occurs regret units are cumulated into to a regret over time curve.
+Rather than using this regret units directly, we build an area-under-the-curve metric.
+The area under the regret curve measures the time regret units have spent being unaddressed.
+
+As this policy operates the two metrics `time` (cost) and a regret metric we need
+a way to express the tradeoff between the two. A user e.g. has to specify how many seconds of training time he is
+willing to eradicate a certain amount of cumulative regret.
+
 ### Main Architecture
 
 ```mermaid
 classDiagram
-
     class Trigger {
         <<abstract>>
-        +void init_trigger(TriggerContext context)
-        +Generator[Triggers] inform(new_data)
-        +void inform_new_model(int previous_model_id)
+        +void init_trigger(trigger_context)
+        +Generator[Triggers] inform(new_data)*
+        +void inform_new_model(model_id, ...)
     }
 
-    class TimeTrigger {
+    class BatchedTrigger {
+        <<abstract>>
+        +void inform(...)
+        -bool evaluate_batch(batch, trigger_index)*
     }
 
-    class DataAmountTrigger {
-    }
+    class PerformanceTriggerMixin {
+        +DataDensityTracker data_density
+        +PerformanceTracker performance_tracker
+        +StatefulModel model
 
-    class DataDriftTrigger {
+        -EvaluationResults run_evaluation(interval_data)
     }
-
-    Trigger <|-- DataDriftTrigger
-    Trigger <|-- TimeTrigger
-    Trigger <|-- DataAmountTrigger
-    Trigger <|-- PerformanceTrigger
-    Trigger <|-- CostTrigger
 
     class CostTrigger {
         <<abstract>>
-        _cost_tracker: CostTracker
+        +CostTracker cost_tracker
+        +IncorporationLatencyTracker latency_tracker
+
+        +void init_trigger(trigger_context)
+        +void inform_new_model(model_id, ...)
+
+        -bool evaluate_batch(batch, trigger_index)
+        -float compute_regret_metric()*
+
     }
 
     class CostTracker {
     }
 
-    class DataIncorporationLatencyCostTrigger {
-        +void init_trigger(TriggerContext context)
-        +Generator[triggers] inform(new_data)
-        +void inform_new_model(int previous_model_id)
-    }
-
     class IncorporationLatencyTracker {
     }
 
-    class AvoidableMisclassificationCostTrigger {
-        +void init_trigger(TriggerContext context)
-        +Generator[triggers] inform(new_data)
-        +void inform_new_model(int previous_model_id)
+    class DataIncorporationLatencyCostTrigger {
+        -float compute_regret_metric()
     }
 
+    class AvoidableMisclassificationCostTrigger {
+        NumberAvoidableMisclassificationEstimator misclassification_estimator
+
+        +void init_trigger(trigger_context)
+        +void inform_new_model(model_id, ...)
+
+        -float compute_regret_metric()
+    }
+
+
+    Trigger <|-- BatchedTrigger
+    BatchedTrigger <|-- CostTrigger
+    PerformanceTriggerMixin <|-- CostTrigger
+
     CostTrigger *-- "1" CostTracker
+    CostTrigger *-- "1" IncorporationLatencyTracker
     CostTrigger <|-- DataIncorporationLatencyCostTrigger
     CostTrigger <|-- AvoidableMisclassificationCostTrigger
 
     DataIncorporationLatencyCostTrigger *-- "1" DataIncorporationLatencyCostTriggerConfig
-    DataIncorporationLatencyCostTrigger *-- "1" IncorporationLatencyTracker
-
     AvoidableMisclassificationCostTrigger *-- "1" AvoidableMisclassificationCostTriggerConfig
-```
 
-<!-- TODO: Add performance tracking details to AvoidableMisclassificationCostTrigger -->
+    style PerformanceTriggerMixin fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
+
+    style DataIncorporationLatencyCostTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px
+    style AvoidableMisclassificationCostTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px
+```
 
 ### `CostTrigger` Hierarchy
 
@@ -73,7 +95,7 @@ Both `DataIncorporationLatencyCostTrigger` and `AvoidableMisclassificationCostTr
 <details>
 <summary><b>Incorporation Latency</b></summary>
 
-Incorporation latency measures the delay in integrating / addressing new data or drift problems. They are typically set up as a area-under-the-curve metric, where the area is the time taken to incorporate the data. The underlying curve function is the number of samples or problems over time that need to be addressed.
+Incorporation latency measures the delay in integrating / addressing new data or drift problems. They are typically set up as a area-under-the-curve metric, where the area is the time taken to incorporate the data. The underlying curve function is the number of samples or regret units over time that need to be addressed.
 
 </details>
 
@@ -108,7 +130,26 @@ classDiagram
     }
 ```
 
-<!-- TODO: add incorporation latency tracker -->
+### `IncorporationLatencyTracker`
+
+- **Purpose**: Tracks latency-based regret metrics like data-incorporation-latency.
+- **Functionality**:
+  - Stores how many units of regret have been seen so far, and their latency.
+  - The regret latency measures the number of seconds regret units have spent being unaddressed by a trigger.
+  - When modeling a regret over time curve, the current regret is value of the curve at the current time.
+  - The cumulative latency regret is the area under the curve up to the current time.
+
+```mermaid
+classDiagram
+    class IncorporationLatencyTracker {
+        +float current_regret
+        +float cumulative_latency_regret
+
+        +float add_latency(float regret, float batch_duration)
+        +float add_latencies(list[tuple[int, float]] regrets, int start_timestamp, float batch_duration)
+        +void inform_trigger()
+    }
+```
 
 ### `CostTriggerConfig`
 

@@ -31,8 +31,8 @@ def test_initialization(
     assert trigger._previous_batch_end_time is None
     assert trigger._unincorporated_samples == 0
 
-    assert trigger._cost_tracker.measurements.maxlen == latency_trigger_config.cost_tracking_window_size
-    assert trigger._incorporation_latency_tracker.cumulative_latency_regret == 0.0
+    assert trigger.cost_tracker.measurements.maxlen == latency_trigger_config.cost_tracking_window_size
+    assert trigger.latency_tracker.cumulative_latency_regret == 0.0
 
     assert trigger.context is None
     trigger.init_trigger(dummy_trigger_context)

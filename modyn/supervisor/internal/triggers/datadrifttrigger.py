@@ -72,7 +72,7 @@ class DataDriftTrigger(BatchedTrigger):
         self.model_downloader: ModelDownloader | None = None
         self.model: StatefulModel | None = None
 
-        self._windows = _setup_detection_windows(config.windowing_strategy)
+        self.windows = _setup_detection_windows(config.windowing_strategy)
         self._triggered_once = False
 
         self.evidently_detector = EvidentlyDriftDetector(config.metrics)
@@ -138,7 +138,7 @@ class DataDriftTrigger(BatchedTrigger):
         Returns:
             Whether this batch resulted in a trigger.
         """
-        self._windows.inform_data(batch)
+        self.windows.inform_data(batch)
 
         if (not self._triggered_once) or (
             not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)
@@ -165,7 +165,7 @@ class DataDriftTrigger(BatchedTrigger):
             if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
                 # for the first detection the reference window is empty, therefore adding the current window
                 self.warmup_intervals.append(
-                    list(self._windows.reference if self._triggered_once else self._windows.current)
+                    list(self.windows.reference if self._triggered_once else self.windows.current)
                 )
 
             self._triggered_once = True
@@ -184,7 +184,7 @@ class DataDriftTrigger(BatchedTrigger):
                         # the current window
                         _warmup_triggered, _warmup_results = self._run_detection(
                             warmup_interval,
-                            list(self._windows.current),
+                            list(self.windows.current),
                             is_warmup=True,
                         )
                         if log:
@@ -193,12 +193,12 @@ class DataDriftTrigger(BatchedTrigger):
                                 trigger_index=-1,
                                 evaluation_interval=(batch[0][1], batch[-1][1]),
                                 detection_interval=(
-                                    self._windows.current[0][1],
-                                    self._windows.current[-1][1],
+                                    self.windows.current[0][1],
+                                    self.windows.current[-1][1],
                                 ),
                                 reference_interval=(
-                                    self._windows.reference[0][1],
-                                    self._windows.reference[-1][1],
+                                    self.windows.reference[0][1],
+                                    self.windows.reference[-1][1],
                                 ),
                                 drift_results=_warmup_results,
                             )
@@ -210,8 +210,8 @@ class DataDriftTrigger(BatchedTrigger):
                 gc.collect()
 
             triggered, drift_results = self._run_detection(
-                list(self._windows.reference),
-                list(self._windows.current),
+                list(self.windows.reference),
+                list(self.windows.current),
                 is_warmup=False,
             )
 
@@ -220,11 +220,11 @@ class DataDriftTrigger(BatchedTrigger):
             trigger_index=-1,
             evaluation_interval=(batch[0][1], batch[-1][1]),
             detection_interval=(
-                self._windows.current[0][1],
-                self._windows.current[-1][1],
+                self.windows.current[0][1],
+                self.windows.current[-1][1],
             ),
             reference_interval=(
-                (self._windows.reference[0][1], self._windows.reference[-1][1]) if self._windows.reference else (-1, -1)
+                (self.windows.reference[0][1], self.windows.reference[-1][1]) if self.windows.reference else (-1, -1)
             ),
             drift_results=drift_results,
         )
@@ -236,7 +236,7 @@ class DataDriftTrigger(BatchedTrigger):
             # during the warmup phase we always want to reset the windows as if we detected drift;
             # we can call `inform_trigger` here and again in `inform_new_model` if `trigger=True`
             # as the call is idempotent
-            self._windows.inform_trigger()
+            self.windows.inform_trigger()
 
         return triggered
 
@@ -249,7 +249,7 @@ class DataDriftTrigger(BatchedTrigger):
     ) -> None:
         self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
-        self._windows.inform_trigger()
+        self.windows.inform_trigger()
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                     INTERNAL                                                     #

@@ -82,6 +82,4 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
             )
         )
 
-        return self._incorporation_latency_tracker.add_latency(
-            estimated_new_avoidable_misclassifications, batch_duration
-        )
+        return self.latency_tracker.add_latency(estimated_new_avoidable_misclassifications, batch_duration)

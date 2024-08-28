@@ -34,8 +34,8 @@ class CostTrigger(BatchedTrigger):
 
         # cost information
         self._unincorporated_samples = 0
-        self._cost_tracker = CostTracker(config.cost_tracking_window_size)
-        self._incorporation_latency_tracker = IncorporationLatencyTracker()
+        self.cost_tracker = CostTracker(config.cost_tracking_window_size)
+        self.latency_tracker = IncorporationLatencyTracker()
         """Maintains the regret metric and the cumulative regret latency,
         semantics are defined by the subclass."""
 
@@ -64,7 +64,7 @@ class CostTrigger(BatchedTrigger):
             regret_in_traintime_unit = -1.0
             triggered = self._triggered_once = True
         else:
-            traintime_estimate = self._cost_tracker.forecast_training_time(self._unincorporated_samples)
+            traintime_estimate = self.cost_tracker.forecast_training_time(self._unincorporated_samples)
             regret_in_traintime_unit = regret_metric * self.config.conversion_factor
             triggered = regret_in_traintime_unit >= traintime_estimate
 
@@ -100,7 +100,7 @@ class CostTrigger(BatchedTrigger):
             number_samples is not None and training_time is not None
         ), "Only the pre-trained model is allowed to not supply the training time and number of samples"
         if number_samples and training_time:
-            self._cost_tracker.inform_trigger(number_samples, training_time)
+            self.cost_tracker.inform_trigger(number_samples, training_time)
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                     INTERNAL                                                     #
