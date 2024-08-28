@@ -31,7 +31,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
 
 class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
     data_density_window_size: int = Field(
-        0,
+        20,
         description="The window size for the data density estimation. Only used for lookahead mode.",
     )
     performance_triggers_window_size: int = Field(
@@ -41,17 +41,6 @@ class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
 
     evaluation: PerformanceTriggerEvaluationConfig = Field(
         description="Configuration for the evaluation of the performance trigger."
-    )
-
-    decision_criteria: dict[str, PerformanceTriggerCriterion] = Field(
-        description=(
-            "The decision criteria to be used for the performance trigger. If any of the criteria is met, "
-            "the trigger will be executed. The criteria will be evaluated in the order they are defined. "
-            "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
-            "the default metric that is always generated and cannot be disabled. To define a "
-            "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
-        ),
-        min_length=1,
     )
 
     mode: TriggerEvaluationMode = Field(
@@ -81,3 +70,14 @@ class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
 
 class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
     id: Literal["PerformanceTrigger"] = Field("PerformanceTrigger")
+
+    decision_criteria: dict[str, PerformanceTriggerCriterion] = Field(
+        description=(
+            "The decision criteria to be used for the performance trigger. If any of the criteria is met, "
+            "the trigger will be executed. The criteria will be evaluated in the order they are defined. "
+            "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
+            "the default metric that is always generated and cannot be disabled. To define a "
+            "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
+        ),
+        min_length=1,
+    )

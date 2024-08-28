@@ -22,6 +22,7 @@ class BatchedTrigger(Trigger):
 
         # allows to detect drift in a fixed interval
         self._sample_left_until_detection = config.evaluation_interval_data_points
+        self._last_detection_interval: list[tuple[int, int]] = []
 
         self._leftover_data: list[tuple[int, int]] = []
         """Stores data that was not processed in the last inform call because
@@ -69,6 +70,7 @@ class BatchedTrigger(Trigger):
             # ----------------------------------------------- Detection ---------------------------------------------- #
 
             triggered = self._evaluate_batch(next_detection_interval, trigger_candidate_idx)
+            self._last_detection_interval = next_detection_interval
 
             # ----------------------------------------------- Response ----------------------------------------------- #
 

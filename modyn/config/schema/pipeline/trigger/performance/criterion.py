@@ -68,19 +68,19 @@ class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
             "If not set, the expected performance will be inferred dynamically with a rolling average."
         ),
     )
-
-
-class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
-    id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
-    avoidable_misclassification_threshold: int = Field(
-        description="The threshold for the misclassification rate that will invoke a trigger."
-    )
     allow_reduction: bool = Field(
         False,
         description=(
             "If True, the cumulated number of misclassifications will be lowered through evaluations that are "
             "better than the expected performance."
         ),
+    )
+
+
+class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
+    id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
+    avoidable_misclassification_threshold: int = Field(
+        description="The threshold for the misclassification rate that will invoke a trigger."
     )
 
 

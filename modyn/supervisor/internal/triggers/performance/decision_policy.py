@@ -9,6 +9,9 @@ from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
+from modyn.supervisor.internal.triggers.performance.misclassification_estimator import (
+    NumberAvoidableMisclassificationEstimator,
+)
 from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
@@ -21,7 +24,7 @@ class PerformanceDecisionPolicy(ABC):
     @abstractmethod
     def evaluate_decision(
         self,
-        update_interval: int,
+        update_interval_samples: int,
         evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
@@ -36,7 +39,7 @@ class PerformanceDecisionPolicy(ABC):
         Also, data_density has to be updated with the new data interval.
 
         Args:
-            update_interval: The interval in which the decision is made.
+            update_interval_samples: The interval in which the decision is made.
             performance: The observed performance metric.
             mode: The mode in which the decision should be evaluated.
             data_density: The data density tracker, updated with the new data interval.
@@ -59,7 +62,7 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
 
     def evaluate_decision(
         self,
-        update_interval: int,
+        update_interval_samples: int,
         evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
@@ -87,7 +90,7 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
 
     def evaluate_decision(
         self,
-        update_interval: int,
+        update_interval_samples: int,
         evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
@@ -116,11 +119,14 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
 
         self.config = config
         self.cumulated_avoidable_misclassifications = 0
+        self.misclassification_estimator = NumberAvoidableMisclassificationEstimator(
+            expected_accuracy=config.expected_accuracy,
+            allow_reduction=config.allow_reduction,
+        )
 
-    # pylint: disable=too-many-locals
     def evaluate_decision(
         self,
-        update_interval: int,
+        update_interval_samples: int,
         evaluation_scores: dict[str, float],
         data_density: DataDensityTracker,
         performance_tracker: PerformanceTracker,
@@ -151,45 +157,29 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
         This forward looking approach tries to avoid exceeding the misclassification budget in the first place.
         """
 
-        # compute the number of avoidable misclassifications by retrieving the actual misclassifications
-        # and the expected misclassifications through the expected accuracy for the last interval.
-        previous_interval_num_misclassifications = performance_tracker.previous_batch_num_misclassifications
-
-        # the expected performance won't change unless there's a trigger
-        expected_accuracy = (
-            performance_tracker.forecast_expected_accuracy(method=method)
-            if self.config.expected_accuracy is None
-            else self.config.expected_accuracy
+        new_avoidable_misclassifications, forecast_new_avoidable_misclassifications = (
+            self.misclassification_estimator.estimate_avoidable_misclassifications(
+                update_interval_samples=update_interval_samples,
+                data_density=data_density,
+                performance_tracker=performance_tracker,
+                method=method,
+            )
         )
-        previous_expected_num_misclassifications = (1 - expected_accuracy) * data_density.previous_batch_num_samples
-        new_avoidable_misclassifications = (
-            previous_interval_num_misclassifications - previous_expected_num_misclassifications
-        )
-        if new_avoidable_misclassifications < 0 and not self.config.allow_reduction:
-            new_avoidable_misclassifications = 0
-
         self.cumulated_avoidable_misclassifications += round(new_avoidable_misclassifications)
+        hindsight_exceeded = (
+            self.cumulated_avoidable_misclassifications >= self.config.avoidable_misclassification_threshold
+        )
+
+        if hindsight_exceeded:
+            # past misclassifications already exceed the threshold, forecasting not needed
+            return True
 
         if mode == "hindsight":
-            return self.cumulated_avoidable_misclassifications >= self.config.avoidable_misclassification_threshold
+            return False
 
         if mode == "lookahead":
-            # past misclassifications already exceed the threshold, forecasting not needed
-            if self.cumulated_avoidable_misclassifications >= self.config.avoidable_misclassification_threshold:
-                return True
-
-            forecasted_data_density = data_density.forecast_density(method=method)
-            forecast_accuracy = performance_tracker.forecast_next_accuracy(method=method)
-
-            accuracy_delta = expected_accuracy - forecast_accuracy
-            if accuracy_delta < 0 and not self.config.allow_reduction:
-                accuracy_delta = 0
-
-            # new misclassification = accuracy * samples; samples = data_density * interval_duration
-            forecast_new_avoidable_misclassifications = accuracy_delta * forecasted_data_density * update_interval
-
-            forecasted_misclassifications = (
-                self.cumulated_avoidable_misclassifications + forecast_new_avoidable_misclassifications
+            forecasted_misclassifications = self.cumulated_avoidable_misclassifications + round(
+                forecast_new_avoidable_misclassifications
             )
 
             return forecasted_misclassifications >= self.config.avoidable_misclassification_threshold

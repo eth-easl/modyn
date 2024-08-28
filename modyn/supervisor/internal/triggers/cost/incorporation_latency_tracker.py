@@ -31,8 +31,11 @@ class IncorporationLatencyTracker:
         Returns:
             Most recent cumulative regret value.
         """
+
+        # newly arrived `regret` has existed for `batch_duration / 2` seconds on average;
+        # old regret persists for the entire `batch_duration`
+        self._cumulative_latency_regret += self._current_regret * batch_duration + regret * (batch_duration / 2.0)
         self._current_regret += regret
-        self._cumulative_latency_regret += self._current_regret * batch_duration
 
         return self._cumulative_latency_regret
 

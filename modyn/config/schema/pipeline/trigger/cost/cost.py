@@ -9,6 +9,7 @@ from pydantic import Field
 
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 
+from ..performance.criterion import _NumberAvoidableMisclassificationCriterion
 from ..performance.performance import _InternalPerformanceTriggerConfig
 
 
@@ -59,7 +60,11 @@ class DataIncorporationLatencyCostTriggerConfig(_CostTriggerConfig):
         return self.incorporation_delay_per_training_second
 
 
-class AvoidableMisclassificationCostTriggerConfig(_CostTriggerConfig, _InternalPerformanceTriggerConfig):
+class AvoidableMisclassificationCostTriggerConfig(
+    _CostTriggerConfig,
+    _InternalPerformanceTriggerConfig,
+    _NumberAvoidableMisclassificationCriterion,
+):
     """Cost aware trigger policy configuration that using the number of
     avoidable misclassifications integration latency as a regret metric.
 
