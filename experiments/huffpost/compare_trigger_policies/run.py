@@ -92,7 +92,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
             gen_pipeline_config(
                 name=f"{experiment.name}_drift_{interval}",
                 trigger=DataDriftTriggerConfig(
-                    detection_interval_data_points=interval,
+                    evaluation_interval_data_points=interval,
                     metrics=experiment.drift_trigger_metrics,
                     aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
                 ),

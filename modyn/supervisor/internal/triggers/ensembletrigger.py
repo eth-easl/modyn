@@ -4,6 +4,8 @@ import logging
 from collections import defaultdict
 from collections.abc import Generator
 
+from typing_extensions import override
+
 from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.ensemble import EnsembleTriggerConfig
 from modyn.config.schema.pipeline.trigger.simple.data_amount import (
@@ -56,10 +58,12 @@ class EnsembleTrigger(Trigger):
         """Leftover decisions from the last inform call of the subtriggers that
         didn't yield a trigger."""
 
+    @override
     def init_trigger(self, context: TriggerContext) -> None:
         for trigger in self.subtriggers.values():
             trigger.init_trigger(context)
 
+    @override
     def inform(
         self,
         new_data: list[tuple[int, int, int]],
@@ -128,7 +132,13 @@ class EnsembleTrigger(Trigger):
 
         self.last_inform_decisions = subtrigger_decision_cache
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
+    @override
+    def inform_new_model(
+        self,
+        most_recent_model_id: int,
+        number_samples: int | None = None,
+        training_time: float | None = None,
+    ) -> None:
         for trigger in self.subtriggers.values():
             trigger.inform_new_model(most_recent_model_id)
 
@@ -223,7 +233,7 @@ class EnsembleTrigger(Trigger):
                 ensemble_eval_log = EnsembleTriggerEvalLog(
                     triggered=aggregation_result,
                     trigger_index=processing_head,
-                    evaluation_interval=(new_data[0][0:2], new_data[-1][0:2]),
+                    evaluation_interval=(new_data[0][1], new_data[-1][1]),
                     subtrigger_decisions=dict(subtrigger_decision_cache),
                 )
                 log.evaluations.append(ensemble_eval_log)

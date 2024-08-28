@@ -1,6 +1,7 @@
 import logging
 import multiprocessing as mp
 import pathlib
+import sys
 import tempfile
 from collections.abc import Generator
 from unittest.mock import ANY, MagicMock, call, patch
@@ -201,6 +202,7 @@ def test_load_model():
         assert not model_path.is_file()
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Skipping test on macOS")
 @patch.object(
     PytorchEvaluator,
     "_prepare_dataloader",

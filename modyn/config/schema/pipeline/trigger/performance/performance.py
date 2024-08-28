@@ -4,6 +4,7 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
 )
@@ -28,13 +29,7 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
         return dataset
 
 
-class _InternalPerformanceTriggerConfig(ModynBaseModel):
-    detection_interval_data_points: int = Field(
-        description=(
-            "Specifies after how many samples another believe update (query density "
-            "estimation, accuracy evaluation) should be performed."
-        )
-    )
+class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
     data_density_window_size: int = Field(
         0,
         description="The window size for the data density estimation. Only used for lookahead mode.",
