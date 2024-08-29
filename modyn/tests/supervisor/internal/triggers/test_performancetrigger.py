@@ -121,7 +121,7 @@ def test_init_trigger(
     trigger_context = TriggerContext(PIPELINE_ID, dummy_pipeline_config, dummy_system_config, BASEDIR)
     trigger = PerformanceTrigger(performance_trigger_config)
     trigger.init_trigger(context=trigger_context)
-    mock_init_trigger.assert_called_once_with(trigger_context)
+    mock_init_trigger.assert_called_once_with(trigger, trigger_context)
 
 
 def test_setup_decision_policies(
@@ -160,10 +160,10 @@ def test_inform_new_model(
     data = [(i, 100 + i) for i in range(5)]
     trigger._last_detection_interval = data
     trigger.inform_new_model(42, 43, 44.0)
-    mock_inform_new_model.assert_called_once_with(42, data)
+    mock_inform_new_model.assert_called_once_with(trigger, 42, data)
 
 
-@patch.object(PerformanceTrigger, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
+@patch.object(PerformanceTriggerMixin, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
 @patch.object(DataDensityTracker, "inform_data", return_value=None)
 @patch.object(
     StaticPerformanceThresholdDecisionPolicy,
@@ -197,7 +197,7 @@ def test_inform(
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4)])]
     assert mock_evaluation.call_args_list == [
         # first time within inform, second time within inform_new_model
-        call(interval_data=[(i, 100 + i) for i in range(4)]),
+        call(trigger, interval_data=[(i, 100 + i) for i in range(4)]),
         call(interval_data=[(i, 100 + i) for i in range(4)]),
     ]
 
@@ -222,7 +222,7 @@ def test_inform(
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4, 8)])]
     assert mock_evaluation.call_args_list == [
         # first time within inform, second time within inform_new_model
-        call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
+        call(trigger, interval_data=[(i, 100 + i) for i in range(4, 8)]),
         call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
     ]
 
@@ -242,4 +242,4 @@ def test_inform(
     assert mock_evaluate_decision.call_count == 1
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(8, 12)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(8, 12)])]
-    assert mock_evaluation.call_args_list == [call(interval_data=[(i, 100 + i) for i in range(8, 12)])]
+    assert mock_evaluation.call_args_list == [call(trigger, interval_data=[(i, 100 + i) for i in range(8, 12)])]
