@@ -8,7 +8,8 @@ from modyn.supervisor.internal.triggers.performance.performance_tracker import (
 
 
 class NumberAvoidableMisclassificationEstimator:
-    """Stateless tracker of the number of avoidable misclassifications.
+    """Immutable class offering estimation functionality for the number of
+    avoidable misclassifications.
 
     Used in `StaticNumberAvoidableMisclassificationDecisionPolicy` to make decisions based on the cumulated
     avoidable misclassifications.
@@ -41,8 +42,7 @@ class NumberAvoidableMisclassificationEstimator:
             Tuple of the number of avoidable misclassifications and the forecasted number of avoidable misclassifications.
         """
 
-        # [BACKWARD LOOKING]
-
+        # --------------------------------- compute new_avoidable_misclassifications --------------------------------- #
         # compute the number of avoidable misclassifications by retrieving the actual misclassifications
         # and the expected misclassifications through the expected accuracy for the last interval.
         previous_interval_num_misclassifications = performance_tracker.previous_batch_num_misclassifications
@@ -60,7 +60,7 @@ class NumberAvoidableMisclassificationEstimator:
         if new_avoidable_misclassifications < 0 and not self.allow_reduction:
             new_avoidable_misclassifications = 0
 
-        # [FORWARD LOOKING]
+        # --------------------------------- compute new_avoidable_misclassifications --------------------------------- #
         # forecasted_data_density = data_density.forecast_density(method=method)
         forecast_accuracy = performance_tracker.forecast_next_accuracy(method=method)
 

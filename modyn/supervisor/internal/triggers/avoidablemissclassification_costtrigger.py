@@ -82,6 +82,13 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
             )
         )
 
+        # Let's build a latency regret metrics based on the estimated number of avoidable misclassifications.
+        # Using avoidable misclassification latency makes sense because we generally aim to to trigger
+        # when many misclassifications could have been avoided. We therefore try to minimize the time that
+        # misclassifications remain unaddressed while an old model is still in use.
+        # We chose the latency based area under curve method as a linear model based on the absolute number of
+        # avoidable misclassifications seems unstable. More advantageous regret non-linear regret functions
+        # could be explored in the future.
         return self._incorporation_latency_tracker.add_latency(
             estimated_new_avoidable_misclassifications, batch_duration
         )
