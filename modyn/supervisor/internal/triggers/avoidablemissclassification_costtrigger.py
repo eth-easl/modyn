@@ -5,7 +5,7 @@ from typing_extensions import override
 from modyn.config.schema.pipeline.trigger.cost.cost import (
     AvoidableMisclassificationCostTriggerConfig,
 )
-from modyn.supervisor.internal.triggers.cost.costtrigger import CostTrigger
+from modyn.supervisor.internal.triggers.costtrigger import CostTrigger
 from modyn.supervisor.internal.triggers.performance.misclassification_estimator import (
     NumberAvoidableMisclassificationEstimator,
 )
@@ -35,10 +35,10 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
     @override
     def init_trigger(self, context: TriggerContext) -> None:
         # Call CostTrigger's init_trigger method to initialize the trigger context
-        super().init_trigger(context)
+        CostTrigger.init_trigger(self, context)
 
         # Call PerformanceTriggerMixin's init_trigger method to initialize the internal performance detection state
-        self._init_trigger(context)
+        PerformanceTriggerMixin._init_trigger(self, context)
 
     @override
     def inform_new_model(
@@ -51,10 +51,10 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
         metadata."""
 
         # Call CostTrigger's inform_new_model method to update the cost tracker
-        super().inform_new_model(most_recent_model_id, number_samples, training_time)
+        CostTrigger.inform_new_model(self, most_recent_model_id, number_samples, training_time)
 
         # Call the internal PerformanceTriggerMixin's inform_new_model method to update the performance tracker
-        self._inform_new_model(most_recent_model_id, self._last_detection_interval)
+        PerformanceTriggerMixin._inform_new_model(self, most_recent_model_id, self._last_detection_interval)
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                     INTERNAL                                                     #
@@ -82,4 +82,11 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
             )
         )
 
+        # Let's build a latency regret metrics based on the estimated number of avoidable misclassifications.
+        # Using avoidable misclassification latency makes sense because we generally aim to to trigger
+        # when many misclassifications could have been avoided. We therefore try to minimize the time that
+        # misclassifications remain unaddressed while an old model is still in use.
+        # We chose the latency based area under curve method as a linear model based on the absolute number of
+        # avoidable misclassifications seems unstable. More advantageous regret non-linear regret functions
+        # could be explored in the future.
         return self.latency_tracker.add_latency(estimated_new_avoidable_misclassifications, batch_duration)

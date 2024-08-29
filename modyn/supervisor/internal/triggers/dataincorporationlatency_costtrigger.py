@@ -7,7 +7,7 @@ from typing_extensions import override
 from modyn.config.schema.pipeline.trigger.cost.cost import (
     AvoidableMisclassificationCostTriggerConfig,
 )
-from modyn.supervisor.internal.triggers.cost.costtrigger import CostTrigger
+from modyn.supervisor.internal.triggers.costtrigger import CostTrigger
 
 logger = logging.getLogger(__name__)
 
