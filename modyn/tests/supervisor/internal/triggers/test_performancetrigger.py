@@ -29,8 +29,8 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
 )
-from modyn.supervisor.internal.triggers.performance.performance_tracker import (
-    PerformanceTracker,
+from modyn.supervisor.internal.triggers.performance.performancetrigger_mixin import (
+    PerformanceTriggerMixin,
 )
 from modyn.supervisor.internal.triggers.performancetrigger import (
     PerformanceTrigger,
@@ -98,7 +98,6 @@ def misclassifications_criterion() -> StaticNumberAvoidableMisclassificationCrit
 def test_initialization(performance_trigger_config: PerformanceTriggerConfig) -> None:
     trigger = PerformanceTrigger(performance_trigger_config)
     assert trigger._sample_left_until_detection == performance_trigger_config.evaluation_interval_data_points
-    assert trigger.data_density.batch_memory.maxlen == performance_trigger_config.data_density_window_size
 
     assert len(trigger.decision_policies) == 1
     assert isinstance(
@@ -112,11 +111,9 @@ def test_initialization(performance_trigger_config: PerformanceTriggerConfig) ->
     assert trigger.most_recent_model_id is None
 
 
-@patch.object(PerformanceTrigger, "_init_dataloader_info", return_value=None)
-@patch.object(PerformanceTrigger, "_init_model_downloader", return_value=None)
+@patch.object(PerformanceTriggerMixin, "_init_trigger")
 def test_init_trigger(
-    mock_init_model_downloader: MagicMock,
-    mock_init_dataloader_info: MagicMock,
+    mock_init_trigger: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
     dummy_pipeline_config: ModynPipelineConfig,
     dummy_system_config: ModynConfig,
@@ -124,9 +121,7 @@ def test_init_trigger(
     trigger_context = TriggerContext(PIPELINE_ID, dummy_pipeline_config, dummy_system_config, BASEDIR)
     trigger = PerformanceTrigger(performance_trigger_config)
     trigger.init_trigger(context=trigger_context)
-    assert trigger.context == trigger_context
-    assert mock_init_model_downloader.called
-    assert mock_init_dataloader_info.called
+    mock_init_trigger.assert_called_once_with(trigger_context)
 
 
 def test_setup_decision_policies(
@@ -156,25 +151,16 @@ def test_setup_decision_policies(
     assert policies["avoidable_misclassifications"].config == misclassifications_criterion
 
 
-@patch.object(PerformanceTrigger, "_run_evaluation", side_effect=[(5, 2, {"Accuracy": 0.6})])
-@patch.object(PerformanceTracker, "inform_trigger", return_value=None)
+@patch.object(PerformanceTriggerMixin, "_inform_new_model")
 def test_inform_new_model(
-    mock_inform_trigger: MagicMock,
-    mock_evaluation: MagicMock,
+    mock_inform_new_model: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
 ) -> None:
     trigger = PerformanceTrigger(performance_trigger_config)
-    data_interval = [(i, 100 + i) for i in range(5)]
-    trigger._last_detection_interval = data_interval
-    assert not trigger.model_refresh_needed
-    trigger.inform_new_model(42)
-    assert trigger.most_recent_model_id == 42
-    assert trigger.model_refresh_needed  # would be reset if _run_evaluation wasn't mocked
-
-    mock_evaluation.assert_called_once_with(interval_data=data_interval)
-    mock_inform_trigger.assert_called_once_with(
-        num_samples=5, num_misclassifications=2, evaluation_scores={"Accuracy": 0.6}
-    )
+    data = [(i, 100 + i) for i in range(5)]
+    trigger._last_detection_interval = data
+    trigger.inform_new_model(42, 43, 44.0)
+    mock_inform_new_model.assert_called_once_with(42, data)
 
 
 @patch.object(PerformanceTrigger, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))

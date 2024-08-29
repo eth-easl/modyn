@@ -57,7 +57,7 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
     @override
     def init_trigger(self, context: TriggerContext) -> None:
         # Call PerformanceTriggerMixin's init_trigger method to initialize the internal performance detection state
-        self._init_trigger(context)
+        PerformanceTriggerMixin._init_trigger(self, context)
 
     @override
     def _evaluate_batch(
@@ -69,7 +69,9 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
         # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
         self.data_density.inform_data(batch)
 
-        num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=batch)
+        num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
+            self, interval_data=batch
+        )
 
         self.performance_tracker.inform_evaluation(
             num_samples=num_samples,
@@ -131,7 +133,7 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
         training_time: float | None = None,
     ) -> None:
         # Delegate to internal implementation
-        self._inform_new_model(most_recent_model_id, self._last_detection_interval)
+        PerformanceTriggerMixin._inform_new_model(self, most_recent_model_id, self._last_detection_interval)
 
 
 def _setup_decision_policies(

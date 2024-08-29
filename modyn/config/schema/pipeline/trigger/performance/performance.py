@@ -55,18 +55,6 @@ class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
         ),
     )
 
-    @model_validator(mode="after")
-    def validate_decision_criteria(self) -> "PerformanceTriggerConfig":
-        """Assert that all criteria use metrics that are defined in the
-        evaluation config."""
-        metrics = {metric.name for metric in self.evaluation.dataset.metrics}
-        for criterion in self.decision_criteria.values():
-            if criterion.metric not in metrics:
-                raise ValueError(
-                    f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."
-                )
-        return self
-
 
 class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
     id: Literal["PerformanceTrigger"] = Field("PerformanceTrigger")
@@ -81,3 +69,15 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
         ),
         min_length=1,
     )
+
+    @model_validator(mode="after")
+    def validate_decision_criteria(self) -> "PerformanceTriggerConfig":
+        """Assert that all criteria use metrics that are defined in the
+        evaluation config."""
+        metrics = {metric.name for metric in self.evaluation.dataset.metrics}
+        for criterion in self.decision_criteria.values():
+            if criterion.metric not in metrics:
+                raise ValueError(
+                    f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."
+                )
+        return self

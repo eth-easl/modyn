@@ -123,7 +123,7 @@ class PerformanceTriggerMixin:
         data_config = self.context.pipeline_config.data
 
         self.dataloader_info = DataLoaderInfo(
-            self.context.pipeline_id,
+            pipeline_id=self.context.pipeline_id,
             dataset_id=data_config.dataset_id,
             num_dataloaders=training_config.dataloader_workers,
             batch_size=training_config.batch_size,
