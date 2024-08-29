@@ -2,7 +2,13 @@
 
 ## Overview
 
-Cost-based triggers evaluate the trade-off between the cost of triggering (e.g., training time) and the benefits gained from triggering (e.g., reducing regret metrics like data incorporation latency or avoidable misclassification latency). The `CostTrigger` class serves as the base class for specific implementations, such as `DataIncorporationLatencyCostTrigger` and `AvoidableMisclassificationCostTrigger`, which utilize different regret metrics.
+Cost-based triggers evaluate the trade-off between the cost of triggering (e.g., training time) and the benefits gained from triggering (e.g., reducing regret metrics like data incorporation latency or avoidable misclassification latency).
+
+As regret, we define metrics that quantify the negative impact of not addressing a problem in a timely manner. They
+therefore help in decision making processes like scheduling or retraining decisions.
+In the context of `modyn` triggering, we can view regret based metrics as the cost of not triggering.
+
+The `CostTrigger` class serves as the base class for specific implementations, such as `DataIncorporationLatencyCostTrigger` and `AvoidableMisclassificationCostTrigger`, which utilize different regret metrics.
 
 While no trigger occurs regret units are cumulated into to a regret over time curve.
 Rather than using this regret units directly, we build an area-under-the-curve metric.
