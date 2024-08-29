@@ -83,8 +83,8 @@ def test_initialization(
 
     assert isinstance(trigger.misclassification_estimator, NumberAvoidableMisclassificationEstimator)
 
-    assert trigger._cost_tracker.measurements.maxlen == trigger_config.cost_tracking_window_size
-    assert trigger._incorporation_latency_tracker.cumulative_latency_regret == 0.0
+    assert trigger.cost_tracker.measurements.maxlen == trigger_config.cost_tracking_window_size
+    assert trigger.latency_tracker.cumulative_latency_regret == 0.0
 
     assert trigger.context is None
     trigger.init_trigger(dummy_trigger_context)
