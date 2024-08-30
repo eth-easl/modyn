@@ -6,7 +6,7 @@ from modyn.config.schema.pipeline.trigger.cost.cost import (
     DataIncorporationLatencyCostTriggerConfig,
 )
 from modyn.supervisor.internal.triggers.cost.cost_tracker import CostTracker
-from modyn.supervisor.internal.triggers.cost.dataincorporationlatency_costtrigger import (
+from modyn.supervisor.internal.triggers.dataincorporationlatency_costtrigger import (
     DataIncorporationLatencyCostTrigger,
 )
 from modyn.supervisor.internal.triggers.trigger import TriggerContext

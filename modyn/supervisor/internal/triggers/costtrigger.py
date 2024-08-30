@@ -29,13 +29,10 @@ class CostTrigger(BatchedTrigger):
         self.config = config
         self.context: TriggerContext | None = None
 
-        self._sample_left_until_detection = config.evaluation_interval_data_points
         self._triggered_once = False
         self._previous_batch_end_time: int | None = None
-        self._leftover_data: list[tuple[int, int]] = []
-        """Stores data that was not processed in the last inform call because
-        the detection interval was not filled."""
 
+        # cost information
         self._unincorporated_samples = 0
         self._cost_tracker = CostTracker(config.cost_tracking_window_size)
         self._incorporation_latency_tracker = IncorporationLatencyTracker()
