@@ -182,15 +182,15 @@ def test_update_current_window_amount_strategy(
 
     # Inform with less data than the window amount
     list(trigger.inform([(1, 102, 1), (2, 103, 1)]))
-    assert len(trigger._windows.current) == 2, "Current window should contain 2 data points."
+    assert len(trigger.windows.current) == 2, "Current window should contain 2 data points."
 
     trigger.inform_new_model(42)
 
     # Inform with additional data points to exceed the window size
     # idx=5: doesn't fill up whole batch --> unprocessed leftover
     list(trigger.inform([(3, 103, 1), (4, 104, 1), (5, 105, 1)]))
-    assert len(trigger._windows.current) == 2, "Current window should not exceed 3 data points."
-    assert trigger._windows.current[0][0] == 3, "Oldest data point should be dropped."
+    assert len(trigger.windows.current) == 2, "Current window should not exceed 3 data points."
+    assert trigger.windows.current[0][0] == 3, "Oldest data point should be dropped."
     assert trigger._leftover_data == [(5, 105)], "Unprocessed data should be stored."
 
 
@@ -206,13 +206,13 @@ def test_time_windowing_strategy_update(
 
     # Inform with initial data points
     list(trigger.inform([(1, 100, 1), (2, 104, 1), (3, 105, 1)]))
-    assert len(trigger._windows.current) == 3, "Current window should contain 3 data points."
+    assert len(trigger.windows.current) == 3, "Current window should contain 3 data points."
 
     # Inform with additional data points outside the time window
     list(trigger.inform([(4, 111, 1), (5, 115, 1)]))
-    assert len(trigger._windows.current) == 3, "Current window should contain only recent data within 10 seconds."
+    assert len(trigger.windows.current) == 3, "Current window should contain only recent data within 10 seconds."
     # Since the window is inclusive, we have 105 in there!
-    assert trigger._windows.current[0][0] == 3, "Data points outside the time window should be dropped."
+    assert trigger.windows.current[0][0] == 3, "Data points outside the time window should be dropped."
 
 
 @patch.object(DataDriftTrigger, "_run_detection", return_value=(False, {}))
@@ -245,19 +245,19 @@ def test_update_current_window_amount_strategy_cross_inform(
 
     # batch 2: no trigger -> remains in current window
     # index 6 remains int the leftover data as it doesn't fill up a batch
-    assert len(trigger._windows.current) == 3
-    assert list(trigger._windows.current) == [(3, 100), (4, 100), (5, 100)]
+    assert len(trigger.windows.current) == 3
+    assert list(trigger.windows.current) == [(3, 100), (4, 100), (5, 100)]
     assert trigger._leftover_data == [(6, 100)]
 
     # fill batch 3 --> no trigger
     assert len(list(trigger.inform([(7, 100, 1), (8, 100, 1)]))) == 0
-    assert len(trigger._windows.current) == 5
-    assert trigger._windows.current[0][0] == 4
+    assert len(trigger.windows.current) == 5
+    assert trigger.windows.current[0][0] == 4
     assert trigger._leftover_data == []
 
     assert len(list(trigger.inform([(9, 100, 1)]))) == 0, "Only the first batch should trigger."
-    assert len(trigger._windows.current) == 5
-    assert trigger._windows.current[0][0] == 4
+    assert len(trigger.windows.current) == 5
+    assert trigger.windows.current[0][0] == 4
     assert trigger._leftover_data == [(9, 100)]
 
 
@@ -281,9 +281,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     )
     trigger = DataDriftTrigger(trigger_config)
     assert isinstance(trigger.warmup_trigger, DataAmountTrigger)
-    assert (
-        len(trigger._windows.current) == len(trigger._windows.reference) == len(trigger._windows.current_reservoir) == 0
-    )
+    assert len(trigger.windows.current) == len(trigger.windows.reference) == len(trigger.windows.current_reservoir) == 0
 
     # Test: We add samples from 0 to 40 in 8 batches of 5 samples each and inspect the trigger state after each batch.
 
@@ -304,24 +302,24 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     assert results == [4]
     assert not trigger.warmup_completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [2, 3, 4]]  # window size 3
-    assert len(trigger._windows.reference) == 3
-    assert len(trigger._windows.current) == 0  # after a trigger the current window is empty
+    assert len(trigger.windows.reference) == 3
+    assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(5, 10)]))
     assert results == [4]  # index in last inform batch
     assert len(trigger.warmup_intervals) == 2
     assert not trigger.warmup_completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [2, 3, 4]]  # from first trigger
-    assert len(trigger._windows.reference) == 3
-    assert len(trigger._windows.current) == 0  # after a trigger the current window is empty
+    assert len(trigger.windows.reference) == 3
+    assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(10, 15)]))
     assert results == [4]
     assert len(trigger.warmup_intervals) == 3
     assert not trigger.warmup_completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [7, 8, 9]]
-    assert len(trigger._windows.reference) == 3
-    assert len(trigger._windows.current) == 0  # after a trigger the current window is empty
+    assert len(trigger.windows.reference) == 3
+    assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(15, 20)]))
     assert len(results) == 0

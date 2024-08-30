@@ -1,4 +1,7 @@
 class IncorporationLatencyTracker:
+    """Tracker for latency-based regret metrics like data-incorporation-
+    latency."""
+
     def __init__(self) -> None:
         self._current_regret = 0.0
         """The current value of the regret metric at the end of the last

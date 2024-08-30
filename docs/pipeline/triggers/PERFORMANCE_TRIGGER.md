@@ -25,23 +25,32 @@ The `lookahead` approach uses the forecasted performance and misclassifications 
 classDiagram
     class Trigger {
         <<abstract>>
-        +void init_trigger(TriggerContext context)
-        +Generator[Triggers] inform(new_data)
-        +void inform_new_model(int most_recent_model_id)
+        +void init_trigger(trigger_context)
+        +Generator[Triggers] inform(new_data)*
+        +void inform_new_model(model_id, ...)
+    }
+
+    class BatchedTrigger {
+        <<abstract>>
+        +void inform(...)
+        -bool evaluate_batch(batch, trigger_index)*
+    }
+
+    class PerformanceTriggerMixin {
+        +DataDensityTracker data_density
+        +PerformanceTracker performance_tracker
+        +StatefulModel model
+
+        -EvaluationResults run_evaluation(interval_data)
     }
 
     class PerformanceTrigger {
         +PerformanceTriggerConfig config
-        +DataDensityTracker data_density
-        +PerformanceTracker performance_tracker
         +dict[str, PerformanceDecisionPolicy] decision_policies
 
-        +void inform_new_model(int most_recent_model_id)
-
-
-        +void init_trigger(TriggerContext context)
-        +Generator[triggers] inform(new_data)
-        +void inform_new_model(int most_recent_model_id)
+        +void init_trigger(trigger_context)
+        -bool evaluate_batch(batch, trigger_index)
+        +void inform_new_model(model_id, ...)
     }
 
     class PerformanceTriggerConfig {
@@ -56,11 +65,16 @@ classDiagram
     class PerformanceTracker {
     }
 
-    Trigger <|-- PerformanceTrigger
+    Trigger <|-- BatchedTrigger
+    BatchedTrigger <|-- PerformanceTrigger
+    PerformanceTriggerMixin <|-- PerformanceTrigger
     PerformanceTrigger *-- "1" PerformanceTriggerConfig
     PerformanceTrigger *-- "1" DataDensityTracker
     PerformanceTrigger *-- "1" PerformanceTracker
     PerformanceTrigger *-- "|decision_policies|" PerformanceDecisionPolicy
+
+    style PerformanceTriggerMixin fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
+    style PerformanceTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px
 ```
 
 ### `DataDensityTracker` and `PerformanceTracker`
@@ -111,12 +125,12 @@ classDiagram
 
     class NumberAvoidableMisclassificationCriterion {
         <<abstract>>
+        +Optional[float] expected_accuracy
+        +bool allow_reduction
     }
 
     class StaticNumberAvoidableMisclassificationCriterion {
-        +Optional[float] expected_accuracy
         +int avoidable_misclassification_threshold
-        +bool allow_reduction
     }
 
     PerformanceThresholdCriterion <|-- StaticPerformanceThresholdCriterion
@@ -158,7 +172,7 @@ By doing so, it aims to prevent performance degradation by triggering preemptive
 classDiagram
     class PerformanceDecisionPolicy {
         <<abstract>>
-        +bool evaluate_decision(update_interval, evaluation_scores, data_density, performance_tracker, mode, method)*
+        +bool evaluate_decision(update_interval_samples, evaluation_scores, data_density, performance_tracker, mode, method)*
         +void inform_trigger()
     }
 

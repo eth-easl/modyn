@@ -89,6 +89,4 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
         # We chose the latency based area under curve method as a linear model based on the absolute number of
         # avoidable misclassifications seems unstable. More advantageous regret non-linear regret functions
         # could be explored in the future.
-        return self._incorporation_latency_tracker.add_latency(
-            estimated_new_avoidable_misclassifications, batch_duration
-        )
+        return self.latency_tracker.add_latency(estimated_new_avoidable_misclassifications, batch_duration)
