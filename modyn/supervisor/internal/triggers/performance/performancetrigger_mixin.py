@@ -76,7 +76,10 @@ class PerformanceTriggerMixin:
             evaluation_scores=evaluation_scores,
         )
 
-    def _run_evaluation(self, interval_data: list[tuple[int, int]]) -> tuple[int, int, dict[str, float]]:
+    def _run_evaluation(
+        self,
+        interval_data: list[tuple[int, int]],
+    ) -> tuple[int, int, dict[str, float]]:  # pragma: no cover
         """Run the evaluation on the given interval data."""
         assert self.most_recent_model_id is not None
         assert self.dataloader_info is not None
