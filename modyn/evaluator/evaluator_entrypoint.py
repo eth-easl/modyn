@@ -15,13 +15,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# We need to do this at the top because other dependencies otherwise set fork.
-try:
-    mp.set_start_method("spawn")
-except RuntimeError as error:
-    if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
-        logger.error("Start method is already set to {}", mp.get_start_method())
-        raise error
+# # We need to do this at the top because other dependencies otherwise set fork.
+# try:
+#     mp.set_start_method("spawn")
+# except RuntimeError as error:
+#     if mp.get_start_method() != "spawn" and "PYTEST_CURRENT_TEST" not in os.environ:
+#         logger.error("Start method is already set to {}", mp.get_start_method())
+#         raise error
 
 from modyn.evaluator.evaluator import Evaluator  # noqa # pylint: disable=wrong-import-position
 

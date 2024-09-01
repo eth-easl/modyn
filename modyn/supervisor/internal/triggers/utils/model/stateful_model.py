@@ -38,10 +38,10 @@ class StatefulModel:
 
         self.model_configuration_dict = json.loads(model_config)
 
-        self._model = self.model_handler(self.model_configuration_dict, device, amp)
-        assert self._model is not None
+        self.model = self.model_handler(self.model_configuration_dict, device, amp)
+        assert self.model is not None
         # The model must be able to record embeddings.
-        assert isinstance(self._model.model, CoresetSupportingModule)
+        assert isinstance(self.model.model, CoresetSupportingModule)
 
     def _load_state(self, path: pathlib.Path) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
@@ -51,7 +51,7 @@ class StatefulModel:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
-        self._model.model.load_state_dict(checkpoint["model"])
+        self.model.model.load_state_dict(checkpoint["model"])
 
         # delete trained model from disk
         path.unlink()

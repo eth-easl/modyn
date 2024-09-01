@@ -90,10 +90,7 @@ def gen_pipeline_config(
                     dataloader_workers=1,
                     tokenizer="DistilBertTokenizerTransform",
                     metrics=[
-                        AccuracyMetricConfig(
-                            evaluation_transformer_function=evaluation_transformer_function,
-                            topn=1
-                        ),
+                        AccuracyMetricConfig(evaluation_transformer_function=evaluation_transformer_function, topn=1),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
                         F1ScoreMetricConfig(

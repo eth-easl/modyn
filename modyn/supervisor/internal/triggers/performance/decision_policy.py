@@ -97,13 +97,21 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         mode: TriggerEvaluationMode,
         method: ForecastingMethod,
     ) -> bool:
-        threshold = performance_tracker.forecast_expected_performance(mode) - self.config.allowed_deviation
+        expected = performance_tracker.forecast_expected_performance(mode)
+        deviation = expected - evaluation_scores[self.config.metric]
 
         if mode == "hindsight":
-            return evaluation_scores[self.config.metric] < threshold
+            if self.config.absolute:
+                return deviation >= self.config.deviation
+            return deviation >= self.config.deviation * expected
 
-        return (evaluation_scores[self.config.metric] < threshold) or (
-            performance_tracker.forecast_next_performance(mode) < threshold
+        if self.config.absolute:
+            allowed_absolute_deviation = self.config.deviation
+        else:
+            allowed_absolute_deviation = self.config.deviation * expected
+
+        return (deviation >= allowed_absolute_deviation) or (
+            (expected - performance_tracker.forecast_next_performance(mode)) >= allowed_absolute_deviation
         )
 
 
