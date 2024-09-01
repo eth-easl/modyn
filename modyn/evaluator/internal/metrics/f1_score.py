@@ -71,5 +71,8 @@ class F1Score(AbstractDecomposableMetric):
 
     def get_name(self) -> str:
         if self.config.average == "binary":
+            # "F1-binary" cannot fully identify the metric
+            # we can have different F1 binary metrics with different positive labels
+            # Therefore the metric name should include the positive label.
             return f"F1-{self.config.average}-{self.config.pos_label}"
         return f"F1-{self.config.average}"
