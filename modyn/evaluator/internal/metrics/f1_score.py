@@ -70,4 +70,6 @@ class F1Score(AbstractDecomposableMetric):
         return float(np.average(f1_scores, weights=total_labels_per_class / total_samples))
 
     def get_name(self) -> str:
+        if self.config.average == "binary":
+            return f"F1-{self.config.average}-{self.config.pos_label}"
         return f"F1-{self.config.average}"

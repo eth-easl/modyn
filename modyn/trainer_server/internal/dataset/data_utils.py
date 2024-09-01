@@ -70,7 +70,6 @@ def prepare_dataloaders(
         batch_size=batch_size,
         num_workers=num_dataloaders,
         drop_last=drop_last,
-        timeout=60 if num_dataloaders > 0 else 0,
     )
 
     # TODO(#50): what to do with the val set in the general case?
