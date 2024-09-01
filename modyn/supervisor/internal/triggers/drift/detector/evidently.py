@@ -6,13 +6,14 @@ import numpy as np
 import pandas as pd
 import torch
 from evidently import ColumnMapping
+from evidently.calculations.stattests.hellinger_distance import _hellinger_distance
+from evidently.core import ColumnType
 from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
 
 from modyn.config.schema.pipeline import EvidentlyDriftMetric, MetricResult
-from evidently.calculations.stattests.hellinger_distance import _hellinger_distance
-from evidently.core import ColumnType
+
 from .drift import DriftDetector
 
 logger = logging.getLogger(__name__)
@@ -85,12 +86,12 @@ class EvidentlyDriftDetector(DriftDetector):
             )
             for metric_idx, metric_result in enumerate(results_raw["metrics"])
         }
-        
+
         # Compute the results for Evidently metrics that aren't supported through the EmbeddingsDriftMetric interface
-        additional_metric_type_results = _evidently_addtional_metric_computation(
+        additional_metric_type_results = _evidently_additional_metric_computation(
             self.evidently_metrics_config, embeddings_ref, embeddings_cur
         )
-        
+
         return {**results, **additional_metric_type_results}
 
 
@@ -150,7 +151,8 @@ def _evidently_metric_factory(config: EvidentlyDriftMetric) -> EmbeddingsDriftMe
 
     raise NotImplementedError(f"Metric {config.id} is not supported in EvidentlyDriftMetric.")
 
-def _evidently_addtional_metric_computation(
+
+def _evidently_additional_metric_computation(
     configs: dict[str, EvidentlyDriftMetric],
     embeddings_ref: pd.DataFrame,
     embeddings_cur: pd.DataFrame,

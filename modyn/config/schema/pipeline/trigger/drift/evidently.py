@@ -12,7 +12,9 @@ class _EvidentlyPcaDriftMetric(BaseMetric):
 class EvidentlyModelDriftMetric(_EvidentlyPcaDriftMetric):
     id: Literal["EvidentlyModelDriftMetric"] = Field("EvidentlyModelDriftMetric")
     bootstrap: bool = Field(False)
-    quantile_probability: float = Field(0.95, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
+    quantile_probability: float = Field(
+        0.95, description="Threshold for the evidently api, unused in modyn. Usage discourged."
+    )
     threshold: float = Field(0.55, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
 
 
@@ -22,7 +24,9 @@ class EvidentlyRatioDriftMetric(_EvidentlyPcaDriftMetric):
         "wasserstein",
         description="The statistical test used to compare the components.",
     )
-    component_stattest_threshold: float = Field(0.1, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
+    component_stattest_threshold: float = Field(
+        0.1, description="Threshold for the evidently api, unused in modyn. Usage discourged."
+    )
     threshold: float = Field(0.2, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
 
 
@@ -33,16 +37,20 @@ class EvidentlySimpleDistanceDriftMetric(_EvidentlyPcaDriftMetric):
         description="The distance metric used for the distance calculation.",
     )
     bootstrap: bool = Field(False)
-    quantile_probability: float = Field(0.95, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
+    quantile_probability: float = Field(
+        0.95, description="Threshold for the evidently api, unused in modyn. Usage discourged."
+    )
     threshold: float = Field(0.2, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
 
 
 class EvidentlyHellingerDistanceDriftMetric(BaseMetric):
     id: Literal["EvidentlyHellingerDistanceDriftMetric"] = Field("EvidentlyHellingerDistanceDriftMetric")
-    
 
 
 EvidentlyDriftMetric = Annotated[
-    EvidentlyModelDriftMetric | EvidentlyRatioDriftMetric | EvidentlySimpleDistanceDriftMetric | EvidentlyHellingerDistanceDriftMetric,
+    EvidentlyModelDriftMetric
+    | EvidentlyRatioDriftMetric
+    | EvidentlySimpleDistanceDriftMetric
+    | EvidentlyHellingerDistanceDriftMetric,
     Field(discriminator="id"),
 ]

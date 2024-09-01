@@ -12,7 +12,8 @@ from modyn.config.schema.pipeline.trigger.drift.criterion import (
 )
 from modyn.config.schema.pipeline.trigger.drift.evidently import EvidentlyHellingerDistanceDriftMetric
 from modyn.supervisor.internal.triggers.drift.detector.evidently import (
-    EvidentlyDriftDetector, _evidently_addtional_metric_computation
+    EvidentlyDriftDetector,
+    _evidently_additional_metric_computation,
 )
 
 
@@ -57,60 +58,55 @@ def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
 
 @pytest.fixture
 def hellinger_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
-    return EvidentlyHellingerDistanceDriftMetric(
-        decision_criterion=DynamicPercentileThresholdCriterion()
-    )
+    return EvidentlyHellingerDistanceDriftMetric(decision_criterion=DynamicPercentileThresholdCriterion())
 
 
-def test_evidently_addtional_metric_computation_hellinger(
+def test_evidently_additional_metric_computation_hellinger(
     hellinger_distance_drift_metric: EvidentlyHellingerDistanceDriftMetric,
     df_data_ref: np.ndarray,
     df_data_h0: np.ndarray,
     df_data_cur: np.ndarray,
 ) -> None:
-    metrics = {
-        "hellinger": hellinger_distance_drift_metric
-    }
-    results_h0 = _evidently_addtional_metric_computation(
-        metrics, df_data_ref, df_data_h0
-    )
+    metrics = {"hellinger": hellinger_distance_drift_metric}
+    results_h0 = _evidently_additional_metric_computation(metrics, df_data_ref, df_data_h0)
     assert len(results_h0) == 1
-    
-    results_cur = _evidently_addtional_metric_computation(
-        metrics, df_data_ref, df_data_cur
-    )
-    assert len(results_cur) == 1
-    
-    assert results_h0["hellinger"].distance < 1.25 * results_cur["hellinger"].distance
-    
-    # Test strong drift in 1 of 3 coluns
-    df_ref = pd.DataFrame({
-        'Column1': np.random.normal(loc=0, scale=1, size=1000),
-        'Column2': np.random.uniform(low=0, high=1, size=1000),
-        'Column3': np.random.exponential(scale=1, size=1000)
-    })
 
-    df_h0 = pd.DataFrame({
-        'Column1': np.random.normal(loc=0, scale=1, size=500),
-        'Column2': np.random.uniform(low=0, high=1, size=500),
-        'Column3': np.random.exponential(scale=1, size=500)
-    })
+    results_cur = _evidently_additional_metric_computation(metrics, df_data_ref, df_data_cur)
+    assert len(results_cur) == 1
+
+    assert results_h0["hellinger"].distance < 1.25 * results_cur["hellinger"].distance
+
+    # Test strong drift in 1 of 3 coluns
+    df_ref = pd.DataFrame(
+        {
+            "Column1": np.random.normal(loc=0, scale=1, size=1000),
+            "Column2": np.random.uniform(low=0, high=1, size=1000),
+            "Column3": np.random.exponential(scale=1, size=1000),
+        }
+    )
+
+    df_h0 = pd.DataFrame(
+        {
+            "Column1": np.random.normal(loc=0, scale=1, size=500),
+            "Column2": np.random.uniform(low=0, high=1, size=500),
+            "Column3": np.random.exponential(scale=1, size=500),
+        }
+    )
 
     # Create the second dataframe with slightly different distributions
-    df_cur = pd.DataFrame({
-        'Column1': np.random.normal(loc=0, scale=1, size=500),
-        'Column2': np.random.uniform(low=0.5, high=1.5, size=500),
-        'Column3': np.random.exponential(scale=1, size=500)
-    })
-    results = _evidently_addtional_metric_computation(
-        metrics, df_ref, df_h0
+    df_cur = pd.DataFrame(
+        {
+            "Column1": np.random.normal(loc=0, scale=1, size=500),
+            "Column2": np.random.uniform(low=0.5, high=1.5, size=500),
+            "Column3": np.random.exponential(scale=1, size=500),
+        }
     )
+    results = _evidently_additional_metric_computation(metrics, df_ref, df_h0)
     assert results["hellinger"].distance < 0.1
-    results = _evidently_addtional_metric_computation(
-        metrics, df_ref, df_cur
-    )
+    results = _evidently_additional_metric_computation(metrics, df_ref, df_cur)
     # assuming 2 columns don't drift and 1 does, we expect sth. around (0 + 0 + 1) / 3 = 0.33
-    assert 0.2 < results["hellinger"].distance < 1/3.0
+    assert 0.2 < results["hellinger"].distance < 1 / 3.0
+
 
 def test_evidently_detect_drift_metric(
     model_drift_metric: EvidentlyModelDriftMetric,
@@ -154,4 +150,3 @@ def test_evidently_detect_drift_metric(
     )
     results = ad.detect_drift(df_data_ref, df_data_cur, False)
     assert len(results) == 4
-
