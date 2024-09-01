@@ -1,5 +1,9 @@
-from modyn.config.schema.pipeline.trigger.drift.detection_window import AmountWindowingStrategy
-from modyn.supervisor.internal.triggers.drift.detection_window.amount import AmountDetectionWindows
+from modyn.config.schema.pipeline.trigger.drift.detection_window import (
+    AmountWindowingStrategy,
+)
+from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
+    AmountDetectionWindows,
+)
 
 
 def test_amount_detection_window_manager_no_overlap() -> None:
@@ -41,18 +45,20 @@ def test_amount_detection_window_manager_no_overlap() -> None:
     assert list(windows.current_reservoir) == [(2, 200), (3, 300)]
 
     # trigger: reset current_ and move data to reference_
-    windows.inform_trigger()
-    assert len(windows.current) == 0
-    assert len(windows.current_reservoir) == 0
-    assert len(windows.reference) == 5
-    assert len(windows.exclusive_current) == 0
-    assert list(windows.reference) == [
-        (2, 200),
-        (3, 300),
-        (4, 400),
-        (5, 500),
-        (6, 600),
-    ]
+    for _ in range(0, 3):
+        # idempotency test
+        windows.inform_trigger()
+        assert len(windows.current) == 0
+        assert len(windows.current_reservoir) == 0
+        assert len(windows.reference) == 5
+        assert len(windows.exclusive_current) == 0
+        assert list(windows.reference) == [
+            (2, 200),
+            (3, 300),
+            (4, 400),
+            (5, 500),
+            (6, 600),
+        ]
 
     windows.inform_data([(7, 700), (8, 800)])
     assert len(windows.current) == 2

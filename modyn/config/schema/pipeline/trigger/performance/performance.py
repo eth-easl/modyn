@@ -4,6 +4,7 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
+from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
 )
@@ -28,15 +29,9 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
         return dataset
 
 
-class _InternalPerformanceTriggerConfig(ModynBaseModel):
-    detection_interval_data_points: int = Field(
-        description=(
-            "Specifies after how many samples another believe update (query density "
-            "estimation, accuracy evaluation) should be performed."
-        )
-    )
+class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
     data_density_window_size: int = Field(
-        0,
+        20,
         description="The window size for the data density estimation. Only used for lookahead mode.",
     )
     performance_triggers_window_size: int = Field(
@@ -46,17 +41,6 @@ class _InternalPerformanceTriggerConfig(ModynBaseModel):
 
     evaluation: PerformanceTriggerEvaluationConfig = Field(
         description="Configuration for the evaluation of the performance trigger."
-    )
-
-    decision_criteria: dict[str, PerformanceTriggerCriterion] = Field(
-        description=(
-            "The decision criteria to be used for the performance trigger. If any of the criteria is met, "
-            "the trigger will be executed. The criteria will be evaluated in the order they are defined. "
-            "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
-            "the default metric that is always generated and cannot be disabled. To define a "
-            "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
-        ),
-        min_length=1,
     )
 
     mode: TriggerEvaluationMode = Field(
@@ -71,6 +55,21 @@ class _InternalPerformanceTriggerConfig(ModynBaseModel):
         ),
     )
 
+
+class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
+    id: Literal["PerformanceTrigger"] = Field("PerformanceTrigger")
+
+    decision_criteria: dict[str, PerformanceTriggerCriterion] = Field(
+        description=(
+            "The decision criteria to be used for the performance trigger. If any of the criteria is met, "
+            "the trigger will be executed. The criteria will be evaluated in the order they are defined. "
+            "Every criterion is linked to a metric. Some of the criteria implicitly only work on accuracy which is "
+            "the default metric that is always generated and cannot be disabled. To define a "
+            "`StaticPerformanceThresholdCriterion` on Accuracy, the evaluation config has to define the accuracy metric."
+        ),
+        min_length=1,
+    )
+
     @model_validator(mode="after")
     def validate_decision_criteria(self) -> "PerformanceTriggerConfig":
         """Assert that all criteria use metrics that are defined in the
@@ -82,7 +81,3 @@ class _InternalPerformanceTriggerConfig(ModynBaseModel):
                     f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."
                 )
         return self
-
-
-class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
-    id: Literal["PerformanceTrigger"] = Field("PerformanceTrigger")

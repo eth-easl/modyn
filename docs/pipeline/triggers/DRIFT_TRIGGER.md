@@ -10,43 +10,44 @@ It utilizes `DetectionWindows` to select samples for drift detection and `DriftD
 
 ```mermaid
 classDiagram
-    class DetectionWindows {
-        <<abstract>>
-    }
-
-    class DriftDetector
-
     class Trigger {
         <<abstract>>
-        +void init_trigger(TriggerContext context)
-        +Generator[Triggers] inform(new_data)
-        +void inform_new_model(int most_recent_model_id)
+        +void init_trigger(trigger_context)
+        +Generator[Triggers] inform(new_data)*
+        +void inform_new_model(model_id, ...)
     }
 
-    class TimeTrigger {
+    class BatchedTrigger {
+        <<abstract>>
+        +void inform(...)
+        -bool evaluate_batch(batch, trigger_index)*
     }
 
-    class DataAmountTrigger {
+    class DataDriftTrigger {
+        +DataDriftTriggerConfig config
+        +DetectionWindows windows
+        +dict[MetricId, DriftDetector] distance_detectors
+        +dict[MetricId, DriftDecisionPolicy] decision_policies
+
+        +void init_trigger(trigger_context)
+        -bool evaluate_batch(batch, trigger_index)
+        +void inform_new_model(model_id, ...)
+    }
+
+    class DetectionWindows {
+        <<abstract>>
     }
 
     class DriftDetector {
         <<abstract>>
     }
 
-    class DataDriftTrigger {
-        +DataDriftTriggerConfig config
-        +DetectionWindows _windows
-        +dict[MetricId, DriftDecisionPolicy] decision_policies
-        +dict[MetricId, DriftDetector] distance_detectors
-
-        +void init_trigger(TriggerContext context)
-        +Generator[triggers] inform(new_data)
-        +void inform_new_model(int most_recent_model_id)
-    }
-
     class DriftDecisionPolicy {
         <<abstract>>
     }
+
+    Trigger <|-- BatchedTrigger
+    BatchedTrigger <|-- DataDriftTrigger
 
     DataDriftTrigger "warmup_trigger" *-- "1" Trigger
     DataDriftTrigger *-- "1" DataDriftTriggerConfig
@@ -54,9 +55,8 @@ classDiagram
     DataDriftTrigger *-- "|metrics|" DriftDetector
     DataDriftTrigger *-- "|metrics|" DriftDecisionPolicy
 
-    Trigger <|-- DataDriftTrigger
-    Trigger <|-- TimeTrigger
-    Trigger <|-- DataAmountTrigger
+    style PerformanceTriggerMixin fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
+    style DataDriftTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px
 ```
 
 ### `DetectionWindows` Hierarchy
@@ -196,7 +196,6 @@ classDiagram
         float deviation = 0.05
         bool absolute = False
     }
-
 
     DriftDecisionCriterion <|-- ThresholdDecisionCriterion
     DriftDecisionCriterion <|-- DynamicThresholdCriterion

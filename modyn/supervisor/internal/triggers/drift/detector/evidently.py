@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import torch
 from evidently import ColumnMapping
+from evidently.calculations.stattests.hellinger_distance import _hellinger_distance
+from evidently.core import ColumnType
 from evidently.metrics import EmbeddingsDriftMetric
 from evidently.metrics.data_drift import embedding_drift_methods
 from evidently.report import Report
@@ -21,11 +23,11 @@ EVIDENTLY_COLUMN_MAPPING_NAME = "data"
 
 class EvidentlyDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, EvidentlyDriftMetric]):
-        evidently_metrics_config = {
+        self.evidently_metrics_config = {
             metric_ref: config for metric_ref, config in metrics_config.items() if config.id.startswith("Evidently")
         }
-        super().__init__(evidently_metrics_config)
-        self.evidently_metrics = _get_evidently_metrics(evidently_metrics_config)
+        super().__init__(self.evidently_metrics_config)
+        self.evidently_metrics = _get_evidently_metrics(self.evidently_metrics_config)
 
     def init_detector(self) -> None:
         pass
@@ -50,7 +52,7 @@ class EvidentlyDriftDetector(DriftDetector):
             assert len(embeddings_cur.shape) == 2
             embeddings_cur = pd.DataFrame(embeddings_cur)
 
-        # Run Evidently detection
+        # Run Evidently embedding drift detection
         # ColumnMapping is {mapping name: column indices},
         # an Evidently way of identifying (sub)columns to use in the detection.
         # e.g. {"even columns": [0,2,4]}.
@@ -84,7 +86,13 @@ class EvidentlyDriftDetector(DriftDetector):
             )
             for metric_idx, metric_result in enumerate(results_raw["metrics"])
         }
-        return results
+
+        # Compute the results for Evidently metrics that aren't supported through the EmbeddingsDriftMetric interface
+        additional_metric_type_results = _evidently_additional_metric_computation(
+            self.evidently_metrics_config, embeddings_ref, embeddings_cur
+        )
+
+        return {**results, **additional_metric_type_results}
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -110,6 +118,7 @@ def _get_evidently_metrics(
             EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config)),
         )
         for metric_ref, config in metrics_config.items()
+        if config.id not in ["EvidentlyHellingerDistanceDriftMetric"]
     }
     return metrics
 
@@ -141,3 +150,25 @@ def _evidently_metric_factory(config: EvidentlyDriftMetric) -> EmbeddingsDriftMe
         )
 
     raise NotImplementedError(f"Metric {config.id} is not supported in EvidentlyDriftMetric.")
+
+
+def _evidently_additional_metric_computation(
+    configs: dict[str, EvidentlyDriftMetric],
+    embeddings_ref: pd.DataFrame,
+    embeddings_cur: pd.DataFrame,
+) -> dict[str, MetricResult]:
+    metric_results: dict[str, MetricResult] = {}
+    for metric_ref, config in configs.items():
+        if config.id == "EvidentlyHellingerDistanceDriftMetric":
+            column_distances = [
+                # [0]: Hellinger distance, [1]: decision with dummy threshold (False)
+                _hellinger_distance(embeddings_ref[c], embeddings_cur[c], ColumnType.Numerical, 0)[0]
+                for c in embeddings_ref.columns
+            ]
+            aggregated_distance = np.mean(column_distances)
+            metric_results[metric_ref] = MetricResult(
+                metric_id=metric_ref,
+                is_drift=False,  # dummy, will be overwritten by DecisionPolicy inside the DataDriftTrigger
+                distance=aggregated_distance,
+            )
+    return metric_results

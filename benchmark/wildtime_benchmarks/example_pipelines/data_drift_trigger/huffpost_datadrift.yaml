@@ -42,7 +42,7 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  detection_interval_data_points: 5000
+  evaluation_interval_data_points: 5000
   metrics:
     ev_mmd:
       id: AlibiDetectMmdDriftMetric

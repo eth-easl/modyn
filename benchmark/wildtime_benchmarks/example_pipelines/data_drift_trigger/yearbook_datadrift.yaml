@@ -44,7 +44,7 @@ data:
 
 trigger:
   id: DataDriftTrigger
-  detection_interval_data_points: 1000
+  evaluation_interval_data_points: 1000
   metrics:
     ev_mmd:
       id: EvidentlyModelDriftMetric

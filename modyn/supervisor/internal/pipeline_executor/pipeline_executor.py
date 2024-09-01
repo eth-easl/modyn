@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 import traceback
 import types
 from collections.abc import Callable, Generator
@@ -108,8 +109,8 @@ def pipeline_stage(  # type: ignore[no-untyped-def]
                 For doing so we wrap the generator with this function.
                 """
                 try:
-                    for item, time in timed_generator(gen):  # type: ignore
-                        stage_log.duration = (stage_log.duration or timedelta(0)) + timedelta(milliseconds=time)
+                    for item, time_ in timed_generator(gen):  # type: ignore
+                        stage_log.duration = (stage_log.duration or timedelta(0)) + timedelta(milliseconds=time_)
                         yield item
                 finally:
                     report_results(stage_log)
@@ -633,6 +634,7 @@ class PipelineExecutor:
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_SINGLE_TRIGGER, MsgType.GENERAL))
 
         # trigger_id: identifier of the trigger received from the selector
+        start_trigger = time.monotonic()
         trigger_id, num_samples_in_trigger = self._inform_selector_about_trigger(
             s, self.logs, trigger_data, trigger_i, trigger_index
         )
@@ -641,7 +643,8 @@ class PipelineExecutor:
             first_timestamp, last_timestamp = PipelineExecutor._get_trigger_timespan(s, trigger_i == 0, trigger_data)
             s.remaining_data_range = None
             training_id, model_id = self._train_and_store_model(s, self.logs, trigger_id)
-            self.trigger.inform_new_model(model_id)
+            trigger_duration = time.monotonic() - start_trigger
+            self.trigger.inform_new_model(model_id, num_samples_in_trigger, trigger_duration)
 
             if s.pipeline_config.evaluation:
                 self._evaluate_and_store_results(

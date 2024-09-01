@@ -29,8 +29,8 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
 )
-from modyn.supervisor.internal.triggers.performance.performance_tracker import (
-    PerformanceTracker,
+from modyn.supervisor.internal.triggers.performance.performancetrigger_mixin import (
+    PerformanceTriggerMixin,
 )
 from modyn.supervisor.internal.triggers.performancetrigger import (
     PerformanceTrigger,
@@ -46,7 +46,7 @@ BASEDIR = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 @fixture
 def performance_trigger_config() -> PerformanceTriggerConfig:
     return PerformanceTriggerConfig(
-        detection_interval_data_points=42,
+        evaluation_interval_data_points=42,
         data_density_window_size=100,
         performance_triggers_window_size=10,
         evaluation=PerformanceTriggerEvaluationConfig(
@@ -97,8 +97,7 @@ def misclassifications_criterion() -> StaticNumberAvoidableMisclassificationCrit
 
 def test_initialization(performance_trigger_config: PerformanceTriggerConfig) -> None:
     trigger = PerformanceTrigger(performance_trigger_config)
-    assert trigger._sample_left_until_detection == performance_trigger_config.detection_interval_data_points
-    assert trigger.data_density.batch_memory.maxlen == performance_trigger_config.data_density_window_size
+    assert trigger._sample_left_until_detection == performance_trigger_config.evaluation_interval_data_points
 
     assert len(trigger.decision_policies) == 1
     assert isinstance(
@@ -112,11 +111,9 @@ def test_initialization(performance_trigger_config: PerformanceTriggerConfig) ->
     assert trigger.most_recent_model_id is None
 
 
-@patch.object(PerformanceTrigger, "_init_dataloader_info", return_value=None)
-@patch.object(PerformanceTrigger, "_init_model_downloader", return_value=None)
+@patch.object(PerformanceTriggerMixin, "_init_trigger")
 def test_init_trigger(
-    mock_init_model_downloader: MagicMock,
-    mock_init_dataloader_info: MagicMock,
+    mock_init_trigger: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
     dummy_pipeline_config: ModynPipelineConfig,
     dummy_system_config: ModynConfig,
@@ -124,9 +121,7 @@ def test_init_trigger(
     trigger_context = TriggerContext(PIPELINE_ID, dummy_pipeline_config, dummy_system_config, BASEDIR)
     trigger = PerformanceTrigger(performance_trigger_config)
     trigger.init_trigger(context=trigger_context)
-    assert trigger.context == trigger_context
-    assert mock_init_model_downloader.called
-    assert mock_init_dataloader_info.called
+    mock_init_trigger.assert_called_once_with(trigger, trigger_context)
 
 
 def test_setup_decision_policies(
@@ -156,35 +151,19 @@ def test_setup_decision_policies(
     assert policies["avoidable_misclassifications"].config == misclassifications_criterion
 
 
-@patch.object(PerformanceTrigger, "_run_evaluation", side_effect=[(5, 2, {"Accuracy": 0.6})])
-@patch.object(PerformanceTracker, "inform_trigger", return_value=None)
+@patch.object(PerformanceTriggerMixin, "_inform_new_model")
 def test_inform_new_model(
-    mock_inform_trigger: MagicMock,
-    mock_evaluation: MagicMock,
+    mock_inform_new_model: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
 ) -> None:
     trigger = PerformanceTrigger(performance_trigger_config)
-    data_interval = [(i, 100 + i) for i in range(5)]
-    trigger._last_detection_interval = data_interval
-    assert not trigger.model_refresh_needed
-    trigger.inform_new_model(42)
-    assert trigger.most_recent_model_id == 42
-    assert trigger.model_refresh_needed  # would be reset if _run_evaluation wasn't mocked
-
-    mock_evaluation.assert_called_once_with(interval_data=data_interval)
-    mock_inform_trigger.assert_called_once_with(
-        num_samples=5, num_misclassifications=2, evaluation_scores={"Accuracy": 0.6}
-    )
+    data = [(i, 100 + i) for i in range(5)]
+    trigger._last_detection_interval = data
+    trigger.inform_new_model(42, 43, 44.0)
+    mock_inform_new_model.assert_called_once_with(trigger, 42, data)
 
 
-# TODO: tests:
-# - initial trigger + _last_data_interval
-# - one criterion no trigger & one criterion trigger
-# - multiple criteria no trigger & multiple criteria trigger
-# - evaluation dispatch: _run_evaluation
-
-
-@patch.object(PerformanceTrigger, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
+@patch.object(PerformanceTriggerMixin, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
 @patch.object(DataDensityTracker, "inform_data", return_value=None)
 @patch.object(
     StaticPerformanceThresholdDecisionPolicy,
@@ -199,13 +178,14 @@ def test_inform(
     mock_evaluation: MagicMock,
     performance_trigger_config: PerformanceTriggerConfig,
 ) -> None:
-    performance_trigger_config.detection_interval_data_points = 4
+    performance_trigger_config.evaluation_interval_data_points = 4
     trigger = PerformanceTrigger(performance_trigger_config)
     assert not trigger._triggered_once
 
     # detection interval 1: at sample (3, 103) --> forced trigger
     trigger_results = list(trigger.inform([(i, 100 + i, 0) for i in range(6)]))
     assert len(trigger_results) == 1
+    assert trigger_results == [3]
     assert trigger._triggered_once
     trigger.inform_new_model(1)
     assert len(trigger._leftover_data) == 2
@@ -217,7 +197,7 @@ def test_inform(
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4)])]
     assert mock_evaluation.call_args_list == [
         # first time within inform, second time within inform_new_model
-        call(interval_data=[(i, 100 + i) for i in range(4)]),
+        call(trigger, interval_data=[(i, 100 + i) for i in range(4)]),
         call(interval_data=[(i, 100 + i) for i in range(4)]),
     ]
 
@@ -229,6 +209,7 @@ def test_inform(
     # detection interval 2: at sample (7, 107) --> optional trigger, 3 samples leftover
     trigger_results = list(trigger.inform([(i, 100 + i, 0) for i in range(6, 11)]))
     assert len(trigger_results) == 1
+    assert trigger_results == [1]
     assert trigger._triggered_once
     trigger.inform_new_model(2)
     assert len(trigger._leftover_data) == 3
@@ -241,7 +222,7 @@ def test_inform(
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4, 8)])]
     assert mock_evaluation.call_args_list == [
         # first time within inform, second time within inform_new_model
-        call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
+        call(trigger, interval_data=[(i, 100 + i) for i in range(4, 8)]),
         call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
     ]
 
@@ -261,4 +242,4 @@ def test_inform(
     assert mock_evaluate_decision.call_count == 1
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(8, 12)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(8, 12)])]
-    assert mock_evaluation.call_args_list == [call(interval_data=[(i, 100 + i) for i in range(8, 12)])]
+    assert mock_evaluation.call_args_list == [call(trigger, interval_data=[(i, 100 + i) for i in range(8, 12)])]

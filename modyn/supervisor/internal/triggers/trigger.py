@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system.config import ModynConfig
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 
 @dataclass
@@ -44,6 +44,17 @@ class Trigger(ABC):
             triggering_indices: List of all indices that trigger training
         """
 
-    def inform_new_model(self, most_recent_model_id: int) -> None:
+    def inform_new_model(
+        self,
+        most_recent_model_id: int,
+        number_samples: int | None = None,
+        training_time: float | None = None,
+    ) -> None:
         """The supervisor informs the Trigger about the model_id of the new
-        trigger."""
+        trigger.
+
+        Args:
+            most_recent_model_id: The id of the most recent model.
+            number_samples: The number of samples used for training the most recent model.
+            training_time: The training time of the most recent model in seconds.
+        """

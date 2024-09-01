@@ -1,8 +1,10 @@
 from collections.abc import Generator
 
+from typing_extensions import override
+
 from modyn.config.schema.pipeline import DataAmountTriggerConfig
-from modyn.supervisor.internal.triggers.models import TriggerPolicyEvaluationLog
 from modyn.supervisor.internal.triggers.trigger import Trigger
+from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 
 
 class DataAmountTrigger(Trigger):
@@ -16,8 +18,11 @@ class DataAmountTrigger(Trigger):
 
         assert self.data_points_for_trigger > 0, "data_points_for_trigger needs to be at least 1"
 
+    @override
     def inform(
-        self, new_data: list[tuple[int, int, int]], log: TriggerPolicyEvaluationLog | None = None
+        self,
+        new_data: list[tuple[int, int, int]],
+        log: TriggerPolicyEvaluationLog | None = None,
     ) -> Generator[int, None, None]:
         assert self.remaining_data_points < self.data_points_for_trigger, "Inconsistent remaining datapoints"
 

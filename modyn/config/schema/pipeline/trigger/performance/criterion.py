@@ -10,13 +10,13 @@ from modyn.config.schema.base_model import ModynBaseModel
 # uses the evaluation results to derive a triggering decision
 
 
-class _NamedMetricPerformanceCriterion(ModynBaseModel):
+class _PerformanceThresholdCriterion(ModynBaseModel):
     metric: str = Field(
         description="The metric that should be used for the comparison. Name as defined in the evaluation config."
     )
 
 
-class StaticPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
+class StaticPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     id: Literal["StaticPerformanceThresholdCriterion"] = Field("StaticPerformanceThresholdCriterion")
     metric_threshold: float = Field(
         0.0,
@@ -27,7 +27,7 @@ class StaticPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
     )
 
 
-class DynamicPerformanceThresholdCriterion(_NamedMetricPerformanceCriterion):
+class DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     """Triggers after comparison of current performance with the a rolling
     average of historic performances after triggers."""
 
@@ -68,19 +68,19 @@ class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
             "If not set, the expected performance will be inferred dynamically with a rolling average."
         ),
     )
-
-
-class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
-    id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
-    avoidable_misclassification_threshold: int = Field(
-        description="The threshold for the misclassification rate that will invoke a trigger."
-    )
     allow_reduction: bool = Field(
         False,
         description=(
             "If True, the cumulated number of misclassifications will be lowered through evaluations that are "
             "better than the expected performance."
         ),
+    )
+
+
+class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):
+    id: Literal["StaticNumberMisclassificationCriterion"] = Field("StaticNumberMisclassificationCriterion")
+    avoidable_misclassification_threshold: int = Field(
+        description="The threshold for the misclassification rate that will invoke a trigger."
     )
 
 
