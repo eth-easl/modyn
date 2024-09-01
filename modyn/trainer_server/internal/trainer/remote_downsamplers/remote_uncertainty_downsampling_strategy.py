@@ -69,6 +69,8 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         self.index_sampleid_map += sample_ids
 
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
+        if forward_output.dim() == 1:
+            forward_output = forward_output.unsqueeze(1)
         if self.score_metric == "LeastConfidence":
             scores = forward_output.max(dim=1).values.cpu().numpy()
         elif self.score_metric == "Entropy":
@@ -139,7 +141,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # we select those with minimal negative entropy, i.e., maximum entropy
         # Margin: We look for the smallest margin. The larger the margin, the more certain the
         # model is.
-        return np.argsort(self.scores)[:target_size], torch.ones(target_size).float()
+        return np.argsort(self.scores)[:target_size].tolist(), torch.ones(target_size).float()
 
     @property
     def requires_grad(self) -> bool:

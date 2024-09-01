@@ -52,7 +52,9 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target
         )
-        scores = torch.norm(last_layer_gradients, dim=-1).cpu()
+        if last_layer_gradients.dim() == 1:
+            last_layer_gradients = last_layer_gradients.unsqueeze(1)
+        scores = torch.linalg.vector_norm(last_layer_gradients, dim=1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
