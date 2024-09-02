@@ -97,18 +97,16 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 for percentile in [0.05, 0.1, 0.2, 0.3]:
                     criteria.append(
                         (
-                            f"perc_{percentile}",
+                            f"roll_{percentile}",
                             DynamicRollingAverageThresholdCriterion(
-                                window_size=metric_window_size, percentile=percentile
+                                window_size=metric_window_size, deviation=percentile, absolute=False
                             ),
                         )
                     )
                     criteria.append(
                         (
-                            f"roll_{percentile}",
-                            DynamicPercentileThresholdCriterion(
-                                window_size=metric_window_size, deviation=percentile, absolute=False
-                            ),
+                            f"perc_{percentile}",
+                            DynamicPercentileThresholdCriterion(window_size=metric_window_size, percentile=percentile),
                         )
                     )
                 for dec_crit_str, decision_criterion in criteria:
@@ -167,8 +165,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             metric="Accuracy", deviation=deviation, absolute=False
                         )
                     },
-                    warmup_policy=TimeTriggerConfig(every="3d"),
-                    warmup_intervals=warmup_intervals,
+                    # We currently don't support warmups for performance triggers, we might need them if they perform bad
                 )
                 name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
                 strategies.append((name, conf))
