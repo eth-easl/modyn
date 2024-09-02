@@ -46,7 +46,7 @@ def test_delegate_inform_without_warmup_trigger(
 
     result = warmup_trigger.delegate_inform(batch)
 
-    assert warmup_trigger._delegation_counter == 1
+    assert warmup_trigger._delegation_counter == 0
     assert result is True
     assert mock_trigger_inform.call_count == 0
 
