@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 EVIDENTLY_COLUMN_MAPPING_NAME = "data"
 
+SPECIAL_METRICS = ["EvidentlyHellingerDistanceDriftMetric"]
+
 
 class EvidentlyDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, EvidentlyDriftMetric]):
@@ -118,7 +120,7 @@ def _get_evidently_metrics(
             EmbeddingsDriftMetric(EVIDENTLY_COLUMN_MAPPING_NAME, _evidently_metric_factory(config)),
         )
         for metric_ref, config in metrics_config.items()
-        if config.id not in ["EvidentlyHellingerDistanceDriftMetric"]
+        if config.id not in SPECIAL_METRICS
     }
     return metrics
 
@@ -160,12 +162,14 @@ def _evidently_additional_metric_computation(
     metric_results: dict[str, MetricResult] = {}
     for metric_ref, config in configs.items():
         if config.id == "EvidentlyHellingerDistanceDriftMetric":
-            column_distances = [
+            # every column marks a feature, we compute the pairwise Hellinger distance between the a reference version
+            # and the current version of the feature. The distances are then computed with a samples of a feature.
+            pairwise_column_distances = [
                 # [0]: Hellinger distance, [1]: decision with dummy threshold (False)
                 _hellinger_distance(embeddings_ref[c], embeddings_cur[c], ColumnType.Numerical, 0)[0]
                 for c in embeddings_ref.columns
             ]
-            aggregated_distance = np.mean(column_distances)
+            aggregated_distance = np.mean(pairwise_column_distances)
             metric_results[metric_ref] = MetricResult(
                 metric_id=metric_ref,
                 is_drift=False,  # dummy, will be overwritten by DecisionPolicy inside the DataDriftTrigger
