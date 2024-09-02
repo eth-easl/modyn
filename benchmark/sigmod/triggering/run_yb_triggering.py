@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 import sys
 from pathlib import Path
@@ -79,78 +80,97 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
     return strategies
 
 
-def gen_revision_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
+def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
+    # For arxiv, change detection interval size and shrink hyperparm space in general (und natürlich static thresholds für drift und performance anpassen)
+
     strategies = []
+    min_warmup_data_points = 5000
+
     for evaluation_interval_data_points in [250, 500, 100]:
+        warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
+
         ## Dynamic Percentile Drift Triggers
         for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
-            # TODO discuss with robin what to try
-            # does this mean top 5 % percentile and 5% deviation from average?
-            # how to set window size?
-            # do we do any forecasting for drift?
-            # TODO which warmup to use?
-            for dec_crit_str, decision_criterion in [
-                ("perc_0.05_window??", DynamicPercentileThresholdCriterion(window_size=10, percentile=0.05)),
-                (
-                    "rolling_0.05_window??",
-                    DynamicRollingAverageThresholdCriterion(window_size=10, deviation=0.05, absolute=False),
-                ),
-            ]:
-                conf = DataDriftTriggerConfig(
-                    evaluation_interval_data_points=evaluation_interval_data_points,
-                    windowing_strategy=TimeWindowingStrategy(
-                        allow_overlap=True, limit_ref=window_size, limit_cur=window_size
-                    ),
-                    metrics={
-                        "mmd_alibi": AlibiDetectMmdDriftMetric(
-                            device="cuda:0",
-                            num_permutations=None,
-                            decision_criterion=decision_criterion,
+            # window size: how many drift scores we use for calibrating the dynamic policy
+            for metric_window_size in [15, 30]:
+                criteria = []
+                for percentile in [0.05, 0.1, 0.2, 0.3]:
+                    criteria.append(
+                        (
+                            f"perc_{percentile}",
+                            DynamicRollingAverageThresholdCriterion(
+                                window_size=metric_window_size, percentile=percentile
+                            ),
                         )
-                    },
-                    warmup_policy=TimeTriggerConfig(every="1d"),
-                )
+                    )
+                    criteria.append(
+                        (
+                            f"roll_{percentile}",
+                            DynamicPercentileThresholdCriterion(
+                                window_size=metric_window_size, deviation=percentile, absolute=False
+                            ),
+                        )
+                    )
+                for dec_crit_str, decision_criterion in criteria:
+                    conf = DataDriftTriggerConfig(
+                        evaluation_interval_data_points=evaluation_interval_data_points,
+                        windowing_strategy=TimeWindowingStrategy(
+                            allow_overlap=True, limit_ref=window_size, limit_cur=window_size
+                        ),
+                        metrics={
+                            "mmd_alibi": AlibiDetectMmdDriftMetric(
+                                device=device,
+                                num_permutations=None,
+                                decision_criterion=decision_criterion,
+                            )
+                        },
+                        warmup_policy=TimeTriggerConfig(every="3d"),
+                        warmup_intervals=warmup_intervals,
+                    )
 
-                name = f"mmdalibi_{evaluation_interval_data_points}_dyn_{dec_crit_str}_{window_size}"
-                strategies.append((name, conf))
+                    name = f"mmdalibi_{evaluation_interval_data_points}_dyn_{metric_window_size}_{dec_crit_str}_{window_size}"
+                    strategies.append((name, conf))
 
         ## Performance Triggers
-        # TODO how to set window size?
-        for performance_triggers_window_size in [10]:
+        for performance_triggers_window_size in [15, 30]:
             ## Static PerformanceTriggers
 
-            for metric, threshold in [("Accuracy", 0.9), ("Accuracy", 0.75), ("Accuracy", 0.5)]:
+            for threshold in [0.95, 0.9, 0.8, 0.7]:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
+                    data_density_window_size=performance_triggers_window_size,
                     mode="hindsight",
                     evaluation=PerformanceTriggerEvaluationConfig(
-                        device="cuda:0", dataset=get_eval_data_config("yearbook_test")
+                        device=device, dataset=get_eval_data_config("yearbook_train")
                     ),
                     decision_criteria={
-                        "static": StaticPerformanceThresholdCriterion(metric=metric, metric_threshold=threshold)
+                        f"static-{threshold}": StaticPerformanceThresholdCriterion(
+                            metric="Accuracy", metric_threshold=threshold
+                        )
                     },
                 )
-                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_{metric}{threshold}"
+                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_{threshold}"
                 strategies.append((name, conf))
             ## Dynamic Performance Triggers
 
-            # TODO which allowed deviations? relative vs absolute?
-            for metric, allowed_deviation in [("Accuracy", 0.05)]:
+            for deviation in [0.05, 0.1, 0.2, 0.3]:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
                     mode="hindsight",
                     evaluation=PerformanceTriggerEvaluationConfig(
-                        device="cuda:0", dataset=get_eval_data_config("yearbook_test")
+                        device=device, dataset=get_eval_data_config("yearbook_train")
                     ),
                     decision_criteria={
-                        "dynamic": DynamicPerformanceThresholdCriterion(
-                            metric=metric, allowed_deviation=allowed_deviation
+                        f"dynamic-{deviation}": DynamicPerformanceThresholdCriterion(
+                            metric="Accuracy", deviation=deviation, absolute=False
                         )
                     },
+                    warmup_policy=TimeTriggerConfig(every="3d"),
+                    warmup_intervals=warmup_intervals,
                 )
-                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_dyn_{metric}{allowed_deviation}"
+                name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
                 strategies.append((name, conf))
 
     return strategies
@@ -197,7 +217,7 @@ def run_experiment() -> None:
     existing_pipelines = set(existing_pipelines)
     run_id = 0
     for seed in seeds:
-        for triggering_strategy_id, triggering_strategy in gen_revision_triggering_strategies():
+        for triggering_strategy_id, triggering_strategy in gen_revision_triggering_strategies(train_gpu):
             if (
                 isinstance(triggering_strategy, DataDriftTriggerConfig)
                 or isinstance(triggering_strategy, PerformanceTriggerConfig)
