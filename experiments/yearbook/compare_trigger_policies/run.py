@@ -149,7 +149,7 @@ _EXPERIMENT_REFS = {
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
             for num_samples in [100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000]
         },
-        gpu_device="cuda:0",
+        gpu_device="cuda:1",
     ),
     # -------------------------------- Drift triggers -------------------------------- #
     # Static treshold drift
@@ -168,18 +168,18 @@ _EXPERIMENT_REFS = {
                 metrics={
                     "mmd": AlibiDetectMmdDriftMetric(
                         decision_criterion=criterion,
-                        device="cuda:0",
+                        device="cuda:2",
                     )
                 },
             )
             for interval in [100, 250, 500, 1_000]
-            for window_size in [3, 5]
+            for window_size in [1, 4, 10]
             for criterion_name, criterion in {
                 f"mmd-{threshold}": ThresholdDecisionCriterion(threshold=threshold)
-                for threshold in [0.03, 0.05, 0.07, 0.09, 0.12, 0.15]
+                for threshold in [0.03, 0.05, 0.07, 0.09, 0.12, 0.15, 0.2]
             }.items()
         },
-        gpu_device="cuda:0",
+        gpu_device="cuda:2",
     ),
     # Dynamic threshold drift
     4: Experiment(
@@ -197,7 +197,7 @@ _EXPERIMENT_REFS = {
                 metrics={
                     "mmd": AlibiDetectMmdDriftMetric(
                         decision_criterion=criterion,
-                        device="cuda:0",
+                        device="cuda:1",
                     )
                 },
             )
@@ -220,7 +220,7 @@ _EXPERIMENT_REFS = {
                 }
             ).items()
         },
-        gpu_device="cuda:0",
+        gpu_device="cuda:1",
     ),
     # ----------------------------- Performance triggers ----------------------------- #
     5: Experiment(
