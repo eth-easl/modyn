@@ -1,7 +1,4 @@
 import os
-from turtle import backward
-
-from sklearn.linear_model import ridge_regression
 
 from experiments.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
@@ -13,7 +10,6 @@ from modyn.config.schema.pipeline import (
     ModynPipelineConfig,
     TimeTriggerConfig,
 )
-from modyn.config.schema.pipeline import trigger
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
 from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig
@@ -26,14 +22,10 @@ from modyn.config.schema.pipeline.evaluation.strategy.periodic import (
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import (
     SlicingEvalStrategyConfig,
 )
-from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig, TriggerConfig
+from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.cost.cost import (
     AvoidableMisclassificationCostTriggerConfig,
-    CostTriggerConfig,
     DataIncorporationLatencyCostTriggerConfig,
-)
-from modyn.config.schema.pipeline.trigger.drift.aggregation import (
-    MajorityVoteDriftAggregationStrategy,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
@@ -152,7 +144,7 @@ _EXPERIMENT_REFS = {
         gpu_device="cuda:1",
     ),
     # -------------------------------- Drift triggers -------------------------------- #
-    # Static treshold drift
+    # Static threshold drift
     3: Experiment(
         name="yb-baseline-datadrift-static",
         eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
@@ -328,9 +320,8 @@ _EXPERIMENT_REFS = {
         },
         gpu_device="cuda:1",
     ),
-    
-    # ------------------------------- Ensemble triggers ------------------------------ 
-    # with best working preivous triggers
+    # ------------------------------- Ensemble triggers ------------------------------
+    # with best working previous triggers
     20: Experiment(
         name="yb-ensemble",
         eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
@@ -339,7 +330,7 @@ _EXPERIMENT_REFS = {
                 subtriggers={
                     "drift1": DataDriftTriggerConfig(
                         evaluation_interval_data_points=500,
-                        windowing_strategy=TimeWindowingStrategy(limit_ref=f"4d", limit_cur=f"4d"),
+                        windowing_strategy=TimeWindowingStrategy(limit_ref="4d", limit_cur="4d"),
                         warmup_intervals=10,
                         warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
                         metrics={
@@ -347,7 +338,7 @@ _EXPERIMENT_REFS = {
                                 device="cuda:0",
                                 decision_criterion=DynamicRollingAverageThresholdCriterion(
                                     deviation=0.1, absolute=False, window_size=15
-                                )
+                                ),
                             )
                         },
                     ),
@@ -363,25 +354,24 @@ _EXPERIMENT_REFS = {
                                 batch_size=64,
                                 dataloader_workers=1,
                                 metrics=[
-                                    AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
+                                    AccuracyMetricConfig(
+                                        evaluation_transformer_function=yb_evaluation_transformer_function
+                                    ),
                                 ],
                             ),
                         ),
                         mode="hindsight",  # TODO: lookahead
                         forecasting_method="ridge_regression",
                         decision_criteria={
-                            "static-0.8": StaticPerformanceThresholdCriterion(
-                                metric="Accuracy", metric_threshold=0.8
-                            )    
+                            "static-0.8": StaticPerformanceThresholdCriterion(metric="Accuracy", metric_threshold=0.8)
                         },
                     ),
                 },
-                ensemble_strategy=AtLeastNEnsembleStrategy(n=1)
+                ensemble_strategy=AtLeastNEnsembleStrategy(n=1),
             )
         },
         gpu_device="cuda:0",
     ),
-    
     # ----------------------------- Evaluation intervals ----------------------------- #
     # 100: Experiment(
     #     name="yb-timetrigger1y-periodic-eval-intervals",

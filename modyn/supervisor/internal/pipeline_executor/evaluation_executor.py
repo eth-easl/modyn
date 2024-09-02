@@ -396,9 +396,8 @@ class EvaluationExecutor:
 #                                       DevTools                                       #
 # ------------------------------------------------------------------------------------ #
 
-def eval_executor_single_pipeline(
-    pipeline_dir: Path
-) -> None:
+
+def eval_executor_single_pipeline(pipeline_dir: Path) -> None:
     # restart evaluation executor
     ex = EvaluationExecutor.init_from_path(pipeline_dir)
 
@@ -412,11 +411,10 @@ def eval_executor_single_pipeline(
 
     logs_.supervisor_logs = ex.run_post_pipeline_evaluations(manual_run=True)
     logs_.materialize(pipeline_dir, mode="final")
-    logger.info(f"Done with manual evaluation.")
+    logger.info("Done with manual evaluation.")
 
-def eval_executor_multi_pipeline(
-    pipelines_dir: Path
-) -> None:
+
+def eval_executor_multi_pipeline(pipelines_dir: Path) -> None:
     """Run the evaluation executor for multiple pipelines."""
     pipeline_dirs = [p for p in pipelines_dir.iterdir() if p.is_dir()]
     for p_dir in pipeline_dirs:
@@ -427,9 +425,10 @@ def eval_executor_multi_pipeline(
             faulty_dir.mkdir(exist_ok=True)
             os.rename(p_dir, faulty_dir / p_dir.name)
             continue
-            
+
         eval_executor_single_pipeline(p_dir)
         logger.info(f"Done with pipeline {p_dir.name}")
+
 
 if __name__ == "__main__":
     single_pipeline_mode = input("Run evaluation executor for single pipeline? (y/n): ")
@@ -445,5 +444,5 @@ if __name__ == "__main__":
     else:
         print("Invalid input")
         sys.exit(1)
-        
+
     sys.exit(0)

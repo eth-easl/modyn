@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.metrics import MetricConfig
 from modyn.config.schema.pipeline.trigger.cost.cost import CostTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.ensemble import EnsembleTriggerConfig
