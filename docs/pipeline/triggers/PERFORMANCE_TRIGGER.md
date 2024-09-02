@@ -95,7 +95,7 @@ classDiagram
         +int previous_batch_num_misclassifications()
         +float forecast_expected_accuracy(method)
         +float forecast_next_accuracy(method)
-        +float forecast_expected_performance(metric, method)
+        +float forecast_optimal_performance(metric, method)
         +float forecast_next_performance(metric, method)
     }
 ```

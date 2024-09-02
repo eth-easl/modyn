@@ -43,13 +43,13 @@ def test_inform_trigger_memory_rollover() -> None:
     assert tracker.trigger_evaluation_memory[0] == (20, 3, {"acc": 0.85})
 
 
-def test_forecast_expected_performance_no_trigger() -> None:
+def test_forecast_optimal_performance_no_trigger() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     with pytest.raises(AssertionError):
         tracker.forecast_optimal_performance(metric="acc")
 
 
-def test_forecast_expected_performance_simple_average() -> None:
+def test_forecast_optimal_performance_simple_average() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     tracker.inform_trigger(10, 2, {"acc": 0.8})
     tracker.inform_trigger(20, 3, {"acc": 0.85})
@@ -63,7 +63,7 @@ def test_forecast_expected_performance_simple_average() -> None:
         tracker.forecast_optimal_performance(metric="NOT_ACC", method="ridge_regression")
 
 
-def test_forecast_expected_performance_ridge_regression() -> None:
+def test_forecast_optimal_performance_ridge_regression() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=5)
     tracker.inform_trigger(10, 2, {"acc": 0.8})
     tracker.inform_trigger(20, 3, {"acc": 0.85})
