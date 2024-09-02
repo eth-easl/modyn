@@ -30,7 +30,7 @@ def static_threshold_policy() -> StaticPerformanceThresholdDecisionPolicy:
 @pytest.fixture
 def dynamic_threshold_policy() -> DynamicPerformanceThresholdDecisionPolicy:
     return DynamicPerformanceThresholdDecisionPolicy(
-        config=DynamicPerformanceThresholdCriterion(allowed_deviation=0.2, metric="acc")
+        config=DynamicPerformanceThresholdCriterion(deviation=0.2, metric="acc", absolute=True)
     )
 
 

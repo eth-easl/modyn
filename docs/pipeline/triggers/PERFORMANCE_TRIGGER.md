@@ -120,7 +120,7 @@ classDiagram
     }
 
     class DynamicPerformanceThresholdCriterion {
-        +float allowed_deviation
+        +float deviation
     }
 
     class NumberAvoidableMisclassificationCriterion {
