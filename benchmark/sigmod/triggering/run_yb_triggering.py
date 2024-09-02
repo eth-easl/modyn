@@ -155,7 +155,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 strategies.append((name, conf))
             ## Dynamic Performance Triggers
 
-            for deviation in [0.05, 0.1, 0.2, 0.3]:
+            for deviation in [0.1, 0.2, 0.3]:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
