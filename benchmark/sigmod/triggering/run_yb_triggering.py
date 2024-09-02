@@ -5,12 +5,24 @@ import os
 import sys
 from pathlib import Path
 
-from benchmark.sigmod.triggering.yearbook_triggering_config import (
-    gen_yearbook_triggering_config,
-)
+from benchmark.sigmod.triggering.yearbook_triggering_config import gen_yearbook_triggering_config, get_eval_data_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config.schema.pipeline import ModynPipelineConfig
+from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.criterion import (
+    DynamicPercentileThresholdCriterion,
+    DynamicRollingAverageThresholdCriterion,
+    ThresholdDecisionCriterion,
+)
+from modyn.config.schema.pipeline.trigger.performance.criterion import (
+    DynamicPerformanceThresholdCriterion,
+    StaticPerformanceThresholdCriterion,
+)
+from modyn.config.schema.pipeline.trigger.performance.performance import (
+    PerformanceTriggerConfig,
+    PerformanceTriggerEvaluationConfig,
+)
 from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
@@ -51,13 +63,95 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
             for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
                 conf = DataDriftTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
-                    windowing_strategy=TimeWindowingStrategy(limit=window_size),
-                    reset_current_window_on_trigger=False,
+                    windowing_strategy=TimeWindowingStrategy(
+                        allow_overlap=True, limit_ref=window_size, limit_cur=window_size
+                    ),
                     metrics={
-                        "mmd_alibi": AlibiDetectMmdDriftMetric(device="cpu", num_permutations=None, threshold=threshold)
+                        "mmd_alibi": AlibiDetectMmdDriftMetric(
+                            device="cpu",
+                            num_permutations=None,
+                            decision_criterion=ThresholdDecisionCriterion(threshold=threshold),
+                        )
                     },
                 )
                 name = f"mmdalibi_{evaluation_interval_data_points}_{threshold}_{window_size}"
+                strategies.append((name, conf))
+
+    return strategies
+
+
+def gen_revision_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
+    strategies = []
+    for evaluation_interval_data_points in [250, 500, 100]:
+        ## Dynamic Percentile Drift Triggers
+        for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
+            # TODO discuss with robin what to try
+            # does this mean top 5 % percentile and 5% deviation from average?
+            # how to set window size?
+            # do we do any forecasting for drift?
+            # TODO which warmup to use?
+            for dec_crit_str, decision_criterion in [
+                ("perc_0.05_window??", DynamicPercentileThresholdCriterion(window_size=10, percentile=0.05)),
+                (
+                    "rolling_0.05_window??",
+                    DynamicRollingAverageThresholdCriterion(window_size=10, deviation=0.05, absolute=False),
+                ),
+            ]:
+                conf = DataDriftTriggerConfig(
+                    evaluation_interval_data_points=evaluation_interval_data_points,
+                    windowing_strategy=TimeWindowingStrategy(
+                        allow_overlap=True, limit_ref=window_size, limit_cur=window_size
+                    ),
+                    metrics={
+                        "mmd_alibi": AlibiDetectMmdDriftMetric(
+                            device="cuda:0",
+                            num_permutations=None,
+                            decision_criterion=decision_criterion,
+                        )
+                    },
+                    warmup_policy=TimeTriggerConfig(every="1d"),
+                )
+
+                name = f"mmdalibi_{evaluation_interval_data_points}_dyn_{dec_crit_str}_{window_size}"
+                strategies.append((name, conf))
+
+        ## Performance Triggers
+        # TODO how to set window size?
+        for performance_triggers_window_size in [10]:
+            ## Static PerformanceTriggers
+
+            for metric, threshold in [("Accuracy", 0.9), ("Accuracy", 0.75), ("Accuracy", 0.5)]:
+                conf = PerformanceTriggerConfig(
+                    evaluation_interval_data_points=evaluation_interval_data_points,
+                    performance_triggers_window_size=performance_triggers_window_size,
+                    mode="hindsight",
+                    evaluation=PerformanceTriggerEvaluationConfig(
+                        device="cuda:0", dataset=get_eval_data_config("yearbook_test")
+                    ),
+                    decision_criteria={
+                        "static": StaticPerformanceThresholdCriterion(metric=metric, metric_threshold=threshold)
+                    },
+                )
+                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_{metric}{threshold}"
+                strategies.append((name, conf))
+            ## Dynamic Performance Triggers
+
+            # TODO which allowed deviations? relativ vs absolut?
+            for metric, allowed_deviation in [("Accuracy", 0.05)]:
+                conf = PerformanceTriggerConfig(
+                    evaluation_interval_data_points=evaluation_interval_data_points,
+                    performance_triggers_window_size=performance_triggers_window_size,
+                    mode="hindsight",
+                    evaluation=PerformanceTriggerEvaluationConfig(
+                        device="cuda:0", dataset=get_eval_data_config("yearbook_test")
+                    ),
+                    decision_criteria={
+                        "dynamic": DynamicPerformanceThresholdCriterion(
+                            metric=metric, allowed_deviation=allowed_deviation
+                        )
+                    },
+                )
+                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_dyn_{metric}{allowed_deviation}"
                 strategies.append((name, conf))
 
     return strategies
@@ -104,8 +198,11 @@ def run_experiment() -> None:
     existing_pipelines = set(existing_pipelines)
     run_id = 0
     for seed in seeds:
-        for triggering_strategy_id, triggering_strategy in gen_triggering_strategies():
-            if isinstance(triggering_strategy, DataDriftTriggerConfig) and seed != seeds[0]:
+        for triggering_strategy_id, triggering_strategy in gen_revision_triggering_strategies():
+            if (
+                isinstance(triggering_strategy, DataDriftTriggerConfig)
+                or isinstance(triggering_strategy, PerformanceTriggerConfig)
+            ) and seed != seeds[0]:
                 continue  # only execute drift triggers once
 
             pipeline_config = gen_yearbook_triggering_config(
