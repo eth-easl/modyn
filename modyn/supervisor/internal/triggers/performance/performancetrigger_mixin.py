@@ -36,7 +36,7 @@ class PerformanceTriggerMixin:
         self.most_recent_model_id: int | None = None
         self.dataloader_info: DataLoaderInfo | None = None
         self.model_downloader: ModelDownloader | None = None
-        self.model: StatefulModel | None = None
+        self.sf_model: StatefulModel | None = None
 
         self._metrics = setup_metrics(config.evaluation.dataset.metrics)
 
@@ -92,16 +92,16 @@ class PerformanceTriggerMixin:
 
         # Download most recent model as stateful model
         if self.model_refresh_needed:
-            self.model = self.model_downloader.setup_manager(
+            self.sf_model = self.model_downloader.setup_manager(
                 self.most_recent_model_id, self.context.pipeline_config.training.device
             )
             self.model_refresh_needed = False
 
         # Run evaluation
-        assert self.model is not None
+        assert self.sf_model is not None
 
         eval_results = perform_evaluation(
-            model=self.model,
+            model=self.sf_model.model.model,
             dataloader=evaluation_dataloader,
             device=self.config.evaluation.device,
             metrics=self._metrics,

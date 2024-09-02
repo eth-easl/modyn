@@ -2,20 +2,21 @@ import os
 
 import pandas as pd
 
-from experiments.huffpost.compare_trigger_policies.pipeline_config import gen_pipeline_config
 from experiments.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config.schema.pipeline import (
-    DataAmountTriggerConfig,
     EvalHandlerConfig,
     ModynPipelineConfig,
-    TimeTriggerConfig,
 )
-from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
-from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
-from modyn.config.schema.pipeline.trigger.drift.aggregation import MajorityVoteDriftAggregationStrategy
+from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import (
+    BetweenTwoTriggersEvalStrategyConfig,
+)
+from modyn.config.schema.pipeline.evaluation.strategy.periodic import (
+    PeriodicEvalStrategyConfig,
+)
+from modyn.config.schema.pipeline.evaluation.strategy.slicing import (
+    SlicingEvalStrategyConfig,
+)
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
 _FIRST_TIMESTAMP = int(pd.to_datetime("2012-01-28").timestamp())
@@ -28,7 +29,9 @@ def construct_slicing_eval_handler(slice: str) -> EvalHandlerConfig:
         execution_time="after_pipeline",
         models="matrix",
         strategy=SlicingEvalStrategyConfig(
-            eval_every=f"{slice}", eval_start_from=_FIRST_TIMESTAMP, eval_end_at=_LAST_TIMESTAMP
+            eval_every=f"{slice}",
+            eval_start_from=_FIRST_TIMESTAMP,
+            eval_end_at=_LAST_TIMESTAMP,
         ),
         datasets=["huffpost_kaggle_test"],
     )
@@ -69,63 +72,72 @@ def construct_between_trigger_eval_handler() -> EvalHandlerConfig:
 def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
     pipeline_configs: list[ModynPipelineConfig] = []
 
-    for time in experiment.time_trigger_schedules:
-        pipeline_configs.append(
-            gen_pipeline_config(
-                name=f"{experiment.name}_time_{time}",
-                trigger=TimeTriggerConfig(every=f"{time}"),
-                eval_handlers=experiment.eval_handlers,
-            )
-        )
+    # for time in experiment.time_triggers:
+    #     pipeline_configs.append(
+    #         gen_pipeline_config(
+    #             name=f"{experiment.name}_time_{time}",
+    #             trigger=TimeTriggerConfig(every=f"{time}"),
+    #             eval_handlers=experiment.eval_handlers,
+    #         )
+    #     )
 
-    for count in experiment.data_amount_triggers:
-        pipeline_configs.append(
-            gen_pipeline_config(
-                name=f"{experiment.name}_dataamount_{count}",
-                trigger=DataAmountTriggerConfig(num_samples=count),
-                eval_handlers=experiment.eval_handlers,
-            )
-        )
+    # for count in experiment.data_amount_triggers:
+    #     pipeline_configs.append(
+    #         gen_pipeline_config(
+    #             name=f"{experiment.name}_dataamount_{count}",
+    #             trigger=DataAmountTriggerConfig(num_samples=count),
+    #             eval_handlers=experiment.eval_handlers,
+    #         )
+    #     )
 
-    for interval in experiment.drift_detection_intervals:
-        pipeline_configs.append(
-            gen_pipeline_config(
-                name=f"{experiment.name}_drift_{interval}",
-                trigger=DataDriftTriggerConfig(
-                    evaluation_interval_data_points=interval,
-                    metrics=experiment.drift_trigger_metrics,
-                    aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
-                ),
-                eval_handlers=experiment.eval_handlers,
-            )
-        )
+    # for interval in experiment.drift_detection_intervals:
+    #     pipeline_configs.append(
+    #         gen_pipeline_config(
+    #             name=f"{experiment.name}_drift_{interval}",
+    #             trigger=DataDriftTriggerConfig(
+    #                 evaluation_interval_data_points=interval,
+    #                 metrics=experiment.drift_trigger_metrics,
+    #                 aggregation_strategy=MajorityVoteDriftAggregationStrategy(),
+    #             ),
+    #             eval_handlers=experiment.eval_handlers,
+    #         )
+    #     )
 
     return pipeline_configs
 
 
-_EXPERIMENT_REFS = {
-    # done
-    0: Experiment(
-        # to verify online composite model determination logic
-        name="huff-timetrigger-smoke-test",
-        eval_handlers=[construct_slicing_eval_handler("90d")],
-        time_trigger_schedules=["90d"],
-        data_amount_triggers=[],
-        drift_detection_intervals=[],
-        drift_trigger_metrics=[],
-        gpu_device="cuda:0",
-    ),
-    1: Experiment(
-        name="hp-numsamples-training-time",
-        eval_handlers=[construct_between_trigger_eval_handler()],
-        time_trigger_schedules=[],
-        data_amount_triggers=[100_000, 50_000, 25_000, 10_000, 5_000, 2_000, 1_000, 500],
-        drift_detection_intervals=[],
-        drift_trigger_metrics=[],
-        gpu_device="cuda:1",
-    ),
-    # tbd.: huff-timetrigger1y-periodic-eval-intervals
-    # tbd.: huff-drift
+_EXPERIMENT_REFS: dict[int, Experiment] = {
+    # # done
+    # 0: Experiment(
+    #     # to verify online composite model determination logic
+    #     name="huff-timetrigger-smoke-test",
+    #     eval_handlers=[construct_slicing_eval_handler("90d")],
+    #     time_trigger_schedules=["90d"],
+    #     data_amount_triggers=[],
+    #     drift_detection_intervals=[],
+    #     drift_trigger_metrics=[],
+    #     gpu_device="cuda:0",
+    # ),
+    # 1: Experiment(
+    #     name="hp-numsamples-training-time",
+    #     eval_handlers=[construct_between_trigger_eval_handler()],
+    #     time_trigger_schedules=[],
+    #     data_amount_triggers=[
+    #         100_000,
+    #         50_000,
+    #         25_000,
+    #         10_000,
+    #         5_000,
+    #         2_000,
+    #         1_000,
+    #         500,
+    #     ],
+    #     drift_detection_intervals=[],
+    #     drift_trigger_metrics=[],
+    #     gpu_device="cuda:1",
+    # ),
+    # # tbd.: huff-timetrigger1y-periodic-eval-intervals
+    # # tbd.: huff-drift
 }
 
 

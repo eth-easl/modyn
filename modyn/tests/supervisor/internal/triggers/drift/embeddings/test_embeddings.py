@@ -20,7 +20,7 @@ def mock_stateful_model() -> StatefulModel:
     dummy_model = YearbookNet({"num_classes": 2, "num_input_channels": 3}, "cpu", False)
 
     # Overwrite the mock's internal model with the dummy model
-    mock_manager._model = dummy_model
+    mock_manager.model = dummy_model
     return mock_manager
 
 

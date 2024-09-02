@@ -33,7 +33,10 @@ class RocAuc(AbstractHolisticMetric):
         desc_score_indices = torch.argsort(y_pred, descending=True)
         y_score = y_pred[desc_score_indices]
         y_true = y_true[desc_score_indices]
-        distinct_value_indices = torch.nonzero(y_score[1:] - y_score[:-1], as_tuple=False).squeeze()
+        # we only need to squeeze the second dimension;
+        # otherwise if there is only one non-zero element in (y_score[1:] - y_score[:-1]),
+        # after squeezing it will become a scalar, which will cause an error in torch.cat
+        distinct_value_indices = torch.nonzero(y_score[1:] - y_score[:-1], as_tuple=False).squeeze(dim=1)
         threshold_idxs = torch.cat([distinct_value_indices, torch.tensor([y_true.numel() - 1])])
         tps = torch.cumsum(y_true, dim=0)[threshold_idxs]
         fps = 1 + threshold_idxs - tps

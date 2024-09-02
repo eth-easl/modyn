@@ -103,7 +103,7 @@ def delete_file(hostname: str, port: int, user: str, password: str, remote_file_
     Returns:
     """
     ftp = FTP()
-    ftp.connect(hostname, port, timeout=3)
+    ftp.connect(hostname, port, timeout=5 * 60)
     ftp.login(user, password)
     ftp.delete(str(remote_file_path))
     ftp.close()

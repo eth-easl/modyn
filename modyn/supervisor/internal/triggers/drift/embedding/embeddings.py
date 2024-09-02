@@ -9,11 +9,11 @@ def get_embeddings(stateful_model: StatefulModel, dataloader: DataLoader) -> tor
     input: embedding_encoder with downloaded model
     output: embeddings Tensor
     """
-    assert stateful_model._model is not None
+    assert stateful_model.model is not None
     all_embeddings: torch.Tensor | None = None
 
-    stateful_model._model.model.eval()
-    stateful_model._model.model.embedding_recorder.start_recording()
+    stateful_model.model.model.eval()
+    stateful_model.model.model.embedding_recorder.start_recording()
 
     with torch.no_grad():
         for batch in dataloader:
@@ -28,13 +28,13 @@ def get_embeddings(stateful_model: StatefulModel, dataloader: DataLoader) -> tor
                 raise ValueError(f"data type {type(batch[1])} not supported")
 
             with torch.autocast(stateful_model.device_type, enabled=stateful_model.amp):
-                stateful_model._model.model(data)
-                embeddings = stateful_model._model.model.embedding_recorder.embedding
+                stateful_model.model.model(data)
+                embeddings = stateful_model.model.model.embedding_recorder.embedding
                 if all_embeddings is None:
                     all_embeddings = embeddings
                 else:
                     all_embeddings = torch.cat((all_embeddings, embeddings), 0)
 
-    stateful_model._model.model.embedding_recorder.end_recording()
+    stateful_model.model.model.embedding_recorder.end_recording()
 
     return all_embeddings

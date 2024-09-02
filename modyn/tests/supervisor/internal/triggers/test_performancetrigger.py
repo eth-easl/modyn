@@ -83,7 +83,7 @@ def static_criterion() -> StaticPerformanceThresholdCriterion:
 
 @fixture
 def dynamic_criterion() -> DynamicPerformanceThresholdCriterion:
-    return DynamicPerformanceThresholdCriterion(metric="Accuracy", allowed_deviation=0.1)
+    return DynamicPerformanceThresholdCriterion(metric="Accuracy", deviation=0.1)
 
 
 @fixture
@@ -191,13 +191,12 @@ def test_inform(
     assert len(trigger._leftover_data) == 2
     assert trigger._sample_left_until_detection == 2
     assert mock_inform_data.call_count == 1
-    assert mock_evaluation.call_count == 2
+    assert mock_evaluation.call_count == 1  # first iteration doesn't call evaluate_decision
     assert mock_evaluate_decision.call_count == 0
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4)])]
     assert mock_evaluation.call_args_list == [
-        # first time within inform, second time within inform_new_model
-        call(trigger, interval_data=[(i, 100 + i) for i in range(4)]),
+        # inform doesn't run a detection, but inform_new_model does
         call(interval_data=[(i, 100 + i) for i in range(4)]),
     ]
 
@@ -221,7 +220,7 @@ def test_inform(
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4, 8)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4, 8)])]
     assert mock_evaluation.call_args_list == [
-        # first time within inform, second time within inform_new_model
+        # first time call doesn't run evaluation (warmup), second time within inform_new_model
         call(trigger, interval_data=[(i, 100 + i) for i in range(4, 8)]),
         call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
     ]

@@ -68,17 +68,6 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
     ) -> bool:
         # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
         self.data_density.inform_data(batch)
-
-        num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
-            self, interval_data=batch
-        )
-
-        self.performance_tracker.inform_evaluation(
-            num_samples=num_samples,
-            num_misclassifications=num_misclassifications,
-            evaluation_scores=evaluation_scores,
-        )
-
         policy_decisions: dict[str, bool] = {}
 
         # The first ever detection will always trigger
@@ -87,12 +76,24 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
             self._triggered_once = True
             triggered = True
 
+            num_samples = None
+            num_misclassifications = None
+            evaluation_scores = None
+
             # in the first interval we don't evaluate the decision policies as they might require one trigger
             # to have happened before in order to derive forecasts
 
         else:
             # evaluate the decision policies
             triggered = False
+            num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
+                self, interval_data=batch
+            )
+            self.performance_tracker.inform_evaluation(
+                num_samples=num_samples,
+                num_misclassifications=num_misclassifications,
+                evaluation_scores=evaluation_scores,
+            )
             for policy_name, policy in self.decision_policies.items():
                 policy_decisions[policy_name] = policy.evaluate_decision(
                     update_interval_samples=self.config.evaluation_interval_data_points,
@@ -115,9 +116,9 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
             evaluation_interval=(batch[0][1], batch[-1][1]),
-            num_samples=num_samples,
-            num_misclassifications=num_misclassifications,
-            evaluation_scores=evaluation_scores,
+            num_samples=num_samples or -1,
+            num_misclassifications=num_misclassifications or -1,
+            evaluation_scores=evaluation_scores or {},
             policy_decisions=policy_decisions,
         )
         if log:

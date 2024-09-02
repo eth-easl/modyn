@@ -76,7 +76,7 @@ def test_create_performance_trigger(
     assert trigger.most_recent_model_id is None
     assert trigger.dataloader_info is None
     assert trigger.model_downloader is None
-    assert trigger.model is None
+    assert trigger.sf_model is None
 
     assert len(trigger._metrics) == 2
     assert trigger._label_transformer_function is None
