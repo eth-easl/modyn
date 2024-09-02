@@ -95,6 +95,8 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
             for metric_window_size in [15, 30]:
                 criteria = []
                 for deviation in [0.05, 1, 2]:
+                    if evaluation_interval_data_points == 100:
+                        continue  # dont try rolling with small interval
                     criteria.append(
                         (
                             f"roll_{deviation}",
