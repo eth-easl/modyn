@@ -99,7 +99,7 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         method: ForecastingMethod,
     ) -> bool:
         # to compute the rolling average we simply reuse the forecast method, it's not a true forecast here
-        expected = performance_tracker.forecast_expected_performance(mode, method="rolling_average")
+        expected = performance_tracker.forecast_optimal_performance(mode, method="rolling_average")
         deviation = expected - evaluation_scores[self.config.metric]
         allowed_absolute_deviation = (
             self.config.deviation if self.config.absolute else (self.config.deviation * expected)
