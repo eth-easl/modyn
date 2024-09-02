@@ -1,8 +1,3 @@
-# By default, we disable mountain the current directory under /modyn_host. However, this might be helpful for local development.
-# For the trainer server, you additionally might want to enable the runtime and deployment option to enable the GPU in the container.
-# For the storage, you probably want to mount some volume containing the datasets.
-# For the selector, you might want to mount a volume on a fast local storage device to store the trigger training sets.
-# For storage-db and metadata-db, you might want to increase the amount of available /dev/shm and store the postgres files on a fast local disk.
 
 services:
   metadata-db:
@@ -14,8 +9,12 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-    #    shm_size: 24gb
+    shm_size: 24gb
+    ports:
+      - 22432:5432
     volumes:
+      # - .data/metadata-postgres-data:/var/lib/postgresql/data  --> place on faster local disk
+      - .data/../:/modyn_all/
       - ./metadata-postgres-data:/var/lib/postgresql/data
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
@@ -34,8 +33,12 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: md5
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
-    #    shm_size: 8gb
+    shm_size: 24gb
+    ports:
+      - 22431:5432
     volumes:
+      # - .data/storage-postgres-data:/var/lib/postgresql/data
+      - .data/../:/modyn_all/
       - ./storage-postgres-data:/var/lib/postgresql/data
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
@@ -44,133 +47,4 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
-      retries: 20
-  storage:
-    restart: on-failure
-    depends_on:
-      storage-db:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: docker/Storage/Dockerfile
-    volumes:
-      - storage-data:/app/storage
-  #      - /mnt/datasets:/datasets
-  #      - .:/modyn_host
-  metadata_processor:
-    restart: on-failure
-    depends_on:
-      metadata-db:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: docker/MetadataProcessor/Dockerfile
-  model_storage:
-    restart: on-failure
-    depends_on:
-      metadata-db:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: docker/Model_Storage/Dockerfile
-    volumes:
-      - model_storage-data:/tmp/models
-  evaluator:
-    restart: on-failure
-    depends_on:
-      - model_storage
-      - storage
-    build:
-      context: .
-      dockerfile: docker/Evaluator/Dockerfile
-  trainer_server:
-    restart: on-failure
-    depends_on:
-      - storage
-      - selector
-      - model_storage
-      - metadata-db
-    build:
-      context: .
-      dockerfile: docker/Trainer_Server/Dockerfile
-    volumes:
-      - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
-  #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
-  #      - .:/modyn_host
-  #    shm_size: 4gb
-  # CUDASTART (ignore/delete if enabling cuda manually)
-  #    runtime: nvidia
-  #    deploy:
-  #      resources:
-  #        reservations:
-  #          devices:
-  #            - driver: nvidia
-  #              count: 1
-  #              capabilities: [gpu, utility, compute]
-  # CUDAEND (ignore/delete if enabling cuda manually)
-  selector:
-    restart: on-failure
-    depends_on:
-      metadata-db:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: docker/Selector/Dockerfile
-    volumes:
-      - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
-      - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
-  #      - /mnt/ssd/local_storage:/tmp/local_storage
-  #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
-  #      - .:/modyn_host
-  #    shm_size: 4gb
-  supervisor:
-    restart: on-failure
-    depends_on:
-      - storage
-      - metadata-db
-      - storage-db
-      - selector
-      - metadata_processor
-      - trainer_server
-      - evaluator
-    build:
-      context: .
-      dockerfile: docker/Supervisor/Dockerfile
-    volumes:
-      - supervisor-evaluation-data:/tmp/evaluation_results
-    #      - .:/modyn_host
-    container_name: supervisor
-    ports:
-      - "3000:50063"
-  tests:
-    depends_on:
-      supervisor:
-        condition: service_started
-      storage:
-        condition: service_started
-      selector:
-        condition: service_started
-      metadata_processor:
-        condition: service_started
-      model_storage:
-        condition: service_started
-      evaluator:
-        condition: service_started
-      trainer_server:
-        condition: service_started
-      metadata-db:
-        condition: service_healthy
-      storage-db:
-        condition: service_healthy
-    build:
-      context: .
-      dockerfile: docker/Tests/Dockerfile
-    volumes:
-      - storage-data:/app/storage
-volumes:
-  storage-data:
-  selector-data:
-  selector-localstorage-data:
-  downsampling-data:
-  model_storage-data:
-  supervisor-evaluation-data:
+
