@@ -94,15 +94,16 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
             # window size: how many drift scores we use for calibrating the dynamic policy
             for metric_window_size in [15, 30]:
                 criteria = []
-                for percentile in [0.05, 0.1, 0.2, 0.3]:
+                for deviation in [0.05, 1, 2]:
                     criteria.append(
                         (
-                            f"roll_{percentile}",
+                            f"roll_{deviation}",
                             DynamicRollingAverageThresholdCriterion(
-                                window_size=metric_window_size, deviation=percentile, absolute=False
+                                window_size=metric_window_size, deviation=deviation, absolute=False
                             ),
                         )
                     )
+                for percentile in [0.05, 0.1, 0.2, 0.3]:
                     criteria.append(
                         (
                             f"perc_{percentile}",
