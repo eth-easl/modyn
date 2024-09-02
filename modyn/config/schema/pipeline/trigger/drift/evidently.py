@@ -5,11 +5,11 @@ from pydantic import Field
 from modyn.config.schema.pipeline.trigger.drift.metric import BaseMetric
 
 
-class _EvidentlyPcaDriftMetric(BaseMetric):
+class _EvidentlyPcaDriftMetricMixin(BaseMetric):
     num_pca_component: int | None = Field(None)
 
 
-class EvidentlyModelDriftMetric(_EvidentlyPcaDriftMetric):
+class EvidentlyModelDriftMetric(_EvidentlyPcaDriftMetricMixin):
     id: Literal["EvidentlyModelDriftMetric"] = Field("EvidentlyModelDriftMetric")
     bootstrap: bool = Field(False)
     quantile_probability: float = Field(
@@ -18,7 +18,7 @@ class EvidentlyModelDriftMetric(_EvidentlyPcaDriftMetric):
     threshold: float = Field(0.55, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
 
 
-class EvidentlyRatioDriftMetric(_EvidentlyPcaDriftMetric):
+class EvidentlyRatioDriftMetric(_EvidentlyPcaDriftMetricMixin):
     id: Literal["EvidentlyRatioDriftMetric"] = Field("EvidentlyRatioDriftMetric")
     component_stattest: str = Field(
         "wasserstein",
@@ -30,7 +30,7 @@ class EvidentlyRatioDriftMetric(_EvidentlyPcaDriftMetric):
     threshold: float = Field(0.2, description="Threshold for the evidently api, unused in modyn. Usage discourged.")
 
 
-class EvidentlySimpleDistanceDriftMetric(_EvidentlyPcaDriftMetric):
+class EvidentlySimpleDistanceDriftMetric(_EvidentlyPcaDriftMetricMixin):
     id: Literal["EvidentlySimpleDistanceDriftMetric"] = Field("EvidentlySimpleDistanceDriftMetric")
     distance_metric: str = Field(
         "euclidean",
