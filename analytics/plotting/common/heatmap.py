@@ -1,22 +1,14 @@
-from calendar import c
+from pathlib import Path
+
+import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
-import seaborn as sns
-
-from pathlib import Path
-import os
-import json
-import pandas as pd
-
-from plotly import graph_objects as go
-from plotly.subplots import make_subplots
-from pydantic import BaseModel, Field
-from math import ceil
-import matplotlib.dates as mdates
 
 # Create the heatmap
 from analytics.plotting.common.common import init_plot
+
 
 def build_heatmap(
     heatmap_data: pd.DataFrame,
@@ -31,15 +23,13 @@ def build_heatmap(
     # sns.set_theme(style="ticks")
     plt.rcParams["svg.fonttype"] = "none"
 
-    FONTSIZE = 20
-    DOUBLE_FIG_WIDTH = 10
-    DOUBLE_FIG_HEIGHT = 3.5
-    DOUBLE_FIG_SIZE = (DOUBLE_FIG_WIDTH, 2.2 * DOUBLE_FIG_HEIGHT)
+    double_fig_width = 10
+    double_fig_height = 3.5
 
     fig = plt.figure(
         edgecolor="black",
         frameon=True,
-        figsize=DOUBLE_FIG_SIZE,
+        figsize=(double_fig_width, 2.2 * double_fig_height),
         dpi=300,
     )
 
@@ -59,7 +49,6 @@ def build_heatmap(
     ax.collections[0].set_rasterized(True)
 
     # Adjust x-axis tick labels
-    xticks = [x for x in range(1, len(heatmap_data.columns) + 1)]
     plt.xlabel(x_label)
     plt.xticks(
         ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],
@@ -70,21 +59,12 @@ def build_heatmap(
     ax.invert_yaxis()
 
     if y_ticks is not None:
-        plt.yticks(ticks=[y+0.5-1930 for y in y_ticks], labels=[y for y in y_ticks], rotation=0)
+        plt.yticks(ticks=[y + 0.5 - 1930 for y in y_ticks], labels=[y for y in y_ticks], rotation=0)
     elif y_ticks_bins is not None:
         ax.yaxis.set_major_locator(MaxNLocator(nbins=y_ticks_bins))
         ax.set_yticklabels([int(i) + min(heatmap_data.index) for i in ax.get_yticks()], rotation=0)
 
     plt.ylabel(y_label)
-
-    # if not drift_pipeline:
-    #     plt.yticks(
-    #         ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],
-    #         labels=[x for x in range(1930, 2010 + 1, 20)],
-    #         rotation=0,
-    #         # ha='right'
-    #     )
-    # plt.ylabel("Trained up to")
 
     # # Draft training boxes
     # if drift_pipeline:
@@ -110,7 +90,7 @@ def build_heatmap(
     # Display the plot
     plt.tight_layout()
     # plt.show()
-    
+
     return fig
 
 
