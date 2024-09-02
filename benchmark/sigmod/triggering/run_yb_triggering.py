@@ -11,13 +11,13 @@ from benchmark.sigmod.triggering.yearbook_triggering_config import (
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
-from modyn.config.schema.pipeline.trigger.data_amount import DataAmountTriggerConfig
+from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.config import TimeWindowingStrategy
-from modyn.config.schema.pipeline.trigger.time import TimeTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
+from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 from modyn.utils.utils import current_time_millis
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
