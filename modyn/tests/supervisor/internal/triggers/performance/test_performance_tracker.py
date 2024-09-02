@@ -43,27 +43,27 @@ def test_inform_trigger_memory_rollover() -> None:
     assert tracker.trigger_evaluation_memory[0] == (20, 3, {"acc": 0.85})
 
 
-def test_forecast_expected_performance_no_trigger() -> None:
+def test_forecast_optimal_performance_no_trigger() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     with pytest.raises(AssertionError):
-        tracker.forecast_expected_performance(metric="acc")
+        tracker.forecast_optimal_performance(metric="acc")
 
 
-def test_forecast_expected_performance_simple_average() -> None:
+def test_forecast_optimal_performance_simple_average() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=3)
     tracker.inform_trigger(10, 2, {"acc": 0.8})
     tracker.inform_trigger(20, 3, {"acc": 0.85})
-    performance = tracker.forecast_expected_performance(metric="acc", method="rolling_average")
+    performance = tracker.forecast_optimal_performance(metric="acc", method="rolling_average")
     assert performance == 0.825  # Simple average of 0.8 and 0.85
-    performance = tracker.forecast_expected_performance(metric="acc", method="ridge_regression")
+    performance = tracker.forecast_optimal_performance(metric="acc", method="ridge_regression")
     # Simple average of 0.8 and 0.85 (not enough samples for ridge regression)
     assert performance == 0.825
 
     with pytest.raises(KeyError):
-        tracker.forecast_expected_performance(metric="NOT_ACC", method="ridge_regression")
+        tracker.forecast_optimal_performance(metric="NOT_ACC", method="ridge_regression")
 
 
-def test_forecast_expected_performance_ridge_regression() -> None:
+def test_forecast_optimal_performance_ridge_regression() -> None:
     tracker = PerformanceTracker(trigger_eval_window_size=5)
     tracker.inform_trigger(10, 2, {"acc": 0.8})
     tracker.inform_trigger(20, 3, {"acc": 0.85})
@@ -71,10 +71,10 @@ def test_forecast_expected_performance_ridge_regression() -> None:
     tracker.inform_trigger(20, 1, {"acc": 0.95})
     tracker.inform_trigger(10, 0, {"acc": 1.0})
     tracker.inform_trigger(20, 0, {"acc": 1.0})
-    performance = tracker.forecast_expected_performance(metric="acc", method="rolling_average")
+    performance = tracker.forecast_optimal_performance(metric="acc", method="rolling_average")
     assert isinstance(performance, float)  # Should run ridge regression
     assert performance == (0.85 + 0.9 + 0.95 + 1.0 + 1.0) / 5
-    performance_ridge = tracker.forecast_expected_performance(metric="acc", method="ridge_regression")
+    performance_ridge = tracker.forecast_optimal_performance(metric="acc", method="ridge_regression")
     assert 0.9 <= performance_ridge
 
 
