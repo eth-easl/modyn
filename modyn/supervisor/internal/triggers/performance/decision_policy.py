@@ -73,7 +73,8 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
             return evaluation_scores[self.config.metric] < self.config.metric_threshold
 
         return (evaluation_scores[self.config.metric] < self.config.metric_threshold) or (
-            performance_tracker.forecast_next_performance(mode) < self.config.metric_threshold
+            performance_tracker.forecast_next_performance(self.config.metric, method=method)
+            < self.config.metric_threshold
         )
 
 
@@ -97,22 +98,22 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         mode: TriggerEvaluationMode,
         method: ForecastingMethod,
     ) -> bool:
-        expected = performance_tracker.forecast_expected_performance(mode)
+        # to compute the rolling average we simply reuse the forecast method, it's not a true forecast here
+        expected = performance_tracker.forecast_expected_performance(mode, method="rolling_average")
         deviation = expected - evaluation_scores[self.config.metric]
-
-        if mode == "hindsight":
-            if self.config.absolute:
-                return deviation >= self.config.deviation
-            return deviation >= self.config.deviation * expected
-
-        if self.config.absolute:
-            allowed_absolute_deviation = self.config.deviation
-        else:
-            allowed_absolute_deviation = self.config.deviation * expected
-
-        return (deviation >= allowed_absolute_deviation) or (
-            (expected - performance_tracker.forecast_next_performance(mode)) >= allowed_absolute_deviation
+        allowed_absolute_deviation = (
+            self.config.deviation if self.config.absolute else (self.config.deviation * expected)
         )
+
+        # first, make the hindsight decision, if this is already a transgression, we don't need to forecast
+        decision = deviation >= allowed_absolute_deviation
+
+        if not decision and mode == "lookahead":
+            decision = (
+                expected - performance_tracker.forecast_next_performance(self.config.metric, method=method)
+            ) >= allowed_absolute_deviation
+
+        return decision
 
 
 class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPolicy):
