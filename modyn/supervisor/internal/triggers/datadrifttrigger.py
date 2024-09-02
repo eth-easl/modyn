@@ -46,7 +46,6 @@ from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
 from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import (
     prepare_trigger_dataloader_fixed_keys,
 )
-from modyn.supervisor.internal.triggers.utils.factory import instantiate_trigger
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
 from modyn.supervisor.internal.triggers.utils.models import (
@@ -81,14 +80,6 @@ class DataDriftTrigger(BatchedTrigger):
         # Every decision policy wraps one metric and is responsible for making decisions based on the metric's results
         # and the metric's range of distance values
         self.decision_policies = _setup_decision_policies(config)
-
-        # [WARMUP CONFIGURATION]
-        self.warmup_completed = config.warmup_policy is None
-
-        # warmup policy (used as drop in replacement for the yet uncalibrated drift policy)
-        self.warmup_trigger = (
-            instantiate_trigger(config.warmup_policy.id, config.warmup_policy) if config.warmup_policy else None
-        )
 
         # list of reference windows for each warmup interval
         self.warmup_intervals: list[list[tuple[int, int]]] = []
@@ -139,43 +130,31 @@ class DataDriftTrigger(BatchedTrigger):
             Whether this batch resulted in a trigger.
         """
         self.windows.inform_data(batch)
+        warmup_completed_prior_to_batch = self.warmup_trigger.completed
 
-        if (not self._triggered_once) or (
-            not self.warmup_completed and len(self.warmup_intervals) < (self.config.warmup_intervals or 0)
-        ):
-            # Warmup trigger, evaluate warmup policy while storing the reference window
-            # for later calibration with the drift policy.
+        # --------------------------------------------- Trigger Decision --------------------------------------------- #
 
-            # delegate to the warmup policy
-            delegated_trigger_results = (
-                next(
-                    self.warmup_trigger.inform([(idx, time, 0) for (idx, time) in batch]),
-                    None,
-                )
-                if self.warmup_trigger
-                else None
-            )
-            triggered = (
-                delegated_trigger_results is not None
-                if self._triggered_once
-                else True  # first candidate always triggers
-            )
-
+        if (not self._triggered_once) or not warmup_completed_prior_to_batch:
+            # storing the reference window for later calibration with the drift policy.
             drift_results: dict[str, MetricResult] = {}
-            if len(self.warmup_intervals) < (self.config.warmup_intervals or 0):
+            if not warmup_completed_prior_to_batch:
                 # for the first detection the reference window is empty, therefore adding the current window
                 self.warmup_intervals.append(
                     list(self.windows.reference if self._triggered_once else self.windows.current)
                 )
 
+            # delegate to the warmup policy
+            delegated_trigger_results = self.warmup_trigger.delegate_inform(batch)
+            triggered = not self._triggered_once or delegated_trigger_results
+
             self._triggered_once = True
 
-        else:
-            # Run the detection
-
-            # if this is the first non warmup detection, we inform the metrics that use decision criteria
-            # with calibration requirements about the warmup intervals so they can calibrate their thresholds
-            if len(self.warmup_intervals) > 0 or not self.warmup_completed:
+            # For the last warmup interval we run all the warmup detections.
+            # This allows to inform the metrics that use decision criteria
+            # with calibration requirements about the warmup intervals.
+            # They can then calibrate their thresholds.
+            first_non_warmup = self.warmup_trigger.completed and not warmup_completed_prior_to_batch
+            if first_non_warmup:
                 # we can ignore the results as the decision criteria will keep track of the warmup results
                 # internally
                 if self._any_metric_needs_calibration():
@@ -205,15 +184,18 @@ class DataDriftTrigger(BatchedTrigger):
                             log.evaluations.append(warmup_log)
 
                 # free the memory, but keep filled
-                self.warmup_completed = True
                 self.warmup_intervals = []
                 gc.collect()
 
+        else:
+            # Run the detection
             triggered, drift_results = self._run_detection(
                 list(self.windows.reference),
                 list(self.windows.current),
                 is_warmup=False,
             )
+
+        # -------------------------------------------------- Log ------------------------------------------------- #
 
         drift_eval_log = DriftTriggerEvalLog(
             triggered=triggered,
@@ -232,7 +214,7 @@ class DataDriftTrigger(BatchedTrigger):
         if log:
             log.evaluations.append(drift_eval_log)
 
-        if not self.warmup_completed:
+        if not self.warmup_trigger.completed:
             # during the warmup phase we always want to reset the windows as if we detected drift;
             # we can call `inform_trigger` here and again in `inform_new_model` if `trigger=True`
             # as the call is idempotent

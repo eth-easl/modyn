@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import Field, field_validator, model_validator
 
@@ -83,4 +83,13 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
                 raise ValueError(
                     f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."
                 )
+        return self
+
+    @model_validator(mode="after")
+    def warmup_policy_requirement(self) -> Self:
+        """Assert whether the warmup policy is set when a metric needs
+        calibration."""
+        for criterion in self.decision_criteria.values():
+            if criterion.needs_calibration and self.warmup_policy is None:
+                raise ValueError("A warmup policy is required for metrics that need calibration.")
         return self

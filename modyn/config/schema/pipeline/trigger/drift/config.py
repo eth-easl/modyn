@@ -9,7 +9,6 @@ from modyn.config.schema.pipeline.trigger.drift.detection_window import (
     AmountWindowingStrategy,
     DriftWindowingStrategy,
 )
-from modyn.config.schema.pipeline.trigger.simple import SimpleTriggerConfig
 
 from .aggregation import DriftAggregationStrategy, MajorityVoteDriftAggregationStrategy
 from .alibi_detect import AlibiDetectDriftMetric
@@ -27,22 +26,6 @@ class DataDriftTriggerConfig(BatchedTriggerConfig):
     windowing_strategy: DriftWindowingStrategy = Field(
         AmountWindowingStrategy(),
         description="Which windowing strategy to use for current and reference data",
-    )
-
-    warmup_intervals: int | None = Field(
-        None,
-        description=(
-            "The number of intervals before starting to use the drift detection. Some "
-            "`DecisionCriteria` use this to calibrate the threshold. During the warmup, a simpler `warmup_policy` "
-            "is consulted for the triggering decision."
-        ),
-    )
-    warmup_policy: SimpleTriggerConfig | None = Field(
-        None,
-        description=(
-            "The policy to use for triggering during the warmup phase of the drift policy. "
-            "Metrics that don't need calibration can ignore this."
-        ),
     )
 
     metrics: dict[str, DriftMetric] = Field(

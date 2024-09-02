@@ -3,9 +3,9 @@
 measured by a regret metric like data incorporation latency or avoidable
 misclassification incorporation latency)."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 
@@ -112,6 +112,14 @@ class AvoidableMisclassificationCostTriggerConfig(
         Unifies names for easier downstream usage.
         """
         return self.avoidable_misclassification_latency_per_training_second
+
+    @model_validator(mode="after")
+    def warmup_policy_requirement(self) -> Self:
+        """Assert whether the warmup policy is set when a metric needs
+        calibration."""
+        if self.warmup_policy is None:
+            raise ValueError("A warmup policy is required for metrics that need calibration.")
+        return self
 
 
 CostTriggerConfig = Annotated[

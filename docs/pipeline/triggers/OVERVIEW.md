@@ -43,6 +43,11 @@ classDiagram
             -bool evaluate_batch(batch, trigger_index)*
         }
 
+        class WarmupTrigger {
+            -int warmup_intervals
+            +delegate_inform(batch)
+        }
+
         class PerformanceTriggerMixin {
             -EvaluationResults run_evaluation()
         }
@@ -74,13 +79,16 @@ classDiagram
 
     }
 
-    Trigger <|-- BatchedTrigger
     Trigger <|-- EnsembleTrigger
+    EnsembleTrigger *-- "n" Trigger
 
     Trigger <|-- TimeTrigger
     Trigger <|-- DataAmountTrigger
 
-    EnsembleTrigger *-- "n" Trigger
+    Trigger <|-- BatchedTrigger
+    BatchedTrigger o-- "0..1" WarmupTrigger
+
+    Trigger "1" --* WarmupTrigger
 
     BatchedTrigger <|-- DataDriftTrigger
     BatchedTrigger <|-- PerformanceTrigger
@@ -89,10 +97,11 @@ classDiagram
     CostTrigger <|-- DataIncorporationLatencyCostTrigger
     CostTrigger <|-- AvoidableMisclassificationCostTrigger
 
-    PerformanceTriggerMixin <|-- PerformanceTrigger
     PerformanceTriggerMixin <|-- AvoidableMisclassificationCostTrigger
+    PerformanceTriggerMixin <|-- PerformanceTrigger
 
     style PerformanceTriggerMixin fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
+    style WarmupTrigger fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
 
     style TimeTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px
     style DataAmountTrigger fill:#C5DEB8,stroke:#A9A9A9,stroke-width:2px

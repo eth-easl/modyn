@@ -70,30 +70,37 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
         self.data_density.inform_data(batch)
         policy_decisions: dict[str, bool] = {}
 
-        # The first ever detection will always trigger
-        if not self._triggered_once:
-            # If we've never triggered before, always trigger
-            self._triggered_once = True
-            triggered = True
+        num_samples = None
+        num_misclassifications = None
+        evaluation_scores: dict[str, float] = {}
 
-            num_samples = None
-            num_misclassifications = None
-            evaluation_scores = None
-
-            # in the first interval we don't evaluate the decision policies as they might require one trigger
-            # to have happened before in order to derive forecasts
-
-        else:
-            # evaluate the decision policies
-            triggered = False
+        if self._triggered_once:
+            # we can run a (warmup) evaluation, iff we have already triggered once and therefore a model at hand
             num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
                 self, interval_data=batch
             )
+
+            # Let's update the state; in the warmup phase this will calibrate the policy without the decision
+            # policies being consulted
             self.performance_tracker.inform_evaluation(
                 num_samples=num_samples,
                 num_misclassifications=num_misclassifications,
                 evaluation_scores=evaluation_scores,
             )
+
+        # --------------------------------------------- Trigger Decision --------------------------------------------- #
+
+        if (not self._triggered_once) or not self.warmup_trigger.completed:
+            # delegate to the warmup policy
+            delegated_trigger_results = self.warmup_trigger.delegate_inform(batch)
+            triggered = not self._triggered_once or delegated_trigger_results
+            self._triggered_once = True
+
+            # we have already reported the warmup evaluation results
+
+        else:
+            # evaluate the decision policies
+            triggered = False
             for policy_name, policy in self.decision_policies.items():
                 policy_decisions[policy_name] = policy.evaluate_decision(
                     update_interval_samples=self.config.evaluation_interval_data_points,
