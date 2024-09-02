@@ -8,13 +8,17 @@ from pathlib import Path
 from benchmark.sigmod.triggering.yearbook_triggering_config import gen_yearbook_triggering_config, get_eval_data_config
 from experiments.utils.experiment_runner import run_multiple_pipelines
 from modyn.config.schema.pipeline import ModynPipelineConfig
-from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
+from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectMmdDriftMetric,
+)
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicPercentileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
+from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     DynamicPerformanceThresholdCriterion,
     StaticPerformanceThresholdCriterion,
@@ -24,11 +28,6 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerEvaluationConfig,
 )
 from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
-from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
-    AlibiDetectMmdDriftMetric,
-)
-from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modyn.supervisor.internal.pipeline_executor.models import PipelineLogs
 from modyn.utils.utils import current_time_millis
@@ -136,7 +135,7 @@ def gen_revision_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
                 strategies.append((name, conf))
             ## Dynamic Performance Triggers
 
-            # TODO which allowed deviations? relativ vs absolut?
+            # TODO which allowed deviations? relative vs absolute?
             for metric, allowed_deviation in [("Accuracy", 0.05)]:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
