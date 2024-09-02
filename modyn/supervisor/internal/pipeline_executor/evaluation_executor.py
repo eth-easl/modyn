@@ -412,7 +412,7 @@ if __name__ == "__main__":
         supervisor_logs=SupervisorLogs(),
     )
 
-    logs_.supervisor_logs = ex.run_post_pipeline_evaluations()
+    logs_.supervisor_logs = ex.run_post_pipeline_evaluations(manual_run=True)
     logs_.materialize(snapshot_path, mode="final")
     logger.info("Done with manual evaluation!")
     sys.exit(0)
