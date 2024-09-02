@@ -7,6 +7,7 @@ from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
+    StaticNumberAvoidableMisclassificationCriterion,
 )
 from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 
@@ -76,6 +77,8 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
         evaluation config."""
         metrics = {metric.name for metric in self.evaluation.dataset.metrics}
         for criterion in self.decision_criteria.values():
+            if isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
+                continue
             if criterion.metric not in metrics:
                 raise ValueError(
                     f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."

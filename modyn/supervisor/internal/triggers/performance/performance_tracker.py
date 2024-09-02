@@ -102,7 +102,7 @@ class PerformanceTracker:
             ),
         )
 
-    def forecast_expected_performance(self, metric: str, method: ForecastingMethod = "ridge_regression") -> float:
+    def forecast_optimal_performance(self, metric: str, method: ForecastingMethod = "ridge_regression") -> float:
         """Forecasts the performance based on the current memory of evaluations
         right after triggers.
 
