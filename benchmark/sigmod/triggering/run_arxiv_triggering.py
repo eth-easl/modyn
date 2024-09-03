@@ -35,7 +35,7 @@ def gen_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
 
     # TimeTriggers
     for years in [1, 3, 5]:
-        strategies.append((f"timetrigger_{years}y", TimeTriggerConfig(every=f"{years}d")))
+        strategies.append((f"timetrigger_{years}y", TimeTriggerConfig(every=f"{years}d", start_timestamp=631152000)))
 
     # DataAmountTriggers
     # for count in [500, 1000, 2000, 10000]:
