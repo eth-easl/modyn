@@ -1,7 +1,7 @@
 # Modyn's Architecture
 
 <div align="center">
-<img src="assets/arch.png" alt="Modyn architecture"/>
+<img src="../assets/arch.jpg" alt="Modyn architecture"/>
 
 ---
 
@@ -39,7 +39,15 @@ The supervisor is the brain of a pipeline as it coordinates the control and data
 It registers a new pipeline at all components.
 The supervisor receives the keys of new samples from storage, and forwards them to the selector.
 On the x-th trigger, it notifies the trainer server to train on the trigger training set.
-The supervisor implements additional coordination mechanisms, such as supplying the model from the previous trigger to the trainer server.
+The supervisor implements additional coordination mechanisms, such as supplying the model from the previous trigger to
+the trainer server.
+
+The following shows the state machine implemented in the supervisor to orchestrate a pipeline. Every semantic
+pipeline stage is reflected in the supervisor by a respective `PipelineStage` and every stage corresponds to a handler
+function that implements the stage's logic. As these functions call each other hierarchically, the state machine stages
+also have a hierarchical relationship.
+
+<img src="../assets/supervisor_statemachine.png" alt="Supervisor State Machine"/>
 
 In addition to coordinating pipeline execution, the supervisor implements triggering policies.
 We identify three types of triggers: (i) amount-based, (ii) time-based, and (iii) drift-based triggers.
