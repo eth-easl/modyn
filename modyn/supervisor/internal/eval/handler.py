@@ -76,7 +76,7 @@ class EvalHandler:
 
         return eval_requests
 
-    def get_eval_requests_after_pipeline(self, df_trainings: pd.DataFrame) -> list[EvalRequest]:
+    def get_eval_requests_after_pipeline(self, df_trainings: pd.DataFrame, dataset_end_time: int) -> list[EvalRequest]:
         """Args:
             df_trainings: The pipeline stage execution tracking information including training and model infos.
                 Can be acquired by joining TriggerExecutionInfo and StoreModelInfo dataframes.
@@ -92,7 +92,7 @@ class EvalHandler:
         training_intervals: list[tuple[int, int]] = [
             (row["first_timestamp"], row["last_timestamp"]) for _, row in df_trainings.iterrows()
         ]
-        eval_intervals = self.eval_strategy.get_eval_intervals(training_intervals)
+        eval_intervals = self.eval_strategy.get_eval_intervals(training_intervals, dataset_end_time=dataset_end_time)
         df_eval_intervals = pd.DataFrame(
             [
                 (eval_interval.start, eval_interval.end, eval_interval.active_model_trained_before)

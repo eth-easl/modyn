@@ -9,7 +9,11 @@ class StaticEvalStrategy(AbstractEvalStrategy):
     def __init__(self, config: StaticEvalStrategyConfig):
         super().__init__(config)
 
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         return [
             EvalInterval(
                 start=interval_start,
