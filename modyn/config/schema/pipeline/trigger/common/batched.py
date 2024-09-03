@@ -15,7 +15,7 @@ class BatchedTriggerConfig(ModynBaseModel):
         None,
         description=(
             "The number of intervals before starting to use the main policy. Some "
-            "`DecisionCriteria` use this to calibrate the threshold. During the warmup, a simpler `warmup_policy` "
+            "Policies use this to calibrate a threshold. During the warmup, a simpler `warmup_policy` "
             "is consulted for the triggering decision."
         ),
     )
@@ -23,6 +23,6 @@ class BatchedTriggerConfig(ModynBaseModel):
         None,
         description=(
             "The policy to use for triggering during the warmup phase of the main policy. "
-            "Metrics that don't need calibration can ignore this."
+            "Policies that don't need calibration can ignore this."
         ),
     )

@@ -118,7 +118,7 @@ class AvoidableMisclassificationCostTriggerConfig(
         """Assert whether the warmup policy is set when a metric needs
         calibration."""
         if self.warmup_policy is None:
-            raise ValueError("A warmup policy is required for metrics that need calibration.")
+            raise ValueError("A warmup policy is required for cost triggers.")
         return self
 
 

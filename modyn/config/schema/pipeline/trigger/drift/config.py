@@ -43,5 +43,5 @@ class DataDriftTriggerConfig(BatchedTriggerConfig):
         calibration."""
         for metric in self.metrics.values():
             if metric.decision_criterion.needs_calibration and self.warmup_policy is None:
-                raise ValueError("A warmup policy is required for metrics that need calibration.")
+                raise ValueError("A warmup policy is required for drift policies that need calibration.")
         return self
