@@ -215,9 +215,10 @@ class DataDriftTrigger(BatchedTrigger):
             log.evaluations.append(drift_eval_log)
 
         if not self.warmup_trigger.completed:
-            # during the warmup phase we always want to reset the windows as if we detected drift;
-            # we can call `inform_trigger` here and again in `inform_new_model` if `trigger=True`
-            # as the call is idempotent
+            # During the warmup phase we want to allow the windows to reset themselves as if we detected drift;
+            # If the window current window is cleared or not is eventually left to the windowing strategy.
+            # We can call `inform_trigger` here and again in `inform_new_model` if `trigger=True`
+            # as the call is idempotent.
             self.windows.inform_trigger()
 
         return triggered

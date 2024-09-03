@@ -91,5 +91,5 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
         calibration."""
         for criterion in self.decision_criteria.values():
             if criterion.needs_calibration and self.warmup_policy is None:
-                raise ValueError("A warmup policy is required for metrics that need calibration.")
+                raise ValueError("A warmup policy is required for performance criteria that need calibration.")
         return self
