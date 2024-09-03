@@ -1,7 +1,7 @@
 # Modyn's Architecture
 
 <div align="center">
-<img src="assets/arch.png" alt="Modyn architecture"/>
+<img src="../assets/arch.jpg" alt="Modyn architecture"/>
 
 ---
 
