@@ -18,7 +18,11 @@ class SlicingEvalStrategy(AbstractEvalStrategy):
     def __init__(self, config: SlicingEvalStrategyConfig):
         super().__init__(config)
 
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         previous_split = self.config.eval_start_from
         while True:
             current_split = min(previous_split + self.config.eval_every_sec, self.config.eval_end_at)

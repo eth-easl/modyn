@@ -26,7 +26,11 @@ class OffsetEvalStrategy(AbstractEvalStrategy):
         super().__init__(config)
         self.offsets = config.offsets
 
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         for train_interval_start, train_interval_end in training_intervals:
             for offset in self.offsets:
                 if offset == "-inf":
