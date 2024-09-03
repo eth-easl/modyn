@@ -266,7 +266,7 @@ def test_update_current_window_amount_strategy_cross_inform(
     "_run_detection",
     side_effect=[(False, {})] * 5 + [(False, {}), (True, {}), (False, {})],  # first 5: warmup
 )
-def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
+def test_warmup_trigger(mock_drift_trigger: DataDriftTrigger) -> None:
     trigger_config = DataDriftTriggerConfig(
         evaluation_interval_data_points=5,
         metrics={
@@ -280,7 +280,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
         warmup_policy=DataAmountTriggerConfig(num_samples=7),
     )
     trigger = DataDriftTrigger(trigger_config)
-    assert isinstance(trigger.warmup_trigger, DataAmountTrigger)
+    assert isinstance(trigger.warmup_trigger.trigger, DataAmountTrigger)
     assert len(trigger.windows.current) == len(trigger.windows.reference) == len(trigger.windows.current_reservoir) == 0
 
     # Test: We add samples from 0 to 40 in 8 batches of 5 samples each and inspect the trigger state after each batch.
@@ -300,7 +300,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(5)]))
     assert results == [4]
-    assert not trigger.warmup_completed
+    assert not trigger.warmup_trigger.completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [2, 3, 4]]  # window size 3
     assert len(trigger.windows.reference) == 3
     assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
@@ -308,7 +308,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(5, 10)]))
     assert results == [4]  # index in last inform batch
     assert len(trigger.warmup_intervals) == 2
-    assert not trigger.warmup_completed
+    assert not trigger.warmup_trigger.completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [2, 3, 4]]  # from first trigger
     assert len(trigger.windows.reference) == 3
     assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
@@ -316,7 +316,7 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(10, 15)]))
     assert results == [4]
     assert len(trigger.warmup_intervals) == 3
-    assert not trigger.warmup_completed
+    assert not trigger.warmup_trigger.completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [7, 8, 9]]
     assert len(trigger.windows.reference) == 3
     assert len(trigger.windows.current) == 0  # after a trigger the current window is empty
@@ -324,26 +324,26 @@ def test_warmup_trigger(drift_trigger: DataDriftTrigger) -> None:
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(15, 20)]))
     assert len(results) == 0
     assert len(trigger.warmup_intervals) == 4
-    assert not trigger.warmup_completed
+    assert not trigger.warmup_trigger.completed
     assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [12, 13, 14]]
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(20, 25)]))
     assert results == [4]
-    assert len(trigger.warmup_intervals) == 5
-    assert not trigger.warmup_completed
-    assert trigger.warmup_intervals[-1] == [(i, 100 + i) for i in [17, 18, 19]]
+    assert len(trigger.warmup_intervals) == 0
+    assert trigger.warmup_trigger.completed
+    assert mock_drift_trigger.call_count == 5
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(25, 30)]))
     assert len(results) == 0
     assert len(trigger.warmup_intervals) == 0
-    assert trigger.warmup_completed
+    assert trigger.warmup_trigger.completed
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(30, 35)]))
     assert results == [4]
     assert len(trigger.warmup_intervals) == 0
-    assert trigger.warmup_completed
+    assert trigger.warmup_trigger.completed
 
     results = list(trigger.inform([(i, 100 + i, 1) for i in range(35, 40)]))
     assert len(results) == 0
     assert len(trigger.warmup_intervals) == 0
-    assert trigger.warmup_completed
+    assert trigger.warmup_trigger.completed
