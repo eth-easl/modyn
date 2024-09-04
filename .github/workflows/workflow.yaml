@@ -5,6 +5,11 @@ on:
       - main
   pull_request:
 
+# Automatically stop old builds on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash -l {0}
@@ -88,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: DoozyX/clang-format-lint-action@v0.16.2
         with:
           source: "modyn"
