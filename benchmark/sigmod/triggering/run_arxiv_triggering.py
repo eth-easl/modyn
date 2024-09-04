@@ -60,7 +60,7 @@ def gen_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
     # DriftTriggers
-    for evaluation_interval_data_points in [5000, 10000]:
+    for evaluation_interval_data_points in [5000]:
         for threshold in [0.02, 0.01, 0.005]:
             for window_size in ["1y", "2y"]:
                 conf = DataDriftTriggerConfig(
