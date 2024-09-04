@@ -20,9 +20,10 @@ from modyn.config.schema.pipeline import (
     TrainingConfig,
 )
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.strategy.slicing import SlicingEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy.periodic import PeriodicEvalStrategyConfig
 from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 from modyn.config.schema.pipeline.trigger import TriggerConfig
+from modyn.utils.utils import SECONDS_PER_UNIT
 
 
 def gen_arxiv_training_conf(gpu_device: str, seed: int):
@@ -96,10 +97,7 @@ def get_eval_data_config(dataset: str) -> EvalDataConfig:
 
 
 def gen_arxiv_triggering_config(
-    config_id: str,
-    gpu_device: str,
-    trigger_config: TriggerConfig,
-    seed: int,
+    config_id: str, gpu_device: str, trigger_config: TriggerConfig, seed: int, start_eval_at: int
 ) -> ModynPipelineConfig:
     return ModynPipelineConfig(
         pipeline=Pipeline(name=f"kaggle_arxiv_{config_id}", description="Arxiv triggering config", version="0.0.1"),
@@ -122,11 +120,16 @@ def gen_arxiv_triggering_config(
                     execution_time="after_pipeline",
                     models="matrix",
                     datasets=["arxiv_kaggle_test"],
-                    strategy=SlicingEvalStrategyConfig(eval_every="26w", eval_start_from=0, eval_end_at=1724803200),
+                    strategy=PeriodicEvalStrategyConfig(
+                        every="26w",
+                        interval="[-13w; +13w]",
+                        start_timestamp=start_eval_at + 13 * SECONDS_PER_UNIT["w"],
+                        end_timestamp=1724803200,
+                    ),
                 )
             ],
-            after_pipeline_evaluation_workers=4,
-            after_training_evaluation_workers=4,
+            after_pipeline_evaluation_workers=2,
+            after_training_evaluation_workers=2,
             device=gpu_device,
             datasets=[get_eval_data_config(dataset) for dataset in ["arxiv_kaggle_test"]],
         ),

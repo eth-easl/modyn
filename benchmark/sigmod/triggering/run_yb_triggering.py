@@ -66,6 +66,7 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
                     windowing_strategy=TimeWindowingStrategy(
                         allow_overlap=True, limit_ref=window_size, limit_cur=window_size
                     ),
+                    sample_size=None,
                     metrics={
                         "mmd_alibi": AlibiDetectMmdDriftMetric(
                             device="cpu",
@@ -168,7 +169,8 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             metric="Accuracy", deviation=deviation, absolute=False
                         )
                     },
-                    # We currently don't support warmups for performance triggers, we might need them if they perform bad
+                    warmup_policy=TimeTriggerConfig(every="3d"),
+                    warmup_intervals=warmup_intervals,
                 )
                 name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
                 strategies.append((name, conf))

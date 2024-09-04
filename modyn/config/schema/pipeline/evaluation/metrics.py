@@ -36,6 +36,10 @@ class _BaseMetricConfig(ModynBaseModel):
     def shape_check(self) -> bool:
         return True
 
+    @property
+    def full_name(self) -> str:
+        return self.name
+
 
 class AccuracyMetricConfig(_BaseMetricConfig):
     name: Literal["Accuracy"] = Field("Accuracy")
@@ -44,6 +48,10 @@ class AccuracyMetricConfig(_BaseMetricConfig):
     @property
     def shape_check(self) -> bool:
         return self.topn <= 1
+
+    @property
+    def full_name(self) -> str:
+        return "Accuracy" if self.topn == 1 else f"Top-{self.topn}-Accuracy"
 
 
 F1ScoreTypes = Literal["macro", "micro", "weighted", "binary"]
