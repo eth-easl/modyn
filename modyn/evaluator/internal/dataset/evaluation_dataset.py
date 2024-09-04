@@ -81,7 +81,7 @@ class EvaluationDataset(IterableDataset):
             self._transform = transforms.Compose(self._transform_list)
 
     @retry(
-        stop=stop_after_attempt(25),
+        stop=stop_after_attempt(10),
         wait=wait_random_exponential(multiplier=1, min=2, max=60),
         before=before_log(logger, logging.ERROR),
         after=after_log(logger, logging.ERROR),
