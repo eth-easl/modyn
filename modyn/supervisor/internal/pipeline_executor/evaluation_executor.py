@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import pickle
+import shutil
 import sys
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -270,7 +271,8 @@ class EvaluationExecutor:
             results = self._single_batched_evaluation(intervals, model_id, dataset_id)
 
             interval_result_infos: list[SingleEvaluationInfo] = []
-            intervals_and_results = zip(eval_requests, results)
+            intervals_and_results = list(zip(eval_requests, results))
+            assert len(intervals_and_results) == len(eval_requests), "Mismatch in the number of intervals and results."
             for eval_req, (failure_reason, interval_res) in intervals_and_results:
                 interval_result_infos.append(
                     SingleEvaluationInfo(
@@ -419,48 +421,62 @@ class EvaluationExecutor:
 # ------------------------------------------------------------------------------------ #
 
 
-def eval_executor_single_pipeline(pipeline_dir: Path) -> None:
+def eval_executor_single_pipeline(pipeline_dir: Path) -> SupervisorLogs:
     # restart evaluation executor
     ex = EvaluationExecutor.init_from_path(pipeline_dir)
 
-    logs_ = PipelineLogs(
-        pipeline_id=ex.pipeline_id,
-        pipeline_stages={},
-        config=ConfigLogs(system=ex.config, pipeline=ex.pipeline),
-        experiment=True,
-        supervisor_logs=SupervisorLogs(),
-    )
-
-    logs_.supervisor_logs = ex.run_post_pipeline_evaluations(manual_run=True)
-    logs_.materialize(pipeline_dir, mode="final")
+    supervisor_eval_logs = ex.run_post_pipeline_evaluations(manual_run=True)
     logger.info("Done with manual evaluation.")
+    
+    return supervisor_eval_logs
 
 
-def eval_executor_multi_pipeline(pipelines_dir: Path) -> None:
+def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = None) -> None:
     """Run the evaluation executor for multiple pipelines."""
+    faulty_dir = pipelines_dir / "_faulty"
+    done_dir = pipelines_dir / "_done"
+    finished_dir = pipelines_dir / "_finished"
+    
+    faulty_dir.mkdir(exist_ok=True)
+    done_dir.mkdir(exist_ok=True)
+    finished_dir.mkdir(exist_ok=True)
+    
     pipeline_dirs = [p for p in pipelines_dir.iterdir() if p.is_dir()]
     for p_dir in pipeline_dirs:
+        if "pipeline" not in p_dir.name:
+            continue
+        if pids and int(p_dir.name.split("_")[-1]) not in pids:
+            continue
         pipeline_logfile = p_dir / "pipeline.log"
         if not pipeline_logfile.exists():
             # move file to _faulty subdir
-            faulty_dir = pipelines_dir / "_faulty"
-            faulty_dir.mkdir(exist_ok=True)
             os.rename(p_dir, faulty_dir / p_dir.name)
             continue
+        
+        (finished_dir / p_dir.stem).mkdir(exist_ok=True)
 
-        eval_executor_single_pipeline(p_dir)
+        supervisor_eval_logs = eval_executor_single_pipeline(p_dir)
+
+        shutil.copytree(p_dir, done_dir / p_dir.stem, dirs_exist_ok=True)
+        full_logs = PipelineLogs.model_validate_json((done_dir / p_dir.stem / "pipeline.log").read_text())
+        full_logs.supervisor_logs.stage_runs += supervisor_eval_logs.stage_runs
+        (done_dir / p_dir.stem / "pipeline.log").write_text(full_logs.model_dump_json(by_alias=True))
+        
+        os.rename(p_dir, finished_dir / p_dir.stem)
+    
         logger.info(f"Done with pipeline {p_dir.name}")
 
 
 if __name__ == "__main__":
-    single_pipeline_mode = input("Run evaluation executor for single pipeline? (y/n): ")
     userpath = Path(input("Enter pipeline log directory path to (re)run evaluation executor: "))
+    single_pipeline_mode = input("Run evaluation executor for single pipeline? (y/n): ")
     if not userpath.exists():
         print("Path not found")
         sys.exit(1)
 
     if single_pipeline_mode.lower() == "y":
-        eval_executor_single_pipeline(userpath)
+        p_id = int(input("Enter pipeline id: "))
+        eval_executor_multi_pipeline(userpath, p_id)
     elif single_pipeline_mode.lower() == "n":
         eval_executor_multi_pipeline(userpath)
     else:
