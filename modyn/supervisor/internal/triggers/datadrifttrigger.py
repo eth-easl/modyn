@@ -259,10 +259,16 @@ class DataDriftTrigger(BatchedTrigger):
         assert len(current) > 0
 
         reference_dataloader = prepare_trigger_dataloader_fixed_keys(
-            self.dataloader_info, [key for key, _ in reference]
+            self.dataloader_info,
+            [key for key, _ in reference],
+            sample_size=self.config.sample_size,
         )
 
-        current_dataloader = prepare_trigger_dataloader_fixed_keys(self.dataloader_info, [key for key, _ in current])
+        current_dataloader = prepare_trigger_dataloader_fixed_keys(
+            self.dataloader_info,
+            [key for key, _ in current],
+            sample_size=self.config.sample_size,
+        )
 
         # Download most recent model as stateful model
         # TODO(417) Support custom model as stateful model

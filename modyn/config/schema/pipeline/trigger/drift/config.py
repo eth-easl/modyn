@@ -28,6 +28,14 @@ class DataDriftTriggerConfig(BatchedTriggerConfig):
         description="Which windowing strategy to use for current and reference data",
     )
 
+    sample_size: int | None = Field(
+        5000,
+        description=(
+            "The number of samples to use for drift detection. If the windows are bigger than this, "
+            "samples are randomly drawn from the window. None does not limit the number of samples."
+        ),
+    )
+
     metrics: dict[str, DriftMetric] = Field(
         min_length=1,
         description="The metrics used for drift detection keyed by a reference.",
