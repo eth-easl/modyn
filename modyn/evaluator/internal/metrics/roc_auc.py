@@ -25,7 +25,7 @@ class RocAuc(AbstractHolisticMetric):
             y_pred: The predicted values by the model.
         """
         assert self.evaluation_result is None
-        
+
         if y_pred.dim() < 1 or y_true.dim() < 1 or len(y_pred) < 2 or len(y_true) < 2:
             # if the number of elements in y_pred or y_true is less than 2, then the ROC-AUC score is undefined
             self.evaluation_result = 0

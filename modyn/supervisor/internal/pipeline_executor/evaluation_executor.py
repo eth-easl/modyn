@@ -30,7 +30,6 @@ from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor.models import (
-    ConfigLogs,
     MultiEvaluationInfo,
     PipelineLogs,
     SingleEvaluationInfo,
@@ -427,7 +426,7 @@ def eval_executor_single_pipeline(pipeline_dir: Path) -> SupervisorLogs:
 
     supervisor_eval_logs = ex.run_post_pipeline_evaluations(manual_run=True)
     logger.info("Done with manual evaluation.")
-    
+
     return supervisor_eval_logs
 
 
@@ -436,11 +435,11 @@ def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = N
     faulty_dir = pipelines_dir / "_faulty"
     done_dir = pipelines_dir / "_done"
     finished_dir = pipelines_dir / "_finished"
-    
+
     faulty_dir.mkdir(exist_ok=True)
     done_dir.mkdir(exist_ok=True)
     finished_dir.mkdir(exist_ok=True)
-    
+
     pipeline_dirs = [p for p in pipelines_dir.iterdir() if p.is_dir()]
     for p_dir in pipeline_dirs:
         if "pipeline" not in p_dir.name:
@@ -452,7 +451,7 @@ def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = N
             # move file to _faulty subdir
             os.rename(p_dir, faulty_dir / p_dir.name)
             continue
-        
+
         (finished_dir / p_dir.stem).mkdir(exist_ok=True)
 
         supervisor_eval_logs = eval_executor_single_pipeline(p_dir)
@@ -461,9 +460,9 @@ def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = N
         full_logs = PipelineLogs.model_validate_json((done_dir / p_dir.stem / "pipeline.log").read_text())
         full_logs.supervisor_logs.stage_runs += supervisor_eval_logs.stage_runs
         (done_dir / p_dir.stem / "pipeline.log").write_text(full_logs.model_dump_json(by_alias=True))
-        
+
         os.rename(p_dir, finished_dir / p_dir.stem)
-    
+
         logger.info(f"Done with pipeline {p_dir.name}")
 
 
@@ -476,7 +475,7 @@ if __name__ == "__main__":
 
     if single_pipeline_mode.lower() == "y":
         p_id = int(input("Enter pipeline id: "))
-        eval_executor_multi_pipeline(userpath, p_id)
+        eval_executor_multi_pipeline(userpath, [p_id])
     elif single_pipeline_mode.lower() == "n":
         eval_executor_multi_pipeline(userpath)
     else:

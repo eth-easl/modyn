@@ -50,7 +50,7 @@ def test_roc_auc_edge_cases():
     y_true = np.array([])
     y_score = np.array([])
     assert get_evaluation_result(y_true, y_score) == 0
-    
+
 
 def test_roc_auc_with_two_entries():
     y_true = np.array([0, 1])
