@@ -16,6 +16,7 @@ channels:
 dependencies:
   - python=3.11
   - pip
+  - setuptools
   - tqdm
   - conda-forge::enlighten
   - pip:
