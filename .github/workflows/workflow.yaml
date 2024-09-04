@@ -88,6 +88,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          create-args: python=3.11 setuptools
       - uses: actions/checkout@v2
       - uses: DoozyX/clang-format-lint-action@v0.16.2
         with:
