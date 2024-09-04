@@ -869,7 +869,9 @@ class PipelineExecutor:
             return
 
         self.logs.materialize(s.log_directory, mode="increment")
-        self.eval_executor.register_tracking_info(tracking_dfs=s.tracking, dataset_end_time=self.state.max_timestamp)
+        self.eval_executor.register_tracking_info(
+            tracking_dfs=s.tracking, dataset_end_time=self.state.current_sample_time
+        )
         self.eval_executor.create_snapshot()
 
     @pipeline_stage(PipelineStage.POST_EVALUATION, parent=PipelineStage.MAIN, log=False, track=False)
