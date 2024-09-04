@@ -23,6 +23,12 @@ classDiagram
         -bool evaluate_batch(batch, trigger_index)*
     }
 
+    class WarmupTrigger {
+        -int warmup_intervals
+        +delegate_inform(batch)
+    }
+
+
     class DataDriftTrigger {
         +DataDriftTriggerConfig config
         +DetectionWindows windows
@@ -48,6 +54,9 @@ classDiagram
 
     Trigger <|-- BatchedTrigger
     BatchedTrigger <|-- DataDriftTrigger
+
+    Trigger "1" --* WarmupTrigger
+    BatchedTrigger o-- "0..1" WarmupTrigger
 
     DataDriftTrigger "warmup_trigger" *-- "1" Trigger
     DataDriftTrigger *-- "1" DataDriftTriggerConfig
@@ -263,9 +272,6 @@ classDiagram
     DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
     DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
     DriftDecisionPolicy <|-- HypothesisTestDecisionPolicy
-
-    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
-    DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
 
     style HypothesisTestDecisionPolicy fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
 ```
