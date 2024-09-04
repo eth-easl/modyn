@@ -146,7 +146,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                                 decision_criterion=decision_criterion,
                             )
                         },
-                        warmup_policy=TimeTriggerConfig(every="1y"),
+                        warmup_policy=TimeTriggerConfig(every="1y", start_timestamp=START_TIMESTAMP),
                         warmup_intervals=warmup_intervals,
                     )
 
@@ -168,7 +168,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             metric="Top-2-Accuracy", deviation=deviation, absolute=False
                         )
                     },
-                    warmup_policy=TimeTriggerConfig(every="1y"),
+                    warmup_policy=TimeTriggerConfig(every="1y", start_timestamp=START_TIMESTAMP),
                     warmup_intervals=warmup_intervals,
                 )
                 name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
