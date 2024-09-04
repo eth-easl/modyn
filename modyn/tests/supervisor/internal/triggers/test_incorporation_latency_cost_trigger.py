@@ -5,6 +5,9 @@ from pytest import fixture
 from modyn.config.schema.pipeline.trigger.cost.cost import (
     DataIncorporationLatencyCostTriggerConfig,
 )
+from modyn.config.schema.pipeline.trigger.simple.data_amount import (
+    DataAmountTriggerConfig,
+)
 from modyn.supervisor.internal.triggers.cost.cost_tracker import CostTracker
 from modyn.supervisor.internal.triggers.dataincorporationlatency_costtrigger import (
     DataIncorporationLatencyCostTrigger,
@@ -98,5 +101,52 @@ def test_inform_and_new_model(
     assert trigger_results == [0]
     assert len(trigger._leftover_data) == 0
     assert trigger._sample_left_until_detection == 4
+    assert mock_compute_regret.call_count == 1
+    assert mock_forecast_training_time.call_count == 1
+
+
+@patch.object(CostTracker, "forecast_training_time", return_value=0)
+@patch.object(DataIncorporationLatencyCostTrigger, "_compute_regret_metric", return_value=10000)
+def test_warmup_trigger(
+    mock_compute_regret: MagicMock,
+    mock_forecast_training_time: MagicMock,
+    latency_trigger_config: DataIncorporationLatencyCostTriggerConfig,
+) -> None:
+    latency_trigger_config.evaluation_interval_data_points = 1
+    latency_trigger_config.warmup_intervals = 3
+    latency_trigger_config.warmup_policy = DataAmountTriggerConfig(num_samples=2)
+    trigger = DataIncorporationLatencyCostTrigger(latency_trigger_config)
+    assert not trigger._triggered_once
+
+    trigger_results = list(trigger.inform([(0, 0, 0)]))
+    assert trigger_results == [0]  # first trigger is enforced
+    assert trigger._triggered_once
+    assert mock_compute_regret.call_count == 1  # not on first trigger, no model
+    assert mock_forecast_training_time.call_count == 0
+
+    mock_compute_regret.reset_mock()
+    mock_forecast_training_time.reset_mock()
+
+    trigger_results = list(trigger.inform([(1, 0, 0)]))
+    assert trigger_results == [0]
+    assert trigger._triggered_once
+    assert mock_compute_regret.call_count == 1
+    assert mock_forecast_training_time.call_count == 0
+
+    mock_compute_regret.reset_mock()
+    mock_forecast_training_time.reset_mock()
+
+    trigger_results = list(trigger.inform([(2, 0, 0)]))
+    assert len(trigger_results) == 0
+    assert trigger._triggered_once
+    assert mock_compute_regret.call_count == 1
+    assert mock_forecast_training_time.call_count == 0
+
+    mock_compute_regret.reset_mock()
+    mock_forecast_training_time.reset_mock()
+
+    trigger_results = list(trigger.inform([(3, 0, 0)]))
+    assert trigger_results == [0]
+    assert trigger._triggered_once
     assert mock_compute_regret.call_count == 1
     assert mock_forecast_training_time.call_count == 1

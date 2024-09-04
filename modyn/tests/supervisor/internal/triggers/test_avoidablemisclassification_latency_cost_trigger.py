@@ -17,6 +17,7 @@ from modyn.config.schema.pipeline.trigger.cost.cost import (
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerEvaluationConfig,
 )
+from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.supervisor.internal.triggers.avoidablemissclassification_costtrigger import (
     AvoidableMisclassificationCostTrigger,
 )
@@ -64,6 +65,8 @@ def trigger_config() -> AvoidableMisclassificationCostTriggerConfig:
         # cost_trigger
         cost_tracking_window_size=5,
         avoidable_misclassification_latency_per_training_second=1.0,
+        warmup_policy=DataAmountTriggerConfig(num_samples=1),
+        warmup_intervals=1,
     )
 
 

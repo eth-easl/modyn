@@ -56,16 +56,22 @@ class CostTrigger(BatchedTrigger):
         self._previous_batch_end_time = batch[-1][1]
         self._unincorporated_samples += len(batch)
 
-        # ----------------------------------------------- decision ----------------------------------------------- #
-        regret_metric = self._compute_regret_metric(batch, batch_start, batch_duration)
+        traintime_estimate = -1.0
 
-        if not self._triggered_once:
-            traintime_estimate = -1.0
-            regret_in_traintime_unit = -1.0
-            triggered = self._triggered_once = True
+        regret_metric = self._compute_regret_metric(batch, batch_start, batch_duration)
+        regret_in_traintime_unit = regret_metric * self.config.conversion_factor
+
+        # --------------------------------------------- Trigger Decision --------------------------------------------- #
+
+        if (not self._triggered_once) or not self.warmup_trigger.completed:
+            delegated_trigger_results = self.warmup_trigger.delegate_inform(batch)
+            triggered = not self._triggered_once or delegated_trigger_results
+            self._triggered_once = True
+
+            # discard regret_metric
+
         else:
             traintime_estimate = self.cost_tracker.forecast_training_time(self._unincorporated_samples)
-            regret_in_traintime_unit = regret_metric * self.config.conversion_factor
             triggered = regret_in_traintime_unit >= traintime_estimate
 
         # -------------------------------------------------- Log ------------------------------------------------- #
@@ -111,6 +117,8 @@ class CostTrigger(BatchedTrigger):
         """Compute the regret metric for the current state of the trigger.
 
         This method will update the _incorporation_latency_tracker.
+
+        Note: Child classes will use the arguments to build an internal state.
 
         Args:
             batch: The batch of data points to compute the regret metric for.

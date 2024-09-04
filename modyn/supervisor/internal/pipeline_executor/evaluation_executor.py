@@ -21,7 +21,10 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
 
 # pylint: disable-next=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelResponse,
+    EvaluationAbortedReason,
+)
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
@@ -50,6 +53,8 @@ class EvalStateConfig(BaseModel):
 @dataclass
 class AfterPipelineEvalContext:
     tracking_dfs: dict[str, pd.DataFrame]
+    dataset_end_time: int
+    """Timestamp of the last sample in the dataset."""
 
 
 class EvaluationExecutor:
@@ -73,10 +78,15 @@ class EvaluationExecutor:
             else []
         )
 
-    def register_tracking_info(self, tracking_dfs: dict[str, pd.DataFrame]) -> None:
+    def register_tracking_info(self, tracking_dfs: dict[str, pd.DataFrame], dataset_end_time: int) -> None:
+        """
+        Args:
+            tracking_dfs: A dictionary of dataframes containing tracking information.
+            dataset_end_time: Timestamp of the last sample in the dataset.
+        """
         assert tracking_dfs.get(PipelineStage.HANDLE_SINGLE_TRIGGER.name) is not None
         assert tracking_dfs.get(PipelineStage.STORE_TRAINED_MODEL.name) is not None
-        self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs)
+        self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs, dataset_end_time=dataset_end_time)
 
     def create_snapshot(self) -> None:
         """Create a snapshot of the pipeline metadata before starting to
@@ -91,7 +101,10 @@ class EvaluationExecutor:
 
         # write state: config, pipeline & context
         eval_state_config = EvalStateConfig(
-            pipeline_id=self.pipeline_id, eval_dir=self.pipeline_logdir, config=self.config, pipeline=self.pipeline
+            pipeline_id=self.pipeline_id,
+            eval_dir=self.pipeline_logdir,
+            config=self.config,
+            pipeline=self.pipeline,
         )
         (snapshot_dir / "eval_state.yaml").write_text(eval_state_config.model_dump_json(by_alias=True))
         (snapshot_dir / "context.pcl").write_bytes(pickle.dumps(self.context))
@@ -187,7 +200,9 @@ class EvaluationExecutor:
             ):
                 continue
 
-            handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
+            handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(
+                df_trainings=df_trainings, dataset_end_time=self.context.dataset_end_time
+            )
             eval_requests += handler_eval_requests
 
         if len(eval_requests) == 0:
@@ -324,7 +339,9 @@ class EvaluationExecutor:
             intervals=cast(list[tuple[int | None, int | None]], intervals),
         )
         for attempt in Retrying(
-            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
         ):
             with attempt:
                 try:
@@ -381,7 +398,12 @@ class EvaluationExecutor:
                 reason = get_failure_reason(interval_response.eval_aborted_reason)
                 eval_results.append((reason, {}))
             else:
-                eval_results.append((None, {"dataset_size": interval_response.dataset_size, "metrics": []}))
+                eval_results.append(
+                    (
+                        None,
+                        {"dataset_size": interval_response.dataset_size, "metrics": []},
+                    )
+                )
 
         for interval_result in eval_data:
             interval_idx = interval_result.interval_index

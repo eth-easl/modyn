@@ -11,9 +11,17 @@ class PeriodicEvalStrategy(AbstractEvalStrategy, _IntervalEvalStrategyMixin):
         super(AbstractEvalStrategy, self).__init__(config)
         _IntervalEvalStrategyMixin.__init__(self, config)
 
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         evaluation_timestamps = list(
-            range(self.config.start_timestamp, self.config.end_timestamp + 1, self.config.every_sec)
+            range(
+                self.config.start_timestamp,
+                self.config.end_timestamp + 1,
+                self.config.every_sec,
+            )
         )
 
         eval_intervals = []

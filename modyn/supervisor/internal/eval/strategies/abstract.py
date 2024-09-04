@@ -36,7 +36,11 @@ class AbstractEvalStrategy(ABC):
         self.config = config
 
     @abstractmethod
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         """This method should return an iterable of tuples, where each tuple
         represents a left inclusive, right exclusive evaluation interval.
 

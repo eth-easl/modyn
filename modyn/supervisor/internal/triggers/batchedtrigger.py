@@ -9,6 +9,7 @@ from typing_extensions import override
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.supervisor.internal.triggers.trigger import Trigger
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
+from modyn.supervisor.internal.triggers.utils.warmuptrigger import WarmupTrigger
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,12 @@ class BatchedTrigger(Trigger):
         self._leftover_data: list[tuple[int, int]] = []
         """Stores data that was not processed in the last inform call because
         the detection interval was not filled."""
+
+        self.warmup_trigger = WarmupTrigger(
+            warmup_intervals=config.warmup_intervals, warmup_policy=config.warmup_policy
+        )
+        """Warmup decisions have to be delegated to the warmup trigger by the
+        subclass of BatchedTrigger."""
 
     @override
     def inform(

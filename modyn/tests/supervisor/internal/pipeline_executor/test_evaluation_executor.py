@@ -97,7 +97,8 @@ def test_evaluation_executor_state_management(
         {
             PipelineStage.HANDLE_SINGLE_TRIGGER.name: tracking_df,
             PipelineStage.STORE_TRAINED_MODEL.name: tracking_df,
-        }
+        },
+        dataset_end_time=99,
     )
     evaluation_executor.create_snapshot()
 
@@ -201,12 +202,14 @@ def test_evaluation_handler_post_training(
         {
             PipelineStage.HANDLE_SINGLE_TRIGGER.name: tracking_df,
             PipelineStage.STORE_TRAINED_MODEL.name: tracking_df,
-        }
+        },
+        dataset_end_time=99,
     )
     evaluation_executor.run_post_pipeline_evaluations()
     test_get_eval_requests_after_training.assert_not_called()
     test_get_eval_requests_after_pipeline.assert_called_once()
     test_launch_evaluations_async.assert_called_once()
+    assert evaluation_executor.context.dataset_end_time == 99
 
 
 @patch.object(EvaluationExecutor, "_single_batched_evaluation", return_value=[("failure", {}), ("failure", {})])
