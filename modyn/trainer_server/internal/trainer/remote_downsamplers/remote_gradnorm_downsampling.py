@@ -54,6 +54,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         )
         if last_layer_gradients.dim() == 1:
             last_layer_gradients = last_layer_gradients.unsqueeze(1)
+        # pylint: disable=not-callable
         scores = torch.linalg.vector_norm(last_layer_gradients, dim=1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
