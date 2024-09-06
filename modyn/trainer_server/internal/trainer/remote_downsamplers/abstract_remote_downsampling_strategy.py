@@ -3,6 +3,8 @@ from typing import Any
 
 import torch
 
+from modyn.utils import DownsamplingMode
+
 FULL_GRAD_APPROXIMATION = ["LastLayer", "LastLayerWithEmbedding"]
 
 
@@ -82,6 +84,10 @@ class AbstractRemoteDownsamplingStrategy(ABC):
 
         # Some methods might only support StB, not BtS.
         self.supports_bts = True
+
+    def set_downsampling_mode(self, downsampling_mode: DownsamplingMode) -> None:
+        # pylint: disable=attribute-defined-outside-init
+        self.downsampling_mode = downsampling_mode
 
     @abstractmethod
     def init_downsampler(self) -> None:

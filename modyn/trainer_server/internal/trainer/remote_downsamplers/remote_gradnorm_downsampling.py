@@ -6,6 +6,7 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
+from modyn.utils import DownsamplingMode
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +73,10 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
 
         # lower probability, higher weight to reduce the variance
         weights = 1.0 / (self.number_of_points_seen * probabilities[downsampled_idxs])
-
-        selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            selected_ids = downsampled_idxs
+        else:
+            selected_ids = [self.index_sampleid_map[sample] for sample in downsampled_idxs]
         return selected_ids, weights
 
     @property

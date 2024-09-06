@@ -45,8 +45,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
-    AbstractRemoteDownsamplingStrategy,
-    get_tensors_subset,
+    AbstractRemoteDownsamplingStrategy
 )
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
@@ -569,11 +568,16 @@ class PytorchTrainer:
 
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
-        selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
-        sample_ids, data, target = selected_indexes, selected_data, selected_target
+        selected_target = target[selected_indexes]
+
+        if isinstance(data, torch.Tensor):
+            selected_data = data[selected_indexes]
+        else:
+            selected_data = {key: tensor[selected_indexes] for key, tensor in data.items()}
+        selected_sample_ids = torch.tensor(sample_ids)[selected_indexes].tolist()
         # TODO(#219) Investigate if we can avoid 2 forward passes
         self._model.model.train()
-        return data, sample_ids, target, weights.to(self._device)
+        return selected_data, selected_sample_ids, selected_target, weights.to(self._device)
 
     def start_embedding_recording_if_needed(self) -> None:
         if self._downsampler.requires_coreset_supporting_module:

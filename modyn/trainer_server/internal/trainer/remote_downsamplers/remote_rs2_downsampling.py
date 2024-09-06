@@ -7,6 +7,7 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
+from modyn.utils import DownsamplingMode
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         assert self._current_subset < len(
             self._subsets
         ), f"Inconsistent state: {self._current_subset}\n{self._subsets}\n{self._first_epoch}\n{self._all_sample_ids}"
+        assert self.downsampling_mode == DownsamplingMode.SAMPLE_THEN_BATCH, "Only sample-then-batch is supported"
         return self._subsets[self._current_subset], torch.ones(len(self._subsets[self._current_subset]))
 
     @property

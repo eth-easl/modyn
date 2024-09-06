@@ -19,6 +19,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.su
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.submodular_optimizer import (
     OPTIMIZER_CHOICES,
 )
+from modyn.utils import DownsamplingMode
 
 
 class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
@@ -193,7 +194,10 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
             batch=self.selection_batch,
         )
         weights = self.calc_weights(self.distance_matrix, selection_result)
-        selected_ids = [self.index_sampleid_map[sample] for sample in selection_result]
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            selected_ids = selection_result
+        else:
+            selected_ids = [self.index_sampleid_map[sample] for sample in selection_result]
         return selected_ids, weights
 
     def init_downsampler(self) -> None:

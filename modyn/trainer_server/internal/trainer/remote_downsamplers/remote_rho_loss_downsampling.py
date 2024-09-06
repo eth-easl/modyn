@@ -6,6 +6,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_d
 from modyn.trainer_server.internal.trainer.remote_downsamplers.rho_loss_utils.irreducible_loss_producer import (
     IrreducibleLossProducer,
 )
+from modyn.utils import DownsamplingMode
 
 
 class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
@@ -61,8 +62,9 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
         # find the indices of maximal "target_size" elements in the list of rho_loss
         selected_indices = torch.topk(self.rho_loss, target_size).indices
+        assert self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
         # use sorted() because we keep the relative order of the selected samples
-        selected_sample_ids = [self.index_sampleid_map[i] for i in sorted(selected_indices)]
+        selected_sample_ids = sorted(selected_indices)
         # all selected samples have weight 1.0
         selected_weights = torch.ones(target_size)
         return selected_sample_ids, selected_weights

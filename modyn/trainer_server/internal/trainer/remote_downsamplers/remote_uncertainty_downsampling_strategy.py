@@ -7,6 +7,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
+from modyn.utils import DownsamplingMode
 
 
 class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
@@ -123,7 +124,10 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         number_of_samples = len(self.scores)
         target_size = max(int(self.downsampling_ratio * number_of_samples / self.ratio_max), 1)
         selected_indices, weights = self._select_indexes_from_scores(target_size)
-        selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
+        if self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
+            selected_ids = selected_indices
+        else:
+            selected_ids = [self.index_sampleid_map[index] for index in selected_indices]
         return selected_ids, weights
 
     def init_downsampler(self) -> None:
