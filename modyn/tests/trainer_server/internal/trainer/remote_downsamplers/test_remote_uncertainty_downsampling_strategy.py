@@ -81,7 +81,7 @@ binary_test_data = {
     },
     "Entropy": {
         "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
-        "expected_scores": np.array([-0.5004 , -0.6931, -0.6109]),
+        "expected_scores": np.array([-0.5004, -0.6931, -0.6109]),
     },
     "Margin": {
         "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
