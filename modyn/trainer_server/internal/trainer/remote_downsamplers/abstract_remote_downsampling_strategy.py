@@ -20,9 +20,9 @@ def get_tensors_subset(
     and then we get the entries of data and target only for the selected
     samples
     """
-
+    sample_id2index = {sample_id: index for index, sample_id in enumerate(sample_ids)}
     # first of all we compute the position of each selected index within the batch
-    in_batch_index = [sample_ids.index(selected_index) for selected_index in selected_indexes]
+    in_batch_index = [sample_id2index[selected_index] for selected_index in selected_indexes]
 
     # then we extract the data
     if isinstance(data, torch.Tensor):
