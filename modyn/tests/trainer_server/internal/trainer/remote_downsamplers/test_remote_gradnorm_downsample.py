@@ -22,7 +22,7 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
     )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         data = torch.randn(8, 10)
-        target = torch.randint(2, size=(8,))
+        target = torch.randint(3, size=(8,))
         ids = list(range(8))
         forward_outputs = model(data)
         sampler.inform_samples(ids, data, forward_outputs, target)
@@ -42,7 +42,7 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
 
 
 @pytest.mark.parametrize("squeeze_dim", [True, False])
-def test_sample_shape_other_losses(dummy_system_config: ModynConfig, squeeze_dim):
+def test_sample_shape_binary(dummy_system_config: ModynConfig, squeeze_dim):
     model = torch.nn.Linear(10, 1)
     downsampling_ratio = 50
     per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")

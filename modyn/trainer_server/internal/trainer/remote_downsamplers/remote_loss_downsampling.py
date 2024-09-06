@@ -52,6 +52,8 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         embedding: torch.Tensor | None = None,
     ) -> None:
         scores = self.get_scores(forward_output, target)
+        if scores.dim() == 2:
+            scores = scores.squeeze(1)
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
