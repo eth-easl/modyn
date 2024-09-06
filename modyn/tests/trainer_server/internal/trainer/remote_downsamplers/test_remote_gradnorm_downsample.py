@@ -22,7 +22,7 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
     )
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         data = torch.randn(8, 10)
-        target = torch.randint(3, size=(8,))
+        target = torch.randint(2, size=(8,))
         ids = list(range(8))
         forward_outputs = model(data)
         sampler.inform_samples(ids, data, forward_outputs, target)
