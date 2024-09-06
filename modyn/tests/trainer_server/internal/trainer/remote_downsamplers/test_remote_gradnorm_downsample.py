@@ -41,7 +41,6 @@ def test_sample_shape_ce(dummy_system_config: ModynConfig):
         assert set(downsampled_indexes) <= set(range(8))
 
 
-
 @pytest.mark.parametrize("squeeze_dim", [True, False])
 def test_sample_shape_other_losses(dummy_system_config: ModynConfig, squeeze_dim):
     model = torch.nn.Linear(10, 1)
