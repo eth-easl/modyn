@@ -45,7 +45,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
-    AbstractRemoteDownsamplingStrategy
+    AbstractRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.trainer_server.internal.utils.trainer_messages import TrainerMessages
