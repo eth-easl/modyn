@@ -50,7 +50,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         embedding: torch.Tensor | None = None,
     ) -> None:
         if forward_output.dim() == 1:
-            # BCEWithLogitsLoss requires that forward_output and target have the same shape
+            # BCEWithLogitsLoss requires that forward_output and target have the same dimension
             forward_output = forward_output.unsqueeze(1)
             target = target.unsqueeze(1)
 
