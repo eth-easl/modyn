@@ -176,7 +176,7 @@ def test_collect_gradients_binary(matrix_content, dummy_system_config: ModynConf
             # shape same as the last dimension of output
             gradient_shape = 1
         else:
-            # 5 is the input dimension of the last layer and 2 is the output one
+            # 5 is the input dimension of the last layer and 1 is the output one
             gradient_shape = 5 * 1 + 1
         assert np.concatenate(amds.matrix_elements).shape == (7, gradient_shape)
 
