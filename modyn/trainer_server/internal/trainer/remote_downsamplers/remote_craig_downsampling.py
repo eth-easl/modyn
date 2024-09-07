@@ -110,6 +110,9 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         target: torch.Tensor,
         embedding: torch.Tensor | None,
     ) -> None:
+        if forward_output.dim() == 1:
+            forward_output = forward_output.unsqueeze(1)
+            target = target.unsqueeze(1)
         if self.full_grad_approximation == "LastLayerWithEmbedding":
             assert embedding is not None
             grads_wrt_loss_sum = self._compute_last_two_layers_gradient_wrt_loss_sum(
