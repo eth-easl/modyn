@@ -3,7 +3,9 @@ import math
 import torch
 
 from modyn.config.schema.pipeline import RocAucMetricConfig
-from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
+from modyn.evaluator.internal.metrics.abstract_holistic_metric import (
+    AbstractHolisticMetric,
+)
 
 
 class RocAuc(AbstractHolisticMetric):
@@ -26,6 +28,11 @@ class RocAuc(AbstractHolisticMetric):
         """
         assert self.evaluation_result is None
 
+        if y_true.dim() < 1 or len(y_true) < 2:
+            # if the number of elements in y_pred or y_true is less than 2, then the ROC-AUC score is undefined
+            self.evaluation_result = 0
+            return
+
         y_true.squeeze_()
         y_pred.squeeze_()
         if y_true.shape != y_pred.shape:
@@ -33,7 +40,10 @@ class RocAuc(AbstractHolisticMetric):
         desc_score_indices = torch.argsort(y_pred, descending=True)
         y_score = y_pred[desc_score_indices]
         y_true = y_true[desc_score_indices]
-        distinct_value_indices = torch.nonzero(y_score[1:] - y_score[:-1], as_tuple=False).squeeze()
+        # we only need to squeeze the second dimension;
+        # otherwise if there is only one non-zero element in (y_score[1:] - y_score[:-1]),
+        # after squeezing it will become a scalar, which will cause an error in torch.cat
+        distinct_value_indices = torch.nonzero(y_score[1:] - y_score[:-1], as_tuple=False).squeeze(dim=1)
         threshold_idxs = torch.cat([distinct_value_indices, torch.tensor([y_true.numel() - 1])])
         tps = torch.cumsum(y_true, dim=0)[threshold_idxs]
         fps = 1 + threshold_idxs - tps

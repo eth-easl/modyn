@@ -25,6 +25,7 @@ class StaticPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
             "a trigger will be forced."
         ),
     )
+    needs_calibration: Literal[False] = Field(False)
 
 
 class DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
@@ -32,13 +33,18 @@ class DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     average of historic performances after triggers."""
 
     id: Literal["DynamicPerformanceThresholdCriterion"] = Field("DynamicPerformanceThresholdCriterion")
-    allowed_deviation: float = Field(
+    deviation: float = Field(
         0.05,
         description=(
             "The allowed deviation from the expected performance. Will only trigger if the performance is "
             "below the expected performance minus the allowed deviation."
         ),
     )
+    absolute: bool = Field(
+        False,
+        description="Whether the deviation is absolute or relative to the rolling average.",
+    )
+    needs_calibration: Literal[True] = Field(True)
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -75,6 +81,7 @@ class _NumberAvoidableMisclassificationCriterion(ModynBaseModel):
             "better than the expected performance."
         ),
     )
+    needs_calibration: Literal[True] = Field(True)
 
 
 class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassificationCriterion):

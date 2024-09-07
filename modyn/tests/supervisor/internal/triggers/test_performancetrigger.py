@@ -19,6 +19,9 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
     PerformanceTriggerEvaluationConfig,
 )
+from modyn.config.schema.pipeline.trigger.simple.data_amount import (
+    DataAmountTriggerConfig,
+)
 from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
@@ -28,6 +31,9 @@ from modyn.supervisor.internal.triggers.performance.decision_policy import (
     PerformanceDecisionPolicy,
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
+)
+from modyn.supervisor.internal.triggers.performance.performance_tracker import (
+    PerformanceTracker,
 )
 from modyn.supervisor.internal.triggers.performance.performancetrigger_mixin import (
     PerformanceTriggerMixin,
@@ -83,7 +89,7 @@ def static_criterion() -> StaticPerformanceThresholdCriterion:
 
 @fixture
 def dynamic_criterion() -> DynamicPerformanceThresholdCriterion:
-    return DynamicPerformanceThresholdCriterion(metric="Accuracy", allowed_deviation=0.1)
+    return DynamicPerformanceThresholdCriterion(metric="Accuracy", deviation=0.1)
 
 
 @fixture
@@ -191,13 +197,12 @@ def test_inform(
     assert len(trigger._leftover_data) == 2
     assert trigger._sample_left_until_detection == 2
     assert mock_inform_data.call_count == 1
-    assert mock_evaluation.call_count == 2
+    assert mock_evaluation.call_count == 1  # first iteration doesn't call evaluate_decision
     assert mock_evaluate_decision.call_count == 0
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4)])]
     assert mock_evaluation.call_args_list == [
-        # first time within inform, second time within inform_new_model
-        call(trigger, interval_data=[(i, 100 + i) for i in range(4)]),
+        # inform doesn't run a detection, but inform_new_model does
         call(interval_data=[(i, 100 + i) for i in range(4)]),
     ]
 
@@ -221,7 +226,7 @@ def test_inform(
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4, 8)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4, 8)])]
     assert mock_evaluation.call_args_list == [
-        # first time within inform, second time within inform_new_model
+        # first time call doesn't run evaluation (warmup), second time within inform_new_model
         call(trigger, interval_data=[(i, 100 + i) for i in range(4, 8)]),
         call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
     ]
@@ -243,3 +248,74 @@ def test_inform(
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(8, 12)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(8, 12)])]
     assert mock_evaluation.call_args_list == [call(trigger, interval_data=[(i, 100 + i) for i in range(8, 12)])]
+
+
+@patch.object(PerformanceTriggerMixin, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
+@patch.object(PerformanceTracker, "inform_evaluation", return_value=None)
+@patch.object(DataDensityTracker, "inform_data", return_value=None)
+@patch.object(
+    StaticPerformanceThresholdDecisionPolicy,
+    "evaluate_decision",
+    side_effect=[True, False],
+)
+@patch.object(PerformanceDecisionPolicy, "inform_trigger")
+def test_warmup_trigger(
+    mock_inform_trigger: MagicMock,
+    mock_evaluate_decision: MagicMock,
+    mock_inform_data: MagicMock,
+    mock_inform_evaluation: MagicMock,
+    mock_evaluation: MagicMock,
+    performance_trigger_config: PerformanceTriggerConfig,
+) -> None:
+    performance_trigger_config.evaluation_interval_data_points = 1
+    performance_trigger_config.warmup_intervals = 3
+    performance_trigger_config.warmup_policy = DataAmountTriggerConfig(num_samples=2)
+    trigger = PerformanceTrigger(performance_trigger_config)
+    assert not trigger._triggered_once
+
+    trigger_results = list(trigger.inform([(0, 0, 0)]))
+    assert trigger_results == [0]  # first trigger is enforced
+    assert trigger._triggered_once
+    assert mock_inform_data.call_count == 1
+    assert mock_evaluation.call_count == 0  # not on first trigger, no model
+    assert mock_inform_evaluation.call_count == 0  # not on first trigger, no model
+    assert mock_evaluate_decision.call_count == 0
+
+    mock_inform_data.reset_mock()
+    mock_evaluation.reset_mock()
+    mock_inform_evaluation.reset_mock()
+    mock_evaluate_decision.reset_mock()
+
+    trigger_results = list(trigger.inform([(1, 0, 0)]))
+    assert trigger_results == [0]
+    assert trigger._triggered_once
+    assert mock_inform_data.call_count == 1
+    assert mock_inform_evaluation.call_count == 1
+    assert mock_evaluation.call_count == 1
+    assert mock_evaluate_decision.call_count == 0
+
+    mock_inform_data.reset_mock()
+    mock_evaluation.reset_mock()
+    mock_inform_evaluation.reset_mock()
+    mock_evaluate_decision.reset_mock()
+
+    trigger_results = list(trigger.inform([(2, 0, 0)]))
+    assert len(trigger_results) == 0
+    assert trigger._triggered_once
+    assert mock_inform_data.call_count == 1
+    assert mock_inform_evaluation.call_count == 1
+    assert mock_evaluation.call_count == 1
+    assert mock_evaluate_decision.call_count == 0
+
+    mock_inform_data.reset_mock()
+    mock_evaluation.reset_mock()
+    mock_inform_evaluation.reset_mock()
+    mock_evaluate_decision.reset_mock()
+
+    trigger_results = list(trigger.inform([(3, 0, 0)]))
+    assert trigger_results == [0]
+    assert trigger._triggered_once
+    assert mock_inform_data.call_count == 1
+    assert mock_inform_evaluation.call_count == 1
+    assert mock_evaluation.call_count == 1
+    assert mock_evaluate_decision.call_count == 1

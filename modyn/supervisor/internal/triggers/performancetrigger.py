@@ -68,27 +68,35 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
     ) -> bool:
         # Run the evaluation (even if we don't use the result, e.g. for the first forced trigger)
         self.data_density.inform_data(batch)
-
-        num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
-            self, interval_data=batch
-        )
-
-        self.performance_tracker.inform_evaluation(
-            num_samples=num_samples,
-            num_misclassifications=num_misclassifications,
-            evaluation_scores=evaluation_scores,
-        )
-
         policy_decisions: dict[str, bool] = {}
 
-        # The first ever detection will always trigger
-        if not self._triggered_once:
-            # If we've never triggered before, always trigger
-            self._triggered_once = True
-            triggered = True
+        num_samples = None
+        num_misclassifications = None
+        evaluation_scores: dict[str, float] = {}
 
-            # in the first interval we don't evaluate the decision policies as they might require one trigger
-            # to have happened before in order to derive forecasts
+        if self._triggered_once:
+            # we can run a (warmup) evaluation, iff we have already triggered once and therefore a model at hand
+            num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
+                self, interval_data=batch
+            )
+
+            # Let's update the state; in the warmup phase this will calibrate the policy without the decision
+            # policies being consulted
+            self.performance_tracker.inform_evaluation(
+                num_samples=num_samples,
+                num_misclassifications=num_misclassifications,
+                evaluation_scores=evaluation_scores,
+            )
+
+        # --------------------------------------------- Trigger Decision --------------------------------------------- #
+
+        if (not self._triggered_once) or not self.warmup_trigger.completed:
+            # delegate to the warmup policy
+            delegated_trigger_results = self.warmup_trigger.delegate_inform(batch)
+            triggered = not self._triggered_once or delegated_trigger_results
+            self._triggered_once = True
+
+            # we have already reported the warmup evaluation results
 
         else:
             # evaluate the decision policies
@@ -115,9 +123,9 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
             evaluation_interval=(batch[0][1], batch[-1][1]),
-            num_samples=num_samples,
-            num_misclassifications=num_misclassifications,
-            evaluation_scores=evaluation_scores,
+            num_samples=num_samples or -1,
+            num_misclassifications=num_misclassifications or -1,
+            evaluation_scores=evaluation_scores or {},
             policy_decisions=policy_decisions,
         )
         if log:

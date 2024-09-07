@@ -3,10 +3,17 @@ from collections.abc import Iterable
 import pandas as pd
 
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import BetweenTwoTriggersEvalStrategyConfig
-from modyn.config.schema.pipeline.evaluation.strategy.static import StaticEvalStrategyConfig
+from modyn.config.schema.pipeline.evaluation.strategy.between_two_triggers import (
+    BetweenTwoTriggersEvalStrategyConfig,
+)
+from modyn.config.schema.pipeline.evaluation.strategy.static import (
+    StaticEvalStrategyConfig,
+)
 from modyn.supervisor.internal.eval.handler import EvalHandler
-from modyn.supervisor.internal.eval.strategies.abstract import AbstractEvalStrategy, EvalInterval
+from modyn.supervisor.internal.eval.strategies.abstract import (
+    AbstractEvalStrategy,
+    EvalInterval,
+)
 
 
 class DummyEvalStrategy(AbstractEvalStrategy):
@@ -14,7 +21,11 @@ class DummyEvalStrategy(AbstractEvalStrategy):
         super().__init__(config)
         self.intervals = intervals
 
-    def get_eval_intervals(self, training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+    def get_eval_intervals(
+        self,
+        training_intervals: list[tuple[int, int]],
+        dataset_end_time: int | None = None,
+    ) -> Iterable[EvalInterval]:
         return self.intervals
 
 
@@ -53,7 +64,13 @@ def test_get_eval_requests_after_training() -> None:
     ]
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == expected_eval_requests
 
@@ -88,7 +105,7 @@ def test_get_eval_requests_after_pipeline() -> None:
         )
     )
     eval_handler.eval_strategy = DummyEvalStrategy(eval_handler.config, intervals)
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, dataset_end_time=99)
 
     # now assert the actual values in the full cross product (matrix mode)
     # (model_id, currently_active_model, currently_trained_model, start_interval, end_interval)
@@ -151,25 +168,43 @@ def test_get_eval_requests_after_pipeline() -> None:
     ]
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == expected_eval_requests
 
     # models=active
     eval_handler.config.models = "active"
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, 99)
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == [exp for exp in expected_eval_requests if exp[1]]
 
     # models=train
     eval_handler.config.models = "train"
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, 99)
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == [exp for exp in expected_eval_requests if exp[2]]
 
@@ -195,7 +230,7 @@ def test_between_two_trigger_after_pipeline() -> None:
             execution_time="after_pipeline",
         )
     )
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, 99)
 
     # now assert the actual values in the full cross product (matrix mode)
     # (model_id, currently_active_model, currently_trained_model, start_interval, end_interval)
@@ -220,27 +255,50 @@ def test_between_two_trigger_after_pipeline() -> None:
         (26, False, False, 14, 16),
         (28, True, False, 14, 16),
         (29, False, True, 14, 16),
+        # interval 5 (until dataset end): for models/triggers 1-8
+        (21, False, False, 17, 99),
+        (26, False, False, 17, 99),
+        (28, False, False, 17, 99),
+        (29, True, True, 17, 99),
     ]
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == expected_eval_requests
 
     # models=active
     eval_handler.config.models = "active"
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, 99)
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == [exp for exp in expected_eval_requests if exp[1]]
 
     # models=train
     eval_handler.config.models = "train"
-    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe)
+    eval_requests = eval_handler.get_eval_requests_after_pipeline(trigger_dataframe, 99)
 
     assert [
-        (r.id_model, r.currently_active_model, r.currently_trained_model, r.interval_start, r.interval_end)
+        (
+            r.id_model,
+            r.currently_active_model,
+            r.currently_trained_model,
+            r.interval_start,
+            r.interval_end,
+        )
         for r in eval_requests
     ] == [exp for exp in expected_eval_requests if exp[2]]

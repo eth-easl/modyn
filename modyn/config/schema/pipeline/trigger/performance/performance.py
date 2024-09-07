@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import Field, field_validator, model_validator
 
@@ -7,6 +7,7 @@ from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.trigger.common.batched import BatchedTriggerConfig
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
     PerformanceTriggerCriterion,
+    StaticNumberAvoidableMisclassificationCriterion,
 )
 from modyn.const.types import ForecastingMethod, TriggerEvaluationMode
 
@@ -76,8 +77,19 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
         evaluation config."""
         metrics = {metric.name for metric in self.evaluation.dataset.metrics}
         for criterion in self.decision_criteria.values():
+            if isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
+                continue
             if criterion.metric not in metrics:
                 raise ValueError(
                     f"Criterion {criterion.id} uses metric {criterion.metric} which is not defined in the evaluation config."
                 )
+        return self
+
+    @model_validator(mode="after")
+    def warmup_policy_requirement(self) -> Self:
+        """Assert whether the warmup policy is set when a metric needs
+        calibration."""
+        for criterion in self.decision_criteria.values():
+            if criterion.needs_calibration and self.warmup_policy is None:
+                raise ValueError("A warmup policy is required for performance criteria that need calibration.")
         return self

@@ -27,7 +27,10 @@ from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
 from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
-from modyn.supervisor.internal.pipeline_executor import PipelineExecutor, execute_pipeline
+from modyn.supervisor.internal.pipeline_executor import (
+    PipelineExecutor,
+    execute_pipeline,
+)
 from modyn.supervisor.internal.pipeline_executor.models import (
     ConfigLogs,
     ExecutionState,
@@ -37,7 +40,10 @@ from modyn.supervisor.internal.pipeline_executor.models import (
     StageInfo,
     StageLog,
 )
-from modyn.supervisor.internal.pipeline_executor.pipeline_executor import _pipeline_stage_parents, pipeline_stage
+from modyn.supervisor.internal.pipeline_executor.pipeline_executor import (
+    _pipeline_stage_parents,
+    pipeline_stage,
+)
 
 EVALUATION_DIRECTORY: pathlib.Path = pathlib.Path(os.path.realpath(__file__)).parent / "test_eval_dir"
 START_TIMESTAMP = 21
@@ -57,7 +63,9 @@ def minimal_system_config(dummy_system_config: ModynConfig) -> ModynConfig:
 
 
 @pytest.fixture
-def minimal_pipeline_config(dummy_pipeline_config: ModynPipelineConfig) -> ModynPipelineConfig:
+def minimal_pipeline_config(
+    dummy_pipeline_config: ModynPipelineConfig,
+) -> ModynPipelineConfig:
     config = dummy_pipeline_config.model_copy()
     return config
 
@@ -86,7 +94,9 @@ def dummy_pipeline_args(
 
 
 @pytest.fixture
-def dummy_execution_state(dummy_pipeline_args: PipelineExecutionParams) -> ExecutionState:
+def dummy_execution_state(
+    dummy_pipeline_args: PipelineExecutionParams,
+) -> ExecutionState:
     return ExecutionState(**vars(dummy_pipeline_args))
 
 
@@ -105,7 +115,14 @@ def dummy_logs(dummy_pipeline_args: PipelineExecutionParams) -> PipelineLogs:
 
 @pytest.fixture
 def dummy_stage_log() -> StageLog:
-    return StageLog(id="dummy", id_seq_num=-1, start=0, sample_idx=1, sample_time=1000, trigger_idx=0)
+    return StageLog(
+        id="dummy",
+        id_seq_num=-1,
+        start=0,
+        sample_idx=1,
+        sample_time=1000,
+        trigger_idx=0,
+    )
 
 
 @overload
@@ -115,7 +132,9 @@ def get_non_connecting_pipeline_executor(
 
 
 @overload
-def get_non_connecting_pipeline_executor(pipeline_args: PipelineExecutionParams) -> PipelineExecutor: ...
+def get_non_connecting_pipeline_executor(
+    pipeline_args: PipelineExecutionParams,
+) -> PipelineExecutor: ...
 
 
 def get_non_connecting_pipeline_executor(
@@ -129,7 +148,9 @@ def get_non_connecting_pipeline_executor(
 
 
 @pytest.fixture
-def non_connecting_pipeline_executor(dummy_pipeline_args: PipelineExecutionParams) -> PipelineExecutor:
+def non_connecting_pipeline_executor(
+    dummy_pipeline_args: PipelineExecutionParams,
+) -> PipelineExecutor:
     return PipelineExecutor(dummy_pipeline_args)
 
 
@@ -175,7 +196,9 @@ def test_pipeline_stage_decorator(dummy_pipeline_args: PipelineExecutionParams) 
     assert abs((pe.logs.supervisor_logs.stage_runs[0].duration - (t1 - t0)).total_seconds()) < 8e-3
 
 
-def test_pipeline_stage_decorator_generator(dummy_pipeline_args: PipelineExecutionParams) -> None:
+def test_pipeline_stage_decorator_generator(
+    dummy_pipeline_args: PipelineExecutionParams,
+) -> None:
     class TestStageLogInfo(StageInfo):
         elements: list[int]
         finalized: bool = False
@@ -266,7 +289,11 @@ def test_fetch_new_data(
     assert triggers == 2
 
 
-@patch.object(GRPCHandler, "get_new_data_since", return_value=[([(10, 42, 0)], 98), ([(11, 43, 1)], 99)])
+@patch.object(
+    GRPCHandler,
+    "get_new_data_since",
+    return_value=[([(10, 42, 0)], 98), ([(11, 43, 1)], 99)],
+)
 @patch.object(PipelineExecutor, "_process_new_data", side_effect=[[10], [11]])
 def test_fetch_new_data_batched(
     test__process_new_data: MagicMock,
@@ -279,13 +306,18 @@ def test_fetch_new_data_batched(
     triggers = non_connecting_pipeline_executor._fetch_new_data(dummy_execution_state, dummy_logs)
     test_get_new_data_since.assert_called_once_with("test", 21)
 
-    expected_calls = [call(ANY, ANY, [(10, 42, 0)], 98), call(ANY, ANY, [(11, 43, 1)], 99)]
+    expected_calls = [
+        call(ANY, ANY, [(10, 42, 0)], 98),
+        call(ANY, ANY, [(11, 43, 1)], 99),
+    ]
     assert test__process_new_data.call_args_list == expected_calls
     assert triggers == 2
 
 
 def test_serve_online_data(
-    non_connecting_pipeline_executor: PipelineExecutor, dummy_execution_state: ExecutionState, dummy_logs: PipelineLogs
+    non_connecting_pipeline_executor: PipelineExecutor,
+    dummy_execution_state: ExecutionState,
+    dummy_logs: PipelineLogs,
 ) -> None:
     pe = non_connecting_pipeline_executor
 
@@ -313,7 +345,12 @@ def test_serve_online_data(
             ]
             assert handle_mock.call_args_list == expected_handle_mock_arg_list
 
-            expected_get_new_data_arg_list = [call("test", 21), call("test", 43), call("test", 45), call("test", 45)]
+            expected_get_new_data_arg_list = [
+                call("test", 21),
+                call("test", 43),
+                call("test", 45),
+                call("test", 45),
+            ]
             assert get_new_data_mock.call_args_list == expected_get_new_data_arg_list
 
 
@@ -346,7 +383,11 @@ def test__process_new_data(
     batch_mock: MagicMock
     with patch.object(ExecutionState, "selector_batch_size", new_callable=PropertyMock) as selector_batch_size_mock:
         selector_batch_size_mock.return_value = selector_batch_size
-        with patch.object(PipelineExecutor, "_process_new_data_batch", side_effect=batching_return_vals) as batch_mock:
+        with patch.object(
+            PipelineExecutor,
+            "_process_new_data_batch",
+            side_effect=batching_return_vals,
+        ) as batch_mock:
             trigger_indexes = pe._process_new_data(dummy_execution_state, pe.logs, new_data, 0)
             assert trigger_indexes == [x for sub in batching_return_vals for x in sub]
             assert batch_mock.call_args_list == (expected_process_new_data_batch_args or [call(ANY, ANY, new_data)])
@@ -380,7 +421,15 @@ def test__process_new_data_batch_no_triggers(
     ),
     [
         (
-            [(10, 1, 0), (11, 2, 0), (12, 3, 0), (13, 4, 0), (14, 5, 0), (15, 6, 0), (16, 7, 0)],  # batch
+            [
+                (10, 1, 0),
+                (11, 2, 0),
+                (12, 3, 0),
+                (13, 4, 0),
+                (14, 5, 0),
+                (15, 6, 0),
+                (16, 7, 0),
+            ],  # batch
             [1, 3, 5],  # trigger_indexes
             [(0, {}), (1, {}), (2, {})],  # trigger_id, selector_log
             [  # inform_selector_and_trigger_expected_args
@@ -394,7 +443,15 @@ def test__process_new_data_batch_no_triggers(
             [call(42, [(16, 7, 0)])],
         ),
         (  # test empty triggers
-            [(10, 1, 5), (11, 2, 5), (12, 3, 5), (13, 4, 5), (14, 5, 5), (15, 6, 5), (16, 7, 5)],  # batch
+            [
+                (10, 1, 5),
+                (11, 2, 5),
+                (12, 3, 5),
+                (13, 4, 5),
+                (14, 5, 5),
+                (15, 6, 5),
+                (16, 7, 5),
+            ],  # batch
             [0, 0, 3],  # trigger_indexes
             [(0, {}), (1, {}), (2, {})],  # (trigger_id, selector_log)
             # inform_selector_and_trigger_expected_args
@@ -609,7 +666,13 @@ def test__execute_triggers_within_batch_trigger_timespan(
     inform_selector_and_trigger_retval: list[tuple[int, dict]],
     dummy_pipeline_args: PipelineExecutionParams,
 ) -> None:
-    tracking_columns = ["trigger_i", "trigger_id", "trigger_index", "first_timestamp", "last_timestamp"]
+    tracking_columns = [
+        "trigger_i",
+        "trigger_id",
+        "trigger_index",
+        "first_timestamp",
+        "last_timestamp",
+    ]
     test_inform_selector_and_trigger.side_effect = inform_selector_and_trigger_retval
     test_inform_selector.return_value = {}
 
@@ -663,7 +726,10 @@ def test_train_and_store_model(
 
     test_start_training.return_value = training_id
     test_store_trained_model.return_value = model_id
-    test_wait_for_training_completion.return_value = {"num_batches": 0, "num_samples": 0}
+    test_wait_for_training_completion.return_value = {
+        "num_batches": 0,
+        "num_samples": 0,
+    }
 
     ret_training_id, ret_model_id = pe._train_and_store_model(pe.state, pe.logs, trigger_id)
     assert (ret_training_id, ret_model_id) == (training_id, model_id)
@@ -677,7 +743,11 @@ def test_train_and_store_model(
 
 @patch.object(GRPCHandler, "store_trained_model", return_value=101)
 @patch.object(GRPCHandler, "start_training", return_value=1337)
-@patch.object(GRPCHandler, "wait_for_training_completion", return_value={"num_batches": 0, "num_samples": 0})
+@patch.object(
+    GRPCHandler,
+    "wait_for_training_completion",
+    return_value={"num_batches": 0, "num_samples": 0},
+)
 @patch.object(GRPCHandler, "get_number_of_samples", return_value=34)
 @patch.object(GRPCHandler, "get_status_bar_scale", return_value=40)
 def test_run_training_set_num_samples_to_pass(
@@ -706,7 +776,11 @@ def test_run_training_set_num_samples_to_pass(
 
 
 @pytest.mark.parametrize("test_failure", [False, True])
-@patch.object(GRPCHandler, "wait_for_evaluation_completion", return_value={"num_batches": 0, "num_samples": 0})
+@patch.object(
+    GRPCHandler,
+    "wait_for_evaluation_completion",
+    return_value={"num_batches": 0, "num_samples": 0},
+)
 @patch.object(GRPCHandler, "cleanup_evaluations")
 @patch.object(GRPCHandler, "get_evaluation_results")
 def test__start_evaluations(
@@ -731,7 +805,10 @@ def test__start_evaluations(
 
     if test_failure:
 
-        def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+        def get_eval_intervals(
+            training_intervals: list[tuple[int, int]],
+            dataset_end_time: int | None = None,
+        ) -> Iterable[EvalInterval]:
             yield from [
                 EvalInterval(start=0, end=100, active_model_trained_before=50),
                 EvalInterval(start=100, end=200, active_model_trained_before=150),
@@ -742,15 +819,31 @@ def test__start_evaluations(
             EvaluateModelResponse(
                 evaluation_started=True,
                 evaluation_id=42,
-                interval_responses=[success_interval, failure_interval, success_interval],
+                interval_responses=[
+                    success_interval,
+                    failure_interval,
+                    success_interval,
+                ],
             )
         ]
         test_get_evaluation_results.return_value = [EvaluationIntervalData() for _ in range(3)]
 
     else:
-        intervals = [(0, 100), (100, 200), (0, None), (0, 200), (0, 0), (200, None), (0, None), (0, 0)]
+        intervals = [
+            (0, 100),
+            (100, 200),
+            (0, None),
+            (0, 200),
+            (0, 0),
+            (200, None),
+            (0, None),
+            (0, 0),
+        ]
 
-        def get_eval_intervals(training_intervals: Iterable[tuple[int, int]]) -> Iterable[EvalInterval]:
+        def get_eval_intervals(
+            training_intervals: list[tuple[int, int]],
+            dataset_end_time: int | None = None,
+        ) -> Iterable[EvalInterval]:
             yield from [EvalInterval(start=start, end=end, active_model_trained_before=0) for start, end in intervals]
 
         evaluator_stub_mock.evaluate_model.return_value = EvaluateModelResponse(
@@ -765,7 +858,13 @@ def test__start_evaluations(
     with patch.object(SlicingEvalStrategy, "get_eval_intervals", side_effect=get_eval_intervals):
         model_id = 1
         pe._evaluate_and_store_results(
-            pe.state, pe.logs, trigger_id=0, training_id=0, model_id=model_id, first_timestamp=20, last_timestamp=70
+            pe.state,
+            pe.logs,
+            trigger_id=0,
+            training_id=0,
+            model_id=model_id,
+            first_timestamp=20,
+            last_timestamp=70,
         )
 
         assert evaluator_stub_mock.evaluate_model.call_count == 1  # batched

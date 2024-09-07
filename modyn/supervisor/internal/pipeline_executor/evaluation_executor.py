@@ -2,7 +2,9 @@
 
 import datetime
 import logging
+import os
 import pickle
+import shutil
 import sys
 from collections import defaultdict
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -20,12 +22,14 @@ from modyn.config.schema.pipeline import ModynPipelineConfig
 from modyn.config.schema.system import ModynConfig
 
 # pylint: disable-next=no-name-in-module
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelResponse, EvaluationAbortedReason
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
+    EvaluateModelResponse,
+    EvaluationAbortedReason,
+)
 from modyn.supervisor.internal.eval.handler import EvalHandler, EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.grpc_handler import GRPCHandler
 from modyn.supervisor.internal.pipeline_executor.models import (
-    ConfigLogs,
     MultiEvaluationInfo,
     PipelineLogs,
     SingleEvaluationInfo,
@@ -49,6 +53,8 @@ class EvalStateConfig(BaseModel):
 @dataclass
 class AfterPipelineEvalContext:
     tracking_dfs: dict[str, pd.DataFrame]
+    dataset_end_time: int
+    """Timestamp of the last sample in the dataset."""
 
 
 class EvaluationExecutor:
@@ -72,10 +78,15 @@ class EvaluationExecutor:
             else []
         )
 
-    def register_tracking_info(self, tracking_dfs: dict[str, pd.DataFrame]) -> None:
+    def register_tracking_info(self, tracking_dfs: dict[str, pd.DataFrame], dataset_end_time: int) -> None:
+        """
+        Args:
+            tracking_dfs: A dictionary of dataframes containing tracking information.
+            dataset_end_time: Timestamp of the last sample in the dataset.
+        """
         assert tracking_dfs.get(PipelineStage.HANDLE_SINGLE_TRIGGER.name) is not None
         assert tracking_dfs.get(PipelineStage.STORE_TRAINED_MODEL.name) is not None
-        self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs)
+        self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs, dataset_end_time=dataset_end_time)
 
     def create_snapshot(self) -> None:
         """Create a snapshot of the pipeline metadata before starting to
@@ -90,7 +101,10 @@ class EvaluationExecutor:
 
         # write state: config, pipeline & context
         eval_state_config = EvalStateConfig(
-            pipeline_id=self.pipeline_id, eval_dir=self.pipeline_logdir, config=self.config, pipeline=self.pipeline
+            pipeline_id=self.pipeline_id,
+            eval_dir=self.pipeline_logdir,
+            config=self.config,
+            pipeline=self.pipeline,
         )
         (snapshot_dir / "eval_state.yaml").write_text(eval_state_config.model_dump_json(by_alias=True))
         (snapshot_dir / "context.pcl").write_bytes(pickle.dumps(self.context))
@@ -186,7 +200,9 @@ class EvaluationExecutor:
             ):
                 continue
 
-            handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(df_trainings=df_trainings)
+            handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(
+                df_trainings=df_trainings, dataset_end_time=self.context.dataset_end_time
+            )
             eval_requests += handler_eval_requests
 
         if len(eval_requests) == 0:
@@ -254,7 +270,8 @@ class EvaluationExecutor:
             results = self._single_batched_evaluation(intervals, model_id, dataset_id)
 
             interval_result_infos: list[SingleEvaluationInfo] = []
-            intervals_and_results = zip(eval_requests, results)
+            intervals_and_results = list(zip(eval_requests, results))
+            assert len(intervals_and_results) == len(eval_requests), "Mismatch in the number of intervals and results."
             for eval_req, (failure_reason, interval_res) in intervals_and_results:
                 interval_result_infos.append(
                     SingleEvaluationInfo(
@@ -323,7 +340,9 @@ class EvaluationExecutor:
             intervals=cast(list[tuple[int | None, int | None]], intervals),
         )
         for attempt in Retrying(
-            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
         ):
             with attempt:
                 try:
@@ -380,7 +399,12 @@ class EvaluationExecutor:
                 reason = get_failure_reason(interval_response.eval_aborted_reason)
                 eval_results.append((reason, {}))
             else:
-                eval_results.append((None, {"dataset_size": interval_response.dataset_size, "metrics": []}))
+                eval_results.append(
+                    (
+                        None,
+                        {"dataset_size": interval_response.dataset_size, "metrics": []},
+                    )
+                )
 
         for interval_result in eval_data:
             interval_idx = interval_result.interval_index
@@ -395,24 +419,67 @@ class EvaluationExecutor:
 #                                       DevTools                                       #
 # ------------------------------------------------------------------------------------ #
 
+
+def eval_executor_single_pipeline(pipeline_dir: Path) -> SupervisorLogs:
+    # restart evaluation executor
+    ex = EvaluationExecutor.init_from_path(pipeline_dir)
+
+    supervisor_eval_logs = ex.run_post_pipeline_evaluations(manual_run=True)
+    logger.info("Done with manual evaluation.")
+
+    return supervisor_eval_logs
+
+
+def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = None) -> None:
+    """Run the evaluation executor for multiple pipelines."""
+    faulty_dir = pipelines_dir / "_faulty"
+    done_dir = pipelines_dir / "_done"
+    finished_dir = pipelines_dir / "_finished"
+
+    faulty_dir.mkdir(exist_ok=True)
+    done_dir.mkdir(exist_ok=True)
+    finished_dir.mkdir(exist_ok=True)
+
+    pipeline_dirs = [p for p in pipelines_dir.iterdir() if p.is_dir()]
+    for p_dir in pipeline_dirs:
+        if "pipeline" not in p_dir.name:
+            continue
+        if pids and int(p_dir.name.split("_")[-1]) not in pids:
+            continue
+        pipeline_logfile = p_dir / "pipeline.log"
+        if not pipeline_logfile.exists():
+            # move file to _faulty subdir
+            os.rename(p_dir, faulty_dir / p_dir.name)
+            continue
+
+        (finished_dir / p_dir.stem).mkdir(exist_ok=True)
+
+        supervisor_eval_logs = eval_executor_single_pipeline(p_dir)
+
+        shutil.copytree(p_dir, done_dir / p_dir.stem, dirs_exist_ok=True)
+        full_logs = PipelineLogs.model_validate_json((done_dir / p_dir.stem / "pipeline.log").read_text())
+        full_logs.supervisor_logs.stage_runs += supervisor_eval_logs.stage_runs
+        (done_dir / p_dir.stem / "pipeline.log").write_text(full_logs.model_dump_json(by_alias=True))
+
+        os.rename(p_dir, finished_dir / p_dir.stem)
+
+        logger.info(f"Done with pipeline {p_dir.name}")
+
+
 if __name__ == "__main__":
-    snapshot_path = Path(input("Enter pipeline log directory path to (re)run evaluation executor: "))
-    if not snapshot_path.exists():
+    userpath = Path(input("Enter pipeline log directory path to (re)run evaluation executor: "))
+    single_pipeline_mode = input("Run evaluation executor for single pipeline? (y/n): ")
+    if not userpath.exists():
         print("Path not found")
         sys.exit(1)
 
-    # restart evaluation executor
-    ex = EvaluationExecutor.init_from_path(snapshot_path)
+    if single_pipeline_mode.lower() == "y":
+        p_id = int(input("Enter pipeline id: "))
+        eval_executor_multi_pipeline(userpath, [p_id])
+    elif single_pipeline_mode.lower() == "n":
+        eval_executor_multi_pipeline(userpath)
+    else:
+        print("Invalid input")
+        sys.exit(1)
 
-    logs_ = PipelineLogs(
-        pipeline_id=ex.pipeline_id,
-        pipeline_stages={},
-        config=ConfigLogs(system=ex.config, pipeline=ex.pipeline),
-        experiment=True,
-        supervisor_logs=SupervisorLogs(),
-    )
-
-    logs_.supervisor_logs = ex.run_post_pipeline_evaluations()
-    logs_.materialize(snapshot_path, mode="final")
-    logger.info("Done with manual evaluation!")
     sys.exit(0)

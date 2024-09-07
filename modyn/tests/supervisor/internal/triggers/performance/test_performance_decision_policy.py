@@ -30,7 +30,7 @@ def static_threshold_policy() -> StaticPerformanceThresholdDecisionPolicy:
 @pytest.fixture
 def dynamic_threshold_policy() -> DynamicPerformanceThresholdDecisionPolicy:
     return DynamicPerformanceThresholdDecisionPolicy(
-        config=DynamicPerformanceThresholdCriterion(allowed_deviation=0.2, metric="acc")
+        config=DynamicPerformanceThresholdCriterion(deviation=0.2, metric="acc", absolute=True)
     )
 
 
@@ -113,9 +113,9 @@ def test_static_performance_forecast(
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-@patch.object(PerformanceTracker, "forecast_expected_performance", side_effect=[0.5, 0.5, -1])
+@patch.object(PerformanceTracker, "forecast_optimal_performance", side_effect=[0.5, 0.5, -1])
 def test_dynamic_performance_hindsight(
-    mock_forecast_expected_performance: MagicMock,
+    mock_forecast_optimal_performance: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
     dynamic_threshold_policy: DynamicPerformanceThresholdDecisionPolicy,
@@ -135,7 +135,7 @@ def test_dynamic_performance_hindsight(
         **eval_decision_kwargs, evaluation_scores={"acc": 0.5 - 0.19}
     )  # allowed deviation not reached
 
-    assert mock_forecast_expected_performance.call_count == 2
+    assert mock_forecast_optimal_performance.call_count == 2
 
     with pytest.raises(KeyError):
         dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"NOT_ACC": 0.5})
@@ -144,11 +144,11 @@ def test_dynamic_performance_hindsight(
 @patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[0.29, 0.31])
 @patch.object(
     PerformanceTracker,
-    "forecast_expected_performance",
+    "forecast_optimal_performance",
     side_effect=[0.5, 0.5, 0.5],
 )
 def test_dynamic_performance_forecast(
-    mock_forecast_expected_performance: MagicMock,
+    mock_forecast_optimal_performance: MagicMock,
     mock_forecast_next_performance: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
@@ -166,14 +166,14 @@ def test_dynamic_performance_forecast(
     # current performance already below threshold, trigger independent of forecast
     assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.29})
 
-    assert mock_forecast_expected_performance.call_count == 1
+    assert mock_forecast_optimal_performance.call_count == 1
     assert mock_forecast_next_performance.call_count == 0
 
     # current performance above threshold, trigger only if forecast is below threshold
     assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
     assert not dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
 
-    assert mock_forecast_expected_performance.call_count == 3
+    assert mock_forecast_optimal_performance.call_count == 3
     assert mock_forecast_next_performance.call_count == 2
 
 
