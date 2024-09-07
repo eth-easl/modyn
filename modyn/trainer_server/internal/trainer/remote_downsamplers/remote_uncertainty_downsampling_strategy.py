@@ -93,7 +93,9 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
                 scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
             elif self.score_metric == "Margin":
                 preds_argmax = torch.argmax(preds, dim=1)  # gets top class
-                max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
+                max_preds = preds[
+                    torch.ones(preds.shape[0], dtype=bool), preds_argmax
+                ].clone()  # gets scores of top class
 
                 # remove highest class from softmax output
                 preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0

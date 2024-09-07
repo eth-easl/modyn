@@ -215,7 +215,7 @@ def test_bts_binary(grad_approx: str, dummy_system_config: ModynConfig):
     with torch.inference_mode(mode=(not sampler.requires_grad)):
         sample_ids = [1, 2, 3, 10, 11, 12, 13]
         forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
-        forward_output = torch.randn(7, )  # 7 samples, 1 output classes
+        forward_output = torch.randn(7,)
         forward_output.requires_grad = True
         target = torch.tensor([1, 1, 1, 0, 0, 0, 1], dtype=torch.float32)  # 7 target labels
         embedding = torch.randn(7, 10)  # 7 samples, embedding dimension 10
