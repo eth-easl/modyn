@@ -142,3 +142,42 @@ def test_collect_gradients(matrix_content, dummy_system_config: ModynConfig):
         assert np.concatenate(amds.matrix_elements).shape == (7, gradient_shape)
 
         assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]
+
+
+@pytest.mark.parametrize(
+    "matrix_content", [MatrixContent.LAST_LAYER_GRADIENTS, MatrixContent.LAST_TWO_LAYERS_GRADIENTS]
+)
+@patch.multiple(AbstractMatrixDownsamplingStrategy, __abstractmethods__=set())
+def test_collect_gradients_binary(matrix_content, dummy_system_config: ModynConfig):
+    per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
+    sampler_config = list(get_sampler_config(dummy_system_config, matrix_content=matrix_content))
+    sampler_config[5] = per_sample_loss_fct
+    sampler_config = tuple(sampler_config)
+    amds = AbstractMatrixDownsamplingStrategy(*sampler_config)
+    with torch.inference_mode(mode=(not amds.requires_grad)):
+        forward_input = torch.randn((4, 5))
+        first_output = torch.randn((4,))
+        first_output.requires_grad = True
+        first_target = torch.tensor([1, 1, 1, 0], dtype=torch.float32)
+        first_embedding = torch.randn((4, 5))
+        amds.inform_samples([1, 2, 3, 4], forward_input, first_output, first_target, first_embedding)
+
+        second_output = torch.randn((3,))
+        second_output.requires_grad = True
+        second_target = torch.tensor([0, 1, 0], dtype=torch.float32)
+        second_embedding = torch.randn((3, 5))
+        amds.inform_samples([21, 31, 41], forward_input, second_output, second_target, second_embedding)
+
+        assert len(amds.matrix_elements) == 2
+
+        # expected shape = (a, gradient_shape)
+        # a = 7 (4 samples in the first batch and 3 samples in the second batch)
+        if matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
+            # shape same as the last dimension of output
+            gradient_shape = 1
+        else:
+            # 5 is the input dimension of the last layer and 2 is the output one
+            gradient_shape = 5 * 1 + 1
+        assert np.concatenate(amds.matrix_elements).shape == (7, gradient_shape)
+
+        assert amds.index_sampleid_map == [1, 2, 3, 4, 21, 31, 41]

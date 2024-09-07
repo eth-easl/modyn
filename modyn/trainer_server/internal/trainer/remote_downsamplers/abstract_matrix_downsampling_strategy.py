@@ -71,6 +71,9 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     ) -> None:
         batch_size = len(sample_ids)
         assert self.matrix_content is not None
+        if forward_output.dim() == 1:
+            forward_output = forward_output.unsqueeze(1)
+            target = target.unsqueeze(1)
         if self.matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
             grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
             grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size
