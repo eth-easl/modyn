@@ -8,6 +8,7 @@ TimeUnit = Literal["s", "m", "h", "d", "w", "y"]
 class TimeResolution(str, Enum):
     YEAR = "year"
     MONTH = "month"
+    WEEK = "week"
     DAY = "day"
     HOUR = "hour"
     MINUTE = "minute"
