@@ -72,30 +72,37 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         if forward_output.dim() == 1:
             forward_output = forward_output.unsqueeze(1)
         feature_size = forward_output.size(1)
-        if feature_size == 1:
-            forward_output = torch.cat((1 - forward_output, forward_output), dim=1)
+
         if self.score_metric == "LeastConfidence":
-            scores = forward_output.max(dim=1).values.cpu().numpy()
-        elif self.score_metric == "Entropy":
-            preds = (
-                torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
-                if not disable_softmax
-                else forward_output.cpu().numpy()
-            )
-            scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
-        elif self.score_metric == "Margin":
-            preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
-            preds_argmax = torch.argmax(preds, dim=1)  # gets top class
-            max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
-
-            # remove highest class from softmax output
-            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
-
-            preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
-            second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
-            scores = (max_preds - second_max_preds).cpu().numpy()
+            if feature_size == 1:
+                # for binary classification comparing how far away the element is from 0.5 after sigmoid layer
+                # is the same as comparing the absolute value of the element before sigmoid layer
+                scores = torch.abs(forward_output).squeeze(1).cpu().numpy()
+            else:
+                scores = forward_output.max(dim=1).values.cpu().numpy()
         else:
-            raise AssertionError("The required metric does not exist")
+            if feature_size == 1:
+                # for binary classification the softmax layer is reduced to sigmoid
+                preds = torch.sigmoid(forward_output) if not disable_softmax else forward_output
+                # we need to convert it to a 2D tensor with probabilities for both classes
+                preds = torch.cat((1 - preds, preds), dim=1)
+            else:
+                preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
+
+            if self.score_metric == "Entropy":
+                scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
+            elif self.score_metric == "Margin":
+                preds_argmax = torch.argmax(preds, dim=1)  # gets top class
+                max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
+
+                # remove highest class from softmax output
+                preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
+
+                preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
+                second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
+                scores = (max_preds - second_max_preds).cpu().numpy()
+            else:
+                raise AssertionError("The required metric does not exist")
 
         return scores
 

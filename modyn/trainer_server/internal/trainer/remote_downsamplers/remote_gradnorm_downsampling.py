@@ -49,11 +49,14 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target: torch.Tensor,
         embedding: torch.Tensor | None = None,
     ) -> None:
+        if forward_output.dim() == 1:
+            # BCEWithLogitsLoss requires that forward_output and target have the same shape
+            forward_output = forward_output.unsqueeze(1)
+            target = target.unsqueeze(1)
+
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target
         )
-        if last_layer_gradients.dim() == 1:
-            last_layer_gradients = last_layer_gradients.unsqueeze(1)
         # pylint: disable=not-callable
         scores = torch.linalg.vector_norm(last_layer_gradients, dim=1).cpu()
         self.probabilities.append(scores)
