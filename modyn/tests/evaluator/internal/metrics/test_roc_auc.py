@@ -39,6 +39,19 @@ def test_roc_auc_metric():
     assert get_evaluation_result(y_true, y_score) == pytest.approx(2 / 3)
 
 
+def test_roc_auc_edge_cases():
+    roc_auc = RocAuc(RocAucMetricConfig())
+    assert isinstance(roc_auc, AbstractHolisticMetric)
+
+    y_true = np.array([0])
+    y_score = np.arange(0.1)
+    assert get_evaluation_result(y_true, y_score) == 0
+
+    y_true = np.array([])
+    y_score = np.array([])
+    assert get_evaluation_result(y_true, y_score) == 0
+
+
 def test_roc_auc_with_two_entries():
     y_true = np.array([0, 1])
     y_score = np.array([0.1, 0.6])

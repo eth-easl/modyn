@@ -3,7 +3,9 @@ import math
 import torch
 
 from modyn.config.schema.pipeline import RocAucMetricConfig
-from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
+from modyn.evaluator.internal.metrics.abstract_holistic_metric import (
+    AbstractHolisticMetric,
+)
 
 
 class RocAuc(AbstractHolisticMetric):
@@ -25,6 +27,11 @@ class RocAuc(AbstractHolisticMetric):
             y_pred: The predicted values by the model.
         """
         assert self.evaluation_result is None
+
+        if y_true.dim() < 1 or len(y_true) < 2:
+            # if the number of elements in y_pred or y_true is less than 2, then the ROC-AUC score is undefined
+            self.evaluation_result = 0
+            return
 
         y_true.squeeze_()
         y_pred.squeeze_()
