@@ -31,9 +31,9 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdDriftCriterion,
+    DynamicPercentileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
-    StaticDriftThresholdDecisionCriterion,
+    ThresholdDecisionCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import (
     TimeWindowingStrategy,
@@ -194,7 +194,7 @@ _EXPERIMENT_REFS = {
             for interval in [100, 250, 500, 1_000]
             for window_size in [1, 4, 10]
             for criterion_name, criterion in {
-                f"mmd-{threshold}": StaticDriftThresholdDecisionCriterion(threshold=threshold)
+                f"mmd-{threshold}": ThresholdDecisionCriterion(threshold=threshold)
                 for threshold in [0.03, 0.05, 0.07, 0.09, 0.12, 0.15, 0.2]
             }.items()
         },
@@ -227,7 +227,7 @@ _EXPERIMENT_REFS = {
             for window_size in [5]
             for criterion_name, criterion in (
                 {
-                    f"mmd-perc-{percentile}-{window_size}": DynamicPercentileThresholdDriftCriterion(
+                    f"mmd-perc-{percentile}-{window_size}": DynamicPercentileThresholdCriterion(
                         window_size=window_size, percentile=percentile
                     )
                     for percentile in [0.05, 0.1, 0.2, 0.3]
