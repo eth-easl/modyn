@@ -8,9 +8,7 @@ from modyn.config.schema.pipeline import (
     AlibiDetectKSDriftMetric,
     AlibiDetectMmdDriftMetric,
 )
-from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    ThresholdDecisionCriterion,
-)
+from modyn.config.schema.pipeline.trigger.drift.criterion import ThresholdDecisionCriterion
 from modyn.supervisor.internal.triggers.drift.detector.alibi import AlibiDriftDetector
 
 

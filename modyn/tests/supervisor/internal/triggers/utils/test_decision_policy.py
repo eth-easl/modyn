@@ -2,19 +2,16 @@ import pytest
 
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicPercentileThresholdCriterion,
-    DynamicRollingAverageThresholdCriterion,
-    ThresholdDecisionCriterion,
 )
-from modyn.supervisor.internal.triggers.drift.decision_policy import (
+from modyn.supervisor.internal.triggers.utils.decision_policy import (
     DynamicPercentileThresholdPolicy,
     DynamicRollingAverageThresholdPolicy,
-    ThresholdDecisionPolicy,
+    StaticThresholdDecisionPolicy,
 )
 
 
 def test_threshold_decision_policy() -> None:
-    config = ThresholdDecisionCriterion(threshold=0.5)
-    policy = ThresholdDecisionPolicy(config)
+    policy = StaticThresholdDecisionPolicy(threshold=0.5, triggering_direction="higher")
 
     assert policy.evaluate_decision(0.6)
     assert not policy.evaluate_decision(0.4)
@@ -22,16 +19,14 @@ def test_threshold_decision_policy() -> None:
 
 @pytest.mark.parametrize("percentile", [0.1, 0.5, 0.9])
 def test_dynamic_decision_policy_initial(percentile: float) -> None:
-    config = DynamicPercentileThresholdCriterion(window_size=3, percentile=percentile)
-    policy = DynamicPercentileThresholdPolicy(config)
+    policy = DynamicPercentileThresholdPolicy(window_size=3, percentile=percentile, triggering_direction="higher")
 
-    # Initially, the deque is empty, so any value should trigger a drift
+    # Initially, the deque is empty, so any value should trigger
     assert policy.evaluate_decision(0.5)
 
 
 def test_dynamic_decision_policy_with_observations() -> None:
-    config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.5)
-    policy = DynamicPercentileThresholdPolicy(config)
+    policy = DynamicPercentileThresholdPolicy(window_size=4, percentile=0.5, triggering_direction="higher")
 
     # Add initial observations
     policy.score_observations.extend([0.4, 0.5, 0.6, 0.7])
@@ -43,8 +38,7 @@ def test_dynamic_decision_policy_with_observations() -> None:
 
 
 def test_dynamic_decision_policy_window_size() -> None:
-    config = DynamicPercentileThresholdCriterion(window_size=3, percentile=0.5)
-    policy = DynamicPercentileThresholdPolicy(config)
+    policy = DynamicPercentileThresholdPolicy(window_size=3, percentile=0.5, triggering_direction="higher")
 
     # Add observations to fill the window
     policy.evaluate_decision(0.4)
@@ -58,7 +52,11 @@ def test_dynamic_decision_policy_window_size() -> None:
 
 def test_dynamic_decision_policy_percentile() -> None:
     config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.25)
-    policy = DynamicPercentileThresholdPolicy(config)
+    policy = DynamicPercentileThresholdPolicy(
+        window_size=config.window_size,
+        percentile=config.percentile,
+        triggering_direction="higher",
+    )
 
     # Add observations
     policy.evaluate_decision(0.4)
@@ -72,8 +70,9 @@ def test_dynamic_decision_policy_percentile() -> None:
 
 
 def test_dynamic_decision_policy_average() -> None:
-    config = DynamicRollingAverageThresholdCriterion(window_size=2, deviation=0.1, absolute=True)
-    policy = DynamicRollingAverageThresholdPolicy(config)
+    policy = DynamicRollingAverageThresholdPolicy(
+        window_size=2, deviation=0.1, absolute=True, triggering_direction="higher"
+    )
 
     # Add observations
     policy.evaluate_decision(1.0)
