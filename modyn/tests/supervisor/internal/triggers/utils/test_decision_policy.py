@@ -69,7 +69,7 @@ def test_dynamic_decision_policy_percentile() -> None:
     assert not policy.evaluate_decision(0.7)
 
 
-def test_dynamic_decision_policy_average() -> None:
+def test_dynamic_decision_policy_average_absolute() -> None:
     policy = DynamicRollingAverageThresholdPolicy(
         window_size=2, deviation=0.1, absolute=True, triggering_direction="higher"
     )
@@ -83,3 +83,18 @@ def test_dynamic_decision_policy_average() -> None:
     assert not policy.evaluate_decision(0.7)  # avg: 0.8
     assert not policy.evaluate_decision(0.8)  # avg: 0.8 (not >=0.1 deviation)
     assert not policy.evaluate_decision(0.85)  # avg: 0.75
+
+
+def test_dynamic_decision_policy_average_relative() -> None:
+    policy = DynamicRollingAverageThresholdPolicy(
+        window_size=2, deviation=0.21, absolute=False, triggering_direction="lower"
+    )
+
+    # Add observations
+    policy.evaluate_decision(1.0)
+    policy.evaluate_decision(0.6)
+    policy.evaluate_decision(0.3)
+    policy.evaluate_decision(0.7)
+
+    assert not policy.evaluate_decision(0.4)  # avg: 0.5 --> threshold: 0.5 * (1-0.21) = 0.395
+    assert policy.evaluate_decision(0.43)  # avg: (0.4+0.7)/2 = 0.55 --> threshold: 0.55 * (1-0.21) = 0.4345
