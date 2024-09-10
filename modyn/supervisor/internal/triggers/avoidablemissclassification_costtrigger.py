@@ -85,7 +85,7 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
         )
 
         regret_log = {
-            "model_id": model_id,
+            "id_model": model_id,
             "num_samples": num_samples,
             "num_misclassifications": num_misclassifications,
             "evaluation_scores": evaluation_scores,
