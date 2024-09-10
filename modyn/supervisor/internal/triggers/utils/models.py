@@ -32,7 +32,7 @@ class EnsembleTriggerEvalLog(_BaseTriggerEvalLog):
 
 class PerformanceTriggerEvalLog(_BaseTriggerEvalLog):
     type: Literal["performance"] = Field("performance")
-    model_id: int | None = Field(None, description="The model ID of the model that was evaluated.")
+    id_model: int | None = Field(None, description="The model ID of the model that was evaluated.")
     num_misclassifications: int = Field(0, description="The number of misclassifications in the evaluation interval.")
     evaluation_scores: dict[str, float] = Field(
         default_factory=dict,
