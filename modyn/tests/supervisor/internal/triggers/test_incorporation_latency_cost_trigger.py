@@ -47,7 +47,7 @@ def test_initialization(
 @patch.object(
     DataIncorporationLatencyCostTrigger,
     "_compute_regret_metric",
-    side_effect=[-1, 4.0, 11.0],
+    side_effect=[(regret, {}) for regret in [-1, 4.0, 11.0]],
 )
 def test_inform_and_new_model(
     mock_compute_regret: MagicMock,
@@ -106,7 +106,11 @@ def test_inform_and_new_model(
 
 
 @patch.object(CostTracker, "forecast_training_time", return_value=0)
-@patch.object(DataIncorporationLatencyCostTrigger, "_compute_regret_metric", return_value=10000)
+@patch.object(
+    DataIncorporationLatencyCostTrigger,
+    "_compute_regret_metric",
+    return_value=(10000, {}),
+)
 def test_warmup_trigger(
     mock_compute_regret: MagicMock,
     mock_forecast_training_time: MagicMock,

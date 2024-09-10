@@ -115,7 +115,7 @@ def test_inform_new_model(
     "estimate_avoidable_misclassifications",
     return_value=(5, -100),
 )
-@patch.object(PerformanceTriggerMixin, "_run_evaluation", side_effect=[(5, 2, {"Accuracy": 0.6})])
+@patch.object(PerformanceTriggerMixin, "_run_evaluation", side_effect=[(1, 5, 2, {"Accuracy": 0.6})])
 def test_compute_regret_metric(
     mock_run_evaluation: MagicMock,
     mock_estimate_avoidable_misclassifications: MagicMock,
@@ -126,7 +126,7 @@ def test_compute_regret_metric(
 
     batch = [(i, 100 + i) for i in range(5)]
     batch_duration = 99
-    new_regret_latency = trigger._compute_regret_metric(batch, 0, batch_duration)
+    new_regret_latency, _ = trigger._compute_regret_metric(batch, 0, batch_duration)
 
     mock_run_evaluation.assert_called_once_with(interval_data=batch)
 

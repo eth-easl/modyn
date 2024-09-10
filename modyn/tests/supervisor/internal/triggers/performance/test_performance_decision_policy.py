@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -11,7 +11,7 @@ from modyn.supervisor.internal.triggers.performance.data_density_tracker import 
     DataDensityTracker,
 )
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
-    DynamicPerformanceThresholdDecisionPolicy,
+    DynamicPerformanceRollingAverageThresholdPolicy,
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
 )
@@ -28,9 +28,11 @@ def static_threshold_policy() -> StaticPerformanceThresholdDecisionPolicy:
 
 
 @pytest.fixture
-def dynamic_threshold_policy() -> DynamicPerformanceThresholdDecisionPolicy:
-    return DynamicPerformanceThresholdDecisionPolicy(
-        config=DynamicPerformanceThresholdCriterion(deviation=0.2, metric="acc", absolute=True)
+def dynamic_threshold_policy() -> DynamicPerformanceRollingAverageThresholdPolicy:
+    return DynamicPerformanceRollingAverageThresholdPolicy(
+        config=DynamicRollingAveragePerformanceThresholdCriterion(
+            window_size=10, deviation=0.2, metric="acc", absolute=True
+        )
     )
 
 
@@ -83,42 +85,15 @@ def test_static_performance_hindsight(
         static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"NOT_ACC": 0.81})
 
 
-@patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[0.81, 0.79])
-def test_static_performance_forecast(
-    mock_forecast_next_performance: MagicMock,
-    dummy_performance_tracker: PerformanceTracker,
-    dummy_data_density_tracker: DataDensityTracker,
-    static_threshold_policy: StaticPerformanceThresholdDecisionPolicy,
-) -> None:
-    """Test static threshold decision policy in lookahead mode."""
-    eval_decision_kwargs = {
-        "update_interval_samples": 10,
-        "data_density": dummy_data_density_tracker,
-        "performance_tracker": dummy_performance_tracker,
-        "mode": "lookahead",
-        "method": "rolling_average",
-    }
-    # current performance already below threshold, trigger independent of forecast
-    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.79})
-
-    # current performance above threshold, trigger only if forecast is below threshold
-    assert not static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.81})
-    assert static_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.81})
-
-    assert mock_forecast_next_performance.call_count == 2
-
-
 # -------------------------------------------------------------------------------------------------------------------- #
 #                                       DynamicPerformanceThresholdDecisionPolicy                                      #
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-@patch.object(PerformanceTracker, "forecast_optimal_performance", side_effect=[0.5, 0.5, -1])
 def test_dynamic_performance_hindsight(
-    mock_forecast_optimal_performance: MagicMock,
     dummy_performance_tracker: PerformanceTracker,
     dummy_data_density_tracker: DataDensityTracker,
-    dynamic_threshold_policy: DynamicPerformanceThresholdDecisionPolicy,
+    dynamic_threshold_policy: DynamicPerformanceRollingAverageThresholdPolicy,
 ) -> None:
     """Test dynamic threshold decision policy in hindsight mode."""
 
@@ -135,46 +110,8 @@ def test_dynamic_performance_hindsight(
         **eval_decision_kwargs, evaluation_scores={"acc": 0.5 - 0.19}
     )  # allowed deviation not reached
 
-    assert mock_forecast_optimal_performance.call_count == 2
-
     with pytest.raises(KeyError):
         dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"NOT_ACC": 0.5})
-
-
-@patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[0.29, 0.31])
-@patch.object(
-    PerformanceTracker,
-    "forecast_optimal_performance",
-    side_effect=[0.5, 0.5, 0.5],
-)
-def test_dynamic_performance_forecast(
-    mock_forecast_optimal_performance: MagicMock,
-    mock_forecast_next_performance: MagicMock,
-    dummy_performance_tracker: PerformanceTracker,
-    dummy_data_density_tracker: DataDensityTracker,
-    dynamic_threshold_policy: DynamicPerformanceThresholdDecisionPolicy,
-) -> None:
-    """Test dynamic threshold decision policy in forecast mode."""
-
-    eval_decision_kwargs = {
-        "update_interval_samples": 10,
-        "data_density": dummy_data_density_tracker,
-        "performance_tracker": dummy_performance_tracker,
-        "mode": "lookahead",
-        "method": "rolling_average",
-    }
-    # current performance already below threshold, trigger independent of forecast
-    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.29})
-
-    assert mock_forecast_optimal_performance.call_count == 1
-    assert mock_forecast_next_performance.call_count == 0
-
-    # current performance above threshold, trigger only if forecast is below threshold
-    assert dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
-    assert not dynamic_threshold_policy.evaluate_decision(**eval_decision_kwargs, evaluation_scores={"acc": 0.5})
-
-    assert mock_forecast_optimal_performance.call_count == 3
-    assert mock_forecast_next_performance.call_count == 2
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -317,101 +254,4 @@ def test_misclassification_static_expected_performance(
     assert mock_previous_batch_num_samples.call_count == 3
 
     # not used in the case of static expected performance
-    assert mock_forecast_expected_accuracy.call_count == 0
-
-
-@patch.object(
-    DataDensityTracker,
-    "previous_batch_num_samples",
-    side_effect=[100, 100, 100],
-    new_callable=PropertyMock,
-)
-@patch.object(DataDensityTracker, "forecast_density", side_effect=[1, 1])
-@patch.object(PerformanceTracker, "forecast_expected_accuracy", return_value=-100)
-@patch.object(PerformanceTracker, "forecast_next_accuracy", side_effect=[-100, 0.4, 0.2])
-@patch.object(PerformanceTracker, "forecast_next_performance", side_effect=[])
-@patch.object(
-    PerformanceTracker,
-    "previous_batch_num_misclassifications",
-    side_effect=[60, 57, 57],
-    new_callable=PropertyMock,
-)
-def test_misclassification_forecast(
-    mock_previous_batch_num_misclassifications: MagicMock,
-    mock_forecast_next_performance: MagicMock,
-    mock_forecast_next_accuracy: MagicMock,
-    mock_forecast_expected_accuracy: MagicMock,
-    mock_forecast_density: MagicMock,
-    mock_previous_batch_num_samples: MagicMock,
-    dummy_performance_tracker: PerformanceTracker,
-    dummy_data_density_tracker: DataDensityTracker,
-    misclassification_criterion: StaticNumberAvoidableMisclassificationCriterion,
-) -> None:
-    """Test static number avoidable misclassification policy in forecast
-    mode."""
-    misclassification_criterion.expected_accuracy = 0.5
-    misclassification_policy = StaticNumberAvoidableMisclassificationDecisionPolicy(config=misclassification_criterion)
-
-    eval_decision_kwargs = {
-        "data_density": dummy_data_density_tracker,
-        "performance_tracker": dummy_performance_tracker,
-        "mode": "lookahead",
-        "method": "rolling_average",
-    }
-
-    assert misclassification_policy.cumulated_avoidable_misclassifications == 0
-
-    # 50 expected misclassifications, 60 observed misclassifications
-    # 10 past avoidable misclassifications, forecasting not needed, already exceeding
-    assert misclassification_policy.evaluate_decision(
-        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval_samples=0
-    )
-    assert misclassification_policy.cumulated_avoidable_misclassifications == 10
-    assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_num_samples.call_count == 1
-    assert mock_forecast_next_accuracy.call_count == 1
-    assert mock_forecast_density.call_count == 0
-
-    misclassification_policy.inform_trigger()  # reset misclassifications
-    mock_previous_batch_num_misclassifications.reset_mock()
-    mock_previous_batch_num_samples.reset_mock()
-    mock_forecast_next_accuracy.reset_mock()
-    mock_forecast_density.reset_mock()
-
-    # 7 avoidable past misclassifications (57 observed, 50 expected)
-    # 1 forecasted misclassifications: exp acc=0.5, forecasted acc=0.4, update interval 10, data density=1
-    # --> 8 avoidable misclassifications --> don't trigger
-    assert not misclassification_policy.evaluate_decision(
-        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval_samples=10
-    )
-    # forecasted misclassifications not persisted in the counter
-    assert misclassification_policy.cumulated_avoidable_misclassifications == 7
-    assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_num_samples.call_count == 1
-    assert mock_forecast_next_accuracy.call_count == 1
-    assert mock_forecast_density.call_count == 0  # unused
-
-    # reset
-    misclassification_policy.cumulated_avoidable_misclassifications = 0
-    mock_previous_batch_num_misclassifications.reset_mock()
-    mock_previous_batch_num_samples.reset_mock()
-    mock_forecast_next_accuracy.reset_mock()
-    mock_forecast_density.reset_mock()
-
-    # 7 avoidable past misclassifications (57 observed, 50 expected)
-    # 3 forecasted misclassifications: exp acc=0.5, forecasted acc=0.2, update interval 10, data density=1
-    # --> 10 avoidable misclassifications --> don't trigger
-    assert misclassification_policy.evaluate_decision(
-        **eval_decision_kwargs, evaluation_scores={"acc": 0}, update_interval_samples=10
-    )
-    assert misclassification_policy.cumulated_avoidable_misclassifications == 7
-    assert mock_previous_batch_num_misclassifications.call_count == 1
-    assert mock_previous_batch_num_samples.call_count == 1
-    assert mock_forecast_next_accuracy.call_count == 1
-    assert mock_forecast_density.call_count == 0  # unused
-
-    # we only need the accuracy values here
-    assert mock_forecast_next_performance.call_count == 0
-
-    # we use a static expected accuracy to make things easier
     assert mock_forecast_expected_accuracy.call_count == 0

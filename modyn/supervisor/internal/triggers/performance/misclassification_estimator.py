@@ -1,3 +1,5 @@
+import logging
+
 from modyn.const.types import ForecastingMethod
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
@@ -46,6 +48,13 @@ class NumberAvoidableMisclassificationEstimator:
         # compute the number of avoidable misclassifications by retrieving the actual misclassifications
         # and the expected misclassifications through the expected accuracy for the last interval.
         previous_interval_num_misclassifications = performance_tracker.previous_batch_num_misclassifications
+
+        if self.expected_accuracy is None:
+            logging.warning(
+                "Forecasting mode is not supported yet, it requires tracking the performance right after trigger. "
+                "However, after triggers the models has learned from the last detection interval. We would need to "
+                "maintain a holdout set for this."
+            )
 
         # the expected performance won't change unless there's a trigger
         expected_accuracy = (
