@@ -19,7 +19,8 @@ from modyn.config.schema.pipeline.trigger.drift.criterion import (
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicPercentilePerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticPerformanceThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.performance.performance import (
@@ -59,8 +60,17 @@ def gen_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
     for count in [30000, 50000]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
-    # DriftTriggers
+    return strategies
+
+
+def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
+    strategies = []
+    min_warmup_data_points = 20000
+
     for evaluation_interval_data_points in [5000]:
+        warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
+
+        # Static Drift Triggers
         for threshold in [0.02, 0.01, 0.005]:
             for window_size in ["1y", "2y"]:
                 conf = DataDriftTriggerConfig(
@@ -76,45 +86,15 @@ def gen_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
                             decision_criterion=ThresholdDecisionCriterion(threshold=threshold),
                         )
                     },
+                    warmup_policy=TimeTriggerConfig(every="1y", start_timestamp=START_TIMESTAMP),
+                    warmup_intervals=warmup_intervals,
                 )
                 name = f"mmdalibi_{evaluation_interval_data_points}_{threshold}_{window_size}"
                 strategies.append((name, conf))
 
-    return strategies
-
-
-def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
-    strategies = []
-    min_warmup_data_points = 20000
-
-    for evaluation_interval_data_points in [5000]:
-        warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
-        ## Performance Triggers
-        for performance_triggers_window_size in [15, 30]:
-            ## Static PerformanceTriggers
-
-            for threshold in [0.8, 0.7]:
-                conf = PerformanceTriggerConfig(
-                    evaluation_interval_data_points=evaluation_interval_data_points,
-                    performance_triggers_window_size=performance_triggers_window_size,
-                    data_density_window_size=performance_triggers_window_size,
-                    mode="hindsight",
-                    evaluation=PerformanceTriggerEvaluationConfig(
-                        device=device, dataset=get_eval_data_config("arxiv_kaggle_test")
-                    ),
-                    decision_criteria={
-                        f"static-{threshold}": StaticPerformanceThresholdCriterion(
-                            metric="Top-2-Accuracy", metric_threshold=threshold
-                        )
-                    },
-                )
-                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_{threshold}"
-                strategies.append((name, conf))
-
-        ## Dynamic Percentile Drift Triggers
+        ## Dynamic Drift Triggers
         for window_size in ["1y"]:
-            # window size: how many drift scores we use for calibrating the dynamic policy
-            for metric_window_size in [15, 30]:
+            for metric_window_size in [15, 30]:  # how many drift scores we use for calibrating the dynamic policy
                 criteria = []
                 for deviation in [0.05, 1]:
                     criteria.append(
@@ -141,7 +121,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                         sample_size=10000,
                         metrics={
                             "mmd_alibi": AlibiDetectMmdDriftMetric(
-                                device=device,
+                                device="gpu",
                                 num_permutations=None,
                                 decision_criterion=decision_criterion,
                             )
@@ -150,28 +130,59 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                         warmup_intervals=warmup_intervals,
                     )
 
-                    name = f"mmdalibi_{evaluation_interval_data_points}_dyn_{metric_window_size}_{dec_crit_str}_{window_size}"
+                    name = f"mmdalibi_dyn_{evaluation_interval_data_points}_{metric_window_size}_{dec_crit_str}_{window_size}"
                     strategies.append((name, conf))
 
-            ## Dynamic Performance Triggers
+        ## Static PerformanceTriggers
+        for threshold in [0.8, 0.75, 0.7]:
+            conf = PerformanceTriggerConfig(
+                evaluation_interval_data_points=evaluation_interval_data_points,
+                performance_triggers_window_size=1,  # deprecated
+                data_density_window_size=1,  # deprecated
+                mode="hindsight",
+                evaluation=PerformanceTriggerEvaluationConfig(
+                    device=device, dataset=get_eval_data_config("arxiv_kaggle_train")
+                ),
+                decision_criteria={
+                    f"static-{threshold}": StaticPerformanceThresholdCriterion(
+                        metric="Top-2-Accuracy", metric_threshold=threshold
+                    )
+                },
+            )
+            name = f"perf_{evaluation_interval_data_points}_{threshold}"
+            strategies.append((name, conf))
 
+        ## Dynamic PerformanceTriggers
+        for performance_triggers_window_size in [15, 30]:
+            criteria = []
             for deviation in [0.1, 0.3]:
+                criterion = DynamicRollingAveragePerformanceThresholdCriterion(
+                    metric="Top-2-Accuracy",
+                    window_size=performance_triggers_window_size,
+                    deviation=deviation,
+                    absolute=False,
+                )
+                criteria.append((f"{performance_triggers_window_size}_roll_{deviation}", criterion))
+
+            for percentile in [0.05, 0.1, 0.2, 0.3]:
+                criterion = DynamicPercentilePerformanceThresholdCriterion(
+                    metric="Top-2-Accuracy", window_size=performance_triggers_window_size, percentile=percentile
+                )
+                criteria.append((f"{performance_triggers_window_size}_perc_{percentile}", criterion))
+
+            for dec_crit_str, decision_criterion in criteria:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
                     mode="hindsight",
                     evaluation=PerformanceTriggerEvaluationConfig(
-                        device=device, dataset=get_eval_data_config("arxiv_kaggle_test")
+                        device=device, dataset=get_eval_data_config("arxiv_kaggle_train")
                     ),
-                    decision_criteria={
-                        f"dynamic-{deviation}": DynamicPerformanceThresholdCriterion(
-                            metric="Top-2-Accuracy", deviation=deviation, absolute=False
-                        )
-                    },
+                    decision_criteria={f"dynamic-{dec_crit_str}": decision_criterion},
                     warmup_policy=TimeTriggerConfig(every="1y", start_timestamp=START_TIMESTAMP),
                     warmup_intervals=warmup_intervals,
                 )
-                name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
+                name = f"perf_dyn_{evaluation_interval_data_points}_{dec_crit_str}"
                 strategies.append((name, conf))
 
     return strategies
@@ -183,7 +194,7 @@ def run_experiment() -> None:
     train_gpu = "cuda:0"
     num_gpus = 1  # to parallelize across gpus
     gpu_id = 0
-    seeds = [42]  # set to [None] to disable, should be 0-100
+    seeds = [42, 99, 12]  # set to [None] to disable, should be 0-100
     skip_existing = True
 
     existing_pipelines = []
@@ -237,6 +248,7 @@ def run_experiment() -> None:
 
             run_id += 1
 
+    print(f"Running {len(pipeline_configs)} pipelines in total now.")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
 

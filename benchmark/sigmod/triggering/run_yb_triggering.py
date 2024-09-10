@@ -151,7 +151,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 warmup_policy=TimeTriggerConfig(every="3d"),
                 warmup_intervals=warmup_intervals,
             )
-            name = f"perf_{threshold}"
+            name = f"perf_{evaluation_interval_data_points}_{threshold}"
             strategies.append((name, conf))
 
         ## Dynamic Performance Triggers
