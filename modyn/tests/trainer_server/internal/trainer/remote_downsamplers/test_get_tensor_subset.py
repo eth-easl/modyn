@@ -61,7 +61,7 @@ def test_get_tensors_subset_invalid_index():
     # Test when selected_indexes contains an invalid index
     selected_indexes.append(999)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         get_tensors_subset(selected_indexes, data, target, sample_ids)
 
 

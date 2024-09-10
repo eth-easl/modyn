@@ -11,9 +11,10 @@ from modyn.config.schema.pipeline.evaluation.metrics import (
     F1ScoreMetricConfig,
 )
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
+    _DynamicPerformanceThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
@@ -27,7 +28,7 @@ from modyn.supervisor.internal.triggers.performance.data_density_tracker import 
     DataDensityTracker,
 )
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
-    DynamicPerformanceThresholdDecisionPolicy,
+    DynamicPerformanceRollingAverageThresholdPolicy,
     PerformanceDecisionPolicy,
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
@@ -43,6 +44,10 @@ from modyn.supervisor.internal.triggers.performancetrigger import (
     _setup_decision_policies,
 )
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
+from modyn.supervisor.internal.triggers.utils.decision_policy import (
+    DynamicRollingAverageThresholdPolicy,
+    StaticThresholdDecisionPolicy,
+)
 
 PIPELINE_ID = 42
 SAMPLE = (10, 1, 1)
@@ -88,8 +93,8 @@ def static_criterion() -> StaticPerformanceThresholdCriterion:
 
 
 @fixture
-def dynamic_criterion() -> DynamicPerformanceThresholdCriterion:
-    return DynamicPerformanceThresholdCriterion(metric="Accuracy", deviation=0.1)
+def dynamic_criterion() -> DynamicRollingAveragePerformanceThresholdCriterion:
+    return DynamicRollingAveragePerformanceThresholdCriterion(window_size=10, metric="Accuracy", deviation=0.1)
 
 
 @fixture
@@ -133,7 +138,7 @@ def test_init_trigger(
 def test_setup_decision_policies(
     performance_trigger_config: PerformanceTriggerConfig,
     static_criterion: StaticPerformanceThresholdCriterion,
-    dynamic_criterion: DynamicPerformanceThresholdCriterion,
+    dynamic_criterion: _DynamicPerformanceThresholdCriterion,
     misclassifications_criterion: StaticNumberAvoidableMisclassificationCriterion,
 ) -> None:
     performance_trigger_config.decision_criteria = {
@@ -145,10 +150,10 @@ def test_setup_decision_policies(
     policies = _setup_decision_policies(performance_trigger_config)
     assert len(policies) == 3
     assert isinstance(policies["static_threshold"], StaticPerformanceThresholdDecisionPolicy)
-    assert policies["static_threshold"].config == static_criterion
+    assert isinstance(policies["static_threshold"]._wrapped, StaticThresholdDecisionPolicy)
 
-    assert isinstance(policies["dynamic_threshold"], DynamicPerformanceThresholdDecisionPolicy)
-    assert policies["dynamic_threshold"].config == dynamic_criterion
+    assert isinstance(policies["dynamic_threshold"], DynamicPerformanceRollingAverageThresholdPolicy)
+    assert isinstance(policies["dynamic_threshold"]._wrapped, DynamicRollingAverageThresholdPolicy)
 
     assert isinstance(
         policies["avoidable_misclassifications"],
@@ -169,7 +174,11 @@ def test_inform_new_model(
     mock_inform_new_model.assert_called_once_with(trigger, 42, data)
 
 
-@patch.object(PerformanceTriggerMixin, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
+@patch.object(
+    PerformanceTriggerMixin,
+    "_run_evaluation",
+    return_value=(1, 5, 2, {"Accuracy": 0.9}),
+)
 @patch.object(DataDensityTracker, "inform_data", return_value=None)
 @patch.object(
     StaticPerformanceThresholdDecisionPolicy,
@@ -197,14 +206,14 @@ def test_inform(
     assert len(trigger._leftover_data) == 2
     assert trigger._sample_left_until_detection == 2
     assert mock_inform_data.call_count == 1
-    assert mock_evaluation.call_count == 1  # first iteration doesn't call evaluate_decision
+    assert mock_evaluation.call_count == 0  # first iteration doesn't call evaluate_decision
     assert mock_evaluate_decision.call_count == 0
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4)]
     assert mock_inform_data.call_args_list == [call([(i, 100 + i) for i in range(4)])]
-    assert mock_evaluation.call_args_list == [
-        # inform doesn't run a detection, but inform_new_model does
-        call(interval_data=[(i, 100 + i) for i in range(4)]),
-    ]
+
+    # inform doesn't run a detection, but inform_new_model does
+    # call(interval_data=[(i, 100 + i) for i in range(4)]),
+    assert mock_evaluation.call_args_list == []
 
     # reset mocks
     mock_inform_data.reset_mock()
@@ -220,7 +229,7 @@ def test_inform(
     assert len(trigger._leftover_data) == 3
     assert trigger._sample_left_until_detection == 1
     assert mock_inform_data.call_count == 1
-    assert mock_evaluation.call_count == 2
+    assert mock_evaluation.call_count == 1
     # not an initial trigger where decision policies are skipped
     assert mock_evaluate_decision.call_count == 1
     assert trigger._last_detection_interval == [(i, 100 + i) for i in range(4, 8)]
@@ -228,7 +237,7 @@ def test_inform(
     assert mock_evaluation.call_args_list == [
         # first time call doesn't run evaluation (warmup), second time within inform_new_model
         call(trigger, interval_data=[(i, 100 + i) for i in range(4, 8)]),
-        call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
+        # call(interval_data=[(i, 100 + i) for i in range(4, 8)]),
     ]
 
     # reset mocks
@@ -250,7 +259,11 @@ def test_inform(
     assert mock_evaluation.call_args_list == [call(trigger, interval_data=[(i, 100 + i) for i in range(8, 12)])]
 
 
-@patch.object(PerformanceTriggerMixin, "_run_evaluation", return_value=(5, 2, {"Accuracy": 0.9}))
+@patch.object(
+    PerformanceTriggerMixin,
+    "_run_evaluation",
+    return_value=(1, 5, 2, {"Accuracy": 0.9}),
+)
 @patch.object(PerformanceTracker, "inform_evaluation", return_value=None)
 @patch.object(DataDensityTracker, "inform_data", return_value=None)
 @patch.object(

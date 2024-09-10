@@ -64,22 +64,29 @@ class PerformanceTriggerMixin:
         self.most_recent_model_id = most_recent_model_id
         self.model_refresh_needed = True
 
+        assert last_detection_interval
+
         # Perform an evaluation of the NEW model on the last evaluation interval, we will derive expected performance
         # forecasts from these evaluations.
-        num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
-            interval_data=last_detection_interval
+        # num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(
+        #     interval_data=last_detection_interval
+        # )
+        assert self.config.mode == "hindsight", (
+            "Forecasting mode is not supported yet, it requires tracking the performance right after trigger. "
+            "However, after triggers the models has learned from the last detection interval. We would need to "
+            "maintain a holdout set for this."
         )
 
-        self.performance_tracker.inform_trigger(
-            num_samples=num_samples,
-            num_misclassifications=num_misclassifications,
-            evaluation_scores=evaluation_scores,
-        )
+        # self.performance_tracker.inform_trigger(
+        #     num_samples=num_samples,
+        #     num_misclassifications=num_misclassifications,
+        #     evaluation_scores=evaluation_scores,
+        # )
 
     def _run_evaluation(
         self,
         interval_data: list[tuple[int, int]],
-    ) -> tuple[int, int, dict[str, float]]:  # pragma: no cover
+    ) -> tuple[int, int, int, dict[str, float]]:  # pragma: no cover
         """Run the evaluation on the given interval data."""
         assert self.most_recent_model_id is not None
         assert self.dataloader_info is not None
@@ -117,7 +124,12 @@ class PerformanceTriggerMixin:
         assert isinstance(accuracy_metric, Accuracy)
         num_misclassifications = accuracy_metric.samples_seen - accuracy_metric.total_correct
 
-        return (eval_results.num_samples, num_misclassifications, evaluation_scores)
+        return (
+            self.most_recent_model_id,
+            eval_results.num_samples,
+            num_misclassifications,
+            evaluation_scores,
+        )
 
     def _init_dataloader_info(self) -> None:
         assert self.context
