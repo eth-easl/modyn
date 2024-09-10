@@ -18,7 +18,7 @@ def build_heatmap(
     y_label: str = "Reference Year",
     x_label: str = "Current Year",
     color_label: str = "Accuracy %",
-):
+) -> Figure:
     init_plot()
     # sns.set_theme(style="ticks")
     plt.rcParams["svg.fonttype"] = "none"
