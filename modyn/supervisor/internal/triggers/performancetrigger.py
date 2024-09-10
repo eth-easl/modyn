@@ -126,7 +126,7 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
             evaluation_interval=(batch[0][1], batch[-1][1]),
-            model_id=model_id or -1,
+            id_model=model_id or -1,
             num_samples=num_samples or -1,
             num_misclassifications=num_misclassifications or -1,
             evaluation_scores=evaluation_scores or {},
