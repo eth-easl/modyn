@@ -21,7 +21,7 @@ from modyn.config.schema.pipeline.trigger.drift.criterion import (
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticPerformanceThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.performance.performance import (
@@ -157,6 +157,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
             ## Dynamic Performance Triggers
 
             for deviation in [0.1, 0.2, 0.3]:
+                # TODO: Add percentile!
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
@@ -165,7 +166,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                         device=device, dataset=get_eval_data_config("yearbook_train")
                     ),
                     decision_criteria={
-                        f"dynamic-{deviation}": DynamicPerformanceThresholdCriterion(
+                        f"dynamic-{deviation}": DynamicRollingAveragePerformanceThresholdCriterion(
                             metric="Accuracy", deviation=deviation, absolute=False
                         )
                     },
