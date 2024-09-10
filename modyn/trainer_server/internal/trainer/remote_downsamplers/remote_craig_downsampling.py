@@ -8,7 +8,8 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
-    FULL_GRAD_APPROXIMATION, unsqueeze_dimensions_if_necessary,
+    FULL_GRAD_APPROXIMATION,
+    unsqueeze_dimensions_if_necessary,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
