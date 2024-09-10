@@ -15,7 +15,7 @@ class _BaseTriggerEvalLog(ModynBaseModel):
 
 class DriftTriggerEvalLog(_BaseTriggerEvalLog):
     type: Literal["drift"] = Field("drift")
-    model_id: int | None = Field(None, description="The model ID used for the embedding generation.")
+    id_model: int | None = Field(None, description="The model ID used for the embedding generation.")
     detection_interval: tuple[int, int]  # timestamps of the current detection interval
     reference_interval: tuple[int | None, int | None] = Field((None, None))  # timestamps of the reference interval
     drift_results: dict[str, MetricResult] = Field(default_factory=dict)
