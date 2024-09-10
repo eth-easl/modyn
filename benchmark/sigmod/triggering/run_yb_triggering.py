@@ -21,6 +21,7 @@ from modyn.config.schema.pipeline.trigger.drift.criterion import (
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
+    DynamicPercentilePerformanceThresholdCriterion,
     DynamicRollingAveragePerformanceThresholdCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -50,17 +51,27 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
     strategies = []
 
     # TimeTriggers
-    for years in [3, 5, 15, 25, 40]:
+    for years in [1, 3, 5, 15, 25, 40]:
         strategies.append((f"timetrigger_{years}y", TimeTriggerConfig(every=f"{years}d")))
 
     # DataAmountTriggers
     for count in [500, 1000, 2000, 10000]:
         strategies.append((f"amounttrigger_{count}", DataAmountTriggerConfig(num_samples=count)))
 
-    # DriftTriggers
+    return strategies
+
+
+def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
+    strategies = []
+    min_warmup_data_points = 3500
+
     for evaluation_interval_data_points in [250, 500, 100]:
-        for threshold in [0.05, 0.07, 0.09]:
-            for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
+        warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
+
+        ## Drift Triggers
+        for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
+            ## Static Drift
+            for threshold in [0.05, 0.07, 0.09]:
                 conf = DataDriftTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     windowing_strategy=TimeWindowingStrategy(
@@ -69,35 +80,23 @@ def gen_triggering_strategies() -> list[tuple[str, TriggerConfig]]:
                     sample_size=None,
                     metrics={
                         "mmd_alibi": AlibiDetectMmdDriftMetric(
-                            device="cpu",
+                            device="gpu",
                             num_permutations=None,
                             decision_criterion=ThresholdDecisionCriterion(threshold=threshold),
                         )
                     },
+                    warmup_policy=TimeTriggerConfig(every="3d"),
+                    warmup_intervals=warmup_intervals,
                 )
                 name = f"mmdalibi_{evaluation_interval_data_points}_{threshold}_{window_size}"
                 strategies.append((name, conf))
 
-    return strategies
-
-
-def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerConfig]]:
-    # For arxiv, change detection interval size and shrink hyperparm space in general (und natürlich static thresholds für drift und performance anpassen)
-
-    strategies = []
-    min_warmup_data_points = 5000
-
-    for evaluation_interval_data_points in [250, 500, 100]:
-        warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
-
-        ## Dynamic Percentile Drift Triggers
-        for window_size in ["1d", "2d", "5d"]:  # fake timestamps, hence days
-            # window size: how many drift scores we use for calibrating the dynamic policy
-            for metric_window_size in [15, 30]:
+            ## Dynamic Drift
+            for metric_window_size in [15, 30]:  #  how many drift scores we use for calibrating the policy
                 criteria = []
                 for deviation in [0.05, 1, 2]:
                     if evaluation_interval_data_points == 100:
-                        continue  # dont try rolling with small interval
+                        continue  # No rolling average for very small windows
                     criteria.append(
                         (
                             f"roll_{deviation}",
@@ -113,6 +112,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             DynamicPercentileThresholdCriterion(window_size=metric_window_size, percentile=percentile),
                         )
                     )
+
                 for dec_crit_str, decision_criterion in criteria:
                     conf = DataDriftTriggerConfig(
                         evaluation_interval_data_points=evaluation_interval_data_points,
@@ -130,34 +130,46 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                         warmup_intervals=warmup_intervals,
                     )
 
-                    name = f"mmdalibi_{evaluation_interval_data_points}_dyn_{metric_window_size}_{dec_crit_str}_{window_size}"
+                    name = f"mmdalibi_dyn_{evaluation_interval_data_points}_{metric_window_size}_{dec_crit_str}_{window_size}"
                     strategies.append((name, conf))
 
-        ## Performance Triggers
+        ## Static PerformanceTriggers
+        for threshold in [0.95, 0.9, 0.875, 0.85, 0.825, 0.8, 0.7]:
+            conf = PerformanceTriggerConfig(
+                evaluation_interval_data_points=evaluation_interval_data_points,
+                performance_triggers_window_size=1,  # somewhat deprecated parameter, not relevant for static
+                data_density_window_size=1,  # also ignored
+                mode="hindsight",
+                evaluation=PerformanceTriggerEvaluationConfig(
+                    device=device, dataset=get_eval_data_config("yearbook_train")
+                ),
+                decision_criteria={
+                    f"static-{threshold}": StaticPerformanceThresholdCriterion(
+                        metric="Accuracy", metric_threshold=threshold
+                    )
+                },
+                warmup_policy=TimeTriggerConfig(every="3d"),
+                warmup_intervals=warmup_intervals,
+            )
+            name = f"perf_{threshold}"
+            strategies.append((name, conf))
+
+        ## Dynamic Performance Triggers
         for performance_triggers_window_size in [15, 30]:
-            ## Static PerformanceTriggers
-
-            for threshold in [0.95, 0.9, 0.8, 0.7]:
-                conf = PerformanceTriggerConfig(
-                    evaluation_interval_data_points=evaluation_interval_data_points,
-                    performance_triggers_window_size=performance_triggers_window_size,
-                    data_density_window_size=performance_triggers_window_size,
-                    mode="hindsight",
-                    evaluation=PerformanceTriggerEvaluationConfig(
-                        device=device, dataset=get_eval_data_config("yearbook_train")
-                    ),
-                    decision_criteria={
-                        f"static-{threshold}": StaticPerformanceThresholdCriterion(
-                            metric="Accuracy", metric_threshold=threshold
-                        )
-                    },
-                )
-                name = f"perf_{evaluation_interval_data_points}_{performance_triggers_window_size}_{threshold}"
-                strategies.append((name, conf))
-            ## Dynamic Performance Triggers
-
+            criteria = []
             for deviation in [0.1, 0.2, 0.3]:
-                # TODO: Add percentile!
+                criterion = DynamicRollingAveragePerformanceThresholdCriterion(
+                    metric="Accuracy", window_size=performance_triggers_window_size, deviation=deviation, absolute=False
+                )
+                criteria.append((f"{performance_triggers_window_size}_roll_{deviation}", criterion))
+
+            for percentile in [0.05, 0.1, 0.2, 0.3]:
+                criterion = DynamicPercentilePerformanceThresholdCriterion(
+                    metric="Accuracy", window_size=performance_triggers_window_size, percentile=percentile
+                )
+                criteria.append((f"{performance_triggers_window_size}_perc_{percentile}", criterion))
+
+            for dec_crit_str, decision_criterion in criteria:
                 conf = PerformanceTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
                     performance_triggers_window_size=performance_triggers_window_size,
@@ -165,15 +177,11 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                     evaluation=PerformanceTriggerEvaluationConfig(
                         device=device, dataset=get_eval_data_config("yearbook_train")
                     ),
-                    decision_criteria={
-                        f"dynamic-{deviation}": DynamicRollingAveragePerformanceThresholdCriterion(
-                            metric="Accuracy", deviation=deviation, absolute=False
-                        )
-                    },
+                    decision_criteria={f"dynamic-{dec_crit_str}": decision_criterion},
                     warmup_policy=TimeTriggerConfig(every="3d"),
                     warmup_intervals=warmup_intervals,
                 )
-                name = f"perf_{evaluation_interval_data_points}_dyn_{performance_triggers_window_size}_{deviation}"
+                name = f"perf_dyn_{evaluation_interval_data_points}_{dec_crit_str}"
                 strategies.append((name, conf))
 
     return strategies
@@ -220,7 +228,10 @@ def run_experiment() -> None:
     existing_pipelines = set(existing_pipelines)
     run_id = 0
     for seed in seeds:
-        for triggering_strategy_id, triggering_strategy in gen_revision_triggering_strategies(train_gpu):
+        for (
+            triggering_strategy_id,
+            triggering_strategy,
+        ) in gen_triggering_strategies() + gen_revision_triggering_strategies(train_gpu):
             if (
                 isinstance(triggering_strategy, DataDriftTriggerConfig)
                 or isinstance(triggering_strategy, PerformanceTriggerConfig)
@@ -237,6 +248,7 @@ def run_experiment() -> None:
 
             run_id += 1
 
+    print(f"Running {len(pipeline_configs)} pipelines in total now.")
     host = os.getenv("MODYN_SUPERVISOR_HOST")
     port = os.getenv("MODYN_SUPERVISOR_PORT")
 
