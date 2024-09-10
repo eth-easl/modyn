@@ -1,12 +1,11 @@
 import os
 
-from experiments.utils.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
+from experiments.utils.models import Experiment
 from experiments.yearbook.compare_trigger_policies.pipeline_config import (
     gen_pipeline_config,
 )
 from modyn.config.schema.pipeline import (
-    DataAmountTriggerConfig,
     ModynPipelineConfig,
     TimeTriggerConfig,
 )
@@ -31,9 +30,7 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
-    ThresholdDecisionCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import (
     TimeWindowingStrategy,
@@ -46,13 +43,11 @@ from modyn.config.schema.pipeline.trigger.performance.criterion import (
     DynamicPercentilePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
-    _DynamicPerformanceThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
     PerformanceTriggerEvaluationConfig,
 )
-from modyn.supervisor.internal.eval.strategies import periodic
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -105,15 +100,17 @@ def construct_periodic_eval_handlers(
     ]
 
 
-def construct_between_trigger_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> list[EvalHandlerConfig]:
+def construct_between_trigger_eval_handler(
+    execution_time: EvalHandlerExecutionTime = "manual",
+) -> list[EvalHandlerConfig]:
     return [
         EvalHandlerConfig(
-        name="full",
-        execution_time=execution_time,
-        models="active",
-        strategy=BetweenTwoTriggersEvalStrategyConfig(),
-        datasets=["yearbook_all"],  # train and test
-    )
+            name="full",
+            execution_time=execution_time,
+            models="active",
+            strategy=BetweenTwoTriggersEvalStrategyConfig(),
+            datasets=["yearbook_all"],  # train and test
+        )
     ]
 
 
@@ -147,9 +144,7 @@ _ALL_PERIODIC_EVAL_INTERVALS = [
     ("delta+-15y", f"{15*24+3}h"),
 ]
 
-BEST_PERIODIC_EVAL_INTERVAL = [
-    ("delta+-1y", f"{1*24+3}h")  # total: 3 years
-]
+BEST_PERIODIC_EVAL_INTERVAL = [("delta+-1y", f"{1*24+3}h")]  # total: 3 years
 
 _EXPERIMENT_REFS = {
     # 0: Experiment(
@@ -264,12 +259,10 @@ _EXPERIMENT_REFS = {
     #         # 1: 0.4, 0.03, 0.09
     #         # 2: 0.2, 0.05, 0.07
     #         # 3: 0.15, 0.12
-            
     #         # rerun failed
     #         # for threshold, detection_interval, window_size in [
     #         #     # (0.03, 250, "10d"),
     #         # ]
-            
     #         for criterion_name, criterion in {
     #             f"mmd-{threshold}": ThresholdDecisionCriterion(threshold=threshold)
     #         }.items()
@@ -280,15 +273,17 @@ _EXPERIMENT_REFS = {
     21: Experiment(
         name="yb-datadrift-dynamic",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         drift_detection_triggers={
             f"{criterion_name}_int{detection_interval}_win{window_size}": DataDriftTriggerConfig(
                 evaluation_interval_data_points=detection_interval,
                 windowing_strategy=TimeWindowingStrategy(
                     # overlap has no affect acc. to offline exploration
-                    limit_ref=window_size, limit_cur=window_size, allow_overlap=False
+                    limit_ref=window_size,
+                    limit_cur=window_size,
+                    allow_overlap=False,
                 ),
                 # with 30k samples and 84 years, 10y are roughly 30000/84*10=3500 samples
                 # hence, if we want ~10 years of warmup, to 3500/detection_interval warmup intervals
@@ -297,11 +292,7 @@ _EXPERIMENT_REFS = {
                 warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
                 # 5k samples are enough for drift detection, in yearbook we won't accumulate that many anyway
                 sample_size=5_000,
-                metrics={
-                    "mmd": AlibiDetectMmdDriftMetric(
-                        decision_criterion=criterion, device="gpu"
-                    )
-                },
+                metrics={"mmd": AlibiDetectMmdDriftMetric(decision_criterion=criterion, device="gpu")},
             )
             # multiprocessing across gpus
             # TODO: 0: 100
@@ -309,7 +300,7 @@ _EXPERIMENT_REFS = {
             # TODO: 2: 500
             for detection_interval in [100]  # 100, 250, 500
             for window_size in ["4d"]  # dataset specific, best acc. to offline exploraion and static drift experiments
-            for decision_window_size in [30]  # 10, 20, 
+            for decision_window_size in [30]  # 10, 20,
             for criterion_name, criterion in (
                 # {
                 #     f"mmd-perc-{percentile}-{decision_window_size}": DynamicPercentileThresholdCriterion(
@@ -317,7 +308,7 @@ _EXPERIMENT_REFS = {
                 #     )
                 #     for percentile in [0.05, 0.15, 0.3]
                 # }
-                # | 
+                # |
                 {
                     f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
                         window_size=decision_window_size, deviation=deviation, absolute=False
@@ -334,8 +325,8 @@ _EXPERIMENT_REFS = {
     30: Experiment(
         name="yb-performancetrigger",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         performance_triggers={
             f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
@@ -397,8 +388,8 @@ _EXPERIMENT_REFS = {
     40: Experiment(
         name="yb-costtrigger-dataincorporation",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         cost_triggers={
             f"int{interval}_exch{exchange_rate}": DataIncorporationLatencyCostTriggerConfig(
@@ -415,8 +406,8 @@ _EXPERIMENT_REFS = {
     41: Experiment(
         name="yb-costtrigger-avoidablemisclassification",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         cost_triggers={
             f"int{interval}_exch{exchange_rate}_red{allow_reduction}": AvoidableMisclassificationCostTriggerConfig(
@@ -458,8 +449,8 @@ _EXPERIMENT_REFS = {
     51: Experiment(
         name="yb-ensemble",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         ensemble_triggers={
             "ensemble1": EnsembleTriggerConfig(

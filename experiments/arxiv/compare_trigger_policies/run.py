@@ -3,8 +3,8 @@ import os
 import pandas as pd
 
 from experiments.arxiv.compare_trigger_policies.pipeline_config import gen_pipeline_config
-from experiments.utils.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
+from experiments.utils.models import Experiment
 from modyn.config.schema.pipeline import (
     EvalHandlerConfig,
     ModynPipelineConfig,
@@ -27,9 +27,8 @@ from modynclient.config.schema.client_config import ModynClientConfig, Superviso
 _FIRST_TIMESTAMP = int(pd.to_datetime("1995-01-01").timestamp())
 _LAST_TIMESTAMP = int(pd.to_datetime("2024-07-01").timestamp())
 
-def construct_slicing_eval_handler(
-    execution_time: EvalHandlerExecutionTime = "manual"
-) -> EvalHandlerConfig:
+
+def construct_slicing_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="slidingmatrix",
         execution_time=execution_time,
@@ -95,9 +94,10 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         )
     ]
 
+
 PERIODIC_EVAL_INTERVAL = [("current", "13w")]  # total: 1/2y
 
-# pretrain/cold start can be chosen post fuction by just dropping evaluation info before a certain date
+# pretrain/cold start can be chosen post function by just dropping evaluation info before a certain date
 _EXPERIMENT_REFS: dict[int, Experiment] = {
     # -------------------------------------------------------------------------------- #
     #         1X: Baselines with PERIODIC_EVAL_INTERVAL, executed with cautious        #
@@ -109,8 +109,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     10: Experiment(
         name="arxiv-baseline-time",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         time_triggers={
             schedule: TimeTriggerConfig(every=schedule, start_timestamp=_FIRST_TIMESTAMP)
@@ -122,8 +122,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     11: Experiment(
         name="arxiv-baseline-dataamount",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)

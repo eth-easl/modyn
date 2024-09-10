@@ -21,8 +21,8 @@ from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig
 hp_bytes_parser_function = (
     "import torch\n"
     "import numpy as np\n"
-        "def bytes_parser_function(data: bytes) -> str:\n"
-        "    return str(data, 'utf8')"
+    "def bytes_parser_function(data: bytes) -> str:\n"
+    "    return str(data, 'utf8')"
 )
 hp_evaluation_transformer_function = (
     "import torch\n"
@@ -40,7 +40,9 @@ def gen_pipeline_config(
 ) -> ModynPipelineConfig:
     num_classes = 42
     return ModynPipelineConfig(
-        pipeline=Pipeline(name=config_ref, description="Huffpost pipeline for comparing trigger policies", version="0.0.1"),
+        pipeline=Pipeline(
+            name=config_ref, description="Huffpost pipeline for comparing trigger policies", version="0.0.1"
+        ),
         model=ModelConfig(id="ArticleNet", config={"num_classes": num_classes}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
@@ -61,7 +63,9 @@ def gen_pipeline_config(
                             name="default",
                             algorithm="AdamW",
                             source="PyTorch",
-                            param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})],
+                            param_groups=[
+                                OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})
+                            ],
                         )
                     ],
                 )
@@ -94,7 +98,9 @@ def gen_pipeline_config(
                     dataloader_workers=1,
                     tokenizer="DistilBertTokenizerTransform",
                     metrics=[
-                        AccuracyMetricConfig(evaluation_transformer_function=hp_evaluation_transformer_function, topn=1),
+                        AccuracyMetricConfig(
+                            evaluation_transformer_function=hp_evaluation_transformer_function, topn=1
+                        ),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=10),

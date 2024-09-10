@@ -2,8 +2,8 @@ import os
 
 import pandas as pd
 
-from experiments.utils.models import Experiment
 from experiments.utils.experiment_runner import run_multiple_pipelines
+from experiments.utils.models import Experiment
 from modyn.config.schema.pipeline import (
     EvalHandlerConfig,
     ModynPipelineConfig,
@@ -21,15 +21,14 @@ from modyn.config.schema.pipeline.evaluation.strategy.slicing import (
 from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
+
 from .pipeline_config import gen_pipeline_config
 
 _FIRST_TIMESTAMP = int(pd.to_datetime("2012-01-28").timestamp())
 _LAST_TIMESTAMP = int(pd.to_datetime("2022-09-24").timestamp())  # last: dummy
 
 
-def construct_slicing_eval_handler(
-    execution_time: EvalHandlerExecutionTime = "manual"
-) -> EvalHandlerConfig:
+def construct_slicing_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="slidingmatrix",
         execution_time=execution_time,
@@ -66,6 +65,7 @@ def construct_periodic_eval_handlers(
         for (interval, fake_interval) in intervals
     ]
 
+
 def construct_between_trigger_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
     return EvalHandlerConfig(
         name="full",
@@ -74,6 +74,7 @@ def construct_between_trigger_eval_handler(execution_time: EvalHandlerExecutionT
         strategy=BetweenTwoTriggersEvalStrategyConfig(),
         datasets=["huffpost_kaggle_all"],  # train and test
     )
+
 
 def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
     return [
@@ -93,6 +94,7 @@ def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
         )
     ]
 
+
 # total: 14weeks -> ~4mths (with quarterly evaluations the intervals slightly overlap by 1 month)
 PERIODIC_EVAL_INTERVAL = [("current", "7w")]
 
@@ -107,8 +109,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     10: Experiment(
         name="hp-baseline-time",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         time_triggers={
             schedule: TimeTriggerConfig(every=schedule, start_timestamp=_FIRST_TIMESTAMP)
@@ -120,8 +122,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     11: Experiment(
         name="hp-baseline-dataamount",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)

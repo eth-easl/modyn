@@ -18,18 +18,18 @@ from modyn.config.schema.pipeline import (
 )
 from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig
 
-
 arxiv_bytes_parser_function = (
     "import torch\n"
     "import numpy as np\n"
-        "def bytes_parser_function(data: bytes) -> str:\n"
-        "    return str(data, 'utf8')"
+    "def bytes_parser_function(data: bytes) -> str:\n"
+    "    return str(data, 'utf8')"
 )
 arxiv_evaluation_transformer_function = (
     "import torch\n"
     "def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:\n"
     "    return torch.argmax(model_output, dim=-1)\n"
 )
+
 
 def gen_pipeline_config(
     config_ref: str,
@@ -40,7 +40,9 @@ def gen_pipeline_config(
 ) -> ModynPipelineConfig:
     num_classes = 172
     return ModynPipelineConfig(
-        pipeline=Pipeline(name=config_ref, description="Arxiv pipeline for comparing trigger policies", version="0.0.1"),
+        pipeline=Pipeline(
+            name=config_ref, description="Arxiv pipeline for comparing trigger policies", version="0.0.1"
+        ),
         model=ModelConfig(id="ArticleNet", config={"num_classes": num_classes}),
         model_storage=PipelineModelStorageConfig(full_model_strategy=FullModelStrategy(name="PyTorchFullModel")),
         training=TrainingConfig(
@@ -87,7 +89,9 @@ def gen_pipeline_config(
                     dataloader_workers=1,
                     tokenizer="DistilBertTokenizerTransform",
                     metrics=[
-                        AccuracyMetricConfig(evaluation_transformer_function=arxiv_evaluation_transformer_function, topn=1),
+                        AccuracyMetricConfig(
+                            evaluation_transformer_function=arxiv_evaluation_transformer_function, topn=1
+                        ),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=2),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=5),
                         AccuracyMetricConfig(evaluation_transformer_function="", topn=10),

@@ -16,7 +16,11 @@ from modyn.config.schema.pipeline.config import (
 )
 from modyn.config.schema.pipeline.evaluation.config import EvalDataConfig
 from modyn.config.schema.pipeline.evaluation.handler import EvalHandlerConfig
-from modyn.config.schema.pipeline.evaluation.metrics import AccuracyMetricConfig, F1ScoreMetricConfig, RocAucMetricConfig
+from modyn.config.schema.pipeline.evaluation.metrics import (
+    AccuracyMetricConfig,
+    F1ScoreMetricConfig,
+    RocAucMetricConfig,
+)
 from modyn.config.schema.pipeline.model_storage import FullModelStrategy
 from modyn.config.schema.pipeline.sampling.config import NewDataStrategyConfig
 
@@ -113,9 +117,7 @@ def gen_pipeline_config(
                             num_classes=2,
                             average="micro",
                         ),
-                        RocAucMetricConfig(
-                            evaluation_transformer_function=yb_evaluation_transformer_function_rocauc
-                        )
+                        RocAucMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function_rocauc),
                     ],
                 )
                 for yb_dataset_name in ["yearbook_all", "yearbook_train", "yearbook_test"]
