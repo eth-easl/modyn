@@ -11,7 +11,6 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     unsqueeze_dimensions_if_necessary,
 )
-
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 
 
