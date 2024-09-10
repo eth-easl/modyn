@@ -93,6 +93,9 @@ class PerformanceTriggerMixin:
         assert self.model_downloader is not None
         assert self.context and self.context.pipeline_config is not None
 
+        # Since the metric objects are stateful, we need to re-instantiate them before each evaluation.
+        self._metrics = setup_metrics(self.config.evaluation.dataset.metrics)
+
         evaluation_dataloader = prepare_trigger_dataloader_fixed_keys(
             self.dataloader_info, [key for key, _ in interval_data]
         )
