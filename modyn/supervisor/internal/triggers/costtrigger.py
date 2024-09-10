@@ -58,7 +58,7 @@ class CostTrigger(BatchedTrigger):
 
         traintime_estimate = -1.0
 
-        regret_metric = self._compute_regret_metric(batch, batch_start, batch_duration)
+        regret_metric, regret_log = self._compute_regret_metric(batch, batch_start, batch_duration)
         regret_in_traintime_unit = regret_metric * self.config.conversion_factor
 
         # --------------------------------------------- Trigger Decision --------------------------------------------- #
@@ -85,6 +85,7 @@ class CostTrigger(BatchedTrigger):
                 batch[-1][1],
             ),
             regret_metric=regret_metric,
+            regret_log=regret_log,
             traintime_estimate=traintime_estimate,
             regret_in_traintime_unit=regret_in_traintime_unit,
         )
@@ -113,7 +114,9 @@ class CostTrigger(BatchedTrigger):
     # ---------------------------------------------------------------------------------------------------------------- #
 
     @abstractmethod
-    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int) -> float:
+    def _compute_regret_metric(
+        self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int
+    ) -> tuple[float, dict]:
         """Compute the regret metric for the current state of the trigger.
 
         This method will update the _incorporation_latency_tracker.
@@ -123,4 +126,8 @@ class CostTrigger(BatchedTrigger):
         Args:
             batch: The batch of data points to compute the regret metric for.
             batch_duration: The duration of the last period in seconds.
+
+        Returns:
+            regret_metric: The regret metric for the current state.
+            additional_log: Additional log information to be stored in the evaluation log
         """
