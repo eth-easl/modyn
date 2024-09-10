@@ -4,7 +4,7 @@ from typing import Any
 import torch
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
-    AbstractRemoteDownsamplingStrategy,
+    AbstractRemoteDownsamplingStrategy, unsqueeze_dimensions_if_necessary,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,10 +49,7 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target: torch.Tensor,
         embedding: torch.Tensor | None = None,
     ) -> None:
-        if forward_output.dim() == 1:
-            # BCEWithLogitsLoss requires that forward_output and target have the same dimension
-            forward_output = forward_output.unsqueeze(1)
-            target = target.unsqueeze(1)
+        forward_output, target = unsqueeze_dimensions_if_necessary(forward_output, target)
 
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target

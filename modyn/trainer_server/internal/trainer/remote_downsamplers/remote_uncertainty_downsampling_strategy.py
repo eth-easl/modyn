@@ -6,6 +6,8 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import \
+    unsqueeze_dimensions_if_necessary
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 
 
@@ -64,15 +66,13 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     ) -> None:
         assert embedding is None
 
+        forward_output, _ = unsqueeze_dimensions_if_necessary(forward_output, target)
         self.scores = np.append(self.scores, self._compute_score(forward_output.detach()))
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
-        if forward_output.dim() == 1:
-            forward_output = forward_output.unsqueeze(1)
         feature_size = forward_output.size(1)
-
         if self.score_metric == "LeastConfidence":
             if feature_size == 1:
                 # for binary classification comparing how far away the element is from 0.5 after sigmoid layer

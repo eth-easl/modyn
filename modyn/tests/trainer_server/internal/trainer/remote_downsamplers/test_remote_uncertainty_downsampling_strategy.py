@@ -76,15 +76,15 @@ def test_compute_score(sampler_config):
 
 binary_test_data = {
     "LeastConfidence": {
-        "outputs": torch.tensor([-0.8, 0.5, 0.3]),
+        "outputs": torch.tensor([[-0.8], [0.5], [0.3]]),
         "expected_scores": np.array([0.8, 0.5, 0.3]),  # confidence just picks the highest probability
     },
     "Entropy": {
-        "outputs": torch.tensor([0.8, 0.5, 0.3]),
+        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
         "expected_scores": np.array([-0.5004, -0.6931, -0.6109]),
     },
     "Margin": {
-        "outputs": torch.tensor([0.8, 0.5, 0.3]),
+        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
         "expected_scores": np.array([0.6, 0.0, 0.4]),  # margin between top two classes
     },
 }

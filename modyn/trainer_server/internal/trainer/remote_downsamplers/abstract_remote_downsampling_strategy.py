@@ -36,6 +36,22 @@ def get_tensors_subset(
     return sub_data, sub_target
 
 
+def unsqueeze_dimensions_if_necessary(
+        forward_output: torch.Tensor, target: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    For binary classification, the forward output is a 1D tensor of length batch_size. We need to unsqueeze it to
+    have a 2D tensor of shape (batch_size, 1).
+
+    For binary classification we use BCEWithLogitsLoss, which requires the same dimensionality between the forward
+    output and the target, so we also need to unsqueeze the target tensor.
+    """
+    if forward_output.dim() == 1:
+        forward_output = forward_output.unsqueeze(1)
+        target = target.unsqueeze(1)
+    return forward_output, target
+
+
 class AbstractRemoteDownsamplingStrategy(ABC):
     def __init__(
         self,
