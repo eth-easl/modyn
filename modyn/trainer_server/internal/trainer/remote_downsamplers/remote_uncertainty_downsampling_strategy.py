@@ -76,8 +76,15 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         feature_size = forward_output.size(1)
         if self.score_metric == "LeastConfidence":
             if feature_size == 1:
-                # for binary classification comparing how far away the element is from 0.5 after sigmoid layer
-                # is the same as comparing the absolute value of the element before sigmoid layer
+                # For binary classification there is only one pre-sigmoid output value, which, after sigmoid layer,
+                # is the probability of the positive class. The probability of the negative class is
+                # 1 - probability_positive_class.
+                # For each sample we need to compute the pre-sigmoid output for the class with the highest probability.
+                # If model_output_value > 0, then sigmoid(model_output_value) > 0.5, hence the positive class has the
+                # highest probability and model_output_value is what we need.
+                # If model_output_value < 0, this case is symmetric to the case where the model output value is
+                # - | model_output_value |. Hence, we can just take the absolute value.
+                # In any case, we just need to compute the absolute value of the model output value.
                 scores = torch.abs(forward_output).squeeze(1).cpu().numpy()
             else:
                 scores = forward_output.max(dim=1).values.cpu().numpy()
