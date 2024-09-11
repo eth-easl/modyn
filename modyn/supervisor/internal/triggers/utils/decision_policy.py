@@ -109,7 +109,7 @@ class DynamicPercentileThresholdPolicy(DynamicDecisionPolicy):
         ]
         self.score_observations.append(measurement)
 
-        return measurement > threshold
+        return measurement >= threshold if self.triggering_direction == "higher" else measurement <= threshold
 
 
 class DynamicRollingAverageThresholdPolicy(DynamicDecisionPolicy):

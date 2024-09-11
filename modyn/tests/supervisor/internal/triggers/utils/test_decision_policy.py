@@ -50,7 +50,7 @@ def test_dynamic_decision_policy_window_size() -> None:
     assert len(policy.score_observations) == 3  # Ensure the deque is still at max length
 
 
-def test_dynamic_decision_policy_percentile() -> None:
+def test_dynamic_decision_policy_percentile_trigger_on_high_value() -> None:
     config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.25)
     policy = DynamicPercentileThresholdPolicy(
         window_size=config.window_size,
@@ -58,7 +58,7 @@ def test_dynamic_decision_policy_percentile() -> None:
         triggering_direction="higher",
     )
 
-    # Add observations
+    # Add observations (metric: e.g. distance, higher is worse)
     policy.evaluate_decision(0.4)
     policy.evaluate_decision(0.6)
     policy.evaluate_decision(0.7)
@@ -67,6 +67,26 @@ def test_dynamic_decision_policy_percentile() -> None:
     assert not policy.evaluate_decision(0.5)
     assert policy.evaluate_decision(0.8)
     assert not policy.evaluate_decision(0.7)
+
+
+def test_dynamic_decision_policy_percentile_trigger_on_low_value() -> None:
+    config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.25)
+    policy = DynamicPercentileThresholdPolicy(
+        window_size=config.window_size,
+        percentile=config.percentile,
+        triggering_direction="lower",
+    )
+
+    # Add observations (metric: e.g. accuracy, lower is worse)
+    policy.evaluate_decision(0.6)
+    policy.evaluate_decision(0.8)
+    policy.evaluate_decision(0.7)
+    policy.evaluate_decision(0.5)
+
+    assert not policy.evaluate_decision(0.9)
+    assert not policy.evaluate_decision(0.95)
+    assert not policy.evaluate_decision(0.9)
+    assert policy.evaluate_decision(0.7)
 
 
 def test_dynamic_decision_policy_average_absolute() -> None:
