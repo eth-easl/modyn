@@ -80,7 +80,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
                 # is the probability of the positive class. The probability of the negative class is
                 # 1 - probability_positive_class.
                 # For each sample we need to compute the pre-sigmoid output for the class with the highest probability.
-                # If model_output_value > 0, then sigmoid(model_output_value) > 0.5, hence the positive class has the
+                # If model_output_value >= 0, then sigmoid(model_output_value) >= 0.5, hence the positive class has the
                 # highest probability and model_output_value is what we need.
                 # If model_output_value < 0, then sigmoid(model_output_value) < 0.5, hence the negative class has the
                 # highest probability. The corresponding pre-sigmoid output value for the negative class
