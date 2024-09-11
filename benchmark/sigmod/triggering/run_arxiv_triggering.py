@@ -71,7 +71,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
         warmup_intervals = math.ceil(min_warmup_data_points / evaluation_interval_data_points)
 
         # Static Drift Triggers
-        for threshold in [0.02, 0.01, 0.005]:
+        for threshold in [0.02, 0.01, 0.005, 0.002]:
             for window_size in ["1y", "2y"]:
                 conf = DataDriftTriggerConfig(
                     evaluation_interval_data_points=evaluation_interval_data_points,
@@ -93,10 +93,10 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 strategies.append((name, conf))
 
         ## Dynamic Drift Triggers
-        for window_size in ["1y"]:
+        for window_size in ["1y", "2y"]:
             for metric_window_size in [15, 30]:  # how many drift scores we use for calibrating the dynamic policy
                 criteria = []
-                for deviation in [0.05, 1]:
+                for deviation in [1]:
                     criteria.append(
                         (
                             f"roll_{deviation}",
@@ -105,7 +105,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             ),
                         )
                     )
-                for percentile in [0.05, 0.1, 0.2, 0.3]:
+                for percentile in [0.05, 0.1, 0.2]:
                     criteria.append(
                         (
                             f"perc_{percentile}",
@@ -155,7 +155,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
         ## Dynamic PerformanceTriggers
         for performance_triggers_window_size in [15, 30]:
             criteria = []
-            for deviation in [0.1, 0.3]:
+            for deviation in [0.2]:
                 criterion = DynamicRollingAveragePerformanceThresholdCriterion(
                     metric="Top-2-Accuracy",
                     window_size=performance_triggers_window_size,
@@ -164,7 +164,7 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 )
                 criteria.append((f"{performance_triggers_window_size}_roll_{deviation}", criterion))
 
-            for percentile in [0.05, 0.1, 0.2, 0.3]:
+            for percentile in [0.05, 0.1, 0.2]:
                 criterion = DynamicPercentilePerformanceThresholdCriterion(
                     metric="Top-2-Accuracy", window_size=performance_triggers_window_size, percentile=percentile
                 )
