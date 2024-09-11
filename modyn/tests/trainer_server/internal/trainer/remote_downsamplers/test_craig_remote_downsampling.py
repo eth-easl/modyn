@@ -205,6 +205,39 @@ def test_bts(grad_approx: str, dummy_system_config: ModynConfig):
         assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
 
 
+@pytest.mark.parametrize("grad_approx", ["LastLayer", "LastLayerWithEmbedding"])
+def test_bts_binary(grad_approx: str, dummy_system_config: ModynConfig):
+    sampler_config = get_sampler_config(dummy_system_config, grad_approx=grad_approx)
+    per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
+    sampler_config = (0, 0, 0, sampler_config[3], sampler_config[4], per_sample_loss_fct, "cpu")
+    sampler = RemoteCraigDownsamplingStrategy(*sampler_config)
+
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
+        sample_ids = [1, 2, 3, 10, 11, 12, 13]
+        forward_input = torch.randn(7, 5)  # 7 samples, 5 input features
+        forward_output = torch.randn(
+            7,
+        )
+        forward_output.requires_grad = True
+        target = torch.tensor([1, 1, 1, 0, 0, 0, 1], dtype=torch.float32)  # 7 target labels
+        embedding = torch.randn(7, 10)  # 7 samples, embedding dimension 10
+
+        assert sampler.distance_matrix.shape == (0, 0)
+        sampler.inform_samples(sample_ids, forward_input, forward_output, target, embedding)
+        sampler.inform_end_of_current_label()
+        assert sampler.distance_matrix.shape == (7, 7)
+        assert len(sampler.current_class_gradients) == 0
+
+        assert sampler.index_sampleid_map == [10, 11, 12, 1, 2, 3, 13]
+
+        selected_points, selected_weights = sampler.select_points()
+
+        assert len(selected_points) == 3
+        assert len(selected_weights) == 3
+        assert all(weight > 0 for weight in selected_weights)
+        assert all(id in [1, 2, 3, 10, 11, 12, 13] for id in selected_points)
+
+
 @pytest.mark.parametrize("grad_approx", ["LastLayerWithEmbedding", "LastLayer"])
 def test_bts_equals_stb(grad_approx: str, dummy_system_config: ModynConfig):
     # data
