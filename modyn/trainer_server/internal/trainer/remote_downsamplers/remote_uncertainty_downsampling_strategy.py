@@ -82,8 +82,9 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
                 # For each sample we need to compute the pre-sigmoid output for the class with the highest probability.
                 # If model_output_value > 0, then sigmoid(model_output_value) > 0.5, hence the positive class has the
                 # highest probability and model_output_value is what we need.
-                # If model_output_value < 0, this case is symmetric to the case where the model output value is
-                # - | model_output_value |. Hence, we can just take the absolute value.
+                # If model_output_value < 0, then sigmoid(model_output_value) < 0.5, hence the negative class has the
+                # highest probability. The corresponding pre-sigmoid output value for the negative class
+                # is - model_output_value.
                 # In any case, we just need to compute the absolute value of the model output value.
                 scores = torch.abs(forward_output).squeeze(1).cpu().numpy()
             else:
