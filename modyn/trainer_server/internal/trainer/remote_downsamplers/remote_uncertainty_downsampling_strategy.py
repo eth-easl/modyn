@@ -6,6 +6,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    unsqueeze_dimensions_if_necessary,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 
 
@@ -64,33 +67,53 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     ) -> None:
         assert embedding is None
 
+        forward_output, _ = unsqueeze_dimensions_if_necessary(forward_output, target)
         self.scores = np.append(self.scores, self._compute_score(forward_output.detach()))
         # keep the mapping index<->sample_id
         self.index_sampleid_map += sample_ids
 
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
+        feature_size = forward_output.size(1)
         if self.score_metric == "LeastConfidence":
-            scores = forward_output.max(dim=1).values.cpu().numpy()
-        elif self.score_metric == "Entropy":
-            preds = (
-                torch.nn.functional.softmax(forward_output, dim=1).cpu().numpy()
-                if not disable_softmax
-                else forward_output.cpu().numpy()
-            )
-            scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
-        elif self.score_metric == "Margin":
-            preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
-            preds_argmax = torch.argmax(preds, dim=1)  # gets top class
-            max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax].clone()  # gets scores of top class
-
-            # remove highest class from softmax output
-            preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
-
-            preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
-            second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
-            scores = (max_preds - second_max_preds).cpu().numpy()
+            if feature_size == 1:
+                # For binary classification there is only one pre-sigmoid output value, which, after sigmoid layer,
+                # is the probability of the positive class. The probability of the negative class is
+                # 1 - probability_positive_class.
+                # For each sample we need to compute the pre-sigmoid output for the class with the highest probability.
+                # If model_output_value >= 0, then sigmoid(model_output_value) >= 0.5, hence the positive class has the
+                # highest probability and model_output_value is what we need.
+                # If model_output_value < 0, then sigmoid(model_output_value) < 0.5, hence the negative class has the
+                # highest probability. The corresponding pre-sigmoid output value for the negative class
+                # is - model_output_value.
+                # In any case, we just need to compute the absolute value of the model output value.
+                scores = torch.abs(forward_output).squeeze(1).cpu().numpy()
+            else:
+                scores = forward_output.max(dim=1).values.cpu().numpy()
         else:
-            raise AssertionError("The required metric does not exist")
+            if feature_size == 1:
+                # for binary classification the softmax layer is reduced to sigmoid
+                preds = torch.sigmoid(forward_output) if not disable_softmax else forward_output
+                # we need to convert it to a 2D tensor with probabilities for both classes
+                preds = torch.cat((1 - preds, preds), dim=1)
+            else:
+                preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
+
+            if self.score_metric == "Entropy":
+                scores = (np.log(preds + 1e-6) * preds).sum(axis=1)
+            elif self.score_metric == "Margin":
+                preds_argmax = torch.argmax(preds, dim=1)  # gets top class
+                max_preds = preds[
+                    torch.ones(preds.shape[0], dtype=bool), preds_argmax
+                ].clone()  # gets scores of top class
+
+                # remove highest class from softmax output
+                preds[torch.ones(preds.shape[0], dtype=bool), preds_argmax] = -1.0
+
+                preds_sub_argmax = torch.argmax(preds, dim=1)  # gets new top class (=> 2nd top class)
+                second_max_preds = preds[torch.ones(preds.shape[0], dtype=bool), preds_sub_argmax]
+                scores = (max_preds - second_max_preds).cpu().numpy()
+            else:
+                raise AssertionError("The required metric does not exist")
 
         return scores
 
@@ -139,7 +162,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         # we select those with minimal negative entropy, i.e., maximum entropy
         # Margin: We look for the smallest margin. The larger the margin, the more certain the
         # model is.
-        return np.argsort(self.scores)[:target_size], torch.ones(target_size).float()
+        return np.argsort(self.scores)[:target_size].tolist(), torch.ones(target_size).float()
 
     @property
     def requires_grad(self) -> bool:
