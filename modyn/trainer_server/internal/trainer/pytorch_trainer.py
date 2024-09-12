@@ -24,6 +24,7 @@ import torch
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
+from modyn.models.dlrm.dlrm import DLRM
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -561,14 +562,13 @@ class PytorchTrainer:
         self._downsampler.init_downsampler()
         self.start_embedding_recording_if_needed()
 
-        if self._downsampler.requires_grad:
-            context_manager = contextlib.nullcontext()
-        else:
-            context_manager = torch.no_grad()
-        # For model DLRM it does not work with inference mode with complaint later in the training phase
-        # that inference tensors cannot be saved for backward, so we have to use torch.no_grad() here.
-        # The guess for the reason is that some of the DLRM parameters are lazily created during the
+        # DLRM does not support inference_mode(), as it will complain during training that
+        # "that inference tensors cannot be saved for backward".
+        # It could be that some DLRM parameters are lazily created during the
         # first forward pass and hence they are created as inference tensors if inference mode is used here.
+        # If this becomes a problem for more models, we might want to make it a field on the model class instead.
+        no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
+        context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
         with context_manager:
             big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
@@ -913,10 +913,8 @@ class PytorchTrainer:
             sample_ids, target, data = self.preprocess_batch(batch)
             number_of_samples += len(sample_ids)
 
-            if self._downsampler.requires_grad:
-                context_manager = contextlib.nullcontext()
-            else:
-                context_manager = torch.no_grad()
+            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
+            context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     # compute the scores and accumulate them
