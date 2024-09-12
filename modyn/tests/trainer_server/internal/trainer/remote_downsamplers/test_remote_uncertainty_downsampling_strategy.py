@@ -74,6 +74,31 @@ def test_compute_score(sampler_config):
     assert np.allclose(scores, expected_scores, atol=1e-4)
 
 
+binary_test_data = {
+    "LeastConfidence": {
+        "outputs": torch.tensor([[-0.8], [0.5], [0.3]]),
+        "expected_scores": np.array([0.8, 0.5, 0.3]),  # confidence just picks the highest probability
+    },
+    "Entropy": {
+        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
+        "expected_scores": np.array([-0.5004, -0.6931, -0.6109]),
+    },
+    "Margin": {
+        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
+        "expected_scores": np.array([0.6, 0.0, 0.4]),  # margin between top two classes
+    },
+}
+
+
+def test_compute_score_binary(sampler_config):
+    metric = sampler_config[3]["score_metric"]
+    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
+    outputs = binary_test_data[metric]["outputs"]
+    expected_scores = binary_test_data[metric]["expected_scores"]
+    scores = amds._compute_score(outputs, disable_softmax=True)
+    assert np.allclose(scores, expected_scores, atol=1e-4)
+
+
 def test_select_points(balance_config):
     amds = RemoteUncertaintyDownsamplingStrategy(*balance_config)
     with torch.inference_mode():

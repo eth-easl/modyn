@@ -31,7 +31,7 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
@@ -227,16 +227,16 @@ _EXPERIMENT_REFS = {
             for window_size in [5]
             for criterion_name, criterion in (
                 {
-                    f"mmd-perc-{percentile}-{window_size}": DynamicPercentileThresholdCriterion(
-                        window_size=window_size, percentile=percentile
+                    f"mmd-perc-{quantile}-{window_size}": DynamicQuantileThresholdCriterion(
+                        window_size=window_size, quantile=quantile
                     )
-                    for percentile in [0.05, 0.1, 0.2, 0.3]
+                    for quantile in [0.05, 0.1, 0.2, 0.3]
                     for window_size in [15]  # TODO [10, 20, 30]
                 }
                 | {
                     f"mmd-rollavg-{deviation}-{window_size}": DynamicRollingAverageThresholdCriterion(
                         window_size=window_size, deviation=deviation, absolute=False
-                    )  # TODO: avg / percentile
+                    )  # TODO: avg / quantile
                     for deviation in [0.025, 0.05, 0.1, 0.2, 0.3]
                     for window_size in [15]  # TODO [10, 20, 30]
                 }
@@ -293,7 +293,7 @@ _EXPERIMENT_REFS = {
                         expected_accuracy=0.9,  # TODO: variable
                         allow_reduction=allow_reduction,
                         avoidable_misclassification_threshold=num_misclassifications,
-                    )  # TODO: avg / percentile
+                    )  # TODO: avg / quantile
                     for num_misclassifications in [100, 200, 500, 1000, 2000, 5000]
                     for allow_reduction in [True, False]
                 }

@@ -7,7 +7,7 @@ from typing_extensions import override
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
@@ -42,7 +42,7 @@ from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import
 )
 from modyn.supervisor.internal.triggers.utils.decision_policy import (
     DecisionPolicy,
-    DynamicPercentileThresholdPolicy,
+    DynamicQuantileThresholdPolicy,
     DynamicRollingAverageThresholdPolicy,
     StaticThresholdDecisionPolicy,
 )
@@ -366,10 +366,10 @@ def _setup_decision_policies(
             policies[metric_name] = StaticThresholdDecisionPolicy(
                 threshold=criterion.threshold, triggering_direction="higher"
             )
-        elif isinstance(criterion, DynamicPercentileThresholdCriterion):
-            policies[metric_name] = DynamicPercentileThresholdPolicy(
+        elif isinstance(criterion, DynamicQuantileThresholdCriterion):
+            policies[metric_name] = DynamicQuantileThresholdPolicy(
                 window_size=criterion.window_size,
-                percentile=criterion.percentile,
+                quantile=criterion.quantile,
                 triggering_direction="higher",
             )
         elif isinstance(criterion, DynamicRollingAverageThresholdCriterion):
