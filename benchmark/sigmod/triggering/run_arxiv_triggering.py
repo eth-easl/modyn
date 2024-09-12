@@ -13,13 +13,13 @@ from modyn.config.schema.pipeline.trigger import TriggerConfig
 from modyn.config.schema.pipeline.trigger.drift import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectMmdDriftMetric
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPercentilePerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
     DynamicRollingAveragePerformanceThresholdCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -105,11 +105,11 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                             ),
                         )
                     )
-                for percentile in [0.05, 0.1, 0.2]:
+                for quantile in [0.05, 0.1, 0.2]:
                     criteria.append(
                         (
-                            f"perc_{percentile}",
-                            DynamicPercentileThresholdCriterion(window_size=metric_window_size, percentile=percentile),
+                            f"qt_{quantile}",
+                            DynamicQuantileThresholdCriterion(window_size=metric_window_size, quantile=quantile),
                         )
                     )
                 for dec_crit_str, decision_criterion in criteria:
@@ -164,11 +164,11 @@ def gen_revision_triggering_strategies(device: str) -> list[tuple[str, TriggerCo
                 )
                 criteria.append((f"{performance_triggers_window_size}_roll_{deviation}", criterion))
 
-            for percentile in [0.05, 0.1, 0.2]:
-                criterion = DynamicPercentilePerformanceThresholdCriterion(
-                    metric="Top-2-Accuracy", window_size=performance_triggers_window_size, percentile=percentile
+            for quantile in [0.05, 0.1, 0.2]:
+                criterion = DynamicQuantilePerformanceThresholdCriterion(
+                    metric="Top-2-Accuracy", window_size=performance_triggers_window_size, quantile=quantile
                 )
-                criteria.append((f"{performance_triggers_window_size}_perc_{percentile}", criterion))
+                criteria.append((f"{performance_triggers_window_size}_perc_{quantile}", criterion))
 
             for dec_crit_str, decision_criterion in criteria:
                 conf = PerformanceTriggerConfig(
