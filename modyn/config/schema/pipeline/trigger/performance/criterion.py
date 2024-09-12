@@ -36,16 +36,18 @@ class _DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     needs_calibration: Literal[True] = Field(True)
 
 
-class DynamicPercentilePerformanceThresholdCriterion(_DynamicPerformanceThresholdCriterion):
-    """Dynamic threshold based on a extremeness percentile of the previous
+class DynamicQuantilePerformanceThresholdCriterion(_DynamicPerformanceThresholdCriterion):
+    """Dynamic threshold based on a extremeness quantile of the previous
     distance values."""
 
-    id: Literal["DynamicPercentilePerformanceThresholdCriterion"] = Field(
-        "DynamicPercentilePerformanceThresholdCriterion"
-    )
-    percentile: float = Field(
+    id: Literal["DynamicQuantilePerformanceThresholdCriterion"] = Field("DynamicQuantilePerformanceThresholdCriterion")
+    quantile: float = Field(
         0.05,
-        description="The percentile that a threshold has to be in to trigger a drift event.",
+        description=(
+            "The quantile that a threshold has to trigger. "
+            "0.05 will only trigger in the most extreme 5% of cases. Hence the triggering "
+            "threshold is more extreme than 95% of the previous values."
+        ),
     )
 
 
@@ -116,7 +118,7 @@ class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassif
 
 PerformanceTriggerCriterion = Annotated[
     StaticPerformanceThresholdCriterion
-    | DynamicPercentilePerformanceThresholdCriterion
+    | DynamicQuantilePerformanceThresholdCriterion
     | DynamicRollingAveragePerformanceThresholdCriterion
     | StaticNumberAvoidableMisclassificationCriterion,
     Field(discriminator="id"),

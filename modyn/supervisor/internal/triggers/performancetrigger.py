@@ -5,7 +5,7 @@ import logging
 from typing_extensions import override
 
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPercentilePerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
     DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
@@ -15,7 +15,7 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 )
 from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
-    DynamicPerformancePercentileThresholdPolicy,
+    DynamicPerformanceQuantileThresholdPolicy,
     DynamicPerformanceRollingAverageThresholdPolicy,
     PerformanceDecisionPolicy,
     StaticNumberAvoidableMisclassificationDecisionPolicy,
@@ -157,8 +157,8 @@ def _setup_decision_policies(
     for name, criterion in config.decision_criteria.items():
         if isinstance(criterion, StaticPerformanceThresholdCriterion):
             policies[name] = StaticPerformanceThresholdDecisionPolicy(criterion)
-        elif isinstance(criterion, DynamicPercentilePerformanceThresholdCriterion):
-            policies[name] = DynamicPerformancePercentileThresholdPolicy(criterion)
+        elif isinstance(criterion, DynamicQuantilePerformanceThresholdCriterion):
+            policies[name] = DynamicPerformanceQuantileThresholdPolicy(criterion)
         elif isinstance(criterion, DynamicRollingAveragePerformanceThresholdCriterion):
             policies[name] = DynamicPerformanceRollingAverageThresholdPolicy(criterion)
         elif isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):

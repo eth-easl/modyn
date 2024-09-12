@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPercentilePerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
     DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
@@ -17,7 +17,7 @@ from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
 )
 from modyn.supervisor.internal.triggers.utils.decision_policy import (
-    DynamicPercentileThresholdPolicy,
+    DynamicQuantileThresholdPolicy,
     DynamicRollingAverageThresholdPolicy,
     StaticThresholdDecisionPolicy,
 )
@@ -79,17 +79,17 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         return self._wrapped.evaluate_decision(measurement=evaluation_scores[self.metric])
 
 
-class DynamicPerformancePercentileThresholdPolicy(PerformanceDecisionPolicy):
+class DynamicPerformanceQuantileThresholdPolicy(PerformanceDecisionPolicy):
     """Wrapper for DynamicRollingAverageThresholdPolicy.
 
-    Triggers if value is in the lower percentile of the rolling window.
+    Triggers if value is in the lower quantile of the rolling window.
     """
 
-    def __init__(self, config: DynamicPercentilePerformanceThresholdCriterion):
+    def __init__(self, config: DynamicQuantilePerformanceThresholdCriterion):
         self.metric = config.metric
-        self._wrapped = DynamicPercentileThresholdPolicy(
+        self._wrapped = DynamicQuantileThresholdPolicy(
             window_size=config.window_size,
-            percentile=config.percentile,
+            quantile=config.quantile,
             triggering_direction="lower",
         )
 
