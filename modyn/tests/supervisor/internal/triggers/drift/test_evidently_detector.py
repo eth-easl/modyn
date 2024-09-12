@@ -8,7 +8,7 @@ from modyn.config.schema.pipeline import (
     EvidentlySimpleDistanceDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.evidently import (
     EvidentlyHellingerDistanceDriftMetric,
@@ -41,12 +41,12 @@ def df_data_cur(data_cur: np.ndarray) -> pd.DataFrame:
 
 @pytest.fixture
 def model_drift_metric() -> EvidentlyModelDriftMetric:
-    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicPercentileThresholdCriterion())
+    return EvidentlyModelDriftMetric(bootstrap=False, decision_criterion=DynamicQuantileThresholdCriterion())
 
 
 @pytest.fixture
 def ratio_drift_metric() -> EvidentlyRatioDriftMetric:
-    return EvidentlyRatioDriftMetric(decision_criterion=DynamicPercentileThresholdCriterion())
+    return EvidentlyRatioDriftMetric(decision_criterion=DynamicQuantileThresholdCriterion())
 
 
 @pytest.fixture
@@ -54,13 +54,13 @@ def simple_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
     return EvidentlySimpleDistanceDriftMetric(
         bootstrap=False,
         distance_metric="euclidean",
-        decision_criterion=DynamicPercentileThresholdCriterion(),
+        decision_criterion=DynamicQuantileThresholdCriterion(),
     )
 
 
 @pytest.fixture
 def hellinger_distance_drift_metric() -> EvidentlySimpleDistanceDriftMetric:
-    return EvidentlyHellingerDistanceDriftMetric(decision_criterion=DynamicPercentileThresholdCriterion())
+    return EvidentlyHellingerDistanceDriftMetric(decision_criterion=DynamicQuantileThresholdCriterion())
 
 
 def test_evidently_additional_metric_computation_hellinger(

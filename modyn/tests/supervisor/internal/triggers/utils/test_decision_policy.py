@@ -1,10 +1,10 @@
 import pytest
 
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
 )
 from modyn.supervisor.internal.triggers.utils.decision_policy import (
-    DynamicPercentileThresholdPolicy,
+    DynamicQuantileThresholdPolicy,
     DynamicRollingAverageThresholdPolicy,
     StaticThresholdDecisionPolicy,
 )
@@ -17,16 +17,16 @@ def test_threshold_decision_policy() -> None:
     assert not policy.evaluate_decision(0.4)
 
 
-@pytest.mark.parametrize("percentile", [0.1, 0.5, 0.9])
-def test_dynamic_decision_policy_initial(percentile: float) -> None:
-    policy = DynamicPercentileThresholdPolicy(window_size=3, percentile=percentile, triggering_direction="higher")
+@pytest.mark.parametrize("quantile", [0.1, 0.5, 0.9])
+def test_dynamic_decision_policy_initial(quantile: float) -> None:
+    policy = DynamicQuantileThresholdPolicy(window_size=3, quantile=quantile, triggering_direction="higher")
 
     # Initially, the deque is empty, so any value should trigger
     assert policy.evaluate_decision(0.5)
 
 
 def test_dynamic_decision_policy_with_observations() -> None:
-    policy = DynamicPercentileThresholdPolicy(window_size=4, percentile=0.5, triggering_direction="higher")
+    policy = DynamicQuantileThresholdPolicy(window_size=4, quantile=0.5, triggering_direction="higher")
 
     # Add initial observations
     policy.score_observations.extend([0.4, 0.5, 0.6, 0.7])
@@ -38,7 +38,7 @@ def test_dynamic_decision_policy_with_observations() -> None:
 
 
 def test_dynamic_decision_policy_window_size() -> None:
-    policy = DynamicPercentileThresholdPolicy(window_size=3, percentile=0.5, triggering_direction="higher")
+    policy = DynamicQuantileThresholdPolicy(window_size=3, quantile=0.5, triggering_direction="higher")
 
     # Add observations to fill the window
     policy.evaluate_decision(0.4)
@@ -50,43 +50,45 @@ def test_dynamic_decision_policy_window_size() -> None:
     assert len(policy.score_observations) == 3  # Ensure the deque is still at max length
 
 
-def test_dynamic_decision_policy_percentile_trigger_on_high_value() -> None:
-    config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.25)
-    policy = DynamicPercentileThresholdPolicy(
+def test_dynamic_decision_policy_quantile_trigger_on_high_value() -> None:
+    config = DynamicQuantileThresholdCriterion(window_size=4, quantile=0.25)
+    policy = DynamicQuantileThresholdPolicy(
         window_size=config.window_size,
-        percentile=config.percentile,
+        quantile=config.quantile,
         triggering_direction="higher",
     )
 
     # Add observations (metric: e.g. distance, higher is worse)
-    policy.evaluate_decision(0.4)
-    policy.evaluate_decision(0.6)
-    policy.evaluate_decision(0.7)
-    policy.evaluate_decision(0.9)
+    policy.evaluate_decision(5)
+    policy.evaluate_decision(11)
+    policy.evaluate_decision(15)
+    policy.evaluate_decision(10)
 
-    assert not policy.evaluate_decision(0.5)
-    assert policy.evaluate_decision(0.8)
-    assert not policy.evaluate_decision(0.7)
+    # observing 4 values with linear interpolation: 5 -> 0%, 10 -> 1/3, 11 -> 2/3, 15 -> 100%
+    assert not policy.evaluate_decision(10)  # most extreme 25% threshold: >11, <15
+    assert not policy.evaluate_decision(11.1)  # most extreme 25% threshold: >11, <15
+    assert policy.evaluate_decision(14.5)  # most extreme 25% threshold: >11.1, <15
 
 
-def test_dynamic_decision_policy_percentile_trigger_on_low_value() -> None:
-    config = DynamicPercentileThresholdCriterion(window_size=4, percentile=0.25)
-    policy = DynamicPercentileThresholdPolicy(
+def test_dynamic_decision_policy_quantile_trigger_on_low_value() -> None:
+    config = DynamicQuantileThresholdCriterion(window_size=3, quantile=0.25)
+    policy = DynamicQuantileThresholdPolicy(
         window_size=config.window_size,
-        percentile=config.percentile,
+        quantile=config.quantile,
         triggering_direction="lower",
     )
 
     # Add observations (metric: e.g. accuracy, lower is worse)
-    policy.evaluate_decision(0.6)
-    policy.evaluate_decision(0.8)
+    policy.evaluate_decision(0.9)
     policy.evaluate_decision(0.7)
     policy.evaluate_decision(0.5)
 
+    # observing 3 values with linear interpolation: 0.5 -> 0%, 0.7 -> 50%, 0.9 -> 100%
     assert not policy.evaluate_decision(0.9)
-    assert not policy.evaluate_decision(0.95)
-    assert not policy.evaluate_decision(0.9)
-    assert policy.evaluate_decision(0.7)
+    assert not policy.evaluate_decision(0.61)
+    # 0.5 -> 0%, 0.61 -> 50%, 0.9 -> 100%: 25% is therefore in the middle of 0.5 and 0.61
+    assert policy.evaluate_decision(0.53)
+    assert not policy.evaluate_decision(0.59)
 
 
 def test_dynamic_decision_policy_average_absolute() -> None:

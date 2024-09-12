@@ -197,8 +197,8 @@ classDiagram
         int window_size = 10
     }
 
-    class DynamicPercentileThresholdCriterion {
-        float percentile = 0.05
+    class DynamicQuantileThresholdCriterion {
+        float quantile = 0.05
     }
 
     class DynamicRollingAverageThresholdCriterion {
@@ -209,7 +209,7 @@ classDiagram
     DriftDecisionCriterion <|-- ThresholdDecisionCriterion
     DriftDecisionCriterion <|-- DynamicThresholdCriterion
 
-    DynamicThresholdCriterion <|-- DynamicPercentileThresholdCriterion
+    DynamicThresholdCriterion <|-- DynamicQuantileThresholdCriterion
     DynamicThresholdCriterion <|-- DynamicRollingAverageThresholdCriterion
 ```
 
@@ -252,8 +252,8 @@ classDiagram
         +Deque~float~ score_observations
     }
 
-    class DynamicPercentileThresholdPolicy {
-        +DynamicPercentileThresholdCriterion config
+    class DynamicQuantileThresholdPolicy {
+        +DynamicQuantileThresholdCriterion config
         +bool evaluate_decision(float distance)
     }
 
@@ -269,7 +269,7 @@ classDiagram
 
     DriftDecisionPolicy <|-- ThresholdDecisionPolicy
     DriftDecisionPolicy <|-- DynamicDecisionPolicy
-    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
+    DynamicDecisionPolicy <|-- DynamicQuantileThresholdPolicy
     DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
     DriftDecisionPolicy <|-- HypothesisTestDecisionPolicy
 
