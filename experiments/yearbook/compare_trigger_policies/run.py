@@ -40,7 +40,7 @@ from modyn.config.schema.pipeline.trigger.ensemble import (
     EnsembleTriggerConfig,
 )
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPercentilePerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -360,7 +360,7 @@ _EXPERIMENT_REFS = {
                     for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
                 }
                 | {
-                    f"dynamic-{deviation}": DynamicPercentilePerformanceThresholdCriterion(  # TODO: check if bug is fixed
+                    f"dynamic-{deviation}": DynamicQuantilePerformanceThresholdCriterion(  # TODO: check if bug is fixed
                         metric="Accuracy",
                         deviation=deviation,
                         absolute=False,
@@ -373,7 +373,7 @@ _EXPERIMENT_REFS = {
                         expected_accuracy=0.95,  # TODO: variable
                         allow_reduction=allow_reduction,
                         avoidable_misclassification_threshold=num_misclassifications,
-                    )
+                    )  # TODO: avg / quantile
                     for num_misclassifications in [100, 200, 500, 1000, 2000, 5000]
                     for allow_reduction in [True, False]
                 }
