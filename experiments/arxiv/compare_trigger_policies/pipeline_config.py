@@ -51,7 +51,7 @@ def gen_pipeline_config(
             dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
-            batch_size=256,
+            batch_size=128,  # gpu memory limit does't allow for larger batch sizes
             shuffle=True,
             optimizers=[
                 OptimizerConfig(

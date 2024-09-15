@@ -67,13 +67,15 @@ def construct_periodic_eval_handlers(
 
 
 def construct_between_trigger_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
-    return EvalHandlerConfig(
-        name="full",
-        execution_time=execution_time,
-        models="active",
-        strategy=BetweenTwoTriggersEvalStrategyConfig(),
-        datasets=["arxiv_kaggle_all"],  # train and test
-    )
+    return [
+        EvalHandlerConfig(
+            name="full",
+            execution_time=execution_time,
+            models="active",
+            strategy=BetweenTwoTriggersEvalStrategyConfig(),
+            datasets=["arxiv_kaggle_all"],  # train and test
+        )
+    ]
 
 
 def construct_pipelines(experiment: Experiment) -> list[ModynPipelineConfig]:
@@ -103,8 +105,6 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     #         1X: Baselines with PERIODIC_EVAL_INTERVAL, executed with cautious        #
     #              parallelism and post factum evaluation (bottlenecking)              #
     # -------------------------------------------------------------------------------- #
-    # TODO: merge main
-    # TODO: reset datasets in db
     # time baselines
     10: Experiment(
         name="arxiv-baseline-time",
@@ -114,9 +114,11 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
         ),
         time_triggers={
             schedule: TimeTriggerConfig(every=schedule, start_timestamp=_FIRST_TIMESTAMP)
-            for schedule in reversed(["52w", "2y", "5y", "10y"])  # TODO: add 1y
+            for schedule in reversed(["26w", "10y"])
+            # 0: "1y", "2y", "5y"
+            # 1: "26w", "10y"
         },
-        gpu_device="cuda:0",
+        gpu_device="cuda:2",
     ),
     # data amount baselines
     11: Experiment(
@@ -127,9 +129,11 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
         ),
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
-            for num_samples in reversed([50_000, 100_000, 500_000])  # TODO: add 25_000
+            for num_samples in reversed([25_000, 50_000])
+            # 2: 100_000, 500_000, 1_000_000
+            # 3: 25_000, 50_000
         },
-        gpu_device="cuda:1",
+        gpu_device="cuda:3",
     ),
     # -------------------------------------------------------------------------------- #
     #                                2X: Drift triggers                                #

@@ -51,22 +51,15 @@ def gen_pipeline_config(
             dataloader_workers=1,
             use_previous_model=True,
             initial_model="random",
-            batch_size=256,
+            batch_size=128,  # gpu memory limit does't allow for larger batch sizes
             shuffle=True,
             optimizers=[
                 OptimizerConfig(
                     name="default",
-                    algorithm="SGD",
+                    algorithm="AdamW",
                     source="PyTorch",
                     param_groups=[
-                        OptimizerParamGroup(
-                            name="default",
-                            algorithm="AdamW",
-                            source="PyTorch",
-                            param_groups=[
-                                OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})
-                            ],
-                        )
+                        OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})
                     ],
                 )
             ],
@@ -88,8 +81,8 @@ def gen_pipeline_config(
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
             device=gpu_device,
-            after_training_evaluation_workers=8,
-            after_pipeline_evaluation_workers=8,
+            after_training_evaluation_workers=2, # one worker needs 8-9 GB of memory
+            after_pipeline_evaluation_workers=2,
             datasets=[
                 EvalDataConfig(
                     dataset_id=hp_dataset_name,
