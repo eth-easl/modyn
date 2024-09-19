@@ -19,11 +19,12 @@ def load_font() -> None:
     assert len([f.name for f in fm.fontManager.ttflist if "cmu" in f.name.lower()]) > 0
 
 
-def setup_font() -> None:
+def setup_font(small_label: bool = False) -> None:
     load_font()
     plt.rcParams["svg.fonttype"] = "none"
     plt.rcParams["font.family"] = "CMU Serif"
     plt.rcParams["legend.fontsize"] = "small"
     plt.rcParams["xtick.labelsize"] = "small"
     plt.rcParams["ytick.labelsize"] = "small"
-    plt.rcParams["axes.labelsize"] = "medium"
+    plt.rcParams["axes.labelsize"] = "small" if small_label else "medium"
+    # plt.rcParams["axes.titlesize"] = "large"

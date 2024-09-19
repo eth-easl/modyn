@@ -11,11 +11,9 @@ from analytics.plotting.common.color import (
     main_color,
     main_colors,
 )
-from analytics.plotting.common.common import init_plot
+from analytics.plotting.common.common import DOUBLE_FIG_HEIGHT, init_plot
+from analytics.plotting.common.const import DOUBLE_FIG_WIDTH
 from analytics.plotting.common.font import setup_font
-
-DOUBLE_FIG_WIDTH = 10
-DOUBLE_FIG_HEIGHT = 3.5
 
 
 def build_countplot(
