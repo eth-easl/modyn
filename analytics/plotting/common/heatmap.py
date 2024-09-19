@@ -1,5 +1,4 @@
-from pathlib import Path
-
+import matplotlib.patches as patches
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -9,6 +8,8 @@ from matplotlib.ticker import MaxNLocator
 
 # Create the heatmap
 from analytics.plotting.common.common import init_plot
+from analytics.plotting.common.const import DOUBLE_FIG_HEIGHT, DOUBLE_FIG_WIDTH
+from analytics.plotting.common.font import setup_font
 
 
 def build_heatmap(
@@ -21,27 +22,32 @@ def build_heatmap(
     x_label: str = "Current Year",
     color_label: str = "Accuracy %",
     target_ax: Axes | None = None,
-) -> Figure:
+    height_factor: float = 1.0,
+    width_factor: float = 1.0,
+    square: bool = False,
+    cbar: bool = True,
+    vmin: float | None = None,
+    vmax: float | None = None,
+) -> Figure | Axes:
     init_plot()
-    # sns.set_theme(style="ticks")
-    plt.rcParams["svg.fonttype"] = "none"
+    setup_font(small_label=True)
 
-    double_fig_width = 10
-    double_fig_height = 3.5
-
-    fig = plt.figure(
-        edgecolor="black",
-        frameon=True,
-        figsize=(double_fig_width, 2.2 * double_fig_height),
-        dpi=300,
-    )
+    if not target_ax:
+        fig = plt.figure(
+            edgecolor="black",
+            frameon=True,
+            figsize=(
+                DOUBLE_FIG_WIDTH * width_factor,
+                2 * DOUBLE_FIG_HEIGHT * height_factor,
+            ),
+            dpi=300,
+        )
 
     ax = sns.heatmap(
         heatmap_data,
         cmap="RdBu" + ("_r" if reverse_col else ""),
         linewidths=0.0,
         linecolor="black",
-        cbar=True,
         # color bar from 0 to 1
         cbar_kws={
             "label": color_label,
@@ -50,11 +56,29 @@ def build_heatmap(
         },
         # TODO
         ax=target_ax,
+        # square=square,
+        **{
+            "vmin": vmin if vmin is not None else heatmap_data.min().min(),
+            "vmax": vmax if vmax is not None else heatmap_data.max().max(),
+            "cbar": cbar,
+        },
     )
+
+    # Rasterize the heatmap background to avoid anti-aliasing artifacts
     ax.collections[0].set_rasterized(True)
 
+    rect = patches.Rectangle(
+        (0, 0),
+        heatmap_data.shape[1],
+        heatmap_data.shape[0],
+        linewidth=2,
+        edgecolor="black",
+        facecolor="none",
+    )
+    ax.add_patch(rect)
+
     # Adjust x-axis tick labels
-    plt.xlabel(x_label)
+    ax.set_xlabel(x_label)
     if not x_ticks:
         ax.set_xticks(
             ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],
@@ -81,8 +105,9 @@ def build_heatmap(
         ax.yaxis.set_major_locator(MaxNLocator(nbins=y_ticks_bins))
         ax.set_yticklabels([int(i) + min(heatmap_data.index) for i in ax.get_yticks()], rotation=0)
 
-    plt.ylabel(y_label)
+    ax.set_ylabel(y_label)
 
+    # # TODO visualize policy
     # # Draft training boxes
     # if drift_pipeline:
     #     for type_, dashed in [("train", False), ("usage", False), ("train", True)]:
@@ -108,10 +133,4 @@ def build_heatmap(
     plt.tight_layout()
     # plt.show()
 
-    return fig
-
-
-def save_plot(fig: Figure, name: str) -> None:
-    for img_type in ["png", "svg"]:
-        img_path = Path("/scratch/robinholzi/gh/modyn/.data/plots") / f"{name}.{img_type}"
-        fig.savefig(img_path, bbox_inches="tight", transparent=True)
+    return fig if not target_ax else ax
