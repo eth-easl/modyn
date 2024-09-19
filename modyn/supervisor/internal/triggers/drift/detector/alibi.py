@@ -20,9 +20,12 @@ from modyn.config.schema.pipeline import (
     MetricResult,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectChiSquareDriftMetric,
     AlibiDetectClassifierDriftMetric,
     AlibiDetectCVMDriftMetric,
+    AlibiDetectFETDriftMetric,
     AlibiDetectKSDriftMetric,
+    AlibiDetectLSDDDriftMetric,
 )
 from modyn.supervisor.internal.triggers.drift.classifier_models import (
     alibi_classifier_models,
@@ -151,6 +154,38 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             p_val=config.p_val,
             correction=config.correction,
             x_ref_preprocessed=config.x_ref_preprocessed,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectLSDDDriftMetric):
+        return LSDDDrift(
+            x_ref=embeddings_ref,
+            backend="pytorch",
+            n_permutations=config.num_permutations or 1,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            device=config.device,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectFETDriftMetric):
+        return FETDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            n_features=config.n_features,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectChiSquareDriftMetric):
+        return ChiSquareDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            n_features=config.n_features,
             **kwargs,
         )
 
