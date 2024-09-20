@@ -343,9 +343,11 @@ class EvaluationExecutor:
         def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
             return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
 
+        started_evaluations = []
+
         for attempt in Retrying(
             stop=stop_after_attempt(10),
-            wait=wait_random_exponential(multiplier=1, min=2, max=120),
+            wait=wait_random_exponential(multiplier=2, min=2, max=180),
             reraise=True,
         ):
             with attempt:
@@ -377,9 +379,17 @@ class EvaluationExecutor:
                     return failure_reasons
 
                 logger.info(f"Evaluation started for model {model_id_to_eval} on intervals {intervals}.")
-                self.grpc.wait_for_evaluation_completion(response.evaluation_id)
-                eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
-                self.grpc.cleanup_evaluations([response.evaluation_id])
+                started_evaluations.append(response.evaluation_id)
+                if not self.grpc.wait_for_evaluation_completion(response.evaluation_id):
+                    raise RuntimeError("There was an exception during evaluation")  # Trigger retry
+
+                eval_data = self.grpc.get_evaluation_results(
+                    response.evaluation_id
+                )  # Will throw in case of invalid result
+
+                self.grpc.cleanup_evaluations(
+                    [response.evaluation_id]
+                )  # Early cleanup if succeeded since we have the data
 
                 eval_results: list[tuple[str | None, dict[str, Any]]] = []
 
@@ -397,6 +407,7 @@ class EvaluationExecutor:
                 # the next loop that unwraps `EvaluationResultResponse`.
                 # ----------------------------------------------------- . ---------------------------------------------------- #
 
+                # Prepare eval_results structure
                 for interval_response in response.interval_responses:
                     if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
                         reason = get_failure_reason(interval_response.eval_aborted_reason)
@@ -409,6 +420,7 @@ class EvaluationExecutor:
                             )
                         )
 
+                # Parse response into eval_results structure
                 for interval_result in eval_data:
                     interval_idx = interval_result.interval_index
                     assert (
@@ -438,9 +450,11 @@ class EvaluationExecutor:
                         + str(eval_results)
                     )
 
+                # All checks succeeded
+                self.grpc.cleanup_evaluations(started_evaluations)  # Make sure to clean up everything we started.
                 return eval_results
 
-        raise RuntimeError("Unreachable code - satisfy mypy.")
+        raise RuntimeError("Unreachable code - just to satisfy mypy.")
 
 
 # ------------------------------------------------------------------------------------ #

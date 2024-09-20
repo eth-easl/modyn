@@ -302,28 +302,46 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                         self.init_evaluator()
                         raise e
 
+            # NOT within retry block
             if not res.valid:
-                exception_msg = f"Evaluation {evaluation_id} is invalid at server:\n{res}\n"
-                logger.error(exception_msg)
-                raise RuntimeError(exception_msg)
+                # Should only happen when requesting invalid id, hence we throw
+                _msg = f"Evaluation {evaluation_id} is invalid at server:\n{res}\n"
+                logger.error(_msg)
+                raise RuntimeError(_msg)
 
             if res.HasField("exception"):
-                exception_msg = f"Exception at evaluator occurred:\n{res.exception}\n\n"
-                logger.error(exception_msg)
+                logger.error(f"Exception at evaluator occurred:\n{res.exception}\n\n")
+                self.cleanup_evaluations([evaluation_id])
+                logger.error(f"Performed cleanup for evaluation {evaluation_id} that threw exception.")
                 has_exception = True
-                break
+                break  # Exit busy wait
+
             if not res.is_running:
-                break
+                break  # Exit busy wait
+
             sleep(1)
+
         return not has_exception
 
     def get_evaluation_results(self, evaluation_id: int) -> list[EvaluationIntervalData]:
         assert self.evaluator is not None
         if not self.connected_to_evaluator:
             raise ConnectionError("Tried to wait for evaluation to finish, but not there is no gRPC connection.")
-
         req = EvaluationResultRequest(evaluation_id=evaluation_id)
-        res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
+        ):
+            with attempt:
+                try:
+                    res: EvaluationResultResponse = self.evaluator.get_evaluation_result(req)
+                except grpc.RpcError as e:  # We catch and reraise to easily reconnect
+                    logger.error(e)
+                    logger.error(f"[Evaluation {evaluation_id}]: gRPC connection error, trying to reconnect.")
+                    self.init_evaluator()
+                    raise e
 
         if not res.valid:
             logger.error(f"Cannot get the evaluation result for evaluation {evaluation_id}")
@@ -334,7 +352,19 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         assert self.evaluator is not None
 
         req = EvaluationCleanupRequest(evaluation_ids=set(evaluation_ids))
-        res: EvaluationCleanupResponse = self.evaluator.cleanup_evaluations(req)
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
+        ):
+            with attempt:
+                try:
+                    res: EvaluationCleanupResponse = self.evaluator.cleanup_evaluations(req)
+                except grpc.RpcError as e:  # We catch and reraise to easily reconnect
+                    logger.error(e)
+                    logger.error(f"[Evaluations {evaluation_ids}]: gRPC connection error, trying to reconnect.")
+                    self.init_evaluator()
+                    raise e
 
         failed = set(evaluation_ids) - {int(i) for i in res.succeeded}
         if failed:
