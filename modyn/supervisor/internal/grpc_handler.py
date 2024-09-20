@@ -344,8 +344,10 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                     raise e
 
         if not res.valid:
-            logger.error(f"Cannot get the evaluation result for evaluation {evaluation_id}")
-            raise RuntimeError(f"Cannot get the evaluation result for evaluation {evaluation_id}")
+            _msg = f"Cannot get the evaluation result for evaluation {evaluation_id}"
+            logger.error(_msg)
+            raise RuntimeError(_msg)
+
         return res.evaluation_results
 
     def cleanup_evaluations(self, evaluation_ids: list[int]) -> None:
