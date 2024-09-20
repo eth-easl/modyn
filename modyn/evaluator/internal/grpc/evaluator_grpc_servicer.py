@@ -317,12 +317,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
             evaluation_data.append(single_eval_data)
 
-        if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):
+        num_metrics = len(self._evaluation_dict[evaluation_id].raw_metrics)
+        expected_results = len(self._evaluation_dict[evaluation_id].not_failed_interval_ids) * num_metrics
+        if len(evaluation_data) < expected_results:
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
-                f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)}, "
-                f"but got {len(evaluation_data)}. Maybe an exception happened during evaluation."
+                f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)} * {num_metrics} = {expected_results} results, "
+                f"but got {len(evaluation_data)} results. Most likely, an exception happened during evaluation."
             )
+            return EvaluationResultResponse(valid=False)
+
         return EvaluationResultResponse(valid=True, evaluation_results=evaluation_data)
 
     def cleanup_evaluations(
