@@ -8,6 +8,9 @@ import torch
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
 )
+from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
+    unsqueeze_dimensions_if_necessary,
+)
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.shuffling import _shuffle_list_and_tensor
 
 
@@ -71,6 +74,7 @@ class AbstractMatrixDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrat
     ) -> None:
         batch_size = len(sample_ids)
         assert self.matrix_content is not None
+        forward_output, target = unsqueeze_dimensions_if_necessary(forward_output, target)
         if self.matrix_content == MatrixContent.LAST_LAYER_GRADIENTS:
             grads_wrt_loss_sum = self._compute_last_layer_gradient_wrt_loss_sum(self.criterion, forward_output, target)
             grads_wrt_loss_mean = grads_wrt_loss_sum / batch_size

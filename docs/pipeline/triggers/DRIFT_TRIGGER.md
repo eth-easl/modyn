@@ -23,6 +23,12 @@ classDiagram
         -bool evaluate_batch(batch, trigger_index)*
     }
 
+    class WarmupTrigger {
+        -int warmup_intervals
+        +delegate_inform(batch)
+    }
+
+
     class DataDriftTrigger {
         +DataDriftTriggerConfig config
         +DetectionWindows windows
@@ -48,6 +54,9 @@ classDiagram
 
     Trigger <|-- BatchedTrigger
     BatchedTrigger <|-- DataDriftTrigger
+
+    Trigger "1" --* WarmupTrigger
+    BatchedTrigger o-- "0..1" WarmupTrigger
 
     DataDriftTrigger "warmup_trigger" *-- "1" Trigger
     DataDriftTrigger *-- "1" DataDriftTriggerConfig
@@ -188,8 +197,8 @@ classDiagram
         int window_size = 10
     }
 
-    class DynamicPercentileThresholdCriterion {
-        float percentile = 0.05
+    class DynamicQuantileThresholdCriterion {
+        float quantile = 0.05
     }
 
     class DynamicRollingAverageThresholdCriterion {
@@ -200,7 +209,7 @@ classDiagram
     DriftDecisionCriterion <|-- ThresholdDecisionCriterion
     DriftDecisionCriterion <|-- DynamicThresholdCriterion
 
-    DynamicThresholdCriterion <|-- DynamicPercentileThresholdCriterion
+    DynamicThresholdCriterion <|-- DynamicQuantileThresholdCriterion
     DynamicThresholdCriterion <|-- DynamicRollingAverageThresholdCriterion
 ```
 
@@ -243,8 +252,8 @@ classDiagram
         +Deque~float~ score_observations
     }
 
-    class DynamicPercentileThresholdPolicy {
-        +DynamicPercentileThresholdCriterion config
+    class DynamicQuantileThresholdPolicy {
+        +DynamicQuantileThresholdCriterion config
         +bool evaluate_decision(float distance)
     }
 
@@ -260,12 +269,9 @@ classDiagram
 
     DriftDecisionPolicy <|-- ThresholdDecisionPolicy
     DriftDecisionPolicy <|-- DynamicDecisionPolicy
-    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
+    DynamicDecisionPolicy <|-- DynamicQuantileThresholdPolicy
     DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
     DriftDecisionPolicy <|-- HypothesisTestDecisionPolicy
-
-    DynamicDecisionPolicy <|-- DynamicPercentileThresholdPolicy
-    DynamicDecisionPolicy <|-- DynamicRollingAverageThresholdPolicy
 
     style HypothesisTestDecisionPolicy fill:#DDDDDD,stroke:#A9A9A9,stroke-width:2px
 ```

@@ -20,9 +20,9 @@ def get_tensors_subset(
     and then we get the entries of data and target only for the selected
     samples
     """
-
+    sample_id2index = {sample_id: index for index, sample_id in enumerate(sample_ids)}
     # first of all we compute the position of each selected index within the batch
-    in_batch_index = [sample_ids.index(selected_index) for selected_index in selected_indexes]
+    in_batch_index = [sample_id2index[selected_index] for selected_index in selected_indexes]
 
     # then we extract the data
     if isinstance(data, torch.Tensor):
@@ -34,6 +34,23 @@ def get_tensors_subset(
     sub_target = target[in_batch_index]
 
     return sub_data, sub_target
+
+
+def unsqueeze_dimensions_if_necessary(
+    forward_output: torch.Tensor, target: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """For binary classification, the forward output is a 1D tensor of length
+    batch_size. We need to unsqueeze it to have a 2D tensor of shape
+    (batch_size, 1).
+
+    For binary classification we use BCEWithLogitsLoss, which requires
+    the same dimensionality between the forward output and the target,
+    so we also need to unsqueeze the target tensor.
+    """
+    if forward_output.dim() == 1:
+        forward_output = forward_output.unsqueeze(1)
+        target = target.unsqueeze(1)
+    return forward_output, target
 
 
 class AbstractRemoteDownsamplingStrategy(ABC):

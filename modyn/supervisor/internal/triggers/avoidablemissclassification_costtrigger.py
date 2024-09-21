@@ -61,11 +61,13 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
     # ---------------------------------------------------------------------------------------------------------------- #
 
     @override
-    def _compute_regret_metric(self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int) -> float:
+    def _compute_regret_metric(
+        self, batch: list[tuple[int, int]], batch_start: int, batch_duration: int
+    ) -> tuple[float, dict]:
         """Compute the regret metric for the current state of the trigger."""
 
         self.data_density.inform_data(batch)
-        num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=batch)
+        model_id, num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=batch)
 
         self.performance_tracker.inform_evaluation(
             num_samples=num_samples,
@@ -82,6 +84,14 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
             )
         )
 
+        regret_log = {
+            "id_model": model_id,
+            "num_samples": num_samples,
+            "num_misclassifications": num_misclassifications,
+            "evaluation_scores": evaluation_scores,
+            "estimated_new_avoidable_misclassifications": estimated_new_avoidable_misclassifications,
+        }
+
         # Let's build a latency regret metrics based on the estimated number of avoidable misclassifications.
         # Using avoidable misclassification latency makes sense because we generally aim to to trigger
         # when many misclassifications could have been avoided. We therefore try to minimize the time that
@@ -89,4 +99,5 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
         # We chose the latency based area under curve method as a linear model based on the absolute number of
         # avoidable misclassifications seems unstable. More advantageous regret non-linear regret functions
         # could be explored in the future.
-        return self.latency_tracker.add_latency(estimated_new_avoidable_misclassifications, batch_duration)
+        new_sum = self.latency_tracker.add_latency(estimated_new_avoidable_misclassifications, batch_duration)
+        return new_sum, regret_log

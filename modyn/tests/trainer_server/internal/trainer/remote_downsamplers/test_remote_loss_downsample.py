@@ -35,6 +35,36 @@ def test_sample_shape(dummy_system_config: ModynConfig):
         assert len(indexes) == 4
 
 
+def test_sample_shape_binary(dummy_system_config: ModynConfig):
+    model = torch.nn.Linear(10, 1)
+    downsampling_ratio = 50
+    per_sample_loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
+
+    params_from_selector = {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": 100}
+    sampler = RemoteLossDownsampling(
+        0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
+    )
+    with torch.inference_mode(mode=(not sampler.requires_grad)):
+        data = torch.randn(8, 10)
+        forward_outputs = model(data).squeeze(1)
+        target = torch.randint(2, size=(8,), dtype=torch.float32)
+        ids = list(range(8))
+
+        sampler.inform_samples(ids, data, forward_outputs, target)
+        downsampled_indexes, weights = sampler.select_points()
+
+        assert len(downsampled_indexes) == 4
+        assert weights.shape[0] == 4
+
+        sampled_data, sampled_target = get_tensors_subset(downsampled_indexes, data, target, ids)
+
+        assert weights.shape[0] == sampled_target.shape[0]
+        assert sampled_data.shape[0] == 4
+        assert sampled_data.shape[1] == data.shape[1]
+        assert weights.shape[0] == 4
+        assert sampled_target.shape[0] == 4
+
+
 def test_sample_weights(dummy_system_config: ModynConfig):
     model = torch.nn.Linear(10, 2)
     downsampling_ratio = 50

@@ -36,6 +36,11 @@ classDiagram
         -bool evaluate_batch(batch, trigger_index)*
     }
 
+    class WarmupTrigger {
+        -int warmup_intervals
+        +delegate_inform(batch)
+    }
+
     class PerformanceTriggerMixin {
         +DataDensityTracker data_density
         +PerformanceTracker performance_tracker
@@ -67,6 +72,10 @@ classDiagram
 
     Trigger <|-- BatchedTrigger
     BatchedTrigger <|-- PerformanceTrigger
+
+    BatchedTrigger o-- "0..1" WarmupTrigger
+    Trigger "1" --* WarmupTrigger
+
     PerformanceTriggerMixin <|-- PerformanceTrigger
     PerformanceTrigger *-- "1" PerformanceTriggerConfig
     PerformanceTrigger *-- "1" DataDensityTracker

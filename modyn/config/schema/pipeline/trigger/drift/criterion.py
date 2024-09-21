@@ -16,14 +16,20 @@ class _DynamicThresholdCriterion(ModynBaseModel):
     needs_calibration: Literal[True] = Field(True)
 
 
-class DynamicPercentileThresholdCriterion(_DynamicThresholdCriterion):
-    """Dynamic threshold based on a extremeness percentile of the previous
+class DynamicQuantileThresholdCriterion(_DynamicThresholdCriterion):
+    """Dynamic threshold based on a extremeness quantile of the previous
     distance values."""
 
-    id: Literal["DynamicPercentileThresholdCriterion"] = "DynamicPercentileThresholdCriterion"
-    percentile: float = Field(
+    id: Literal["DynamicQuantileThresholdCriterion"] = "DynamicQuantileThresholdCriterion"
+    quantile: float = Field(
         0.05,
-        description="The percentile that a threshold has to be in to trigger a drift event.",
+        description=(
+            "The quantile that a threshold has to be in to trigger a drift event. "
+            "0.05 will only trigger in the most extreme 5% of cases. Hence the triggering "
+            "threshold is more extreme than 95% of the previous values."
+        ),
+        min=0.0,
+        max=1.0,
     )
 
 
@@ -42,9 +48,9 @@ class DynamicRollingAverageThresholdCriterion(_DynamicThresholdCriterion):
     )
 
 
-DynamicThresholdCriterion = DynamicPercentileThresholdCriterion | DynamicRollingAverageThresholdCriterion
+DynamicThresholdCriterion = DynamicQuantileThresholdCriterion | DynamicRollingAverageThresholdCriterion
 
 DriftDecisionCriterion = Annotated[
-    ThresholdDecisionCriterion | DynamicPercentileThresholdCriterion | DynamicRollingAverageThresholdCriterion,
+    ThresholdDecisionCriterion | DynamicQuantileThresholdCriterion | DynamicRollingAverageThresholdCriterion,
     Field(discriminator="id"),
 ]

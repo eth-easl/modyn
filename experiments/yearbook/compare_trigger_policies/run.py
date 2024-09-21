@@ -31,16 +31,21 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
     AlibiDetectMmdDriftMetric,
 )
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
-from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import TimeWindowingStrategy
-from modyn.config.schema.pipeline.trigger.ensemble import AtLeastNEnsembleStrategy, EnsembleTriggerConfig
+from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import (
+    TimeWindowingStrategy,
+)
+from modyn.config.schema.pipeline.trigger.ensemble import (
+    AtLeastNEnsembleStrategy,
+    EnsembleTriggerConfig,
+)
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
+    _DynamicPerformanceThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
@@ -49,7 +54,10 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
-from .pipeline_config import yb_bytes_parser_function, yb_evaluation_transformer_function
+from .pipeline_config import (
+    yb_bytes_parser_function,
+    yb_evaluation_transformer_function,
+)
 
 _FIRST_TIMESTAMP = 0
 _LAST_TIMESTAMP = SECONDS_PER_UNIT["d"] * (2014 - 1930)  # 2014: dummy
@@ -126,7 +134,10 @@ _EXPERIMENT_REFS = {
     # time baselines
     1: Experiment(
         name="yb-baseline-time",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         time_triggers={
             f"{schedule}y": TimeTriggerConfig(every=f"{schedule}d", start_timestamp=_FIRST_TIMESTAMP)
             for schedule in [1, 2, 3, 5, 15, 25, 40]
@@ -136,10 +147,23 @@ _EXPERIMENT_REFS = {
     # data amount baselines
     2: Experiment(
         name="yb-baseline-dataamount",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
-            for num_samples in [100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000]
+            for num_samples in [
+                100,
+                200,
+                500,
+                1_000,
+                2_500,
+                5_000,
+                10_000,
+                15_000,
+                30_000,
+            ]
         },
         gpu_device="cuda:1",
     ),
@@ -147,7 +171,10 @@ _EXPERIMENT_REFS = {
     # Static threshold drift
     3: Experiment(
         name="yb-baseline-datadrift-static",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         drift_detection_triggers={
             f"{criterion_name}_int{interval}_win{window_size}": DataDriftTriggerConfig(
                 evaluation_interval_data_points=interval,
@@ -176,7 +203,10 @@ _EXPERIMENT_REFS = {
     # Dynamic threshold drift
     4: Experiment(
         name="yb-baseline-datadrift-dynamic",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         drift_detection_triggers={
             f"{criterion_name}_int{interval}_win{window_size}": DataDriftTriggerConfig(
                 evaluation_interval_data_points=interval,
@@ -197,16 +227,16 @@ _EXPERIMENT_REFS = {
             for window_size in [5]
             for criterion_name, criterion in (
                 {
-                    f"mmd-perc-{percentile}-{window_size}": DynamicPercentileThresholdCriterion(
-                        window_size=window_size, percentile=percentile
+                    f"mmd-perc-{quantile}-{window_size}": DynamicQuantileThresholdCriterion(
+                        window_size=window_size, quantile=quantile
                     )
-                    for percentile in [0.05, 0.1, 0.2, 0.3]
+                    for quantile in [0.05, 0.1, 0.2, 0.3]
                     for window_size in [15]  # TODO [10, 20, 30]
                 }
                 | {
                     f"mmd-rollavg-{deviation}-{window_size}": DynamicRollingAverageThresholdCriterion(
                         window_size=window_size, deviation=deviation, absolute=False
-                    )  # TODO: avg / percentile
+                    )  # TODO: avg / quantile
                     for deviation in [0.025, 0.05, 0.1, 0.2, 0.3]
                     for window_size in [15]  # TODO [10, 20, 30]
                 }
@@ -217,7 +247,10 @@ _EXPERIMENT_REFS = {
     # ----------------------------- Performance triggers ----------------------------- #
     5: Experiment(
         name="yb-performancetrigger",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         performance_triggers={
             f"{criterion_name}-int{interval}y": PerformanceTriggerConfig(
                 evaluation_interval_data_points=interval,
@@ -248,7 +281,7 @@ _EXPERIMENT_REFS = {
                     for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
                 }
                 | {
-                    f"dynamic-{deviation}": DynamicPerformanceThresholdCriterion(
+                    f"dynamic-{deviation}": _DynamicPerformanceThresholdCriterion(
                         metric="Accuracy",
                         deviation=deviation,
                         absolute=False,
@@ -260,7 +293,7 @@ _EXPERIMENT_REFS = {
                         expected_accuracy=0.9,  # TODO: variable
                         allow_reduction=allow_reduction,
                         avoidable_misclassification_threshold=num_misclassifications,
-                    )  # TODO: avg / percentile
+                    )  # TODO: avg / quantile
                     for num_misclassifications in [100, 200, 500, 1000, 2000, 5000]
                     for allow_reduction in [True, False]
                 }
@@ -273,7 +306,10 @@ _EXPERIMENT_REFS = {
     # Data integration latency trigger
     10: Experiment(
         name="yb-costtrigger-dataincorporation",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         cost_triggers={
             f"int{interval}_exch{exchange_rate}": DataIncorporationLatencyCostTriggerConfig(
                 evaluation_interval_data_points=interval,
@@ -288,7 +324,10 @@ _EXPERIMENT_REFS = {
     # avoidable misclassfication integration trigger
     11: Experiment(
         name="yb-costtrigger-avoidablemisclassification",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         cost_triggers={
             f"int{interval}_exch{exchange_rate}_red{allow_reduction}": AvoidableMisclassificationCostTriggerConfig(
                 # cost trigger params
@@ -324,7 +363,10 @@ _EXPERIMENT_REFS = {
     # with best working previous triggers
     20: Experiment(
         name="yb-ensemble",
-        eval_handlers=[construct_slicing_eval_handler(), construct_between_trigger_eval_handler()],
+        eval_handlers=[
+            construct_slicing_eval_handler(),
+            construct_between_trigger_eval_handler(),
+        ],
         ensemble_triggers={
             "ensemble1": EnsembleTriggerConfig(
                 subtriggers={

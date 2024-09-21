@@ -5,6 +5,7 @@ import torch
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
+    unsqueeze_dimensions_if_necessary,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,10 +50,13 @@ class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
         target: torch.Tensor,
         embedding: torch.Tensor | None = None,
     ) -> None:
+        forward_output, target = unsqueeze_dimensions_if_necessary(forward_output, target)
+
         last_layer_gradients = self._compute_last_layer_gradient_wrt_loss_sum(
             self.per_sample_loss_fct, forward_output, target
         )
-        scores = torch.norm(last_layer_gradients, dim=-1).cpu()
+        # pylint: disable=not-callable
+        scores = torch.linalg.vector_norm(last_layer_gradients, dim=1).cpu()
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids

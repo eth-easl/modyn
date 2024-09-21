@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup mamba
         uses: ./.github/actions/mamba
@@ -220,7 +220,7 @@ jobs:
 
       - name: Upload HTML coverage report
         if: ${{ matrix.compiler.coverage && matrix.build-type == 'Debug' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-results
           path: ${{github.workspace}}/build/modyn/tests/coverage
@@ -236,7 +236,7 @@ jobs:
       line-coverage: ${{steps.run_main_test_with_coverage.outputs.LINE_COVERAGE}}
       branch-coverage: ${{steps.run_main_test_with_coverage.outputs.BRANCH_COVERAGE}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ref: main
 
@@ -315,7 +315,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup base container
         uses: ./.github/actions/base
@@ -335,7 +335,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Debug
@@ -351,7 +351,7 @@ jobs:
       - cpp_build_and_test
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Asan
@@ -368,7 +368,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Tsan
@@ -385,7 +385,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Release

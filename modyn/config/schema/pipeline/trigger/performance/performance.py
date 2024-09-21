@@ -56,6 +56,15 @@ class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
         ),
     )
 
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, mode: TriggerEvaluationMode) -> TriggerEvaluationMode:
+        """Assert that the forecasting method is set if lookahead mode is
+        used."""
+        if mode == "lookahead":
+            raise ValueError("Currently only hindsight mode is supported.")
+        return mode
+
 
 class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
     id: Literal["PerformanceTrigger"] = Field("PerformanceTrigger")

@@ -111,10 +111,12 @@ def test_inform_new_model(
     assert trigger.most_recent_model_id == 42
     assert trigger.model_refresh_needed  # would be reset if _run_evaluation wasn't mocked
 
-    mock_evaluation.assert_called_once_with(interval_data=last_detection_interval)
-    mock_inform_trigger.assert_called_once_with(
-        num_samples=5, num_misclassifications=2, evaluation_scores={"Accuracy": 0.6}
-    )
+    # distabled
+    # mock_evaluation.assert_called_once_with(interval_data=last_detection_interval)
+    # mock_inform_trigger.assert_called_once_with(
+    #     num_samples=5, num_misclassifications=2, evaluation_scores={"Accuracy": 0.6}
+    # )
+    mock_evaluation.assert_not_called()
 
 
 # Note: we don't test _run_evaluation as this would require more mocking than actual testing

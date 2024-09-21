@@ -76,7 +76,7 @@ class BatchedTrigger(Trigger):
 
             # ----------------------------------------------- Detection ---------------------------------------------- #
 
-            triggered = self._evaluate_batch(next_detection_interval, trigger_candidate_idx)
+            triggered = self._evaluate_batch(next_detection_interval, trigger_candidate_idx, log=log)
             self._last_detection_interval = next_detection_interval
 
             # ----------------------------------------------- Response ----------------------------------------------- #

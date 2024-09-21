@@ -7,7 +7,7 @@ from typing_extensions import override
 
 from modyn.config.schema.pipeline import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicPercentileThresholdCriterion,
+    DynamicQuantileThresholdCriterion,
     DynamicRollingAverageThresholdCriterion,
     ThresholdDecisionCriterion,
 )
@@ -18,12 +18,6 @@ from modyn.config.schema.pipeline.trigger.drift.detection_window import (
 )
 from modyn.config.schema.pipeline.trigger.drift.result import MetricResult
 from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
-from modyn.supervisor.internal.triggers.drift.decision_policy import (
-    DriftDecisionPolicy,
-    DynamicPercentileThresholdPolicy,
-    DynamicRollingAverageThresholdPolicy,
-    ThresholdDecisionPolicy,
-)
 from modyn.supervisor.internal.triggers.drift.detection_window.amount import (
     AmountDetectionWindows,
 )
@@ -45,6 +39,12 @@ from modyn.supervisor.internal.triggers.utils.datasets.dataloader_info import (
 )
 from modyn.supervisor.internal.triggers.utils.datasets.prepare_dataloader import (
     prepare_trigger_dataloader_fixed_keys,
+)
+from modyn.supervisor.internal.triggers.utils.decision_policy import (
+    DecisionPolicy,
+    DynamicQuantileThresholdPolicy,
+    DynamicRollingAverageThresholdPolicy,
+    StaticThresholdDecisionPolicy,
 )
 from modyn.supervisor.internal.triggers.utils.model.downloader import ModelDownloader
 from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
@@ -355,17 +355,28 @@ def _setup_detection_windows(
 
 def _setup_decision_policies(
     config: DataDriftTriggerConfig,
-) -> dict[str, DriftDecisionPolicy]:
-    policies: dict[str, DriftDecisionPolicy] = {}
+) -> dict[str, DecisionPolicy]:
+    policies: dict[str, DecisionPolicy] = {}
     for metric_name, metric_config in config.metrics.items():
         criterion = metric_config.decision_criterion
         assert (
             metric_config.num_permutations is None
         ), "Modyn doesn't allow hypothesis testing, it doesn't work in our context"
         if isinstance(criterion, ThresholdDecisionCriterion):
-            policies[metric_name] = ThresholdDecisionPolicy(criterion)
-        elif isinstance(criterion, DynamicPercentileThresholdCriterion):
-            policies[metric_name] = DynamicPercentileThresholdPolicy(criterion)
+            policies[metric_name] = StaticThresholdDecisionPolicy(
+                threshold=criterion.threshold, triggering_direction="higher"
+            )
+        elif isinstance(criterion, DynamicQuantileThresholdCriterion):
+            policies[metric_name] = DynamicQuantileThresholdPolicy(
+                window_size=criterion.window_size,
+                quantile=criterion.quantile,
+                triggering_direction="higher",
+            )
         elif isinstance(criterion, DynamicRollingAverageThresholdCriterion):
-            policies[metric_name] = DynamicRollingAverageThresholdPolicy(criterion)
+            policies[metric_name] = DynamicRollingAverageThresholdPolicy(
+                window_size=criterion.window_size,
+                deviation=criterion.deviation,
+                absolute=criterion.absolute,
+                triggering_direction="higher",
+            )
     return policies

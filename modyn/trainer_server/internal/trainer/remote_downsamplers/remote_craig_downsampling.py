@@ -9,6 +9,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_labe
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     FULL_GRAD_APPROXIMATION,
+    unsqueeze_dimensions_if_necessary,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils import submodular_optimizer
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.euclidean import euclidean_dist_pair_np
@@ -110,6 +111,7 @@ class RemoteCraigDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy
         target: torch.Tensor,
         embedding: torch.Tensor | None,
     ) -> None:
+        forward_output, target = unsqueeze_dimensions_if_necessary(forward_output, target)
         if self.full_grad_approximation == "LastLayerWithEmbedding":
             assert embedding is not None
             grads_wrt_loss_sum = self._compute_last_two_layers_gradient_wrt_loss_sum(

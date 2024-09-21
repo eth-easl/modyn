@@ -5,7 +5,8 @@ import logging
 from typing_extensions import override
 
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -14,7 +15,8 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 )
 from modyn.supervisor.internal.triggers.batchedtrigger import BatchedTrigger
 from modyn.supervisor.internal.triggers.performance.decision_policy import (
-    DynamicPerformanceThresholdDecisionPolicy,
+    DynamicPerformanceQuantileThresholdPolicy,
+    DynamicPerformanceRollingAverageThresholdPolicy,
     PerformanceDecisionPolicy,
     StaticNumberAvoidableMisclassificationDecisionPolicy,
     StaticPerformanceThresholdDecisionPolicy,
@@ -70,13 +72,14 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
         self.data_density.inform_data(batch)
         policy_decisions: dict[str, bool] = {}
 
+        model_id = None
         num_samples = None
         num_misclassifications = None
         evaluation_scores: dict[str, float] = {}
 
         if self._triggered_once:
             # we can run a (warmup) evaluation, iff we have already triggered once and therefore a model at hand
-            num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
+            model_id, num_samples, num_misclassifications, evaluation_scores = PerformanceTriggerMixin._run_evaluation(
                 self, interval_data=batch
             )
 
@@ -123,6 +126,7 @@ class PerformanceTrigger(BatchedTrigger, PerformanceTriggerMixin):
             triggered=triggered,
             trigger_index=trigger_candidate_idx,
             evaluation_interval=(batch[0][1], batch[-1][1]),
+            id_model=model_id or -1,
             num_samples=num_samples or -1,
             num_misclassifications=num_misclassifications or -1,
             evaluation_scores=evaluation_scores or {},
@@ -153,8 +157,10 @@ def _setup_decision_policies(
     for name, criterion in config.decision_criteria.items():
         if isinstance(criterion, StaticPerformanceThresholdCriterion):
             policies[name] = StaticPerformanceThresholdDecisionPolicy(criterion)
-        elif isinstance(criterion, DynamicPerformanceThresholdCriterion):
-            policies[name] = DynamicPerformanceThresholdDecisionPolicy(criterion)
+        elif isinstance(criterion, DynamicQuantilePerformanceThresholdCriterion):
+            policies[name] = DynamicPerformanceQuantileThresholdPolicy(criterion)
+        elif isinstance(criterion, DynamicRollingAveragePerformanceThresholdCriterion):
+            policies[name] = DynamicPerformanceRollingAverageThresholdPolicy(criterion)
         elif isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
             policies[name] = StaticNumberAvoidableMisclassificationDecisionPolicy(criterion)
     return policies

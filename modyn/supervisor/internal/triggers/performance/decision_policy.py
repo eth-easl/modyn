@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicPerformanceThresholdCriterion,
+    DynamicQuantilePerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
     StaticNumberAvoidableMisclassificationCriterion,
     StaticPerformanceThresholdCriterion,
 )
@@ -14,6 +15,11 @@ from modyn.supervisor.internal.triggers.performance.misclassification_estimator 
 )
 from modyn.supervisor.internal.triggers.performance.performance_tracker import (
     PerformanceTracker,
+)
+from modyn.supervisor.internal.triggers.utils.decision_policy import (
+    DynamicQuantileThresholdPolicy,
+    DynamicRollingAverageThresholdPolicy,
+    StaticThresholdDecisionPolicy,
 )
 
 
@@ -58,7 +64,8 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
     static threshold."""
 
     def __init__(self, config: StaticPerformanceThresholdCriterion):
-        self.config = config
+        self.metric = config.metric
+        self._wrapped = StaticThresholdDecisionPolicy(threshold=config.metric_threshold, triggering_direction="lower")
 
     def evaluate_decision(
         self,
@@ -69,25 +76,22 @@ class StaticPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         mode: TriggerEvaluationMode,
         method: ForecastingMethod,
     ) -> bool:
-        if mode == "hindsight":
-            return evaluation_scores[self.config.metric] < self.config.metric_threshold
-
-        return (evaluation_scores[self.config.metric] < self.config.metric_threshold) or (
-            performance_tracker.forecast_next_performance(self.config.metric, method=method)
-            < self.config.metric_threshold
-        )
+        return self._wrapped.evaluate_decision(measurement=evaluation_scores[self.metric])
 
 
-class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
-    """Decision policy that will make the binary trigger decisions based on a
-    dynamic threshold.
+class DynamicPerformanceQuantileThresholdPolicy(PerformanceDecisionPolicy):
+    """Wrapper for DynamicRollingAverageThresholdPolicy.
 
-    Value falls below the rolling average more than the allowed
-    deviation.
+    Triggers if value is in the lower quantile of the rolling window.
     """
 
-    def __init__(self, config: DynamicPerformanceThresholdCriterion):
-        self.config = config
+    def __init__(self, config: DynamicQuantilePerformanceThresholdCriterion):
+        self.metric = config.metric
+        self._wrapped = DynamicQuantileThresholdPolicy(
+            window_size=config.window_size,
+            quantile=config.quantile,
+            triggering_direction="lower",
+        )
 
     def evaluate_decision(
         self,
@@ -98,22 +102,35 @@ class DynamicPerformanceThresholdDecisionPolicy(PerformanceDecisionPolicy):
         mode: TriggerEvaluationMode,
         method: ForecastingMethod,
     ) -> bool:
-        # to compute the rolling average we simply reuse the forecast method, it's not a true forecast here
-        expected = performance_tracker.forecast_optimal_performance(self.config.metric, method="rolling_average")
-        deviation = expected - evaluation_scores[self.config.metric]
-        allowed_absolute_deviation = (
-            self.config.deviation if self.config.absolute else (self.config.deviation * expected)
+        return self._wrapped.evaluate_decision(measurement=evaluation_scores[self.metric])
+
+
+class DynamicPerformanceRollingAverageThresholdPolicy(PerformanceDecisionPolicy):
+    """Wrapper for DynamicRollingAverageThresholdPolicy.
+
+    Trigger if value falls below the rolling average more than the
+    allowed deviation.
+    """
+
+    def __init__(self, config: DynamicRollingAveragePerformanceThresholdCriterion):
+        self.metric = config.metric
+        self._wrapped = DynamicRollingAverageThresholdPolicy(
+            window_size=config.window_size,
+            deviation=config.deviation,
+            absolute=config.absolute,
+            triggering_direction="lower",
         )
 
-        # first, make the hindsight decision, if this is already a transgression, we don't need to forecast
-        decision = deviation >= allowed_absolute_deviation
-
-        if not decision and mode == "lookahead":
-            decision = (
-                expected - performance_tracker.forecast_next_performance(self.config.metric, method=method)
-            ) >= allowed_absolute_deviation
-
-        return decision
+    def evaluate_decision(
+        self,
+        update_interval_samples: int,
+        evaluation_scores: dict[str, float],
+        data_density: DataDensityTracker,
+        performance_tracker: PerformanceTracker,
+        mode: TriggerEvaluationMode,
+        method: ForecastingMethod,
+    ) -> bool:
+        return self._wrapped.evaluate_decision(measurement=evaluation_scores[self.metric])
 
 
 class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPolicy):
@@ -187,6 +204,7 @@ class StaticNumberAvoidableMisclassificationDecisionPolicy(PerformanceDecisionPo
             return False
 
         if mode == "lookahead":
+            # NOTE: this is a early feature that might not work as expected
             forecasted_misclassifications = self.cumulated_avoidable_misclassifications + round(
                 forecast_new_avoidable_misclassifications
             )

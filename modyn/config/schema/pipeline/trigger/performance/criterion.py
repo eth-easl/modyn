@@ -28,23 +28,44 @@ class StaticPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     needs_calibration: Literal[False] = Field(False)
 
 
-class DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
+class _DynamicPerformanceThresholdCriterion(_PerformanceThresholdCriterion):
     """Triggers after comparison of current performance with the a rolling
     average of historic performances after triggers."""
 
-    id: Literal["DynamicPerformanceThresholdCriterion"] = Field("DynamicPerformanceThresholdCriterion")
-    deviation: float = Field(
+    window_size: int = Field(10)
+    needs_calibration: Literal[True] = Field(True)
+
+
+class DynamicQuantilePerformanceThresholdCriterion(_DynamicPerformanceThresholdCriterion):
+    """Dynamic threshold based on a extremeness quantile of the previous
+    distance values."""
+
+    id: Literal["DynamicQuantilePerformanceThresholdCriterion"] = Field("DynamicQuantilePerformanceThresholdCriterion")
+    quantile: float = Field(
         0.05,
         description=(
-            "The allowed deviation from the expected performance. Will only trigger if the performance is "
-            "below the expected performance minus the allowed deviation."
+            "The quantile that a threshold has to trigger. "
+            "0.05 will only trigger in the most extreme 5% of cases. Hence the triggering "
+            "threshold is more extreme than 95% of the previous values."
         ),
+    )
+
+
+class DynamicRollingAveragePerformanceThresholdCriterion(_DynamicPerformanceThresholdCriterion):
+    """Triggers when a new distance value deviates from the rolling average by
+    a certain amount or percentage."""
+
+    id: Literal["DynamicRollingAveragePerformanceThresholdCriterion"] = Field(
+        "DynamicRollingAveragePerformanceThresholdCriterion"
+    )
+    deviation: float = Field(
+        0.05,
+        description="The deviation from the rolling average that triggers a drift event.",
     )
     absolute: bool = Field(
         False,
         description="Whether the deviation is absolute or relative to the rolling average.",
     )
-    needs_calibration: Literal[True] = Field(True)
 
 
 # -------------------------------------------------------------------------------------------------------------------- #
@@ -97,7 +118,8 @@ class StaticNumberAvoidableMisclassificationCriterion(_NumberAvoidableMisclassif
 
 PerformanceTriggerCriterion = Annotated[
     StaticPerformanceThresholdCriterion
-    | DynamicPerformanceThresholdCriterion
+    | DynamicQuantilePerformanceThresholdCriterion
+    | DynamicRollingAveragePerformanceThresholdCriterion
     | StaticNumberAvoidableMisclassificationCriterion,
     Field(discriminator="id"),
 ]
