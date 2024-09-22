@@ -21,7 +21,9 @@ from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
 
 logger = logging.getLogger(__name__)
@@ -250,7 +252,12 @@ class SelectorInformTriggerInfo(_TriggerLogMixin):
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_i, self.trigger_index, self.trigger_i, self.num_samples_in_trigger)
+        return (
+            self.trigger_i,
+            self.trigger_index,
+            self.trigger_i,
+            self.num_samples_in_trigger,
+        )
 
 
 class TriggerExecutionInfo(_TriggerLogMixin):
@@ -260,12 +267,24 @@ class TriggerExecutionInfo(_TriggerLogMixin):
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["trigger_i", "trigger_index", "trigger_id", "first_timestamp", "last_timestamp"]
+        return [
+            "trigger_i",
+            "trigger_index",
+            "trigger_id",
+            "first_timestamp",
+            "last_timestamp",
+        ]
 
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_i, self.trigger_index, self.trigger_id, self.first_timestamp, self.last_timestamp)
+        return (
+            self.trigger_i,
+            self.trigger_index,
+            self.trigger_id,
+            self.first_timestamp,
+            self.last_timestamp,
+        )
 
 
 class _TrainInfoMixin(StageInfo):
@@ -279,12 +298,24 @@ class TrainingInfo(_TrainInfoMixin):
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["trigger_id", "training_id", "num_batches", "num_samples"]
+        return [
+            "trigger_id",
+            "training_id",
+            "num_batches",
+            "num_samples",
+            "train_time_at_trainer",
+        ]
 
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])
+        return (
+            self.trigger_id,
+            self.training_id,
+            self.trainer_log["num_batches"],
+            self.trainer_log["num_samples"],
+            self.trainer_log["total_train"],
+        )
 
 
 class StoreModelInfo(_TrainInfoMixin):
@@ -510,9 +541,16 @@ class StageLog(BaseModel):
     def df_columns(self, extended: bool = False) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"] + (
-            self.info.df_columns() if extended and self.info else []
-        )
+        return [
+            "id",
+            "start",
+            "end",
+            "duration",
+            "batch_idx",
+            "sample_idx",
+            "sample_time",
+            "trigger_idx",
+        ] + (self.info.df_columns() if extended and self.info else [])
 
     def df_row(self, extended: bool = False) -> tuple:
         return (
@@ -605,7 +643,16 @@ class SupervisorLogs(BaseModel):
                 )
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
+            columns=[
+                "id",
+                "start",
+                "end",
+                "duration",
+                "batch_idx",
+                "sample_idx",
+                "sample_time",
+                "trigger_idx",
+            ],
         )
 
 
@@ -644,7 +691,11 @@ class PipelineLogs(BaseModel):
     # metadata
     partial_idx: int = Field(0)
 
-    def materialize(self, log_dir_path: Path, mode: Literal["initial", "increment", "final"] = "increment") -> None:
+    def materialize(
+        self,
+        log_dir_path: Path,
+        mode: Literal["initial", "increment", "final"] = "increment",
+    ) -> None:
         """Materialize the logs to log files.
 
         If run with pytest, log_file_path and mode will be ignored.
@@ -682,7 +733,11 @@ class PipelineLogs(BaseModel):
             return
 
         if mode == "increment":
-            with open(pipeline_logdir / f"supervisor_part_{self.partial_idx}.log", "w", encoding="utf-8") as logfile:
+            with open(
+                pipeline_logdir / f"supervisor_part_{self.partial_idx}.log",
+                "w",
+                encoding="utf-8",
+            ) as logfile:
                 logfile.write(self.supervisor_logs.model_dump_json(by_alias=True, indent=2))
 
             self.supervisor_logs.clear()
