@@ -24,9 +24,6 @@ class Accuracy(AbstractDecomposableMetric):
         self.total_correct += labeled_correctly
         self.samples_seen += batch_size
 
-        self.total_correct += labeled_correctly
-        self.samples_seen += batch_size
-
     def get_evaluation_result(self) -> float:
         if self.samples_seen == 0:
             self.warning("Did not see any samples.")
