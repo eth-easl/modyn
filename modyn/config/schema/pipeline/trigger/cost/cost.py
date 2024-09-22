@@ -97,7 +97,7 @@ class AvoidableMisclassificationCostTriggerConfig(
     `PerformanceTriggerConfig`.
     """
 
-    id: Literal["AvoidableMisclassificationCostTrigger"] = Field("AvoidableMisclassificationCost")
+    id: Literal["AvoidableMisclassificationCostTrigger"] = Field("AvoidableMisclassificationCostTrigger")
 
     # Conversion rate between budget (training time) and regret metric (misclassifications)
     avoidable_misclassification_latency_per_training_second: float = Field(

@@ -20,22 +20,36 @@ from modyn.config.schema.pipeline import (
     MetricResult,
 )
 from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
+    AlibiDetectChiSquareDriftMetric,
     AlibiDetectClassifierDriftMetric,
     AlibiDetectCVMDriftMetric,
+    AlibiDetectFETDriftMetric,
     AlibiDetectKSDriftMetric,
+    AlibiDetectLSDDDriftMetric,
 )
 from modyn.supervisor.internal.triggers.drift.classifier_models import (
     alibi_classifier_models,
 )
 from modyn.supervisor.internal.triggers.drift.detector.drift import DriftDetector
 
-_AlibiMetrics = MMDDrift | ClassifierDrift | ChiSquareDrift | CVMDrift | FETDrift | KSDrift | LSDDDrift | MMDDrift
+_AlibiMetrics = (
+    MMDDrift
+    | ClassifierDrift
+    | ChiSquareDrift
+    | CVMDrift
+    | FETDrift
+    | KSDrift
+    | LSDDDrift
+    | MMDDrift
+)
 
 
 class AlibiDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, AlibiDetectDriftMetric]):
         alibi_metrics_config = {
-            metric_ref: config for metric_ref, config in metrics_config.items() if config.id.startswith("AlibiDetect")
+            metric_ref: config
+            for metric_ref, config in metrics_config.items()
+            if config.id.startswith("AlibiDetect")
         }
         super().__init__(alibi_metrics_config)
 
@@ -109,7 +123,9 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
 
     kwargs = {}
     if config.preprocessor:
-        kwargs.update({"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)})
+        kwargs.update(
+            {"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)}
+        )
 
     if isinstance(config, AlibiDetectMmdDriftMetric):
         assert kernel is not None
@@ -154,4 +170,38 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             **kwargs,
         )
 
-    raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")
+    if isinstance(config, AlibiDetectLSDDDriftMetric):
+        return LSDDDrift(
+            x_ref=embeddings_ref,
+            backend="pytorch",
+            n_permutations=config.num_permutations or 1,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            device=config.device,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectFETDriftMetric):
+        return FETDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            n_features=config.n_features,
+            **kwargs,
+        )
+
+    if isinstance(config, AlibiDetectChiSquareDriftMetric):
+        return ChiSquareDrift(
+            x_ref=embeddings_ref,
+            p_val=config.p_val,
+            correction=config.correction,
+            x_ref_preprocessed=config.x_ref_preprocessed,
+            n_features=config.n_features,
+            **kwargs,
+        )
+
+    raise NotImplementedError(
+        f"Metric {config.id} is not supported in AlibiDetectDriftMetric."
+    )

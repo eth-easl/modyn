@@ -21,33 +21,14 @@ from modyn.config.schema.pipeline.evaluation.strategy.periodic import (
 from modyn.config.schema.pipeline.evaluation.strategy.slicing import (
     SlicingEvalStrategyConfig,
 )
-from modyn.config.schema.pipeline.trigger import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.cost.cost import (
     AvoidableMisclassificationCostTriggerConfig,
     DataIncorporationLatencyCostTriggerConfig,
 )
-from modyn.config.schema.pipeline.trigger.drift.alibi_detect import (
-    AlibiDetectMmdDriftMetric,
-)
-from modyn.config.schema.pipeline.trigger.drift.criterion import (
-    DynamicRollingAverageThresholdCriterion,
-)
-from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import (
-    TimeWindowingStrategy,
-)
-from modyn.config.schema.pipeline.trigger.ensemble import (
-    AtLeastNEnsembleStrategy,
-    EnsembleTriggerConfig,
-)
-from modyn.config.schema.pipeline.trigger.performance.criterion import (
-    DynamicQuantilePerformanceThresholdCriterion,
-    StaticNumberAvoidableMisclassificationCriterion,
-    StaticPerformanceThresholdCriterion,
-)
 from modyn.config.schema.pipeline.trigger.performance.performance import (
-    PerformanceTriggerConfig,
     PerformanceTriggerEvaluationConfig,
 )
+from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -209,22 +190,23 @@ _EXPERIMENT_REFS = {
     #     gpu_device="cuda:1",
     # ),
     # # data amount baselines
-    # 11: Experiment(
-    #     name="yb-baseline-dataamount",
-    #     eval_handlers=(
-    #         construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-    #         construct_between_trigger_eval_handler("manual")
-    #     ),
-    #     data_amount_triggers={
-    #         f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
-    #         for num_samples in ([250, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000])
-    #     },
-    #     gpu_device="cuda:2",
-    # ),
+    11: Experiment(
+        name="yb-baseline-dataamount",
+        eval_handlers=(
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
+            construct_between_trigger_eval_handler("manual")
+        ),
+        data_amount_triggers={
+            f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
+            # for num_samples in ([250, 500, 1_000, 2_500, 5_000, 10_000, 15_000, 30_000])
+            # for num_samples in ([1_000, 2_500, 5_000, 10_000])
+            for num_samples in ([250, 500, 15_000, 30_000])
+        },
+        gpu_device="cuda:2",
+    ),
     # -------------------------------------------------------------------------------- #
     #                                2X: Drift triggers                                #
     # -------------------------------------------------------------------------------- #
-    # TODO: check if these experiments also have all values for other handlers
     # Static threshold drift
     # 20: Experiment(
     #     name="yb-datadrift-static",
@@ -269,118 +251,136 @@ _EXPERIMENT_REFS = {
     #     },
     #     gpu_device="cuda:3",
     # ),
-    # Dynamic threshold drift
-    21: Experiment(
-        name="yb-datadrift-dynamic",
-        eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
-            + construct_between_trigger_eval_handler("manual")
-        ),
-        drift_detection_triggers={
-            f"{criterion_name}_int{detection_interval}_win{window_size}": DataDriftTriggerConfig(
-                evaluation_interval_data_points=detection_interval,
-                windowing_strategy=TimeWindowingStrategy(
-                    # overlap has no affect acc. to offline exploration
-                    limit_ref=window_size,
-                    limit_cur=window_size,
-                    allow_overlap=False,
-                ),
-                # with 30k samples and 84 years, 10y are roughly 30000/84*10=3500 samples
-                # hence, if we want ~10 years of warmup, to 3500/detection_interval warmup intervals
-                warmup_intervals=3500 // detection_interval,
-                # triggering every 3 years during the warmup phase seems reasonable.
-                warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
-                # 5k samples are enough for drift detection, in yearbook we won't accumulate that many anyway
-                sample_size=5_000,
-                metrics={"mmd": AlibiDetectMmdDriftMetric(decision_criterion=criterion, device="gpu")},
-            )
-            # multiprocessing across gpus
-            # TODO: 0: 100
-            # TODO: 1: 250
-            # TODO: 2: 500
-            for detection_interval in [100]  # 100, 250, 500
-            for window_size in ["4d"]  # dataset specific, best acc. to offline exploraion and static drift experiments
-            for decision_window_size in [30]  # 10, 20,
-            for criterion_name, criterion in (
-                # {
-                #     f"mmd-perc-{percentile}-{decision_window_size}": DynamicPercentileThresholdCriterion(
-                #         window_size=decision_window_size, percentile=percentile
-                #     )
-                #     for percentile in [0.05, 0.15, 0.3]
-                # }
-                # |
-                {
-                    f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
-                        window_size=decision_window_size, deviation=deviation, absolute=False
-                    )
-                    for deviation in [0.05, 0.2, 0.5, 1.0, 2.0]
-                }
-            ).items()
-        },
-        gpu_device="cuda:3",
-    ),
-    # -------------------------------------------------------------------------------- #
-    #                             3X:  Performance triggers                            #
-    # -------------------------------------------------------------------------------- #
-    30: Experiment(
-        name="yb-performancetrigger",
-        eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
-            + construct_between_trigger_eval_handler("manual")
-        ),
-        performance_triggers={
-            f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
-                evaluation_interval_data_points=detection_interval,
-                data_density_window_size=20,
-                performance_triggers_window_size=20,
-                warmup_intervals=10,  # TODO: link to window_size
-                warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
-                evaluation=PerformanceTriggerEvaluationConfig(
-                    device="cuda:2",
-                    dataset=EvalDataConfig(
-                        dataset_id="yearbook_train",
-                        bytes_parser_function=yb_bytes_parser_function,
-                        batch_size=512,
-                        dataloader_workers=1,
-                        metrics=[
-                            AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
-                        ],
-                    ),
-                ),
-                mode="hindsight",
-                forecasting_method="ridge_regression",
-                decision_criteria={criterion_name: criterion},
-            )
-            for detection_interval in [100, 250, 500]
-            for criterion_name, criterion in (
-                {
-                    f"static-{perf_threshold}": StaticPerformanceThresholdCriterion(  # TODO: check if bug is fixed
-                        metric="Accuracy", metric_threshold=perf_threshold
-                    )
-                    for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
-                }
-                | {
-                    f"dynamic-{deviation}": DynamicQuantilePerformanceThresholdCriterion(  # TODO: check if bug is fixed
-                        metric="Accuracy",
-                        deviation=deviation,
-                        absolute=False,
-                    )
-                    for deviation in [0.025, 0.05, 0.1, 0.2, 0.3]
-                }
-                # TODO: dynamic rolling average
-                | {
-                    f"num_misclass-{num_misclassifications}-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
-                        expected_accuracy=0.95,  # TODO: variable
-                        allow_reduction=allow_reduction,
-                        avoidable_misclassification_threshold=num_misclassifications,
-                    )  # TODO: avg / quantile
-                    for num_misclassifications in [100, 200, 500, 1000, 2000, 5000]
-                    for allow_reduction in [True, False]
-                }
-            ).items()
-        },
-        gpu_device="cuda:2",
-    ),
+    # # Dynamic threshold drift
+    # 21: Experiment(
+    #     name="yb-datadrift-dynamic",
+    #     eval_handlers=(
+    #         construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+    #         + construct_between_trigger_eval_handler("manual")
+    #     ),
+    #     drift_detection_triggers={
+    #         f"{criterion_name}_int{detection_interval}_win{window_size}": DataDriftTriggerConfig(
+    #             evaluation_interval_data_points=detection_interval,
+    #             windowing_strategy=TimeWindowingStrategy(
+    #                 # overlap has no affect acc. to offline exploration
+    #                 limit_ref=window_size,
+    #                 limit_cur=window_size,
+    #                 allow_overlap=False,
+    #             ),
+    #             # with 30k samples and 84 years, 10y are roughly 30000/84*10=3500 samples
+    #             # hence, if we want ~10 years of warmup, to 3500/detection_interval warmup intervals
+    #             warmup_intervals=3500 // detection_interval,
+    #             # triggering every 3 years during the warmup phase seems reasonable.
+    #             warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
+    #             # 5k samples are enough for drift detection, in yearbook we won't accumulate that many anyway
+    #             sample_size=5_000,
+    #             metrics={"mmd": AlibiDetectMmdDriftMetric(decision_criterion=criterion, device="gpu")},
+    #         )
+    #         # multiprocessing across gpus
+    #         for detection_interval in reversed([100, 250, 500])
+    #         for window_size in ["4d"]  # dataset specific, best acc. to offline exploraion and static drift experiments
+    #         for decision_window_size in [10, 20, 30]
+    #         # cuda:1: 10
+    #         # cuda:2: 20
+    #         # cuda:3: 30
+    #         for criterion_name, criterion in (
+    #             {
+    #                 f"mmd-quant-{quantile}-{decision_window_size}": DynamicQuantileThresholdCriterion(
+    #                     window_size=decision_window_size, quantile=quantile
+    #                 )
+    #                 for quantile in [0.05, 0.1, 0.15, 0.3]
+    #             }
+    #             |
+    #             {
+    #                 f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
+    #                     window_size=decision_window_size, deviation=deviation, absolute=False
+    #                 )
+    #                 for deviation in [0.05, 0.2, 0.5, 1.0, 2.0]
+    #             }
+    #         ).items()
+    #     },
+    #     gpu_device="cuda:0",
+    # ),
+    # # -------------------------------------------------------------------------------- #
+    # #                             3X:  Performance triggers                            #
+    # # -------------------------------------------------------------------------------- #
+    # 30: Experiment(
+    #     name="yb-performancetrigger",
+    #     eval_handlers=(
+    #         construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+    #         + construct_between_trigger_eval_handler("manual")
+    #     ),
+    #     performance_triggers={
+    #         f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
+    #             evaluation_interval_data_points=detection_interval,
+    #             data_density_window_size=20,  # performed well for drift, only used for #avoidable misclass
+    #             performance_triggers_window_size=20,  # performed well for drift, only used for #avoidable misclass
+    #             warmup_intervals=3500 // detection_interval,  # same as in drift case
+    #             warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
+    #             evaluation=PerformanceTriggerEvaluationConfig(
+    #                 device="cuda:0",
+    #                 dataset=EvalDataConfig(
+    #                     dataset_id="yearbook_train",  # optional: extra holdout split
+    #                     bytes_parser_function=yb_bytes_parser_function,
+    #                     batch_size=512,
+    #                     dataloader_workers=1,
+    #                     metrics=[
+    #                         AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
+    #                     ],
+    #                 ),
+    #             ),
+    #             mode="hindsight",
+    #             forecasting_method="ridge_regression",
+    #             decision_criteria={criterion_name: criterion},
+    #         )
+    #         # for detection_interval in [100, 250, 500]
+    #         for detection_interval in [100]
+    #         # cuda1: 100
+    #         # cuda2: 250
+    #         # cuda3: 500
+    #         # cuda0: 100, 250, 500 - num_misscl - 100, 200, 500
+    #         for criterion_name, criterion in (
+    #             # {
+    #             #     f"static-{perf_threshold}": StaticPerformanceThresholdCriterion(
+    #             #         metric="Accuracy", metric_threshold=perf_threshold
+    #             #     )
+    #             #     for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925, 0.95]
+    #             # }
+    #             # | {
+    #             #     f"dynamic-quant-{quantile}-{decision_window_size}": DynamicQuantilePerformanceThresholdCriterion(
+    #             #         metric="Accuracy",
+    #             #         quantile=quantile,
+    #             #         window_size=decision_window_size,
+    #             #     )
+    #             #     for quantile in [0.05, 0.15, 0.3]
+    #             #     for decision_window_size in [10, 20, 30]
+    #             # }
+    #             # |
+    #             {
+    #                 f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
+    #                     metric="Accuracy",
+    #                     deviation=deviation,
+    #                     absolute=False,
+    #                     window_size=decision_window_size,
+    #                 )
+    #                 for deviation in reversed([0.05, 0.1, 0.2, 0.3])  # TODO: delete: 0.025
+    #                 for decision_window_size in [10, 20, 30]
+    #             }
+    #             # |
+    #             # {
+    #             #     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
+    #             #         expected_accuracy=expected_accuracy,
+    #             #         allow_reduction=allow_reduction,
+    #             #         avoidable_misclassification_threshold=num_misclassifications,
+    #             #     )
+    #             #     for num_misclassifications in reversed([100, 200, 500])  # TODO: 100, 200, 500, 1000, 2000, 5000
+    #             #     for expected_accuracy in [0.85, 0.9, 0.95]  # TODO last successful: yearbook_performancetrigger_num_misclass-200-exp-0.85-red-False--int500y --> mind the reversed
+    #             #     for allow_reduction in [True, False]
+    #             # }
+    #         ).items()
+    #     },
+    #     gpu_device="cuda:0",
+    # ),
     # -------------------------------------------------------------------------------- #
     #                              4X: Cost aware triggers                             #
     # -------------------------------------------------------------------------------- #
@@ -397,10 +397,10 @@ _EXPERIMENT_REFS = {
                 cost_tracking_window_size=20,
                 incorporation_delay_per_training_second=exchange_rate,
             )
-            for interval in [100, 250, 500, 1_000]
+            for interval in reversed([100, 250, 500, 1_000])
             for exchange_rate in [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0]
         },
-        gpu_device="cuda:3",
+        gpu_device="cuda:0",
     ),
     # avoidable misclassfication integration trigger
     41: Experiment(
@@ -410,34 +410,38 @@ _EXPERIMENT_REFS = {
             + construct_between_trigger_eval_handler("manual")
         ),
         cost_triggers={
-            f"int{interval}_exch{exchange_rate}_red{allow_reduction}": AvoidableMisclassificationCostTriggerConfig(
+            f"int{detection_interval}_exch{exchange_rate}_red{allow_reduction}": AvoidableMisclassificationCostTriggerConfig(
                 # cost trigger params
-                expected_accuracy=0.9,
+                expected_accuracy=0.9,  # assumed to work out ask it worked well for performance triggers
                 cost_tracking_window_size=50,
                 avoidable_misclassification_latency_per_training_second=exchange_rate,
                 # performance trigger params
-                evaluation_interval_data_points=interval,
+                evaluation_interval_data_points=detection_interval,
                 data_density_window_size=20,
                 performance_triggers_window_size=20,
-                warmup_intervals=10,  # TODO: link to window_size
+                warmup_intervals=3500 // detection_interval,  # same as in drift case
                 warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
                 evaluation=PerformanceTriggerEvaluationConfig(
-                    device="cuda:2",
+                    device="cuda:1",
                     dataset=EvalDataConfig(
                         dataset_id="yearbook_train",
                         bytes_parser_function=yb_bytes_parser_function,
-                        batch_size=512,  # TODO: lower
+                        batch_size=512,
                         dataloader_workers=1,
                         metrics=[
                             AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
                         ],
                     ),
                 ),
-                mode="hindsight",  # TODO: lookahead
+                mode="hindsight",
                 forecasting_method="ridge_regression",
             )
-            for interval in [100, 250, 500, 1_000]
-            for exchange_rate in [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0]
+            # for detection_interval in [100, 250, 500]
+            for detection_interval in [500]
+            # cuda:1 - 100
+            # cuda:2 - 250
+            # cuda:3 - 500
+            for exchange_rate in [1_000_000_000]
             for allow_reduction in [True, False]
         },
         gpu_device="cuda:1",
@@ -445,87 +449,57 @@ _EXPERIMENT_REFS = {
     # -------------------------------------------------------------------------------- #
     #                               5X: Ensemble triggers                              #
     # -------------------------------------------------------------------------------- #
-    # with best working previous triggers
-    51: Experiment(
-        name="yb-ensemble",
-        eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
-            + construct_between_trigger_eval_handler("manual")
-        ),
-        ensemble_triggers={
-            "ensemble1": EnsembleTriggerConfig(
-                subtriggers={
-                    "drift1": DataDriftTriggerConfig(
-                        evaluation_interval_data_points=500,
-                        windowing_strategy=TimeWindowingStrategy(limit_ref="4d", limit_cur="4d"),
-                        warmup_intervals=10,
-                        warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
-                        metrics={
-                            "mmd": AlibiDetectMmdDriftMetric(
-                                device="gpu",
-                                decision_criterion=DynamicRollingAverageThresholdCriterion(
-                                    deviation=0.1, absolute=False, window_size=15
-                                ),
-                            )
-                        },
-                    ),
-                    "perf1": PerformanceTriggerConfig(
-                        evaluation_interval_data_points=500,
-                        data_density_window_size=20,
-                        performance_triggers_window_size=20,
-                        evaluation=PerformanceTriggerEvaluationConfig(
-                            device="cuda:0",
-                            dataset=EvalDataConfig(
-                                dataset_id="yearbook_train",
-                                bytes_parser_function=yb_bytes_parser_function,
-                                batch_size=64,
-                                dataloader_workers=1,
-                                metrics=[
-                                    AccuracyMetricConfig(
-                                        evaluation_transformer_function=yb_evaluation_transformer_function
-                                    ),
-                                ],
-                            ),
-                        ),
-                        mode="hindsight",  # TODO: lookahead
-                        forecasting_method="ridge_regression",
-                        decision_criteria={
-                            "static-0.8": StaticPerformanceThresholdCriterion(metric="Accuracy", metric_threshold=0.8)
-                        },
-                    ),
-                },
-                ensemble_strategy=AtLeastNEnsembleStrategy(n=1),
-            )
-        },
-        gpu_device="cuda:0",
-    ),
-    # ----------------------------- Evaluation intervals ----------------------------- #
-    # 30: Experiment(
-    #     name="yb-drift-interval-cost",
-    #     eval_handlers=[
-    #         construct_slicing_eval_handler(),
-    #         construct_between_trigger_eval_handler(),
-    #     ],
-    #     time_triggers={},
-    #     data_amount_triggers={},
-    #     drift_detection_triggers={
-    #         f"detection_interval_{detection_interval}": DataDriftTriggerConfig(
-    #             evaluation_interval_data_points=detection_interval,
-    #             windowing_strategy=TimeWindowingStrategy(
-    #                 limit_ref="4d", limit_cur="4d",
-    #             ),
-    #             warmup_intervals=10,
-    #             warmup_policy=TimeTriggerConfig(
-    #                 every="3d", start_timestamp=_FIRST_TIMESTAMP
-    #             ),
-    #             metrics={
-    #                 "mmd": AlibiDetectMmdDriftMetric(
-    #                     decision_criterion=DynamicThresholdCriterion(window_size=10),
-    #                     device="gpu",
-    #                 )
-    #             }
+    # # with best working previous triggers
+    # 51: Experiment(
+    #     name="yb-ensemble",
+    #     eval_handlers=(
+    #         construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+    #         + construct_between_trigger_eval_handler("manual")
+    #     ),
+    #     ensemble_triggers={
+    #         "ensemble1": EnsembleTriggerConfig(
+    #             subtriggers={
+    #                 "drift1": DataDriftTriggerConfig(
+    #                     evaluation_interval_data_points=500,
+    #                     windowing_strategy=TimeWindowingStrategy(limit_ref="4d", limit_cur="4d"),
+    #                     warmup_intervals=10,
+    #                     warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
+    #                     metrics={
+    #                         "mmd": AlibiDetectMmdDriftMetric(
+    #                             device="gpu",
+    #                             decision_criterion=DynamicRollingAverageThresholdCriterion(
+    #                                 deviation=0.1, absolute=False, window_size=15
+    #                             ),
+    #                         )
+    #                     },
+    #                 ),
+    #                 "perf1": PerformanceTriggerConfig(
+    #                     evaluation_interval_data_points=500,
+    #                     data_density_window_size=20,
+    #                     performance_triggers_window_size=20,
+    #                     evaluation=PerformanceTriggerEvaluationConfig(
+    #                         device="cuda:0",
+    #                         dataset=EvalDataConfig(
+    #                             dataset_id="yearbook_train",
+    #                             bytes_parser_function=yb_bytes_parser_function,
+    #                             batch_size=64,
+    #                             dataloader_workers=1,
+    #                             metrics=[
+    #                                 AccuracyMetricConfig(
+    #                                     evaluation_transformer_function=yb_evaluation_transformer_function
+    #                                 ),
+    #                             ],
+    #                         ),
+    #                     ),
+    #                     mode="hindsight",  # TODO: lookahead
+    #                     forecasting_method="ridge_regression",
+    #                     decision_criteria={
+    #                         "static-0.8": StaticPerformanceThresholdCriterion(metric="Accuracy", metric_threshold=0.8)
+    #                     },
+    #                 ),
+    #             },
+    #             ensemble_strategy=AtLeastNEnsembleStrategy(n=1),
     #         )
-    #         for detection_interval in [100, 200, 500, 1_000, 2_500, 5_000, 10_000, 15_000]
     #     },
     #     gpu_device="cuda:0",
     # ),

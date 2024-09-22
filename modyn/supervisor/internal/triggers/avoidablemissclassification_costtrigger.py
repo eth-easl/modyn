@@ -67,6 +67,10 @@ class AvoidableMisclassificationCostTrigger(CostTrigger, PerformanceTriggerMixin
         """Compute the regret metric for the current state of the trigger."""
 
         self.data_density.inform_data(batch)
+
+        if not self._triggered_once:
+            return 0.0, {}  # we don't have a model to evaluate yet
+
         model_id, num_samples, num_misclassifications, evaluation_scores = self._run_evaluation(interval_data=batch)
 
         self.performance_tracker.inform_evaluation(

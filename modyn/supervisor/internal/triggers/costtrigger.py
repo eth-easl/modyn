@@ -59,7 +59,7 @@ class CostTrigger(BatchedTrigger):
         traintime_estimate = -1.0
 
         regret_metric, regret_log = self._compute_regret_metric(batch, batch_start, batch_duration)
-        regret_in_traintime_unit = regret_metric * self.config.conversion_factor
+        regret_in_traintime_unit = regret_metric / self.config.conversion_factor
 
         # --------------------------------------------- Trigger Decision --------------------------------------------- #
 
