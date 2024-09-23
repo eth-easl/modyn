@@ -317,6 +317,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 break  # Exit busy wait
 
             if not res.is_running:
+                logger.info(f"Evaluation {evaluation_id} has finished successfully.")
                 break  # Exit busy wait
 
             sleep(1)
@@ -347,6 +348,8 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             _msg = f"Cannot get the evaluation result for evaluation {evaluation_id}"
             logger.error(_msg)
             raise RuntimeError(_msg)
+
+        logger.debug(f"Obtained evaluation results for evaluation {evaluation_id}")
 
         return res.evaluation_results
 

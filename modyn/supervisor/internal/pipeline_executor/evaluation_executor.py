@@ -378,7 +378,9 @@ class EvaluationExecutor:
                     # This is likely due to an invalid request in the first place.
                     return failure_reasons
 
-                logger.info(f"Evaluation started for model {model_id_to_eval} on intervals {intervals}.")
+                logger.info(
+                    f"Evaluation {response.evaluation_id} started for model {model_id_to_eval} on intervals {intervals}."
+                )
                 started_evaluations.append(response.evaluation_id)
                 if not self.grpc.wait_for_evaluation_completion(response.evaluation_id):
                     raise RuntimeError("There was an exception during evaluation")  # Trigger retry
