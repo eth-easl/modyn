@@ -299,16 +299,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         logger.info(f"Received get evaluation result request for evaluation {evaluation_id}.")
 
         if evaluation_id not in self._evaluation_dict:
-            logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
+            logger.error(f"Evaluation {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
 
         self._drain_result_queue(evaluation_id)  # Should already be drained, but just make sure
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
-            logger.error(f"Evaluation with id {evaluation_id} is still running.")
+            logger.error(f"Evaluation {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
-        logger.info("Returning results of all metrics.")
+        logger.info(f"[Evaluation {evaluation_id}] Returning results of all metrics.")
         self._drain_result_queue(evaluation_id)  # Should not do anything, but let's make sure
 
         evaluation_data: list[EvaluationIntervalData] = []
@@ -317,12 +317,11 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
             evaluation_data.append(single_eval_data)
 
-        num_metrics = len(self._evaluation_dict[evaluation_id].raw_metrics)
-        expected_results = len(self._evaluation_dict[evaluation_id].not_failed_interval_ids) * num_metrics
+        expected_results = len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)
         if len(evaluation_data) < expected_results:
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
-                f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)} * {num_metrics} = {expected_results} results, "
+                f"Expected {expected_results} results, "
                 f"but got {len(evaluation_data)} results. Most likely, an exception happened during evaluation."
             )
             return EvaluationResultResponse(valid=False)
