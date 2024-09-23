@@ -67,6 +67,7 @@ def test_accuracy() -> None:
     accuracy.evaluate_batch(y_true, y_pred, 6)
 
     assert accuracy.get_evaluation_result() == pytest.approx(1.0 / 3)
+    assert accuracy.samples_seen - accuracy.total_correct == 0 + 6 + 4
 
 
 def test_accuracy_invalid() -> None:
