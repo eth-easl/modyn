@@ -299,7 +299,7 @@ class DataDriftTrigger(BatchedTrigger):
                 metric_result.distance
             )
 
-        logger.info(f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}")
+        logger.info("[DataDriftDetector][Dataset %s][Result] %s", self.dataloader_info.dataset_id, drift_results)
         if is_warmup:
             return False, {}
 
