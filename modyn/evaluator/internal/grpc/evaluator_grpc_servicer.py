@@ -353,9 +353,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             self._evaluation_process_dict.pop(evaluation_id)
 
         for e_id in evaluation_ids:
-            self._evaluation_dict.pop(e_id)
-            self._evaluation_data_dict.pop(e_id)
-            self._evaluation_data_dict_locks.pop(e_id)
+            if e_id in self._evaluation_dict:
+                self._evaluation_dict.pop(e_id)
+            if e_id in self._evaluation_data_dict:
+                self._evaluation_data_dict.pop(e_id)
+            if e_id in self._evaluation_data_dict_locks:
+                self._evaluation_data_dict_locks.pop(e_id)
 
         gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))
