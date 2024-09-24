@@ -6,7 +6,7 @@ from matplotlib.figure import Figure
 
 def save_plot(fig: Figure, name: str) -> None:
     for img_type in ["png", "svg", "pdf"]:
-        img_path = Path(".data/plots") / f"{name}.{img_type}"
+        img_path = Path(".data/_plots") / f"{name}.{img_type}"
         img_path.parent.mkdir(exist_ok=True, parents=True)
         fig.savefig(img_path, bbox_inches="tight", transparent=True)
 
