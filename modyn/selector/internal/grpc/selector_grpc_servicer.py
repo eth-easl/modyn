@@ -57,15 +57,11 @@ class SelectorGRPCServicer(SelectorServicer):
         tid = threading.get_native_id()
         pid = os.getpid()
 
-        logger.info(
-            "[%s][%s][Pipeline %s]: Fetching samples for trigger id %s and worker id %s and partition id %s",
-            pid,
-            tid,
-            pipeline_id,
-            trigger_id,
-            worker_id,
-            partition_id,
+        _logmsg = (
+            f"[{pid}][{tid}][Pipeline {pipeline_id}]: Fetching samples for trigger id {trigger_id}"
+            + f" and worker id {worker_id} and partition id {partition_id}"
         )
+        logger.info(_logmsg)
 
         samples = self.selector_manager.get_sample_keys_and_weights(pipeline_id, trigger_id, worker_id, partition_id)
 
@@ -94,14 +90,11 @@ class SelectorGRPCServicer(SelectorServicer):
         pipeline_id, keys, timestamps, labels = request.pipeline_id, request.keys, request.timestamps, request.labels
         tid = threading.get_native_id()
         pid = os.getpid()
-        logger.info(
-            "[%s][%s][Pipeline %s]: Selector is informed of %s new data points + trigger at timestamp %s",
-            pid,
-            tid,
-            pipeline_id,
-            len(keys),
-            timestamps[-1] if keys else "n/a",
+        _lgmsg = (
+            f"[{pid}][{tid}][Pipeline {pipeline_id}]: Selector is informed of {len(keys)} new data points"
+            + f"+ trigger at timestamp {timestamps[-1] if len(keys) > 0 else 'n/a'}"
         )
+        logger.info(_lgmsg)
 
         trigger_id, log = self.selector_manager.inform_data_and_trigger(pipeline_id, keys, timestamps, labels)
         return TriggerResponse(trigger_id=trigger_id, log=JsonString(value=json.dumps(log)))
