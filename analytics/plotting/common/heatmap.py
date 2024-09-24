@@ -16,9 +16,11 @@ from analytics.plotting.common.font import setup_font
 
 def build_heatmap(
     heatmap_data: pd.DataFrame,
-    y_ticks: list[int] | None = None,
+    y_ticks: list[int] | list[str] | None = None,
     y_ticks_bins: int | None = None,
     x_ticks: list[int] | None = None,
+    x_custom_ticks: list[tuple[int, str]] | None = None,  # (position, label)
+    y_custom_ticks: list[tuple[int, str]] | None = None,  # (position, label)
     reverse_col: bool = False,
     y_label: str = "Reference Year",
     x_label: str = "Current Year",
@@ -34,6 +36,7 @@ def build_heatmap(
     policy: list[tuple[int, int, int]] = [],
     cmap: Any | None = None,
     linewidth: int = 2,
+    grid_alpha: float = 0.0,
 ) -> Figure | Axes:
     init_plot()
     setup_font(small_label=True, small_title=True)
@@ -53,7 +56,7 @@ def build_heatmap(
         heatmap_data,
         cmap=("RdBu" + ("_r" if reverse_col else "")) if not cmap else cmap,
         linewidths=0.0,
-        linecolor="black",
+        linecolor="white",
         # color bar from 0 to 1
         cbar_kws={
             "label": color_label,
@@ -84,7 +87,7 @@ def build_heatmap(
 
     # Adjust x-axis tick labels
     ax.set_xlabel(x_label)
-    if not x_ticks:
+    if not x_ticks and not x_custom_ticks:
         ax.set_xticks(
             ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],
             labels=[x for x in range(1930, 2010 + 1, 20)],
@@ -92,13 +95,25 @@ def build_heatmap(
             # ha='right'
         )
     else:
-        ax.set_xticks(
-            ticks=[x - 1930 + 0.5 for x in x_ticks],
-            labels=[x for x in x_ticks],
-            rotation=0,
-            # ha='right'
-        )
+        if x_custom_ticks:
+            ax.set_xticks(
+                ticks=[x[0] for x in x_custom_ticks],
+                labels=[x[1] for x in x_custom_ticks],
+                rotation=0,
+                # ha='right'
+            )
+        else:
+            assert x_ticks is not None
+            ax.set_xticks(
+                ticks=[x - 1930 + 0.5 for x in x_ticks],
+                labels=[x for x in x_ticks],
+                rotation=0,
+                # ha='right'
+            )
     ax.invert_yaxis()
+
+    ax.grid(axis="y", linestyle="--", alpha=grid_alpha, color="white")
+    ax.grid(axis="x", linestyle="--", alpha=grid_alpha, color="white")
 
     if y_ticks is not None:
         ax.set_yticks(
@@ -109,20 +124,19 @@ def build_heatmap(
     elif y_ticks_bins is not None:
         ax.yaxis.set_major_locator(MaxNLocator(nbins=y_ticks_bins))
         ax.set_yticklabels([int(i) + min(heatmap_data.index) for i in ax.get_yticks()], rotation=0)
+    else:
+        if y_custom_ticks:
+            ax.set_yticks(
+                ticks=[y[0] for y in y_custom_ticks],
+                labels=[y[1] for y in y_custom_ticks],
+                rotation=0,
+                # ha='right'
+            )
 
     ax.set_ylabel(y_label)
 
     if title_label:
         ax.set_title(title_label)
-
-        # drift_pipeline = []
-
-    # TODO visualize policy
-    # Draft training boxes
-    # if drift_pipeline:
-    # x_start = active_[1][f"_start"].year - 1930
-    # x_end = active_[1][f"{type_}_end"].year - 1930
-    # y = active_[1]["model_idx"]
 
     previous_y = 0
     for x_start, x_end, y in policy:
