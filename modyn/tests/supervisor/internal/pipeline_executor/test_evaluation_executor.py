@@ -299,6 +299,11 @@ def test_single_batched_evaluation_mixed(
     eval_req2 = dummy_eval_request()
     eval_req.interval_start = 64
     eval_req.interval_end = 14
+
+    request = MagicMock()
+    request.metrics = ["Accuracy"]
+    test_prepare_evaluation_request.return_value = request
+
     results = evaluation_executor._single_batched_evaluation(
         [
             (eval_req.interval_start, eval_req.interval_end),
@@ -317,4 +322,4 @@ def test_single_batched_evaluation_mixed(
     )
     test_wait_for_evaluation_completion.assert_called_once()
     test_get_evaluation_results.assert_called_once()
-    test_cleanup_evaluations.assert_called_once()
+    assert test_cleanup_evaluations.call_count == 2
