@@ -28,13 +28,19 @@ from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicRollingAverageThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import TimeWindowingStrategy
-from modyn.config.schema.pipeline.trigger.performance.criterion import StaticNumberAvoidableMisclassificationCriterion
-from modyn.config.schema.pipeline.trigger.performance.performance import PerformanceTriggerConfig, PerformanceTriggerEvaluationConfig
-from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
+from modyn.config.schema.pipeline.trigger.performance.criterion import (
+    DynamicQuantilePerformanceThresholdCriterion,
+    DynamicRollingAveragePerformanceThresholdCriterion,
+    StaticNumberAvoidableMisclassificationCriterion,
+    StaticPerformanceThresholdCriterion,
+)
+from modyn.config.schema.pipeline.trigger.performance.performance import (
+    PerformanceTriggerConfig,
+    PerformanceTriggerEvaluationConfig,
+)
 from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modyn.utils.utils import SECONDS_PER_UNIT
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
-
 
 from .pipeline_config import (
     arxiv_bytes_parser_function,
@@ -220,7 +226,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
             + construct_between_trigger_eval_handler("manual")
         ),
         performance_triggers={
-            f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
+            f"{criterion_name}-int{detection_interval}": PerformanceTriggerConfig(
                 evaluation_interval_data_points=detection_interval,
                 data_density_window_size=20,  # performed well for drift, only used for #avoidable misclass
                 performance_triggers_window_size=20,  # performed well for drift, only used for #avoidable misclass
@@ -228,7 +234,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                 # triggering every 3 years during the warmup phase seems reasonable.
                 warmup_policy=TimeTriggerConfig(every="2y", start_timestamp=_FIRST_TIMESTAMP),
                 evaluation=PerformanceTriggerEvaluationConfig(
-                    device="cuda:2",
+                    device="cuda:3",
                     dataset=EvalDataConfig(
                         dataset_id="arxiv_kaggle_train",  # optional: extra holdout split
                         bytes_parser_function=arxiv_bytes_parser_function,
@@ -245,11 +251,12 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
             )
             for detection_interval in [20_000]
             for criterion_name, criterion in (
+                # peak accuracy 0.6-0.65
                 # {
                 #     f"static-{perf_threshold}": StaticPerformanceThresholdCriterion(
                 #         metric="Accuracy", metric_threshold=perf_threshold
                 #     )
-                #     for perf_threshold in [0.45, 0.5, 0.55, 0.6]
+                #     for perf_threshold in [0.45, 0.5, 0.55]  # 0.6 --> too many triggers
                 # }
                 # |
                 # {
@@ -258,8 +265,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                 #         quantile=quantile,
                 #         window_size=decision_window_size,
                 #     )
-                #     for quantile in [0.05, 0.15, 0.3]
-                #     for decision_window_size in [15, 30]
+                #     for quantile in [0.05, 0.15]
+                #     for decision_window_size in [20]
                 # }
                 # |
                 # {
@@ -270,22 +277,22 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                 #         window_size=decision_window_size,
                 #     )
                 #     for deviation in reversed([0.1, 0.2, 0.3])
-                #     for decision_window_size in [15, 30]
+                #     for decision_window_size in [20]
                 # }
                 # |
-                {
-                    f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
-                        expected_accuracy=expected_accuracy,
-                        allow_reduction=allow_reduction,
-                        avoidable_misclassification_threshold=num_misclassifications,
-                    )
-                    for num_misclassifications in reversed([10000])  # 1000, 2000, 5000, 7500, 10000
-                    for expected_accuracy in [0.5, 0.55, 0.6]
-                    for allow_reduction in [False]
-                }
+                # {
+                #     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
+                #         expected_accuracy=expected_accuracy,
+                #         allow_reduction=allow_reduction,
+                #         avoidable_misclassification_threshold=num_misclassifications,
+                #     )
+                #     for num_misclassifications in reversed([10_000, 15_000, 30_000, 50_000, 100_000])
+                #     for expected_accuracy in [0.6]
+                #     for allow_reduction in [False]
+                # }
             ).items()
         },
-        gpu_device="cuda:2",
+        gpu_device="cuda:3",
     ),
 }
 

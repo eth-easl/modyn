@@ -25,7 +25,9 @@ from modyn.config.schema.pipeline.trigger.cost.cost import (
     AvoidableMisclassificationCostTriggerConfig,
     DataIncorporationLatencyCostTriggerConfig,
 )
+from modyn.config.schema.pipeline.trigger.performance.criterion import StaticNumberAvoidableMisclassificationCriterion
 from modyn.config.schema.pipeline.trigger.performance.performance import (
+    PerformanceTriggerConfig,
     PerformanceTriggerEvaluationConfig,
 )
 from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
@@ -304,83 +306,84 @@ _EXPERIMENT_REFS = {
     # # -------------------------------------------------------------------------------- #
     # #                             3X:  Performance triggers                            #
     # # -------------------------------------------------------------------------------- #
-    # 30: Experiment(
-    #     name="yb-performancetrigger",
-    #     eval_handlers=(
-    #         construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
-    #         + construct_between_trigger_eval_handler("manual")
-    #     ),
-    #     performance_triggers={
-    #         f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
-    #             evaluation_interval_data_points=detection_interval,
-    #             data_density_window_size=20,  # performed well for drift, only used for #avoidable misclass
-    #             performance_triggers_window_size=20,  # performed well for drift, only used for #avoidable misclass
-    #             warmup_intervals=3500 // detection_interval,  # same as in drift case
-    #             warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
-    #             evaluation=PerformanceTriggerEvaluationConfig(
-    #                 device="cuda:0",
-    #                 dataset=EvalDataConfig(
-    #                     dataset_id="yearbook_train",  # optional: extra holdout split
-    #                     bytes_parser_function=yb_bytes_parser_function,
-    #                     batch_size=512,
-    #                     dataloader_workers=1,
-    #                     metrics=[
-    #                         AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
-    #                     ],
-    #                 ),
-    #             ),
-    #             mode="hindsight",
-    #             forecasting_method="ridge_regression",
-    #             decision_criteria={criterion_name: criterion},
-    #         )
-    #         # for detection_interval in [100, 250, 500]
-    #         for detection_interval in [100]
-    #         # cuda1: 100
-    #         # cuda2: 250
-    #         # cuda3: 500
-    #         # cuda0: 100, 250, 500 - num_misscl - 100, 200, 500
-    #         for criterion_name, criterion in (
-    #             # {
-    #             #     f"static-{perf_threshold}": StaticPerformanceThresholdCriterion(
-    #             #         metric="Accuracy", metric_threshold=perf_threshold
-    #             #     )
-    #             #     for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925, 0.95]
-    #             # }
-    #             # | {
-    #             #     f"dynamic-quant-{quantile}-{decision_window_size}": DynamicQuantilePerformanceThresholdCriterion(
-    #             #         metric="Accuracy",
-    #             #         quantile=quantile,
-    #             #         window_size=decision_window_size,
-    #             #     )
-    #             #     for quantile in [0.05, 0.15, 0.3]
-    #             #     for decision_window_size in [10, 20, 30]
-    #             # }
-    #             # |
-    #             {
-    #                 f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
-    #                     metric="Accuracy",
-    #                     deviation=deviation,
-    #                     absolute=False,
-    #                     window_size=decision_window_size,
-    #                 )
-    #                 for deviation in reversed([0.05, 0.1, 0.2, 0.3])  # TODO: delete: 0.025
-    #                 for decision_window_size in [10, 20, 30]
-    #             }
-    #             # |
-    #             # {
-    #             #     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
-    #             #         expected_accuracy=expected_accuracy,
-    #             #         allow_reduction=allow_reduction,
-    #             #         avoidable_misclassification_threshold=num_misclassifications,
-    #             #     )
-    #             #     for num_misclassifications in reversed([100, 200, 500])  # TODO: 100, 200, 500, 1000, 2000, 5000
-    #             #     for expected_accuracy in [0.85, 0.9, 0.95]  # TODO last successful: yearbook_performancetrigger_num_misclass-200-exp-0.85-red-False--int500y --> mind the reversed
-    #             #     for allow_reduction in [True, False]
-    #             # }
-    #         ).items()
-    #     },
-    #     gpu_device="cuda:0",
-    # ),
+    30: Experiment(
+        name="yb-performancetrigger",
+        eval_handlers=(
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
+        ),
+        performance_triggers={
+            f"{criterion_name}-int{detection_interval}y": PerformanceTriggerConfig(
+                evaluation_interval_data_points=detection_interval,
+                data_density_window_size=20,  # performed well for drift, only used for #avoidable misclass
+                performance_triggers_window_size=20,  # performed well for drift, only used for #avoidable misclass
+                warmup_intervals=3500 // detection_interval,  # same as in drift case
+                warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
+                evaluation=PerformanceTriggerEvaluationConfig(
+                    device="cuda:2",
+                    dataset=EvalDataConfig(
+                        dataset_id="yearbook_train",  # optional: extra holdout split
+                        bytes_parser_function=yb_bytes_parser_function,
+                        batch_size=512,
+                        dataloader_workers=1,
+                        metrics=[
+                            AccuracyMetricConfig(evaluation_transformer_function=yb_evaluation_transformer_function),
+                        ],
+                    ),
+                ),
+                mode="hindsight",
+                forecasting_method="ridge_regression",
+                decision_criteria={criterion_name: criterion},
+            )
+            # for detection_interval in [100, 250, 500]
+            for detection_interval in [250]  # Solid choice
+            for criterion_name, criterion in (
+                # {
+                #     f"static-{perf_threshold}": StaticPerformanceThresholdCriterion(
+                #         metric="Accuracy", metric_threshold=perf_threshold
+                #     )
+                #     for perf_threshold in [0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925, 0.95]
+                # }
+                # | {
+                #     f"dynamic-quant-{quantile}-{decision_window_size}": DynamicQuantilePerformanceThresholdCriterion(
+                #         metric="Accuracy",
+                #         quantile=quantile,
+                #         window_size=decision_window_size,
+                #     )
+                #     for quantile in [0.05, 0.15, 0.3]
+                #     for decision_window_size in [10, 20, 30]
+                # }
+                # |
+                # {  # TODO: not completed
+                #     f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
+                #         metric="Accuracy",
+                #         deviation=deviation,
+                #         absolute=False,
+                #         window_size=decision_window_size,
+                #     )
+                #     for deviation in reversed([0.05, 0.1, 0.2, 0.3])
+                #     for decision_window_size in [10, 20, 30]
+                # }
+                # |
+                {
+                    f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
+                        expected_accuracy=expected_accuracy,
+                        allow_reduction=allow_reduction,
+                        avoidable_misclassification_threshold=num_misclassifications,
+                    )
+                    # for num_misclassifications, expected_accuracy, allow_reduction in [
+                    #     (1500, 0.95, False),
+                    # ]
+                    # cuda1: 100, 200, 500, 1000
+                    # cuda2: 50
+                    for num_misclassifications in reversed([50])  # TODO: 50, 100, 200, 500, 1000, 1500
+                    for expected_accuracy in [0.85, 0.9, 0.95]
+                    for allow_reduction in [True, False]
+                }
+            ).items()
+        },
+        gpu_device="cuda:2",
+    ),
     # -------------------------------------------------------------------------------- #
     #                              4X: Cost aware triggers                             #
     # -------------------------------------------------------------------------------- #

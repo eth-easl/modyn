@@ -24,6 +24,7 @@ from modyn.config.schema.pipeline.trigger.drift.alibi_detect import AlibiDetectM
 from modyn.config.schema.pipeline.trigger.drift.config import DataDriftTriggerConfig
 from modyn.config.schema.pipeline.trigger.drift.criterion import (
     DynamicQuantileThresholdCriterion,
+    DynamicRollingAverageThresholdCriterion,
 )
 from modyn.config.schema.pipeline.trigger.drift.detection_window.time_ import TimeWindowingStrategy
 from modyn.config.schema.pipeline.trigger.performance.criterion import (
@@ -33,6 +34,7 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
     PerformanceTriggerConfig,
     PerformanceTriggerEvaluationConfig,
 )
+from modyn.config.schema.pipeline.trigger.simple.data_amount import DataAmountTriggerConfig
 from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
 from modynclient.config.schema.client_config import ModynClientConfig, Supervisor
 
@@ -141,29 +143,26 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     #     gpu_device="cuda:2",
     # ),
     # # data amount baselines
-    # 11: Experiment(
-    #     name="hp-baseline-dataamount",
-    #     eval_handlers=(
-    #         construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
-    #         + construct_between_trigger_eval_handler("manual")
-    #     ),
-    #     data_amount_triggers={
-    #         f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
-    #         for num_samples in ([5_000, 80_000])
-    #         # 2: 10_000, 20_000, 40_000
-    #         # 3: 5_000, 80_000
-    #     },
-    #     gpu_device="cuda:3",
-    # ),
+    11: Experiment(
+        name="hp-baseline-dataamount",
+        eval_handlers=(
+            construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
+        ),
+        data_amount_triggers={
+            f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
+            for num_samples in ([15_000, 30_000]) # 5_000, 10_000, 15_000, 20_000, 30_000, 40_000, 80_000
+        },
+        gpu_device="cuda:2",
+    ),
     # -------------------------------------------------------------------------------- #
     #                                2X: Drift triggers                                #
     # -------------------------------------------------------------------------------- #
-    # TODO: rerun huffpost with different eval set
     21: Experiment(
         name="hp-datadrift-dynamic",
         eval_handlers=(
             construct_periodic_eval_handlers(intervals=PERIODIC_EVAL_INTERVAL, execution_time="manual")
-            + construct_between_trigger_eval_handler("manual")
+            # + construct_between_trigger_eval_handler("manual")  # not executed to speed things up
         ),
         drift_detection_triggers={
             f"{criterion_name}_int{detection_interval}_win{window_size}": DataDriftTriggerConfig(
@@ -185,28 +184,26 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
             # multiprocessing across gpus
             for detection_interval in [1500]
             for window_size in ["1y"]  # dataset specific
-            for decision_window_size in [15, 30]  # TODO: check
+            for decision_window_size in [20]  # more values
             for criterion_name, criterion in (
                 {
                     f"mmd-quant-{quantile}-{decision_window_size}": DynamicQuantileThresholdCriterion(
                         window_size=decision_window_size, quantile=quantile
                     )
-                    for quantile in [0.02, 0.05, 0.10, 0.15]  # TODO: 0.3
+                    for quantile in [0.05, 0.10, 0.15]  # TODO: 0.3
+                    # cuda3
                 }
-                # |
-                # {
-                #     f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
-                #         window_size=decision_window_size, deviation=deviation, absolute=False
-                #     )
-                #     for deviation in [0.5, 1.0, 2.0, 5.0]  # TODO: 0.05, 0.2,
-                #     # 0:
-                #     # 1:
-                #     # 2: 0.5
-                #     # 3: 1.0, 2.0
-                # }
+                |
+                {
+                    f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
+                        window_size=decision_window_size, deviation=deviation, absolute=False
+                    )
+                    for deviation in reversed([0.5, 1.0, 2.0, 5.0])  # TODO: 0.05, 0.2,
+                    # cuda3
+                }
             ).items()
         },
-        gpu_device="cuda:0",
+        gpu_device="cuda:3",
     ),
     # -------------------------------------------------------------------------------- #
     #                             3X:  Performance triggers                            #
@@ -277,9 +274,15 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                         allow_reduction=allow_reduction,
                         avoidable_misclassification_threshold=num_misclassifications,
                     )
-                    for num_misclassifications in reversed([10000])  # 1000, 2000, 5000, 7500, 10000
-                    for expected_accuracy in [0.5, 0.55, 0.6]
-                    for allow_reduction in [False]  # TODO: test with [False]
+                    # for num_misclassifications in reversed([250, 500, 1000, 4000, 8000])  # 250, 500, 1000, 4000
+                    # for expected_accuracy in [0.5, 0.6]
+                    # for allow_reduction in [False]
+                    for num_misclassifications, expected_accuracy, allow_reduction in [
+                        (500, 0.5, False),  # TODO:
+                        (500, 0.6, False),
+                        (250, 0.5, False),
+                        (250, 0.6, False),
+                    ]
                 }
             ).items()
         },
