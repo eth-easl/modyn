@@ -45,7 +45,7 @@ class SelectorGRPCServicer(SelectorServicer):
         self.selector_manager = selector_manager
         self._sample_batch_size = sample_batch_size
 
-    def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument
+    def get_sample_keys_and_weights(  # pylint: disable-next=unused-argument, too-many-locals
         self, request: GetSamplesRequest, context: grpc.ServicerContext
     ) -> Iterable[SamplesResponse]:
         pipeline_id, trigger_id, worker_id, partition_id = (
