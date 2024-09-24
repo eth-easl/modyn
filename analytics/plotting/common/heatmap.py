@@ -49,7 +49,7 @@ def build_heatmap(
                 DOUBLE_FIG_WIDTH * width_factor,
                 2 * DOUBLE_FIG_HEIGHT * height_factor,
             ),
-            dpi=300,
+            dpi=600,
         )
 
     ax = sns.heatmap(

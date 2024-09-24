@@ -39,7 +39,7 @@ def build_countplot(
             DOUBLE_FIG_WIDTH * width_factor,
             2 * DOUBLE_FIG_HEIGHT * height_factor,
         ),
-        dpi=300,
+        dpi=600,
     )
     ax = fig.add_subplot(111)
 
@@ -246,7 +246,7 @@ def build_histogram_multicategory_barnorm(
             DOUBLE_FIG_WIDTH * width_factor,
             2 * DOUBLE_FIG_HEIGHT * height_factor,
         ),
-        dpi=300,
+        dpi=600,
     )
     ax = fig.add_subplot(111)
 
@@ -344,7 +344,7 @@ def build_cum_barplot(
             DOUBLE_FIG_WIDTH * width_factor,
             2 * DOUBLE_FIG_HEIGHT * height_factor,
         ),
-        dpi=300,
+        dpi=600,
     )
     ax = fig.add_subplot(111)
 
@@ -416,7 +416,7 @@ def build_pieplot(
             DOUBLE_FIG_WIDTH * width_factor,
             2 * DOUBLE_FIG_HEIGHT * height_factor,
         ),
-        dpi=300,
+        dpi=600,
     )
 
     def func(pct, allvals):
