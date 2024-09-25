@@ -158,6 +158,8 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
     # -------------------------------------------------------------------------------- #
     #                                2X: Drift triggers                                #
     # -------------------------------------------------------------------------------- #
+    # 20: static tresholds are very hard to find, especially with such long timeline durations
+    # We, therefore, focus on dynamic thresholds.
     21: Experiment(
         name="hp-datadrift-dynamic",
         eval_handlers=(
