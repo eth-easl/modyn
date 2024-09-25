@@ -48,8 +48,24 @@ def main_colors(light: bool = False) -> list[tuple[float, float, float]]:
     colorblind_palette = sns.color_palette("colorblind", 10)
 
     if light:
-        return [rdbu_palette[-2], rdbu_palette[2], colorblind_palette[-2]]
-    return [rdbu_palette[-1], rdbu_palette[1], colorblind_palette[-2]]
+        return [
+            rdbu_palette[-2],
+            rdbu_palette[2],
+            colorblind_palette[-2],
+            colorblind_palette[1],
+            colorblind_palette[2],
+            colorblind_palette[3],
+            colorblind_palette[4],
+        ]
+    return [
+        rdbu_palette[-1],
+        rdbu_palette[1],
+        colorblind_palette[-2],
+        colorblind_palette[1],
+        colorblind_palette[2],
+        colorblind_palette[3],
+        colorblind_palette[4],
+    ]
 
 
 def main_color(i: int, light: bool = False) -> tuple[float, float, float]:

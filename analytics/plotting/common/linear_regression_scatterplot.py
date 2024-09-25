@@ -28,6 +28,7 @@ def scatter_linear_regression(
     title_label: str = "",
     target_ax: Axes | None = None,
     palette: Any = None,
+    small_legend_fonts: bool = False,
 ) -> Figure | tuple[Axes, Axes]:
     sns.set_style("whitegrid")
 
@@ -66,7 +67,13 @@ def scatter_linear_regression(
         marker="X",
     )
 
-    ax2.legend(title=legend_label, ncol=2, handletextpad=0, columnspacing=0.5, fontsize="x-small")
+    ax2.legend(
+        title=legend_label,
+        ncol=2,
+        handletextpad=0,
+        columnspacing=0.5,
+        **({"fontsize": "x-small"} if small_legend_fonts else {}),
+    )
     # ax2.legend().set_title(legend_label)
 
     # Adjust x-axis tick labels
