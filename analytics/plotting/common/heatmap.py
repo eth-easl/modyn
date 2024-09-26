@@ -37,6 +37,9 @@ def build_heatmap(
     cmap: Any | None = None,
     linewidth: int = 2,
     grid_alpha: float = 0.0,
+    disable_horizontal_grid: bool = False,
+    df_logs_models: pd.DataFrame | None = None,
+    triggers: dict[int, list[pd.Timestamp]] = {},
 ) -> Figure | Axes:
     init_plot()
     setup_font(small_label=True, small_title=True)
@@ -112,7 +115,12 @@ def build_heatmap(
             )
     ax.invert_yaxis()
 
-    ax.grid(axis="y", linestyle="--", alpha=grid_alpha, color="white")
+    ax.grid(
+        axis="y",
+        linestyle="--",
+        alpha=0 if disable_horizontal_grid else grid_alpha,
+        color="white",
+    )
     ax.grid(axis="x", linestyle="--", alpha=grid_alpha, color="white")
 
     if y_ticks is not None:
@@ -138,6 +146,7 @@ def build_heatmap(
     if title_label:
         ax.set_title(title_label)
 
+    # mainly for offline expore
     previous_y = 0
     for x_start, x_end, y in policy:
         # main box
@@ -170,6 +179,49 @@ def build_heatmap(
         )
         ax.add_patch(connector)
         previous_y = y
+
+    # for post factum evaluation
+    if df_logs_models is not None:
+        for type_, dashed in [("train", False), ("usage", False), ("train", True)]:
+            for active_ in df_logs_models.iterrows():
+                x_start = active_[1][f"{type_}_start"].year - 1930
+                x_end = active_[1][f"{type_}_end"].year - 1930
+                y = active_[1]["model_idx"]
+                rect = plt.Rectangle(
+                    (x_start, y - 1),  # y: 0 based index, model_idx: 1 based index
+                    x_end - x_start,
+                    1,
+                    edgecolor="White" if type_ == "train" else "Black",
+                    facecolor="none",
+                    linewidth=1.5,
+                    linestyle="dotted" if dashed else "solid",
+                    hatch="/",
+                    joinstyle="bevel",
+                    # capstyle="round",
+                )
+                ax.add_patch(rect)
+
+    if triggers:
+        for y, triggers_df in triggers.items():
+            for row in triggers_df.iterrows():
+                type_ = "usage"
+                # for y, x_list in triggers.items():
+                x_start = row[1][f"{type_}_start"].year - 1930
+                x_end = row[1][f"{type_}_end"].year - 1930
+                # for x in x_list:
+                rect = plt.Rectangle(
+                    (x_start, y),  # y: 0 based index, model_idx: 1 based index
+                    x_end - x_start,
+                    1,
+                    edgecolor="black",
+                    facecolor="none",
+                    linewidth=1,
+                    # linestyle="dotted",
+                    # hatch="/",
+                    # joinstyle="bevel",
+                    # capstyle="round",
+                )
+                ax.add_patch(rect)
 
     # Display the plot
     plt.tight_layout()

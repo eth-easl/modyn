@@ -77,7 +77,14 @@ def plot_cost_matrix(
     hue_col = "id"
 
     palette = sns.color_palette("RdBu", 10)
-    new_palette = [palette[0], palette[1], palette[2], palette[-3], palette[-1]]
+    new_palette = {
+        "train": palette[0],
+        "inform remaining data": palette[-2],
+        "evaluate trigger policy": palette[2],
+        "inform trigger": palette[-1],
+        "store trained model": palette[1],
+    }
+    # [palette[0], palette[-2], palette[1], palette[-1], palette[2]]
 
     # use sum of all pipelines to determine the order of the bars that is consistent across subplots
     df_agg = df_costs.groupby([hue_col]).agg({y_col: "sum"}).reset_index()
@@ -97,7 +104,7 @@ def plot_cost_matrix(
             elif not cumulative and y_minutes:
                 df_final[y_col] = df_final[y_col] / 60
 
-            ax = axs[row, int(cumulative)]
+            ax = axs[row, int(cumulative)] if len(pipeline_ids) > 1 else axs[int(cumulative)]
             h = sns.histplot(
                 df_final,
                 x=x_col,
