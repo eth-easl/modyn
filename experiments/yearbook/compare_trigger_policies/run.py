@@ -386,7 +386,7 @@ _EXPERIMENT_REFS = {
         name="yb-costtrigger-dataincorporation",
         eval_handlers=(
             construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
-            + construct_between_trigger_eval_handler("manual")
+            # + construct_between_trigger_eval_handler("manual")  # TODO not executed to save evaluation time
         ),
         cost_triggers={
             f"int{interval}_exch{exchange_rate}": DataIncorporationLatencyCostTriggerConfig(
@@ -394,8 +394,18 @@ _EXPERIMENT_REFS = {
                 cost_tracking_window_size=20,
                 incorporation_delay_per_training_second=exchange_rate,
             )
-            for interval in reversed([100, 250, 500, 1_000])
-            for exchange_rate in [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0]
+            for interval in reversed([250])
+            # for interval in reversed([100, 250, 500])  # TODO
+            # one sample staying unadressed for 1 days (= 1 year in dataset) causes SECONDS_PER_UNIT["d"] regret
+            # back of the envelope calculation:
+            # - we want to trigger roughly every 2000 samples
+            # - it takes 5-10 years for these samples to be collected
+            # - in that time regret stacks up, therefore we need to require more regret than 2000 for a training
+            for exchange_rate in (
+                x * SECONDS_PER_UNIT["d"]
+                # numer of training samples that are equivalent to a training second
+                for x in reversed([2_000, 10_000, 50_000, 100_000, 500_000])  # 10_000 produces many triggers
+            )
         },
         gpu_device="cuda:0",
     ),
@@ -434,7 +444,7 @@ _EXPERIMENT_REFS = {
                 forecasting_method="ridge_regression",
             )
             # for detection_interval in [100, 250, 500]
-            for detection_interval in [500]
+            for detection_interval in [250]
             # cuda:1 - 100
             # cuda:2 - 250
             # cuda:3 - 500
