@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 import matplotlib.patches as patches
 import pandas as pd
@@ -12,6 +12,31 @@ from matplotlib.ticker import MaxNLocator
 from analytics.plotting.common.common import init_plot
 from analytics.plotting.common.const import DOUBLE_FIG_HEIGHT, DOUBLE_FIG_WIDTH
 from analytics.plotting.common.font import setup_font
+
+
+def get_fractional_index(dates: pd.Series, query_date: pd.Timestamp, fractional: bool = True) -> float:
+    """Given a list of Period objects (dates) and a query_date as a Period,
+    return the interpolated fractional index between two period indices if the
+    query_date lies between them."""
+    # Ensure query_date is within the bounds of the period range
+    if query_date < dates[0].start_time:
+        return -1  # -1 before first index
+
+    if query_date > dates[-1].start_time:
+        return len(dates)  # +1 after last index
+
+    # Find the two periods where the query_date falls in between
+    for i in range(len(dates) - 1):
+        if dates[i].start_time <= query_date <= dates[i + 1].start_time:
+            # Perform linear interpolation, assuming equal length periods
+            return i + (
+                ((query_date - dates[i].start_time) / (dates[i + 1].start_time - dates[i].start_time))
+                if fractional
+                else 0
+            )
+
+    # If query_date is exactly one of the dates
+    return dates.get_loc(query_date)
 
 
 def build_heatmap(
@@ -39,7 +64,8 @@ def build_heatmap(
     grid_alpha: float = 0.0,
     disable_horizontal_grid: bool = False,
     df_logs_models: pd.DataFrame | None = None,
-    triggers: dict[int, list[pd.Timestamp]] = {},
+    triggers: dict[int, pd.DataFrame] = {},
+    x_axis: Literal["int", "period"] = "year",
 ) -> Figure | Axes:
     init_plot()
     setup_font(small_label=True, small_title=True)
@@ -92,7 +118,7 @@ def build_heatmap(
     ax.set_xlabel(x_label)
     if not x_ticks and not x_custom_ticks:
         ax.set_xticks(
-            ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],
+            ticks=[x + 0.5 for x in range(0, 2010 - 1930 + 1, 20)],  # TODO: check 0.5
             labels=[x for x in range(1930, 2010 + 1, 20)],
             rotation=0,
             # ha='right'
@@ -184,11 +210,31 @@ def build_heatmap(
     if df_logs_models is not None:
         for type_, dashed in [("train", False), ("usage", False), ("train", True)]:
             for active_ in df_logs_models.iterrows():
-                x_start = active_[1][f"{type_}_start"].year - 1930
-                x_end = active_[1][f"{type_}_end"].year - 1930
+                if x_axis == "year":
+                    x_start = active_[1][f"{type_}_start"].year - 1930
+                    x_end = active_[1][f"{type_}_end"].year - 1930
+                else:
+                    # start_idx = get_fractional_index(heatmap_data.columns, start_date)
+                    # end_idx = get_fractional_index(heatmap_data.columns, end_date)
+                    # x_start = heatmap_data.columns.get_loc(active_[1][f"{type_}_start"])
+                    # x_end = heatmap_data.columns.get_loc(active_[1][f"{type_}_end"])
+                    x_start = get_fractional_index(
+                        heatmap_data.columns,
+                        active_[1][f"{type_}_start"],
+                        fractional=False,
+                    )
+                    x_end = get_fractional_index(
+                        heatmap_data.columns,
+                        active_[1][f"{type_}_end"],
+                        fractional=False,
+                    )
+
                 y = active_[1]["model_idx"]
                 rect = plt.Rectangle(
-                    (x_start, y - 1),  # y: 0 based index, model_idx: 1 based index
+                    (
+                        x_start,
+                        y - 1,
+                    ),  # y: 0 based index, model_idx: 1 based index
                     x_end - x_start,
                     1,
                     edgecolor="White" if type_ == "train" else "Black",
