@@ -32,24 +32,13 @@ from modyn.supervisor.internal.triggers.drift.classifier_models import (
 )
 from modyn.supervisor.internal.triggers.drift.detector.drift import DriftDetector
 
-_AlibiMetrics = (
-    MMDDrift
-    | ClassifierDrift
-    | ChiSquareDrift
-    | CVMDrift
-    | FETDrift
-    | KSDrift
-    | LSDDDrift
-    | MMDDrift
-)
+_AlibiMetrics = MMDDrift | ClassifierDrift | ChiSquareDrift | CVMDrift | FETDrift | KSDrift | LSDDDrift | MMDDrift
 
 
 class AlibiDriftDetector(DriftDetector):
     def __init__(self, metrics_config: dict[str, AlibiDetectDriftMetric]):
         alibi_metrics_config = {
-            metric_ref: config
-            for metric_ref, config in metrics_config.items()
-            if config.id.startswith("AlibiDetect")
+            metric_ref: config for metric_ref, config in metrics_config.items() if config.id.startswith("AlibiDetect")
         }
         super().__init__(alibi_metrics_config)
 
@@ -123,9 +112,7 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
 
     kwargs = {}
     if config.preprocessor:
-        kwargs.update(
-            {"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)}
-        )
+        kwargs.update({"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)})
 
     if isinstance(config, AlibiDetectMmdDriftMetric):
         assert kernel is not None
@@ -202,6 +189,4 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
             **kwargs,
         )
 
-    raise NotImplementedError(
-        f"Metric {config.id} is not supported in AlibiDetectDriftMetric."
-    )
+    raise NotImplementedError(f"Metric {config.id} is not supported in AlibiDetectDriftMetric.")

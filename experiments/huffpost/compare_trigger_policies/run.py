@@ -197,8 +197,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     )
                     for quantile in [0.05, 0.10, 0.15]
                 }
-                |
-                {
+                | {
                     f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
                         window_size=decision_window_size, deviation=deviation, absolute=False
                     )
@@ -249,8 +248,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     )
                     for perf_threshold in [0.45, 0.5, 0.55, 0.6]
                 }
-                |
-                {
+                | {
                     f"dynamic-quant-{quantile}-{decision_window_size}": DynamicQuantilePerformanceThresholdCriterion(
                         metric="Accuracy",
                         quantile=quantile,
@@ -259,8 +257,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     for quantile in [0.05, 0.15, 0.3]
                     for decision_window_size in [15, 30]
                 }
-                |
-                {
+                | {
                     f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
                         metric="Accuracy",
                         deviation=deviation,
@@ -270,8 +267,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     for deviation in reversed([0.1, 0.2, 0.3])
                     for decision_window_size in [15, 30]
                 }
-                |
-                {
+                | {
                     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
                         expected_accuracy=expected_accuracy,
                         allow_reduction=allow_reduction,

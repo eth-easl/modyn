@@ -179,7 +179,7 @@ class EvaluationExecutor:
     def run_post_pipeline_evaluations(self, manual_run: bool = False, num_workers: int | None = None) -> SupervisorLogs:
         """Evaluate the trained models after the core pipeline and store the
         results.
-        
+
         Args:
             manual_run: If True, only the evaluations that are marked as manual will be executed.
             num_workers: The number of workers to use for the evaluations. If None, the number of workers will be
@@ -230,9 +230,7 @@ class EvaluationExecutor:
                 sample_time=-1,
                 trigger_idx=-1,
             ),
-            num_workers=(
-                num_workers if num_workers else self.pipeline.evaluation.after_pipeline_evaluation_workers    
-            )
+            num_workers=(num_workers if num_workers else self.pipeline.evaluation.after_pipeline_evaluation_workers),
         )
         return logs
 
@@ -481,9 +479,9 @@ if __name__ == "__main__":
         print("Path not found")
         sys.exit(1)
 
-    num_workers = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
+    num_workers: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
     if num_workers <= 0:
-        num_workers = None
+        num_workers = 1
 
     if single_pipeline_mode.lower() == "y":
         p_id = int(input("Enter pipeline id: "))

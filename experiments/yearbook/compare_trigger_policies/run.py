@@ -145,16 +145,17 @@ _EXPERIMENT_REFS = {
     0: Experiment(
         name="yb-dev",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=[
-                ("current", "20h"),  # total: 1 year
-                ("delta+-1y", f"{1*24+3}h"),  # total: 3 years
-            ], execution_time="after_pipeline")
+            construct_periodic_eval_handlers(
+                intervals=[
+                    ("current", "20h"),  # total: 1 year
+                    ("delta+-1y", f"{1*24+3}h"),  # total: 3 years
+                ],
+                execution_time="after_pipeline",
+            )
             # construct_slicing_eval_handler("after_pipeline") +
             # construct_between_trigger_eval_handler("after_pipeline")
         ),
-        time_triggers={
-            "20y": TimeTriggerConfig(every="20d", start_timestamp=_FIRST_TIMESTAMP)
-        },
+        time_triggers={"20y": TimeTriggerConfig(every="20d", start_timestamp=_FIRST_TIMESTAMP)},
         gpu_device="cuda:0",
     ),
     # -------------------------------------------------------------------------------- #
@@ -164,8 +165,8 @@ _EXPERIMENT_REFS = {
     1: Experiment(
         name="yb-baseline-time",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=_ALL_PERIODIC_EVAL_INTERVALS, execution_time="after_pipeline") +
-            construct_between_trigger_eval_handler("after_pipeline")
+            construct_periodic_eval_handlers(intervals=_ALL_PERIODIC_EVAL_INTERVALS, execution_time="after_pipeline")
+            + construct_between_trigger_eval_handler("after_pipeline")
         ),
         time_triggers={
             f"{schedule}y": TimeTriggerConfig(every=f"{schedule}d", start_timestamp=_FIRST_TIMESTAMP)
@@ -177,8 +178,8 @@ _EXPERIMENT_REFS = {
     2: Experiment(
         name="yb-baseline-dataamount",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=_ALL_PERIODIC_EVAL_INTERVALS, execution_time="after_pipeline") +
-            construct_between_trigger_eval_handler("after_pipeline")
+            construct_periodic_eval_handlers(intervals=_ALL_PERIODIC_EVAL_INTERVALS, execution_time="after_pipeline")
+            + construct_between_trigger_eval_handler("after_pipeline")
         ),
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
@@ -194,8 +195,8 @@ _EXPERIMENT_REFS = {
     10: Experiment(
         name="yb-baseline-time",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         time_triggers={
             f"{schedule}y": TimeTriggerConfig(every=f"{schedule}d", start_timestamp=_FIRST_TIMESTAMP)
@@ -207,8 +208,8 @@ _EXPERIMENT_REFS = {
     11: Experiment(
         name="yb-baseline-dataamount",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         data_amount_triggers={
             f"{num_samples}": DataAmountTriggerConfig(num_samples=num_samples)
@@ -223,15 +224,17 @@ _EXPERIMENT_REFS = {
     20: Experiment(
         name="yb-datadrift-static",
         eval_handlers=(
-            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual") +
-            construct_between_trigger_eval_handler("manual")
+            construct_periodic_eval_handlers(intervals=BEST_PERIODIC_EVAL_INTERVAL, execution_time="manual")
+            + construct_between_trigger_eval_handler("manual")
         ),
         drift_detection_triggers={
             f"{criterion_name}_int{detection_interval}_win{window_size}": DataDriftTriggerConfig(
                 evaluation_interval_data_points=detection_interval,
                 windowing_strategy=TimeWindowingStrategy(
                     # overlap has no affect acc. to offline exploration
-                    limit_ref=window_size, limit_cur=window_size, allow_overlap=False
+                    limit_ref=window_size,
+                    limit_cur=window_size,
+                    allow_overlap=False,
                 ),
                 # with 30k samples and 84 years, 10y are roughly 30000/84*10=3500 samples
                 # hence, if we want ~10 years of warmup, to 3500/detection_interval warmup intervals
@@ -240,11 +243,7 @@ _EXPERIMENT_REFS = {
                 warmup_policy=TimeTriggerConfig(every="3d", start_timestamp=_FIRST_TIMESTAMP),
                 # 5k samples are enough for drift detection, in yearbook we won't accumulate that many anyway
                 sample_size=5_000,
-                metrics={
-                    "mmd": AlibiDetectMmdDriftMetric(
-                        decision_criterion=criterion, device="gpu"
-                    )
-                },
+                metrics={"mmd": AlibiDetectMmdDriftMetric(decision_criterion=criterion, device="gpu")},
             )
             for detection_interval in [100, 250, 500, 1_000]
             for window_size in ["1d", "4d", "10d"]
@@ -302,8 +301,7 @@ _EXPERIMENT_REFS = {
                     )
                     for quantile in [0.05, 0.1, 0.15, 0.3]
                 }
-                |
-                {
+                | {
                     f"mmd-rollavg-{deviation}-{decision_window_size}": DynamicRollingAverageThresholdCriterion(
                         window_size=decision_window_size, deviation=deviation, absolute=False
                     )
@@ -363,8 +361,7 @@ _EXPERIMENT_REFS = {
                     for quantile in [0.05, 0.15, 0.3]
                     for decision_window_size in [10, 20, 30]
                 }
-                |
-                {   # only executed for 250 and 500 detection intervals
+                | {  # only executed for 250 and 500 detection intervals
                     f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
                         metric="Accuracy",
                         deviation=deviation,
@@ -374,8 +371,7 @@ _EXPERIMENT_REFS = {
                     for deviation in reversed([0.05, 0.1, 0.2, 0.3])
                     for decision_window_size in [10, 20, 30]
                 }
-                |
-                {
+                | {
                     # only executed for 250 detection interval
                     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
                         expected_accuracy=expected_accuracy,
@@ -418,8 +414,31 @@ _EXPERIMENT_REFS = {
             # - in that time regret stacks up, therefore we need to require more regret than 2000 for a training
             for exchange_rate in (
                 x * SECONDS_PER_UNIT["d"]
-                # numer of training samples that are equivalent to a training second
-                for x in reversed([50, 75, 100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 400, 500, 750, 1000, 1500, 2000, 4000])
+                # number of training samples that are equivalent to a training second
+                for x in reversed(
+                    [
+                        50,
+                        75,
+                        100,
+                        120,
+                        140,
+                        160,
+                        180,
+                        200,
+                        220,
+                        240,
+                        260,
+                        280,
+                        300,
+                        400,
+                        500,
+                        750,
+                        1000,
+                        1500,
+                        2000,
+                        4000,
+                    ]
+                )
             )
         },
         gpu_device="cuda:2",
@@ -462,8 +481,10 @@ _EXPERIMENT_REFS = {
             for allow_reduction in [False]
             for exchange_rate in (
                 x * SECONDS_PER_UNIT["d"]
-                # numer of training samples that are equivalent to a training second
-                for x in reversed([ 0.001, 0.01, 0.1, 0.25, 0.5, 0.75, 10, 100, 1000, 10_000, 15_000, 20_000, 50_000, 100_000])
+                # number of training samples that are equivalent to a training second
+                for x in reversed(
+                    [0.001, 0.01, 0.1, 0.25, 0.5, 0.75, 10, 100, 1000, 10_000, 15_000, 20_000, 50_000, 100_000]
+                )
             )
         },
         gpu_device="cuda:2",

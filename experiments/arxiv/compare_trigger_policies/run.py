@@ -176,7 +176,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     limit_cur=window_size,
                     allow_overlap=False,
                 ),
-                # frist 200k of 2mio samples are warmup
+                # first 200k of 2mio samples are warmup
                 warmup_intervals=200_000 // detection_interval,
                 # triggering every 3 years during the warmup phase seems reasonable.
                 warmup_policy=TimeTriggerConfig(every="2y", start_timestamp=_FIRST_TIMESTAMP),
@@ -248,8 +248,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     )
                     for perf_threshold in [0.45, 0.5, 0.55]  # 0.6 --> too many triggers
                 }
-                |
-                {
+                | {
                     f"dynamic-quant-{quantile}-{decision_window_size}": DynamicQuantilePerformanceThresholdCriterion(
                         metric="Accuracy",
                         quantile=quantile,
@@ -258,8 +257,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     for quantile in [0.05, 0.15]
                     for decision_window_size in [20]
                 }
-                |
-                {
+                | {
                     f"dynamic-rollavg-{deviation}-{decision_window_size}": DynamicRollingAveragePerformanceThresholdCriterion(
                         metric="Accuracy",
                         deviation=deviation,
@@ -269,8 +267,7 @@ _EXPERIMENT_REFS: dict[int, Experiment] = {
                     for deviation in reversed([0.1, 0.2, 0.3])
                     for decision_window_size in [20]
                 }
-                |
-                {
+                | {
                     f"num_misclass-{num_misclassifications}-exp-{expected_accuracy}-red-{allow_reduction}-": StaticNumberAvoidableMisclassificationCriterion(
                         expected_accuracy=expected_accuracy,
                         allow_reduction=allow_reduction,

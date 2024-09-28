@@ -42,11 +42,6 @@ class IncorporationLatencyTracker:
 
         return self._cumulative_latency_regret
 
-    def inform_trigger(self) -> None:
-        """Informs the tracker about a trigger which will reset the counter."""
-        self._current_regret = 0
-        self._cumulative_latency_regret = 0
-
     def add_latencies(
         self,
         regrets: list[tuple[int, float]],

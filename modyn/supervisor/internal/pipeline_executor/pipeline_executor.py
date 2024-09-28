@@ -644,8 +644,10 @@ class PipelineExecutor:
 
             # fetch latest training time from tracker data
             tracking_df_train = s.tracking[PipelineStage.TRAIN.name]
-            max_trigger_idx = tracking_df_train['trigger_idx'].max()
-            time_at_trainer = float(tracking_df_train[tracking_df_train["trigger_idx"] == max_trigger_idx]["train_time_at_trainer"][0])
+            max_trigger_idx = tracking_df_train["trigger_idx"].max()
+            time_at_trainer = float(
+                tracking_df_train[tracking_df_train["trigger_idx"] == max_trigger_idx]["train_time_at_trainer"][0]
+            )
             last_training_seconds = time_at_trainer / 1_000  # ms to s
             self.trigger.inform_new_model(model_id, num_samples_in_trigger, last_training_seconds)
 

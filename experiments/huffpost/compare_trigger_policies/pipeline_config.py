@@ -58,9 +58,7 @@ def gen_pipeline_config(
                     name="default",
                     algorithm="AdamW",
                     source="PyTorch",
-                    param_groups=[
-                        OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})
-                    ],
+                    param_groups=[OptimizerParamGroup(module="model", config={"lr": 0.00002, "weight_decay": 0.01})],
                 )
             ],
             optimization_criterion=OptimizationCriterion(name="CrossEntropyLoss"),
@@ -81,7 +79,7 @@ def gen_pipeline_config(
         evaluation=EvaluationConfig(
             handlers=eval_handlers,
             device=gpu_device,
-            after_training_evaluation_workers=2, # one worker needs 8-9 GB of memory
+            after_training_evaluation_workers=2,  # one worker needs 8-9 GB of memory
             after_pipeline_evaluation_workers=2,
             datasets=[
                 EvalDataConfig(

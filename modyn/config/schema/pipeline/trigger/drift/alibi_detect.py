@@ -14,13 +14,9 @@ from modyn.config.schema.pipeline.trigger.drift.preprocess.alibi_detect import (
 
 
 class _AlibiDetectBaseDriftMetric(BaseMetric):
-    p_val: float = Field(
-        0.05, description="The p-value threshold for the drift detection."
-    )
+    p_val: float = Field(0.05, description="The p-value threshold for the drift detection.")
     x_ref_preprocessed: bool = Field(False)
-    preprocessor: AlibiDetectNLPreprocessor | None = Field(
-        None, description="Preprocessor function."
-    )
+    preprocessor: AlibiDetectNLPreprocessor | None = Field(None, description="Preprocessor function.")
 
 
 class AlibiDetectDeviceMixin(ModynBaseModel):
@@ -73,12 +69,8 @@ class AlibiDetectMmdDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMi
         return self
 
 
-class AlibiDetectClassifierDriftMetric(
-    _AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin
-):
-    id: Literal["AlibiDetectClassifierDriftMetric"] = Field(
-        "AlibiDetectClassifierDriftMetric"
-    )
+class AlibiDetectClassifierDriftMetric(_AlibiDetectBaseDriftMetric, AlibiDetectDeviceMixin):
+    id: Literal["AlibiDetectClassifierDriftMetric"] = Field("AlibiDetectClassifierDriftMetric")
     classifier_id: str = Field(
         description="The model to use for classifications; has to be registered in alibi_detector.py"
     )
@@ -92,15 +84,11 @@ class AlibiDetectKSDriftMetric(
     id: Literal["AlibiDetectKSDriftMetric"] = Field("AlibiDetectKSDriftMetric")
 
 
-class AlibiDetectCVMDriftMetric(
-    _AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin
-):
+class AlibiDetectCVMDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin):
     id: Literal["AlibiDetectCVMDriftMetric"] = Field("AlibiDetectCVMDriftMetric")
 
 
-class AlibiDetectLSDDDriftMetric(
-    _AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin, AlibiDetectDeviceMixin
-):
+class AlibiDetectLSDDDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin, AlibiDetectDeviceMixin):
     id: Literal["AlibiDetectLSDDDriftMetric"] = Field("AlibiDetectLSDDDriftMetric")
 
 
@@ -113,12 +101,8 @@ class AlibiDetectFETDriftMetric(
     n_features: int | None = Field(None)
 
 
-class AlibiDetectChiSquareDriftMetric(
-    _AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin
-):
-    id: Literal["AlibiDetectChiSquareDriftMetric"] = Field(
-        "AlibiDetectChiSquareDriftMetric"
-    )
+class AlibiDetectChiSquareDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin):
+    id: Literal["AlibiDetectChiSquareDriftMetric"] = Field("AlibiDetectChiSquareDriftMetric")
     n_features: int | None = Field(None)
 
 
