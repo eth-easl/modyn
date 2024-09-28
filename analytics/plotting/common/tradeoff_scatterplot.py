@@ -20,6 +20,8 @@ def plot_tradeoff_scatter(
     height_factor: float = 1.0,
     width_factor: float = 1.0,
     target_ax: Axes | None = None,
+    manual_legend_title: bool = True,
+    legend_ncol: int = 1,
 ) -> Figure:
     sns.set_theme(style="whitegrid")
     init_plot()
@@ -46,7 +48,13 @@ def plot_tradeoff_scatter(
         hue=hue,
         style=style,
         # style="pipeline_ref",
-        palette=[main_color(0), main_color(1), main_color(3)],
+        palette=[
+            main_color(0),
+            main_color(1),
+            main_color(3),
+            main_color(4),
+            main_color(5),
+        ],
         # palette={"drift": main_color(3), "yearly": main_color(0), "amount": main_color(1)},
         s=300,
         # legend=False,
@@ -56,10 +64,18 @@ def plot_tradeoff_scatter(
     # ax.set(xlim=(-4, 85))
 
     ax.legend(
-        title=hue,
         fontsize="small",
         title_fontsize="medium",
         # title="Pipeline",
+        **(
+            {
+                "title": hue,
+            }
+            if manual_legend_title
+            else {}
+        ),
+        # 2 columns
+        ncol=legend_ncol,
     )
 
     # Adjust x-axis tick labels

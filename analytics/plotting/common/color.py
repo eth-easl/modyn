@@ -63,8 +63,8 @@ def main_colors(light: bool = False) -> list[tuple[float, float, float]]:
         colorblind_palette[-2],
         colorblind_palette[1],
         colorblind_palette[2],
-        colorblind_palette[3],
         colorblind_palette[4],
+        colorblind_palette[5],
     ]
 
 
