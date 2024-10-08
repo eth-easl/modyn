@@ -485,15 +485,7 @@ def test__run_evaluation_retain_metrics_before_real_exception(test_connect_to_st
 
     get_result_req = EvaluationResultRequest(evaluation_id=evaluation_id)
     get_result_resp = evaluator.get_evaluation_result(get_result_req, None)
-    assert get_result_resp.valid
-    # evaluation on the last interval was not finished
-    assert len(get_result_resp.evaluation_results) == len(intervals) - 1
-    assert get_result_resp.evaluation_results[0].interval_index == 0
-    assert len(get_result_resp.evaluation_results[0].evaluation_data) == 2
-    assert get_result_resp.evaluation_results[0].evaluation_data[0].metric == "Accuracy"
-    assert get_result_resp.evaluation_results[0].evaluation_data[0].result == pytest.approx(0.5)
-    assert get_result_resp.evaluation_results[0].evaluation_data[1].metric == "F1Score"
-    assert get_result_resp.evaluation_results[0].evaluation_data[1].result == pytest.approx(0.6)
+    assert not get_result_resp.valid
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())
@@ -535,12 +527,7 @@ def test_get_evaluation_result_incomplete_metric(test_is_alive, test_connect_to_
         metric_result_queue = evaluation_process_info.metric_result_queue
         metric_result_queue.put((1, [("Accuracy", 0.5)]))
         response = evaluator.get_evaluation_result(EvaluationResultRequest(evaluation_id=3), None)
-        assert response.valid
-        assert len(response.evaluation_results) == 1
-        assert response.evaluation_results[0].interval_index == 1
-        assert len(response.evaluation_results[0].evaluation_data) == 1
-        assert response.evaluation_results[0].evaluation_data[0].result == pytest.approx(0.5)
-        assert response.evaluation_results[0].evaluation_data[0].metric == "Accuracy"
+        assert not response.valid
 
 
 @patch.object(EvaluatorGRPCServicer, "connect_to_storage", return_value=DummyStorageStub())

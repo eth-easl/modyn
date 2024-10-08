@@ -299,16 +299,16 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
         logger.info(f"Received get evaluation result request for evaluation {evaluation_id}.")
 
         if evaluation_id not in self._evaluation_dict:
-            logger.error(f"Evaluation with id {evaluation_id} has not been registered.")
+            logger.error(f"Evaluation {evaluation_id} has not been registered.")
             return EvaluationResultResponse(valid=False)
 
         self._drain_result_queue(evaluation_id)  # Should already be drained, but just make sure
 
         if self._evaluation_process_dict[evaluation_id].process_handler.is_alive():
-            logger.error(f"Evaluation with id {evaluation_id} is still running.")
+            logger.error(f"Evaluation {evaluation_id} is still running.")
             return EvaluationResultResponse(valid=False)
 
-        logger.info("Returning results of all metrics.")
+        logger.info(f"[Evaluation {evaluation_id}] Returning results of all metrics.")
         self._drain_result_queue(evaluation_id)  # Should not do anything, but let's make sure
 
         evaluation_data: list[EvaluationIntervalData] = []
@@ -317,12 +317,15 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             single_eval_data = EvaluationIntervalData(interval_index=interval_idx, evaluation_data=metric_result)
             evaluation_data.append(single_eval_data)
 
-        if len(evaluation_data) < len(self._evaluation_dict[evaluation_id].not_failed_interval_ids):
+        expected_results = len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)
+        if len(evaluation_data) < expected_results:
             logger.error(
                 f"Could not retrieve results for all intervals of evaluation {evaluation_id}. "
-                f"Expected {len(self._evaluation_dict[evaluation_id].not_failed_interval_ids)}, "
-                f"but got {len(evaluation_data)}. Maybe an exception happened during evaluation."
+                f"Expected {expected_results} results, "
+                f"but got {len(evaluation_data)} results. Most likely, an exception happened during evaluation."
             )
+            return EvaluationResultResponse(valid=False)
+
         return EvaluationResultResponse(valid=True, evaluation_results=evaluation_data)
 
     def cleanup_evaluations(
@@ -350,9 +353,12 @@ class EvaluatorGRPCServicer(EvaluatorServicer):
             self._evaluation_process_dict.pop(evaluation_id)
 
         for e_id in evaluation_ids:
-            self._evaluation_dict.pop(e_id)
-            self._evaluation_data_dict.pop(e_id)
-            self._evaluation_data_dict_locks.pop(e_id)
+            if e_id in self._evaluation_dict:
+                self._evaluation_dict.pop(e_id)
+            if e_id in self._evaluation_data_dict:
+                self._evaluation_data_dict.pop(e_id)
+            if e_id in self._evaluation_data_dict_locks:
+                self._evaluation_data_dict_locks.pop(e_id)
 
         gc.collect()
         return EvaluationCleanupResponse(succeeded=list(sorted(already_cleaned + not_yet_cleaned)))

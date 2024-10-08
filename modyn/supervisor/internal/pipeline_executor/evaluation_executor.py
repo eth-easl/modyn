@@ -339,80 +339,126 @@ class EvaluationExecutor:
             self.pipeline.evaluation.device,
             intervals=cast(list[tuple[int | None, int | None]], intervals),
         )
+
+        def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
+            return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
+
+        started_evaluations = []
+
         for attempt in Retrying(
-            stop=stop_after_attempt(5),
-            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            stop=stop_after_attempt(10),
+            wait=wait_random_exponential(multiplier=2, min=2, max=180),
             reraise=True,
         ):
             with attempt:
                 try:
                     response: EvaluateModelResponse = self.grpc.evaluator.evaluate_model(request)
-                except grpc.RpcError as e:  # We catch and reraise to reconnect
+                except grpc.RpcError as e:  # We catch and reraise them to tenacity after reconnecting
                     logger.error(e)
                     logger.error("gRPC connection error, trying to reconnect...")
                     self.grpc.init_evaluator()
                     raise e
 
-        assert len(response.interval_responses) == len(
-            intervals
-        ), f"We expected {len(intervals)} intervals, but got {len(response.interval_responses)}."
+                assert len(response.interval_responses) == len(
+                    intervals
+                ), f"We expected {len(intervals)} intervals, but got {len(response.interval_responses)}."
 
-        def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:
-            return EvaluationAbortedReason.DESCRIPTOR.values_by_number[eval_aborted_reason].name
+                if not response.evaluation_started:
+                    failure_reasons: list[tuple[str | None, dict]] = []
+                    # note: interval indexes correspond to the intervals in the request
+                    for interval_idx, interval_response in enumerate(response.interval_responses):
+                        if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
+                            reason = get_failure_reason(interval_response.eval_aborted_reason)
+                            failure_reasons.append((reason, {}))
+                            logger.error(
+                                f"Evaluation for model {model_id_to_eval} on split {intervals[interval_idx]} "
+                                f"not started with reason: {reason}."
+                            )
+                    # No retrying here, if we were to retry it should be done at the evaluator
+                    # This is likely due to an invalid request in the first place.
+                    return failure_reasons
 
-        if not response.evaluation_started:
-            failure_reasons: list[tuple[str | None, dict]] = []
-            # note: interval indexes correspond to the intervals in the request
-            for interval_idx, interval_response in enumerate(response.interval_responses):
-                if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
-                    reason = get_failure_reason(interval_response.eval_aborted_reason)
-                    failure_reasons.append((reason, {}))
-                    logger.error(
-                        f"Evaluation for model {model_id_to_eval} on split {intervals[interval_idx]} "
-                        f"not started with reason: {reason}."
-                    )
-            return failure_reasons
-
-        logger.info(f"Evaluation started for model {model_id_to_eval} on intervals {intervals}.")
-        self.grpc.wait_for_evaluation_completion(response.evaluation_id)
-        eval_data = self.grpc.get_evaluation_results(response.evaluation_id)
-        self.grpc.cleanup_evaluations([response.evaluation_id])
-
-        eval_results: list[tuple[str | None, dict[str, Any]]] = []
-
-        # ---------------------------------------------- Result Builder ---------------------------------------------- #
-        # The `eval_results` list is a list of tuples. Each tuple contains a failure reason (if any) and a dictionary
-        # with the evaluation results. The order of the tuples corresponds to the order of the intervals.
-        #
-        # response.interval_responses contains the evaluation results for each interval in the same order as the
-        # intervals in the request. Failed evaluations are marked with a failure reason.
-
-        # Metric results come from the `EvaluateModelResponse` and are stored in the `evaluation_data` field. This
-        # only contains the metrics for the intervals that were successfully evaluated.
-        #
-        # Therefore we first build a list of results with the same order as the intervals. The metrics will be filled in
-        # the next loop that unwraps `EvaluationResultResponse`.
-        # ----------------------------------------------------- . ---------------------------------------------------- #
-
-        for interval_response in response.interval_responses:
-            if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
-                reason = get_failure_reason(interval_response.eval_aborted_reason)
-                eval_results.append((reason, {}))
-            else:
-                eval_results.append(
-                    (
-                        None,
-                        {"dataset_size": interval_response.dataset_size, "metrics": []},
-                    )
+                logger.info(
+                    f"Evaluation {response.evaluation_id} started for model {model_id_to_eval} on intervals {intervals}."
                 )
+                started_evaluations.append(response.evaluation_id)
+                if not self.grpc.wait_for_evaluation_completion(response.evaluation_id):
+                    raise RuntimeError("There was an exception during evaluation")  # Trigger retry
 
-        for interval_result in eval_data:
-            interval_idx = interval_result.interval_index
-            assert eval_results[interval_idx][0] is None, "Evaluation failed, no metrics should be present."
-            eval_results[interval_idx][1]["metrics"] = [
-                {"name": metric.metric, "result": metric.result} for metric in interval_result.evaluation_data
-            ]
-        return eval_results
+                eval_data = self.grpc.get_evaluation_results(
+                    response.evaluation_id
+                )  # Will throw in case of invalid result
+
+                self.grpc.cleanup_evaluations(
+                    [response.evaluation_id]
+                )  # Early cleanup if succeeded since we have the data
+
+                eval_results: list[tuple[str | None, dict[str, Any]]] = []
+
+                # ---------------------------------------------- Result Builder ---------------------------------------------- #
+                # The `eval_results` list is a list of tuples. Each tuple contains a failure reason (if any) and a dictionary
+                # with the evaluation results. The order of the tuples corresponds to the order of the intervals.
+                #
+                # response.interval_responses contains the evaluation results for each interval in the same order as the
+                # intervals in the request. Failed evaluations are marked with a failure reason.
+
+                # Metric results come from the `EvaluateModelResponse` and are stored in the `evaluation_data` field. This
+                # only contains the metrics for the intervals that were successfully evaluated.
+                #
+                # Therefore we first build a list of results with the same order as the intervals. The metrics will be filled in
+                # the next loop that unwraps `EvaluationResultResponse`.
+                # ----------------------------------------------------- . ---------------------------------------------------- #
+
+                # Prepare eval_results structure
+                for interval_response in response.interval_responses:
+                    if interval_response.eval_aborted_reason != EvaluationAbortedReason.NOT_ABORTED:
+                        reason = get_failure_reason(interval_response.eval_aborted_reason)
+                        eval_results.append((reason, {}))
+                    else:
+                        eval_results.append(
+                            (
+                                None,
+                                {"dataset_size": interval_response.dataset_size, "metrics": []},
+                            )
+                        )
+
+                # Parse response into eval_results structure
+                for interval_result in eval_data:
+                    interval_idx = interval_result.interval_index
+                    assert (
+                        eval_results[interval_idx][0] is None
+                    ), "Evaluation failed, this interval idx should not be returned by evaluator."
+                    eval_results[interval_idx][1]["metrics"] = [
+                        {"name": metric.metric, "result": metric.result} for metric in interval_result.evaluation_data
+                    ]
+
+                # Assert that all evaluated intervals have all metrics
+                # Will trigger a retry in case this is not successful
+                # Can happen, e.g., if the evaluator is overloaded
+                expected_num_metrics = len(request.metrics)
+                for result_id, (abort_reason, data_dict) in enumerate(eval_results):
+                    if abort_reason is not None:
+                        # If there was any reason to abort, we don't care
+                        continue
+
+                    assert (
+                        data_dict["dataset_size"] > 0
+                    ), f"dataset size of 0, but no EMPTY_INTERVAL response: {eval_results}"
+                    actual_num_metrics = len(data_dict["metrics"])
+                    assert actual_num_metrics == expected_num_metrics, (
+                        f"result {result_id}: actual_num_metrics = {actual_num_metrics}"
+                        + f" != expected_num_metrics = {expected_num_metrics}"
+                        + "\n"
+                        + str(eval_results)
+                        + "\n\n"
+                        + str(eval_data)
+                    )
+
+                # All checks succeeded
+                self.grpc.cleanup_evaluations(started_evaluations)  # Make sure to clean up everything we started.
+                return eval_results
+
+        raise RuntimeError("Unreachable code - just to satisfy mypy.")
 
 
 # ------------------------------------------------------------------------------------ #
