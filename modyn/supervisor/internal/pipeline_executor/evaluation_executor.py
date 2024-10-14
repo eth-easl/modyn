@@ -436,7 +436,7 @@ class EvaluationExecutor:
                 # Will trigger a retry in case this is not successful
                 # Can happen, e.g., if the evaluator is overloaded
                 expected_num_metrics = len(request.metrics)
-                for abort_reason, data_dict in eval_results:
+                for result_id, (abort_reason, data_dict) in enumerate(eval_results):
                     if abort_reason is not None:
                         # If there was any reason to abort, we don't care
                         continue
@@ -446,10 +446,12 @@ class EvaluationExecutor:
                     ), f"dataset size of 0, but no EMPTY_INTERVAL response: {eval_results}"
                     actual_num_metrics = len(data_dict["metrics"])
                     assert actual_num_metrics == expected_num_metrics, (
-                        f"actual_num_metrics = {actual_num_metrics}"
+                        f"result {result_id}: actual_num_metrics = {actual_num_metrics}"
                         + f" != expected_num_metrics = {expected_num_metrics}"
                         + "\n"
                         + str(eval_results)
+                        + "\n\n"
+                        + str(eval_data)
                     )
 
                 # All checks succeeded
