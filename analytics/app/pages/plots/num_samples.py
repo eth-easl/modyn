@@ -34,12 +34,12 @@ YAxis = Literal["eval_samples", "train_samples", "train_batches"]
 def gen_figure(
     page: str,
     multi_pipeline_mode: bool,
-    time_metric: str,
-    y_axis: YAxis,
-    use_scatter_size: bool,
+    time_metric: str | None,
+    y_axis: YAxis | None,
+    use_scatter_size: bool | None,
     patch_yearbook: bool,
-    dataset_id: str,
-    eval_handler: str,
+    dataset_id: str | None,
+    eval_handler: str | None,
 ) -> go.Figure:
     """Create the cost over time figure with barplot or histogram. Histogram
     has nice binning while barplot is precise.
