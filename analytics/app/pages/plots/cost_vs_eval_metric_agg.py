@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import get_args
+from typing import Any, get_args
 
 import pandas as pd
 import plotly.express as px
@@ -32,9 +32,9 @@ _shared_data: dict[str, _PageState] = {}  # page -> _PageState
 
 def gen_fig_scatter_num_triggers(
     page: str,
-    eval_handler: str,
-    dataset_id: str,
-    metric: str,
+    eval_handler: str | Any | None,
+    dataset_id: str | Any | None,
+    metric: str | Any | None,
     agg_func_x: AGGREGATION_FUNCTION,
     agg_func_y: EVAL_AGGREGATION_FUNCTION,
     stages: list[str],

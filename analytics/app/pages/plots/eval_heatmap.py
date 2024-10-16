@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 from dash import Input, Output, callback, dcc, html
@@ -31,9 +32,9 @@ def gen_figure(
     page: str,
     multi_pipeline_mode: bool,
     patch_yearbook: bool,
-    eval_handler: str,
-    dataset_id: str,
-    metric: str,
+    eval_handler: str | Any | None,
+    dataset_id: str | Any | None,
+    metric: str | Any | None,
 ) -> go.Figure:
     """Create the cost over time figure with barplot or histogram. Histogram
     has nice binning while barplot is precise.

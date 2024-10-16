@@ -10,7 +10,7 @@ from analytics.tools.aggregate_runs.pipeline_equivalence import assert_pipeline_
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.pipeline_executor.models import MultiEvaluationInfo, PipelineLogs
 
-DEBUGGING_MODE = True
+DEBUGGING_MODE = False
 """If True, the the process will halt on breakpoints to allow for manual
 verification."""
 
