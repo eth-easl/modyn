@@ -7,7 +7,7 @@
 [![codecov](https://codecov.io/github/eth-easl/modyn/graph/badge.svg?token=KFDCE03SQ4)](https://codecov.io/github/eth-easl/modyn)
 [![License](https://img.shields.io/github/license/eth-easl/modyn)](https://img.shields.io/github/license/eth-easl/modyn)
 
-Modyn is an open-source platform for model training on growing datasets, i.e., datasets where points get added over time.
+Modyn is a data-centric machine learning pipeline orchestrator, i.e., a platform for model training on growing datasets where points get added over time. Check out our [blog post](https://systems.ethz.ch/research/blog/modyn.html) for a brief introduction.
 
 </div>
 
@@ -55,9 +55,8 @@ For running all integration tests, run
 Checkout our [Example Pipeline](docs/EXAMPLE.md) guide for an example on how to run a Modyn pipeline.
 Checkout our [Technical Guidelines](docs/TECHNICAL.md) for some hints on developing Modyn and how to add new data selection and triggering policies.
 Checkout the [Architecture Documentation](docs/ARCHITECTURE.md) for an overview of Modyn's components.
-Last, checkout our [vision paper on Modyn](https://anakli.inf.ethz.ch/papers/MLonDynamicData_EuroMLSys23.pdf) for an introduction to model training on dynamic datasets.
+Last, checkout our [full paper on Modyn](https://anakli.inf.ethz.ch/papers/modyn_sigmod25.pdf) for more technical background and experiments we ran using Modyn.
 
-We are actively developing and designing Modyn, including more thorough documentation.
 Please reach out via Github, Twitter, E-Mail, or any other channel of communication if you are interested in collaborating, have any questions, or have any problems running Modyn.
 
 How to [contribute](docs/CONTRIBUTING.md).
@@ -81,3 +80,16 @@ We welcome input from both research and practice.
 
 Modyn is being developed at the [Efficient Architectures and Systems Lab (EASL)](https://anakli.inf.ethz.ch/#Group) at the [ETH Zurich Systems Group](https://systems.ethz.ch/).
 Please reach out to `mboether [at] inf [­dot] ethz [dot] ch` or open an issue on Github if you have any questions or inquiry related to Modyn and its usage.
+
+### Paper / Citation
+
+If you use Modyn, please cite our SIGMOD'25 paper:
+
+```bibtex
+@inproceedings{Bother2025Modyn,
+  author = {B\"{o}ther, Maximilian and Robroek, Ties and Gsteiger, Viktor and Ma, Xianzhe and T\"{o}z\"{u}n, P{\i}nar and Klimovic, Ana},
+  title = {Modyn: Data-Centric Machine Learning Pipeline Orchestration},
+  booktitle = {Proceedings of the Conference on Management of Data (SIGMOD)},
+  year = {2025},
+}
+```
