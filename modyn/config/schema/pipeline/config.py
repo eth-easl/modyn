@@ -56,3 +56,6 @@ class ModynPipelineConfig(ModynBaseModel):
                     )
 
         return self
+
+
+ModynPipelineConfig.model_rebuild()
