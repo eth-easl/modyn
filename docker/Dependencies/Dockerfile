@@ -61,6 +61,7 @@ RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mini
     /bin/bash ~/mamba.sh -b -p /opt/mamba
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN mamba update -n base -c defaults mamba
+RUN /bin/bash -c "mamba shell init -s bash -y"
 RUN mamba update --all
 
 # RUN /bin/bash mamba shell init
