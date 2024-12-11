@@ -12,6 +12,7 @@ from .resnet152.resnet152 import ResNet152  # noqa: F401
 from .rho_loss_twin_model.rho_loss_twin_model import RHOLOSSTwinModel  # noqa: F401
 from .smallyearbooknet.smallyearbooknet import SmallYearbookNet  # noqa: F401
 from .yearbooknet.yearbooknet import YearbookNet  # noqa: F401
+from .GPT2.GPT2 import GPT2 #noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

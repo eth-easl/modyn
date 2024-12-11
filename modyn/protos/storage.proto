@@ -4,6 +4,7 @@ package modyn.storage;
 
 service Storage {
   rpc Get(GetRequest) returns (stream GetResponse) {}
+  rpc GetNL(GetRequest) returns (stream GetResponseNoLabels) {}
   rpc GetNewDataSince(GetNewDataSinceRequest)
       returns (stream GetNewDataSinceResponse) {}
   rpc GetDataInInterval(GetDataInIntervalRequest)
@@ -25,12 +26,20 @@ service Storage {
 message GetRequest {
   string dataset_id = 1;
   repeated int64 keys = 2;
+  bool include_labels = 3;  // Added this line
 }
 
 message GetResponse {
   repeated bytes samples = 1;
   repeated int64 keys = 2;
   repeated int64 labels = 3;
+}
+
+
+message GetResponseNoLabels {
+  repeated bytes samples = 1;
+  repeated int64 keys = 2;
+ 
 }
 
 // https://github.com/grpc/grpc/issues/15937

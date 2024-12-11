@@ -17,6 +17,7 @@ training:
   initial_model: random
   batch_size: 128
   shuffle: True
+  generative: False
   optimizers:
     - name: "default"
       algorithm: "SGD"

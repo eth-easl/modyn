@@ -85,7 +85,8 @@ class PytorchTrainer:
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
-
+        self._info("Initializing Pytorch Trainer")
+        self.generative=training_info.generative
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -217,7 +218,6 @@ class PytorchTrainer:
 
         self._info("Handled OnBegin Callbacks.")
         self._log["epochs"] = []
-
         training_loss: list[float] = []
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
@@ -272,7 +272,8 @@ class PytorchTrainer:
                 passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
-
+                   # if self.generative:
+                        #target=data.clone()
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
@@ -297,15 +298,32 @@ class PytorchTrainer:
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
-                        output = self._model.model(data, sample_ids)
+                        if self.generative:
+                            # Pass input data
+                            output = self._model.model(data)
+
+                        else:
+                            # Non-generative task: Pass data, and optionally sample_ids if required
+                            output = self._model.model(data, sample_ids=sample_ids)
+
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
-                        if weighted_optimization:
-                            # weighted gradient descent
-                            assert weights is not None
-                            loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                        if self.generative:
+                            # Shift logits and labels for next-token prediction
+                            output = output[..., :-1, :].contiguous()
+                            target = data[..., 1:].contiguous()
+                            # Calculate loss
+                            loss = self._criterion(
+                                output.view(-1, output.size(-1)),
+                                output.view(-1)
+                            )
                         else:
-                            loss = self._criterion(output, target)
+                            if weighted_optimization:
+                                # Weighted gradient descent
+                                assert weights is not None
+                                loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                            else:
+                                loss = self._criterion(output, target)
 
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
@@ -514,19 +532,21 @@ class PytorchTrainer:
             sample_ids = sample_ids.tolist()
         elif isinstance(sample_ids, tuple):
             sample_ids = list(sample_ids)
-
+        print(f"{self.generative}")
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
-
-        stopw.start("LabelTransform", resume=True)
-        if self._label_transformer_function is not None:
-            target = self._label_transformer_function(batch[2])
+        if self.generative:
+            target=None
         else:
-            target = batch[2]
-        stopw.stop("LabelTransform")
+            stopw.start("LabelTransform", resume=True)
+            if self._label_transformer_function is not None:
+                target = self._label_transformer_function(batch[2])
+            else:
+                target = batch[2]
+            stopw.stop("LabelTransform")
 
-        with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
-            target = target.to(self._device)
+            with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
+                target = target.to(self._device)
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: torch.Tensor | dict
@@ -573,9 +593,7 @@ class PytorchTrainer:
             big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
             self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
-
         self.end_embedding_recorder_if_needed()
-
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
         selected_data, selected_target = get_tensors_subset(selected_indexes, data, target, sample_ids)
@@ -898,31 +916,35 @@ class PytorchTrainer:
         Args:
             dataloader: torch.dataloader to get the data
             previous_batch_number: The batch number returned from the last call to this method. Useful when this
-            function is called several times to keep track of previous invocations (ex label by label dataloader). We
-            need to have a total to correctly update the queue and show the progress in the supervisor counter.
-            previous_number_of_samples: number of samples processed before calling this function. See above for the use.
+            function is called several times to keep track of previous invocations (e.g., label-by-label dataloader).
+            previous_number_of_samples: Number of samples processed before calling this function. See above for usage.
 
         Returns:
             Updated number of batches and samples
         """
         number_of_samples = previous_number_of_samples
         batch_number = previous_batch_number
+
         for batch in dataloader:
             self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=False)
             batch_number += 1
             sample_ids, target, data = self.preprocess_batch(batch)
+            # Handle cases where target is None for generative tasks
+            if self.generative and target is None:
+                target = torch.Tensor()
             number_of_samples += len(sample_ids)
-
             no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
             context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    # compute the scores and accumulate them
-                    model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
+                    model_output = (
+                        self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
+                    )
                     embeddings = self.get_embeddings_if_recorded()
+                    # Inform the downsampler
                     self._downsampler.inform_samples(sample_ids, data, model_output, target, embeddings)
-
         return batch_number, number_of_samples
+
 
     # ---------------------------------------------------- Logging --------------------------------------------------- #
 

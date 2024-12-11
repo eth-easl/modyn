@@ -12,6 +12,7 @@ model_storage:
 training:
   gpus: 1
   device: "cuda:0"
+  generative: False
   dataloader_workers: 2
   use_previous_model: True
   initial_model: random

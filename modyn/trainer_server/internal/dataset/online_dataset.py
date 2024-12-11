@@ -12,7 +12,15 @@ from collections.abc import Callable, Generator, Iterator
 from typing import Any, cast
 
 import grpc
-from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt, wait_random_exponential
+from tenacity import (
+    Retrying,
+    after_log,
+    before_log,
+    retry,
+    stop_after_attempt,
+    wait_random_exponential,
+)
+
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
@@ -20,9 +28,13 @@ from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetRequest,
     GetResponse,
+    GetResponseNoLabels,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
+from modyn.trainer_server.internal.dataset.key_sources import (
+    AbstractKeySource,
+    SelectorKeySource,
+)
 from modyn.utils import (
     BYTES_PARSER_FUNC_NAME,
     deserialize_function,
@@ -53,7 +65,9 @@ class OnlineDataset(IterableDataset):
         shuffle: bool,
         tokenizer: str | None,
         log_path: pathlib.Path | None,
+        generative: bool = False,
     ):
+        self._generative = generative
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id
@@ -86,7 +100,9 @@ class OnlineDataset(IterableDataset):
         self._pref_started: dict[int, bool] = {}
         self._thread_data_container: dict[int, dict[str, Any]] = {}
         self._partition_locks: dict[int, threading.Lock] = {}
-        self._partition_signals: dict[int, threading.Condition] = {}  # Should use the lock out of partition_locks
+        self._partition_signals: dict[int, threading.Condition] = (
+            {}
+        )  # Should use the lock out of partition_locks
         self._partition_valid_until: dict[int, int] = {}
         self._partition_valid: dict[int, bool] = {}
         self._next_partition_to_fetch = 0
@@ -96,13 +112,16 @@ class OnlineDataset(IterableDataset):
         self._shuffled_partition_indices: list[int] = []
 
         if log_path is None:
-            logger.warning("Did not provide log path for OnlineDataset - logging disabled.")
+            logger.warning(
+                "Did not provide log path for OnlineDataset - logging disabled."
+            )
 
         # tokenizer for NLP tasks
         self._tokenizer = None
         self._tokenizer_name = tokenizer
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+            self._tokenizer = instantiate_class(
+                "modyn.models.tokenizers", tokenizer)
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -124,7 +143,9 @@ class OnlineDataset(IterableDataset):
             self._transform = transforms.Compose(self._transform_list)
 
     def _init_transforms(self) -> None:
-        self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
+        self._bytes_parser_function = deserialize_function(
+            self._bytes_parser, BYTES_PARSER_FUNC_NAME
+        )
         self._transform = self._bytes_parser_function
         self._setup_composed_transform()
 
@@ -136,7 +157,9 @@ class OnlineDataset(IterableDataset):
         reraise=True,
     )
     def _init_grpc(self, worker_id: int | None = None) -> None:  # pragma: no cover
-        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        self._storage_channel = grpc.insecure_channel(
+            self._storage_address, options=grpc_common_config()
+        )
         if grpc_connection_established(self._storage_channel):
             self._storagestub = StorageStub(self._storage_channel)
             return
@@ -147,29 +170,38 @@ class OnlineDataset(IterableDataset):
 
     def _silence_pil(self) -> None:  # pragma: no cover
         pil_logger = logging.getLogger("PIL")
-        pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
+        # by default, PIL on DEBUG spams the console
+        pil_logger.setLevel(logging.INFO)
 
     def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
-        logger.info(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
+        logger.info(
+            f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}"
+        )
 
     def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
-        logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
+        logger.debug(
+            f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}"
+        )
 
     def _get_data_from_storage(
         self, selector_keys: list[int], worker_id: int | None = None
     ) -> Iterator[tuple[list[int], list[bytes], list[int], int]]:
         processed_keys: set[int] | list[int] = []
         has_failed = False
-
         for attempt in Retrying(
-            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
         ):
             with attempt:
                 try:
-                    req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
+                    new_keys: list[int]
+                    new_samples: list[bytes]
+                    response:GetResponse
+                    req = GetRequest(
+                        dataset_id=self._dataset_id, keys=selector_keys
+                    )
                     stopw = Stopwatch()
-
-                    response: GetResponse
                     stopw.start("ResponseTime", overwrite=True)
                     for response in self._storagestub.Get(req):
                         response_time = stopw.stop("ResponseTime")
@@ -177,32 +209,115 @@ class OnlineDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            yield keys, list(response.samples), list(response.labels), response_time
+                            yield keys, list(response.samples), list(
+                                response.labels
+                            ), response_time
                         else:  # If we have failed, we need to filter out yielded samples
                             # Note that the returned order by storage is non-deterministic
                             assert isinstance(processed_keys, set)
-                            new_keys: list[int] = [key for key in keys if key not in processed_keys]
-                            new_samples: list[bytes] = [
-                                sample for key, sample in zip(keys, response.samples) if key not in processed_keys
+                            new_keys = [
+                                key for key in keys if key not in processed_keys
+                            ]
+                            new_samples = [
+                                sample
+                                for key, sample in zip(keys, response.samples)
+                                if key not in processed_keys
                             ]
                             new_labels: list[int] = [
-                                label for key, label in zip(keys, response.labels) if key not in processed_keys
+                                label
+                                for key, label in zip(keys, response.labels)
+                                if key not in processed_keys
                             ]
                             processed_keys.update(keys)
                             yield new_keys, new_samples, new_labels, response_time
 
                         stopw.start("ResponseTime", overwrite=True)
-
-                except grpc.RpcError as e:  # We catch and reraise to reconnect to rpc and do logging
+                except (
+                    grpc.RpcError
+                ) as e:  # We catch and reraise to reconnect to rpc and do logging
                     has_failed = True
                     # Convert processed keys to set on first failure
-                    processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
+                    processed_keys = (
+                        set(processed_keys)
+                        if isinstance(processed_keys, list)
+                        else processed_keys
+                    )
                     self._info(
-                        "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
+                        "gRPC error occurred, processed_keys = "
+                        + f"{processed_keys}\n{e.code()} - {e.details()}",
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
-                    self._info(f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}", worker_id)
+                    self._info(
+                        f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}",
+                        worker_id,
+                    )
+                    self._init_grpc(worker_id=worker_id)
+                    raise e
+
+    def _get_data_from_storage_gen(
+        self, selector_keys: list[int], worker_id: int | None = None
+    ) -> Iterator[tuple[list[int], list[bytes], int]]:
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
+        for attempt in Retrying(
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
+        ):
+            with attempt:
+                try:
+                    new_keys: list[int]
+                    new_samples: list[bytes]
+                    response: GetResponseNoLabels
+                    req = GetRequest(
+                        dataset_id=self._dataset_id, keys=selector_keys
+                    )
+                    stopw = Stopwatch()
+                    stopw.start("ResponseTime", overwrite=True)
+                    for response in self._storagestub.GetNL(req):
+                        response_time = stopw.stop("ResponseTime")
+                        keys = list(response.keys)
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(keys)
+                            yield keys, list(response.samples), response_time
+                        else:  # If we have failed, we need to filter out yielded samples
+                            # Note that the returned order by storage is non-deterministic
+                            assert isinstance(processed_keys, set)
+                            new_keys = [
+                                key for key in keys if key not in processed_keys
+                            ]
+                            new_samples = [
+                                sample
+                                for key, sample in zip(keys, response.samples)
+                                if key not in processed_keys
+                            ]
+
+                            processed_keys.update(keys)
+                            yield new_keys, new_samples, response_time
+
+                        stopw.start("ResponseTime", overwrite=True)
+                except (
+                    grpc.RpcError
+                ) as e:  # We catch and reraise to reconnect to rpc and do logging
+                    has_failed = True
+                    # Convert processed keys to set on first failure
+                    processed_keys = (
+                        set(processed_keys)
+                        if isinstance(processed_keys, list)
+                        else processed_keys
+                    )
+                    self._info(
+                        "gRPC error occurred, processed_keys = "
+                        + f"{processed_keys}\n{e.code()} - {e.details()}",
+                        worker_id,
+                    )
+                    self._info(f"Stringified exception: {str(e)}", worker_id)
+                    self._info(
+                        f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}",
+                        worker_id,
+                    )
                     self._init_grpc(worker_id=worker_id)
                     raise e
 
@@ -223,37 +338,77 @@ class OnlineDataset(IterableDataset):
         get_data_log = {}
         self._sw.start(f"GetKeysAndWeightsPart{partition_id}", overwrite=True)
         keys, weights = self._key_source.get_keys_and_weights(
-            worker_id, shuffled_partition_id if shuffled_partition_id is not None else partition_id
+            worker_id,
+            (
+                shuffled_partition_id
+                if shuffled_partition_id is not None
+                else partition_id
+            ),
         )
-        get_data_log["get_keys_and_weights"] = self._sw.stop(f"GetKeysAndWeightsPart{partition_id}")
+        get_data_log["get_keys_and_weights"] = self._sw.stop(
+            f"GetKeysAndWeightsPart{partition_id}"
+        )
         get_data_log["num_items"] = len(keys)
 
         self._info("Getting data from storage", worker_id)
         self._sw.start(f"GetDataPart{partition_id}", overwrite=True)
         all_response_times = []
+        key_weight_map = (
+            {key: weights[idx] for idx, key in enumerate(keys)}
+            if weights is not None
+            else None
+        )
+        if self._generative:
+            for data_tuple_gen in self._get_data_from_storage_gen(keys, worker_id=worker_id):
+                stor_keys, data, response_time = data_tuple_gen
 
-        key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
+                all_response_times.append(response_time)
+                num_items = len(stor_keys)
+                with (
+                    partition_locks[partition_id]
+                    if partition_locks is not None
+                    else contextlib.suppress()
+                ):
+                    data_container["data"].extend(data)
+                    data_container["keys"].extend(stor_keys)
+                    data_container["weights"].extend(
+                        [cast(float | None, key_weight_map[key])
+                         for key in stor_keys]
+                        if key_weight_map is not None
+                        else [None for _ in range(len(stor_keys))]
+                    )
+                    if partition_valid_until is not None:
+                        partition_valid_until[partition_id] += num_items
 
-        for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
-            stor_keys, data, labels, response_time = data_tuple
+                if partition_signals is not None:
+                    with partition_signals[partition_id]:
+                        partition_signals[partition_id].notify_all()
+        else:
+            for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
+                stor_keys, data, labels, response_time = data_tuple
 
-            all_response_times.append(response_time)
-            num_items = len(stor_keys)
-            with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
-                data_container["data"].extend(data)
-                data_container["keys"].extend(stor_keys)
-                data_container["labels"].extend(labels)
-                data_container["weights"].extend(
-                    [cast(float | None, key_weight_map[key]) for key in stor_keys]
-                    if key_weight_map is not None
-                    else [None for _ in range(len(stor_keys))]
-                )
-                if partition_valid_until is not None:
-                    partition_valid_until[partition_id] += num_items
+                all_response_times.append(response_time)
+                num_items = len(stor_keys)
+                with (
+                    partition_locks[partition_id]
+                    if partition_locks is not None
+                    else contextlib.suppress()
+                ):
+                    data_container["data"].extend(data)
+                    data_container["keys"].extend(stor_keys)
+                    data_container["labels"].extend(labels)
+                    data_container["weights"].extend(
+                        [cast(float | None, key_weight_map[key])
+                         for key in stor_keys]
+                        if key_weight_map is not None
+                        else [None for _ in range(len(stor_keys))]
+                    )
+                    if partition_valid_until is not None:
+                        partition_valid_until[partition_id] += num_items
 
-            if partition_signals is not None:
-                with partition_signals[partition_id]:
-                    partition_signals[partition_id].notify_all()
+                if partition_signals is not None:
+                    with partition_signals[partition_id]:
+                        partition_signals[partition_id].notify_all()
 
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
@@ -281,6 +436,18 @@ class OnlineDataset(IterableDataset):
             return key, transformed_sample, label, weight
         return key, transformed_sample, label
 
+    def _get_transformed_data_tuple_gen(
+        self, key: int, sample: memoryview, weight: float | None
+    ) -> tuple | None:
+        assert self._uses_weights is not None
+        self._sw.start("transform", resume=True)
+        # mypy complains here because _transform has unknown type, which is ok
+        transformed_sample = self._transform(sample)  # type: ignore
+        self._sw.stop("transform")
+        if self._uses_weights:
+            return key, transformed_sample, weight
+        return key, transformed_sample
+
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
 
@@ -297,14 +464,22 @@ class OnlineDataset(IterableDataset):
 
             log_file = f"{self._log_path / str(worker_id)}.log"
             self._log["transform"] = self._sw.measurements.get("transform", 0)
-            self._log["wait_for_later_partitions"] = self._sw.measurements.get("wait_for_later_partitions", 0)
-            self._log["wait_for_initial_partition"] = self._sw.measurements.get("wait_for_initial_partition", 0)
+            self._log["wait_for_later_partitions"] = self._sw.measurements.get(
+                "wait_for_later_partitions", 0
+            )
+            self._log["wait_for_initial_partition"] = self._sw.measurements.get(
+                "wait_for_initial_partition", 0
+            )
 
             with open(log_file, "w", encoding="utf-8") as logfile:
                 json.dump(self._log, logfile)
 
     def _clear_partition(self, partition_id: int) -> None:
-        with self._partition_locks[partition_id] if self._partition_locks is not None else contextlib.suppress():
+        with (
+            self._partition_locks[partition_id]
+            if self._partition_locks is not None
+            else contextlib.suppress()
+        ):
             self._partition_valid[partition_id] = False
             self._partition_valid_until[partition_id] = -1
             del self._thread_data_container[partition_id]
@@ -312,35 +487,51 @@ class OnlineDataset(IterableDataset):
         if "PYTEST_CURRENT_TEST" not in os.environ:
             gc.collect()
 
-    def _prefetch_partition(self, worker_id: int, maybe_continue: bool = False) -> None:
+    def _prefetch_partition(
+        self, worker_id: int, maybe_continue: bool = False
+    ) -> None:
         assert self._start_prefetch_lock is not None
         with self._start_prefetch_lock:
-            if self._num_prefetched_partitions < 1 or self._next_partition_to_fetch >= self._num_partitions:
+            if (
+                self._num_prefetched_partitions < 1
+                or self._next_partition_to_fetch >= self._num_partitions
+            ):
                 return  # Prefetching disabled or nothing more to prefetch
 
-            if maybe_continue and self._launched_prefetches >= self._num_prefetched_partitions:
+            if (
+                maybe_continue
+                and self._launched_prefetches >= self._num_prefetched_partitions
+            ):
                 return  # Two callbacks started to prefetch basically at the same time
 
             if maybe_continue:
                 # Do this as early as possible to avoid running into the "problem" above frequently
                 self._launched_prefetches += 1
-
             assert self._next_partition_to_fetch >= 0
             assert (
                 self._next_partition_to_fetch not in self._data_threads
             ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
-
-            self._thread_data_container[self._next_partition_to_fetch] = {
-                "data": [],
-                "keys": [],
-                "labels": [],
-                "weights": [],
-            }
+            if not self._generative:
+                self._thread_data_container[self._next_partition_to_fetch] = {
+                    "data": [],
+                    "keys": [],
+                    "labels": [],
+                    "weights": [],
+                }
+            else:
+                self._thread_data_container[self._next_partition_to_fetch] = {
+                    "data": [],
+                    "keys": [],
+                    "weights": [],
+                }
             self._partition_valid[self._next_partition_to_fetch] = False
             self._partition_valid_until[self._next_partition_to_fetch] = -1
-            self._partition_locks[self._next_partition_to_fetch] = threading.Lock()
-            self._partition_signals[self._next_partition_to_fetch] = threading.Condition(
-                self._partition_locks[self._next_partition_to_fetch]
+            self._partition_locks[self._next_partition_to_fetch] = threading.Lock(
+            )
+            self._partition_signals[self._next_partition_to_fetch] = (
+                threading.Condition(
+                    self._partition_locks[self._next_partition_to_fetch]
+                )
             )
 
             callback = None
@@ -367,7 +558,9 @@ class OnlineDataset(IterableDataset):
             # We implement shuffling on a partition level by mapping everything to increasing indices but actually load
             # different partition data.
             shuffle_partition_id = (
-                self._shuffled_partition_indices[self._next_partition_to_fetch] if self._shuffle else None
+                self._shuffled_partition_indices[self._next_partition_to_fetch]
+                if self._shuffle
+                else None
             )
             self._data_threads[self._next_partition_to_fetch] = threading.Thread(
                 target=self._get_data,
@@ -393,13 +586,37 @@ class OnlineDataset(IterableDataset):
         self, worker_id: int, partition_id: int
     ) -> Iterator[tuple[int, memoryview, int, float | None]]:
         assert self._num_prefetched_partitions < 1
-        container: dict[str, Any] = {"data": [], "keys": [], "labels": [], "weights": []}
-        shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
-        self._get_data(container, worker_id, partition_id, None, None, None, None, None, shuffle_partition_id)
-        assert "data" in container and "labels" in container and "keys" in container and "weights" in container
-
+        container: dict[str, Any] = {
+            "data": [],
+            "keys": [],
+            "labels": [],
+            "weights": [],
+        }
+        shuffle_partition_id = (
+            self._shuffled_partition_indices[partition_id] if self._shuffle else None
+        )
+        self._get_data(
+            container,
+            worker_id,
+            partition_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            shuffle_partition_id,
+        )
+        assert (
+            "data" in container
+            and "labels" in container
+            and "keys" in container
+            and "weights" in container
+        )
         if self._shuffle:
-            self._shuffle_partition(partition_id, worker_id, container=container)
+            if not self._generative:
+                self._shuffle_partition(partition_id, worker_id,container=container)
+            else:
+                self._shuffle_partition_gen(partition_id, worker_id,container=container)
 
         for idx in range(len(container["keys"])):
             yield (
@@ -409,8 +626,45 @@ class OnlineDataset(IterableDataset):
                 container["weights"][idx],
             )
 
+    def _fetch_partition_noprefetch_generative(  # based on the one above
+        self, worker_id: int, partition_id: int
+    ) -> Iterator[tuple[int, memoryview, float | None]]:
+        assert self._num_prefetched_partitions < 1
+        container: dict[str, Any] = {"data": [], "keys": [], "weights": []}
+        shuffle_partition_id = (
+            self._shuffled_partition_indices[partition_id] if self._shuffle else None
+        )
+        self._get_data(
+            container,
+            worker_id,
+            partition_id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            shuffle_partition_id,
+        )
+        assert "data" in container and "keys" in container and "weights" in container
+
+        if self._shuffle:
+            if not self._generative:
+                self._shuffle_partition(partition_id, worker_id)
+            else:
+                self._shuffle_partition_gen(partition_id, worker_id)
+
+        for idx in range(len(container["keys"])):
+            yield (
+                container["keys"][idx],
+                memoryview(container["data"][idx]),
+                container["weights"][idx],
+            )
+
     def _is_partition_fetched(self, partition_id: int) -> bool:
-        if partition_id not in self._partition_locks or partition_id not in self._partition_valid:
+        if (
+            partition_id not in self._partition_locks
+            or partition_id not in self._partition_valid
+        ):
             return False
 
         with self._partition_locks[partition_id]:
@@ -422,24 +676,43 @@ class OnlineDataset(IterableDataset):
 
     def _get_partition_data(
         self, last_idx: int, max_idx: int, partition_id: int
-    ) -> Iterator[tuple[int, memoryview, int, float | None]]:
-        for idx in range(last_idx + 1, max_idx + 1):
-            yield (
-                self._thread_data_container[partition_id]["keys"][idx],
-                memoryview(self._thread_data_container[partition_id]["data"][idx]),
-                self._thread_data_container[partition_id]["labels"][idx],
-                self._thread_data_container[partition_id]["weights"][idx],
-            )
+    ) -> Iterator[tuple[int, memoryview, int, float | None]]| Iterator[tuple[int, memoryview, float | None]]:
+        if self._generative:
+            for idx in range(last_idx + 1, max_idx + 1):
+                yield (
+                    self._thread_data_container[partition_id]["keys"][idx],
+                    memoryview(
+                        self._thread_data_container[partition_id]["data"][idx]),
+                    self._thread_data_container[partition_id]["weights"][idx],
+                )
+        else:
+            for idx in range(last_idx + 1, max_idx + 1):
+                yield (
+                    self._thread_data_container[partition_id]["keys"][idx],
+                    memoryview(
+                        self._thread_data_container[partition_id]["data"][idx]),
+                    self._thread_data_container[partition_id]["labels"][idx],
+                    self._thread_data_container[partition_id]["weights"][idx],
+                )
 
     def _wait_for_new_partition_data(self, partition_id: int) -> None:
         with self._partition_signals[partition_id]:
-            self._partition_signals[partition_id].wait(1)  # In case we do not get woken up, we at most waste a second
+            self._partition_signals[partition_id].wait(
+                1
+            )  # In case we do not get woken up, we at most waste a second
 
-    def _shuffle_partition(self, partition_id: int, worker_id: int, container: dict | None = None) -> None:
-        assert container is not None or self._is_partition_fetched(partition_id)
+    def _shuffle_partition(
+        self, partition_id: int, worker_id: int, container: dict | None = None
+    ) -> None:
+        assert container is not None or self._is_partition_fetched(
+            partition_id)
         assert self._shuffle
 
-        container = container if container is not None else self._thread_data_container[partition_id]
+        container = (
+            container
+            if container is not None
+            else self._thread_data_container[partition_id]
+        )
 
         self._info(f"Shuffling partition {partition_id}", worker_id)
 
@@ -459,9 +732,40 @@ class OnlineDataset(IterableDataset):
 
         self._info(f"Shuffled partition {partition_id}", worker_id)
 
+    def _shuffle_partition_gen(
+        self, partition_id: int, worker_id: int, container: dict | None = None
+    ) -> None:
+        assert container is not None or self._is_partition_fetched(
+            partition_id)
+        assert self._shuffle
+
+        container = (
+            container
+            if container is not None
+            else self._thread_data_container[partition_id]
+        )
+
+        self._info(f"Shuffling partition {partition_id}", worker_id)
+
+        data_length = len(container["data"])
+        indices = list(range(data_length))
+        random.shuffle(indices)
+
+        new_data = [container["data"][i] for i in indices]
+        new_keys = [container["keys"][i] for i in indices]
+
+        new_weights = [container["weights"][i] for i in indices]
+
+        container["data"] = new_data
+        container["keys"] = new_keys
+
+        container["weights"] = new_weights
+
+        self._info(f"Shuffled partition {partition_id}", worker_id)
+
     def prefetched_partition_generator(
         self, worker_id: int, partition_id: int
-    ) -> Iterator[tuple[int, memoryview, int, float | None]]:
+    ) -> Iterator[tuple[int, memoryview, int, float | None]]|Iterator[tuple[int, memoryview, float | None]]:
         last_idx = -1
         if not self._shuffle:
             # If we do not shuffle, we can emit data as soon as it streamed over
@@ -470,14 +774,17 @@ class OnlineDataset(IterableDataset):
                 max_idx = self._partition_max_index(partition_id)
                 if max_idx <= last_idx:  # No new data
                     self._wait_for_new_partition_data(partition_id)
-
                 yield from self._get_partition_data(last_idx, max_idx, partition_id)
                 last_idx = max_idx
         else:
             while not self._is_partition_fetched(partition_id):
                 self._wait_for_new_partition_data(partition_id)
+            if not self._generative:
 
-            self._shuffle_partition(partition_id, worker_id)
+                self._shuffle_partition(partition_id, worker_id)
+            else:
+
+                self._shuffle_partition_gen(partition_id, worker_id)
 
         # Yield potential remaining data (when not shuffling) or all data (when shuffling)
         self._info(f"Joining thread for partition {partition_id}", worker_id)
@@ -504,21 +811,28 @@ class OnlineDataset(IterableDataset):
         for _ in range(self._parallel_prefetch_requests):
             self._prefetch_partition(worker_id, True)
 
-    def all_partition_generator(self, worker_id: int) -> Iterator[tuple[int, memoryview, int, float | None]]:
+    def all_partition_generator(
+        self, worker_id: int
+    ) -> Iterator[tuple[int, memoryview, int, float | None]]|Iterator[tuple[int, memoryview,float | None]]:
         self.start_prefetching(worker_id)
 
         for partition_id in range(self._num_partitions):
             self._persist_log(worker_id)
-
             if self._num_prefetched_partitions > 0:
                 if partition_id < self._num_partitions - 1:
                     # As we consume one partition, prefetch exactly one more partition
                     self._prefetch_partition(worker_id, False)
 
                 yield from self.prefetched_partition_generator(worker_id, partition_id)
-            else:
-                yield from self._fetch_partition_noprefetch(worker_id, partition_id)
 
+            else:
+
+                if not self._generative:
+                    yield from self._fetch_partition_noprefetch(worker_id, partition_id)
+                else:
+                    yield from self._fetch_partition_noprefetch_generative(
+                        worker_id, partition_id
+                    )
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 
     def __iter__(self) -> Generator:
@@ -531,7 +845,9 @@ class OnlineDataset(IterableDataset):
 
         if self._first_call:
             self._first_call = False
-            self._debug("This is the first run of iter, making gRPC connections.", worker_id)
+            self._debug(
+                "This is the first run of iter, making gRPC connections.", worker_id
+            )
             # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
             # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
@@ -560,9 +876,13 @@ class OnlineDataset(IterableDataset):
         self._num_partitions = self._key_source.get_num_data_partitions()
 
         if self._shuffle:
-            self._shuffled_partition_indices = list(range(0, self._num_partitions))
+            self._shuffled_partition_indices = list(
+                range(0, self._num_partitions))
             random.shuffle(self._shuffled_partition_indices)
-            self._info(f"Shuffled partitions into random order: {self._shuffled_partition_indices}", worker_id)
+            self._info(
+                f"Shuffled partitions into random order: {self._shuffled_partition_indices}",
+                worker_id,
+            )
 
         self._info(
             f"Total number of partitions will be {self._num_partitions}.\n"
@@ -573,10 +893,22 @@ class OnlineDataset(IterableDataset):
         assert self._log_lock is not None
         with self._log_lock:
             self._log["num_partitions"] = self._num_partitions
-        self._num_prefetched_partitions = min(self._num_prefetched_partitions, self._num_partitions)
-
-        for data_tuple in self.all_partition_generator(worker_id):
-            if (transformed_tuple := self._get_transformed_data_tuple(*data_tuple)) is not None:
-                yield transformed_tuple
+        self._num_prefetched_partitions = min(
+            self._num_prefetched_partitions, self._num_partitions
+        )
+        if self._generative:
+            for data_tuple in self.all_partition_generator(worker_id):
+                if (
+                    transformed_tuple := self._get_transformed_data_tuple_gen(
+                        *data_tuple
+                    )
+                ) is not None:
+                    yield transformed_tuple
+        else:
+            for data_tuple in self.all_partition_generator(worker_id):
+                if (
+                    transformed_tuple := self._get_transformed_data_tuple(*data_tuple)
+                ) is not None:
+                    yield transformed_tuple
 
         self._persist_log(worker_id)
