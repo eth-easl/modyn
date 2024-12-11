@@ -13,6 +13,8 @@ training:
   gpus: 1
   device: "cuda:0"
   dataloader_workers: 2
+  generative: False
+
   use_previous_model: True
   initial_model: random
   batch_size: 64
