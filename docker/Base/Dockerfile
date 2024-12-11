@@ -15,6 +15,7 @@ RUN chown -R appuser /src
 USER appuser
 ENV CONDA_DEFAULT_ENV modyn
 ENV MAMBA_DEFAULT_ENV modyn
+ENV MAMBA_ROOT_PREFIX /opt/mamba
 RUN /bin/bash -c "mamba shell init -s bash -y"
 RUN echo "mamba activate modyn" >> /home/appuser/.bashrc
 

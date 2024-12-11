@@ -57,6 +57,7 @@ RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules htt
 # Install mamba
 ENV CONDA_DIR=/opt/mamba
 ENV MAMBA_DIR=/opt/mamba
+ENV MAMBA_ROOT_PREFIX /opt/mamba
 RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
     /bin/bash ~/mamba.sh -b -p /opt/mamba
 ENV PATH=$CONDA_DIR/bin:$PATH
