@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import matplotlib.patches as patches
 import pandas as pd
@@ -14,7 +14,7 @@ from analytics.plotting.common.const import DOUBLE_FIG_HEIGHT, DOUBLE_FIG_WIDTH
 from analytics.plotting.common.font import setup_font
 
 
-def get_fractional_index(dates: pd.Series, query_date: pd.Timestamp, fractional: bool = True) -> float:
+def get_fractional_index(dates: pd.Index, query_date: pd.Timestamp, fractional: bool = True) -> float:
     """Given a list of Period objects (dates) and a query_date as a Period,
     return the interpolated fractional index between two period indices if the
     query_date lies between them."""
@@ -65,7 +65,7 @@ def build_heatmap(
     disable_horizontal_grid: bool = False,
     df_logs_models: pd.DataFrame | None = None,
     triggers: dict[int, pd.DataFrame] = {},
-    x_axis: Literal["int", "period"] = "year",
+    x_axis: Literal["year", "other"] = "year",
 ) -> Figure | Axes:
     init_plot()
     setup_font(small_label=True, small_title=True)
@@ -151,7 +151,7 @@ def build_heatmap(
 
     if y_ticks is not None:
         ax.set_yticks(
-            ticks=[y + 0.5 - 1930 for y in y_ticks],
+            ticks=[int(y) + 0.5 - 1930 for y in y_ticks],
             labels=[y for y in y_ticks],
             rotation=0,
         )
@@ -211,27 +211,27 @@ def build_heatmap(
         for type_, dashed in [("train", False), ("usage", False), ("train", True)]:
             for active_ in df_logs_models.iterrows():
                 if x_axis == "year":
-                    x_start = active_[1][f"{type_}_start"].year - 1930
-                    x_end = active_[1][f"{type_}_end"].year - 1930
+                    eval_x_start = active_[1][f"{type_}_start"].year - 1930
+                    eval_x_end = active_[1][f"{type_}_end"].year - 1930
                 else:
-                    x_start = get_fractional_index(
+                    eval_x_start = get_fractional_index(
                         heatmap_data.columns,
-                        active_[1][f"{type_}_start"],
+                        cast(pd.Index, active_[1][f"{type_}_start"]),
                         fractional=False,
                     )
-                    x_end = get_fractional_index(
+                    eval_x_end = get_fractional_index(
                         heatmap_data.columns,
-                        active_[1][f"{type_}_end"],
+                        cast(pd.Index, active_[1][f"{type_}_end"]),
                         fractional=False,
                     )
 
                 y = active_[1]["model_idx"]
                 rect = plt.Rectangle(
                     (
-                        x_start,
+                        eval_x_start,
                         y - 1,
                     ),  # y: 0 based index, model_idx: 1 based index
-                    x_end - x_start,
+                    eval_x_end - eval_x_start,
                     1,
                     edgecolor="White" if type_ == "train" else "Black",
                     facecolor="none",
@@ -248,12 +248,12 @@ def build_heatmap(
             for row in triggers_df.iterrows():
                 type_ = "usage"
                 # for y, x_list in triggers.items():
-                x_start = row[1][f"{type_}_start"].year - 1930
-                x_end = row[1][f"{type_}_end"].year - 1930
+                eval_x_start = row[1][f"{type_}_start"].year - 1930
+                eval_x_end = row[1][f"{type_}_end"].year - 1930
                 # for x in x_list:
                 rect = plt.Rectangle(
-                    (x_start, y),  # y: 0 based index, model_idx: 1 based index
-                    x_end - x_start,
+                    (eval_x_start, y),  # y: 0 based index, model_idx: 1 based index
+                    eval_x_end - eval_x_start,
                     1,
                     edgecolor="black",
                     facecolor="none",

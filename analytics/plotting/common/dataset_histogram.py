@@ -415,7 +415,7 @@ def build_pieplot(
         dpi=600,
     )
 
-    def func(pct, allvals):
+    def func(pct: float, allvals: list[int]) -> str:
         absolute = int(np.round(pct / 100.0 * np.sum(allvals)))
         return f"{pct:.1f}%\n({absolute:d})"
 
