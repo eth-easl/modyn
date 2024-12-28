@@ -37,7 +37,7 @@ class MetadataDatabaseConnection(AbstractDatabaseConnection):
             if "hash_partition_modulus" in self.modyn_config["metadata_database"]
             else 16
         )
-        self.seed: int = (
+        self.seed: int | None = (
             self.modyn_config["metadata_database"]["seed"] if "seed" in self.modyn_config["metadata_database"] else None
         )
         if self.seed is not None:

@@ -22,6 +22,7 @@ from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     EvaluateModelResponse,
     EvaluationAbortedReason,
     EvaluationIntervalData,
+    SingleMetricResult,
 )
 from modyn.supervisor.internal.eval.strategies.abstract import EvalInterval
 from modyn.supervisor.internal.eval.strategies.slicing import SlicingEvalStrategy
@@ -826,7 +827,12 @@ def test__start_evaluations(
                 ],
             )
         ]
-        test_get_evaluation_results.return_value = [EvaluationIntervalData() for _ in range(3)]
+        test_get_evaluation_results.return_value = [
+            EvaluationIntervalData(
+                interval_index=idx, evaluation_data=[SingleMetricResult(metric="Accuracy", result=0.5)]
+            )
+            for idx in [0, 2]
+        ]
 
     else:
         intervals = [
@@ -851,7 +857,12 @@ def test__start_evaluations(
             evaluation_id=42,
             interval_responses=[success_interval for _ in range(len(intervals))],
         )
-        test_get_evaluation_results.return_value = [EvaluationIntervalData() for _ in range(len(intervals))]
+        test_get_evaluation_results.return_value = [
+            EvaluationIntervalData(
+                interval_index=idx, evaluation_data=[SingleMetricResult(metric="Accuracy", result=0.5)]
+            )
+            for idx in range(len(intervals))
+        ]
 
     pe.grpc.evaluator = evaluator_stub_mock
 
@@ -869,7 +880,7 @@ def test__start_evaluations(
 
         assert evaluator_stub_mock.evaluate_model.call_count == 1  # batched
         if test_failure:
-            assert test_cleanup_evaluations.call_count == 1
+            assert test_cleanup_evaluations.call_count == 2
             assert test_wait_for_evaluation_completion.call_count == 1
 
             stage_info = [

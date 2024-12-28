@@ -298,8 +298,8 @@ class DataDriftTrigger(BatchedTrigger):
             drift_results[metric_name].is_drift = self.decision_policies[metric_name].evaluate_decision(
                 metric_result.distance
             )
-
-        logger.info(f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}")
+        _logmsg = f"[DataDriftDetector][Dataset {self.dataloader_info.dataset_id}]" + f"[Result] {drift_results}"
+        logger.info(_logmsg)
         if is_warmup:
             return False, {}
 

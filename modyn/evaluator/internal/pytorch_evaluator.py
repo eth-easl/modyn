@@ -39,7 +39,6 @@ class PytorchEvaluator:
         )
 
         self._device = evaluation_info.device
-        self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = evaluation_info.amp
 
         self._info("Initialized PyTorch evaluator.")

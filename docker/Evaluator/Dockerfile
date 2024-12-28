@@ -7,4 +7,4 @@ FROM modynbase:latest AS evaluatorimage
 RUN chmod a+x /src/modyn/evaluator/modyn-evaluator
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD mamba run -n modyn --no-capture-output ./modyn/evaluator/modyn-evaluator ./modyn/config/examples/modyn_config.yaml
+CMD mamba run -n modyn -a "" ./modyn/evaluator/modyn-evaluator ./modyn/config/examples/modyn_config.yaml

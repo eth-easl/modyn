@@ -84,7 +84,7 @@ class PerformanceTriggerConfig(_InternalPerformanceTriggerConfig):
     def validate_decision_criteria(self) -> "PerformanceTriggerConfig":
         """Assert that all criteria use metrics that are defined in the
         evaluation config."""
-        metrics = {metric.name for metric in self.evaluation.dataset.metrics}
+        metrics = {metric.full_name for metric in self.evaluation.dataset.metrics}
         for criterion in self.decision_criteria.values():
             if isinstance(criterion, StaticNumberAvoidableMisclassificationCriterion):
                 continue

@@ -368,30 +368,22 @@ def test_wait_for_evaluation_completion(*args):
     assert handler.evaluator is not None
 
     with patch.object(handler.evaluator, "get_evaluation_status") as status_method:
-        status_method.side_effect = [
-            EvaluationStatusResponse(valid=True, is_running=True),
-            EvaluationStatusResponse(valid=False),
-            EvaluationStatusResponse(valid=True, is_running=False),
-        ]
-        with pytest.raises(RuntimeError):
-            handler.wait_for_evaluation_completion(10)
-        assert status_method.call_count == 2
+        with patch.object(handler.evaluator, "cleanup_evaluations") as _:
+            status_method.side_effect = [
+                EvaluationStatusResponse(valid=True, is_running=True),
+                EvaluationStatusResponse(valid=True, is_running=False),
+            ]
 
-        status_method.reset_mock()
-        status_method.side_effect = [
-            EvaluationStatusResponse(valid=True, exception="Some error"),
-            EvaluationStatusResponse(valid=True, is_running=False),
-        ]
-        assert not handler.wait_for_evaluation_completion(10)
-        assert status_method.call_count == 1
+            assert handler.wait_for_evaluation_completion(10)
+            assert status_method.call_count == 2
 
-        status_method.reset_mock()
-        status_method.side_effect = [
-            EvaluationStatusResponse(valid=True, is_running=True),
-            EvaluationStatusResponse(valid=True, is_running=False),
-        ]
-        assert handler.wait_for_evaluation_completion(10)
-        assert status_method.call_count == 2
+            status_method.reset_mock()
+            status_method.side_effect = [
+                EvaluationStatusResponse(valid=True, exception="Some error"),
+                EvaluationStatusResponse(valid=True, is_running=False),
+            ]
+            assert not handler.wait_for_evaluation_completion(10)
+            assert status_method.call_count == 1
 
 
 @patch("modyn.supervisor.internal.grpc_handler.grpc_connection_established", return_value=True)

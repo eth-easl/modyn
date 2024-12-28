@@ -5,3 +5,4 @@ extend-ignore-re = ["(?Rm)^.*# spellchecker:disable-line$"]
 [default.extend-words]
 strat = "strat"
 fpr = "fpr"
+ther = "ther"

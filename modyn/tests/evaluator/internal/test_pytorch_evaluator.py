@@ -170,7 +170,6 @@ def test_evaluator_init(load_state_mock: MagicMock) -> None:
         )
     )
     assert evaluator._device == "cpu"
-    assert evaluator._device_type == "cpu"
     assert not evaluator._amp
     load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 
@@ -183,7 +182,6 @@ def test_no_transform_evaluator_init(load_state_mock: MagicMock):
     assert isinstance(evaluator._model.model, MockModel)
     assert not evaluator._label_transformer_function
     assert evaluator._device == "cpu"
-    assert evaluator._device_type == "cpu"
     assert not evaluator._amp
     load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 

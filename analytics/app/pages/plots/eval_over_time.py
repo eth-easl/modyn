@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 import pandas as pd
 import plotly.express as px
@@ -29,9 +30,9 @@ def gen_figure(
     page: str,
     multi_pipeline_mode: bool,
     patch_yearbook: bool,
-    eval_handler: str,
-    dataset_id: str,
-    metric: str,
+    eval_handler: str | Any | None,
+    dataset_id: str | Any | None,
+    metric: str | Any | None,
 ) -> go.Figure:
     """Create the evaluation over time figure with a line plot.
 

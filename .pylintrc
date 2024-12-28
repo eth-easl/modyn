@@ -186,8 +186,9 @@ disable=raw-checker-failed,
         too-many-arguments,             # we can't determine a good limit here. reviews should spot bad cases of this.
         duplicate-code,                 # Mostly imports and test setup.
         cyclic-import,                  # We use these inside methods that require models from multiple apps. Tests will catch actual errors.
-        too-many-instance-attributes    # We always ignore this anyways
-
+        too-many-instance-attributes,   # We always ignore this anyways
+        too-many-positional-arguments,  # We do not want to limit the number of positional arguments
+        too-many-locals                 # We always ignore this anyways
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
 # multiple time (only on the command line, not in the configuration file where

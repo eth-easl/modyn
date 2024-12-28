@@ -31,9 +31,9 @@ _shared_data: dict[str, _PageState] = {}  # page -> _PageState
 def gen_fig_scatter_num_triggers(
     page: str,
     multi_pipeline_mode: bool,
-    eval_handler: str,
-    dataset_id: str,
-    metric: str,
+    eval_handler: str | None,
+    dataset_id: str | None,
+    metric: str | None,
     aggregate_metric: bool = True,
     time_weighted: bool = True,
     only_active_periods: bool = True,
