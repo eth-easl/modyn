@@ -86,7 +86,9 @@ def construct_periodic_eval_handlers(
     ]
 
 
-def construct_between_trigger_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
+def construct_between_trigger_eval_handler(
+    execution_time: EvalHandlerExecutionTime = "manual",
+) -> list[EvalHandlerConfig]:
     return [
         EvalHandlerConfig(
             name="full",

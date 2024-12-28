@@ -56,7 +56,7 @@ _FIRST_TIMESTAMP = 0
 _LAST_TIMESTAMP = SECONDS_PER_UNIT["d"] * (2014 - 1930)  # 2014: dummy
 
 
-def construct_slicing_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> EvalHandlerConfig:
+def construct_slicing_eval_handler(execution_time: EvalHandlerExecutionTime = "manual") -> list[EvalHandlerConfig]:
     return [
         EvalHandlerConfig(
             name="slidingmatrix",
