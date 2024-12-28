@@ -40,7 +40,6 @@ class CostTracker:
     def forecast_training_time(self, number_samples: int) -> float:
         """Forecasts the training time for a given number of samples."""
         assert not self.needs_calibration(), "The tracker needs more data to make a forecast."
-        # return self._linear_model.predict(np.array([[number_samples]]))[0]  # TODO: make this work more robustly
 
         # rolling average based: sum up all training durations in the window and divide by the number of samples;
         # then we can use this average to predict the training time for the next batch

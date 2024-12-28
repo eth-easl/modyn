@@ -48,11 +48,7 @@ class ArxivKaggleDataGenerator:
         return ArxivKaggleDataGenerator.sanitize_dataframe(df, keep_true_category=keep_true_category)
 
     def store_data(
-        self,
-        cleaned_df: pd.DataFrame,
-        resolution: TimeResolution,
-        test_split: bool,
-        dummy_period: bool = False,
+        self, cleaned_df: pd.DataFrame, resolution: TimeResolution, test_split: bool, dummy_period: bool = False
     ) -> None:
         partitions = bin_dataframe_wrt_time_resolution(cleaned_df, resolution, "first_version_timestamp")
 
