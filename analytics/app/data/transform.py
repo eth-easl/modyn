@@ -23,6 +23,33 @@ OPTIONAL_EVAL_AGGREGATION_FUNCTION = Literal["none", "time_weighted_avg", "mean"
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
+def pipeline_leaf_times_df(
+    logs: PipelineLogs,
+    *,
+    use_traintime_patch_at_trainer: bool,
+    pipeline_id: str = "pipeline",
+) -> pd.DataFrame:
+    pipeline_leaf_stages = leaf_stages(logs)
+    df_all = logs_dataframe(logs, f"pipeline_{pipeline_id}")
+    df_leaf_single = df_all[df_all["id"].isin(pipeline_leaf_stages)]
+    if not use_traintime_patch_at_trainer:
+        return df_leaf_single
+
+    df_leaf_only_train = df_leaf_single[df_leaf_single["id"] == PipelineStage.TRAIN.name]
+    df_leaf_wo_train = df_leaf_single[df_leaf_single["id"] != PipelineStage.TRAIN.name]
+
+    df_trainings = StageLog.df(
+        (x for x in logs.supervisor_logs.stage_runs if x.id == PipelineStage.TRAIN.name),
+        extended=True,
+    )
+    df_merged = df_leaf_only_train.merge(df_trainings, on="trigger_idx", how="inner", suffixes=("", "_training"))
+    assert df_merged.shape[0] == df_leaf_only_train.shape[0] == df_trainings.shape[0]
+    df_merged["duration"] = df_merged["train_time_at_trainer"] / 1000.0  # ms to s
+    df_merged = df_merged[df_leaf_only_train.columns]
+
+    return pd.concat([df_merged, df_leaf_wo_train])
+
+
 def logs_dataframe(logs: PipelineLogs, pipeline_ref: str = "pipeline") -> pd.DataFrame:
     df = logs.supervisor_logs.df
     df["pipeline_ref"] = pipeline_ref
