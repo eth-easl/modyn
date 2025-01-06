@@ -4,7 +4,7 @@ package modyn.storage;
 
 service Storage {
   rpc Get(GetRequest) returns (stream GetResponse) {}
-  rpc GetNL(GetRequest) returns (stream GetResponseNoLabels) {}
+  rpc GetNL(GetRequest) returns (stream GetResponse) {}
   rpc GetNewDataSince(GetNewDataSinceRequest)
       returns (stream GetNewDataSinceResponse) {}
   rpc GetDataInInterval(GetDataInIntervalRequest)

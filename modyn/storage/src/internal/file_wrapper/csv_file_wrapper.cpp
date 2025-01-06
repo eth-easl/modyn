@@ -17,6 +17,7 @@ void CsvFileWrapper::setup_document(const std::string& path) {
 }
 
 void CsvFileWrapper::validate_file_extension() {
+  std::cout << file_path_ << std::endl;
   if (file_path_.substr(file_path_.find_last_of('.') + 1) != "csv") {
     FAIL("The file extension must be .csv");
   }
@@ -55,23 +56,31 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices) {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(
+    const std::vector<uint64_t>& indices, bool generative) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
-    row.erase(row.begin() + static_cast<int64_t>(label_index_));
+
+    //Erase label based on the generative flag
+    if (!generative) {
+      row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    }
+
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
     }
-    row_string.pop_back();
+    row_string.pop_back();  
+
     samples.emplace_back(row_string.begin(), row_string.end());
   }
   return samples;
 }
+
 
 int64_t CsvFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");

@@ -17,7 +17,7 @@ import tempfile
 import traceback
 from collections.abc import Iterable
 from typing import Any, Literal
-
+import time
 import grpc
 import numpy as np
 import torch
@@ -191,6 +191,7 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
+            generative=training_info.generative,
         )
 
         # Create callbacks
@@ -244,7 +245,9 @@ class PytorchTrainer:
 
         trained_batches = 0
         passed_batches = 0
+        
         for epoch in epoch_num_generator:
+            
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
             batch_timings = []
@@ -258,27 +261,24 @@ class PytorchTrainer:
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
+            
             for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
                 retrieve_weights_from_dataloader, weighted_optimization = self.weights_handling(len(batch))
-
                 stopw.start("OnBatchBeginCallbacks", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_begin(self._model.model, self._optimizers, batch, passed_batches)
                 stopw.stop()
-
                 self.update_queue("TRAINING", trained_batches, trained_batches * self._batch_size, training_active=True)
                 passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
-                   # if self.generative:
-                        #target=data.clone()
+                   
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
                     weights = batch[3].float().to(self._device)
-
                 for _, optimizer in self._optimizers.items():
                     optimizer.zero_grad()
 
@@ -296,27 +296,22 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
-
+                    
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         if self.generative:
-                            # Pass input data
                             output = self._model.model(data)
-
                         else:
                             # Non-generative task: Pass data, and optionally sample_ids if required
                             output = self._model.model(data, sample_ids=sample_ids)
-
-
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
                         if self.generative:
                             # Shift logits and labels for next-token prediction
                             output = output[..., :-1, :].contiguous()
-                            target = data[..., 1:].contiguous()
+                            target = data[..., 1:,0].contiguous()
                             # Calculate loss
-                            loss = self._criterion(
-                                output.view(-1, output.size(-1)),
-                                output.view(-1)
-                            )
+                            output = output.view(-1, output.size(-1))  # Shape: (batch_size * (sequence_length - 1), vocab_size)
+                            target = target.view(-1)  # Shape: (batch_size * (sequence_length - 1))
+                            loss = self._criterion(output,target)
                         else:
                             if weighted_optimization:
                                 # Weighted gradient descent
@@ -366,7 +361,9 @@ class PytorchTrainer:
                     break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
+                
 
+    
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
@@ -532,7 +529,6 @@ class PytorchTrainer:
             sample_ids = sample_ids.tolist()
         elif isinstance(sample_ids, tuple):
             sample_ids = list(sample_ids)
-        print(f"{self.generative}")
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
         if self.generative:
@@ -561,7 +557,6 @@ class PytorchTrainer:
                     "The format of the data provided is not supported in modyn. "
                     "Please use either torch tensors or dict[str, torch.Tensor]"
                 )
-
         return sample_ids, target, data
 
     def downsample_batch(

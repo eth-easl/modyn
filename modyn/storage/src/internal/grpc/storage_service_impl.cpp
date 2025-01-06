@@ -19,8 +19,8 @@ Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
 }
 Status StorageServiceImpl::GetNL(  // NOLINT readability-identifier-naming
     ServerContext* context, const modyn::storage::GetRequest* request,
-    ServerWriter<modyn::storage::GetResponseNoLabels>* writer) {
-  return Get_Impl_NL<ServerWriter<modyn::storage::GetResponseNoLabels>>(context, request, writer);
+    ServerWriter<modyn::storage::GetResponse>* writer) {
+  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer,true);
 }
 
 Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming

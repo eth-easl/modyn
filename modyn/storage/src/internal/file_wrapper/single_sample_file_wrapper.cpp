@@ -54,7 +54,7 @@ std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples(uin
 }
 
 std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples_from_indices(
-    const std::vector<uint64_t>& indices) {
+    const std::vector<uint64_t>& indices,  bool generative) {
   ASSERT(indices.size() == 1 && indices[0] == 0,
          fmt::format("Single sample file wrappers can only access the first sample. file_path = {}, indices.size() = "
                      "{}, indices = [{}]",
