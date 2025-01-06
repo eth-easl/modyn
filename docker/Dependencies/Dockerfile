@@ -55,12 +55,17 @@ RUN git clone --recurse-submodules -b v1.59.2 --depth 1 --shallow-submodules htt
     make -j8 && make install && cd ../../
 
 # Install mamba
-ENV CONDA_DIR /opt/mamba
-ENV MAMBA_DIR /opt/mamba
-RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
+ENV CONDA_DIR=/opt/mamba
+ENV MAMBA_DIR=/opt/mamba
+ENV MAMBA_ROOT_PREFIX /opt/mamba
+RUN wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" -O ~/mamba.sh && \
     /bin/bash ~/mamba.sh -b -p /opt/mamba
 ENV PATH=$CONDA_DIR/bin:$PATH
-RUN mamba update -n base -c defaults mamba && mamba update --all && mamba init bash
+RUN mamba update -n base -c defaults mamba
+RUN /bin/bash -c "mamba shell init -s bash -y"
+RUN mamba update --all
+
+# RUN /bin/bash mamba shell init
 
 # Install dependencies
 COPY ./environment.yml /tmp/environment.yml

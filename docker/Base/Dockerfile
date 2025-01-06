@@ -15,7 +15,8 @@ RUN chown -R appuser /src
 USER appuser
 ENV CONDA_DEFAULT_ENV modyn
 ENV MAMBA_DEFAULT_ENV modyn
-RUN /bin/bash -c "mamba init"
+ENV MAMBA_ROOT_PREFIX /opt/mamba
+RUN /bin/bash -c "mamba shell init -s bash -y"
 RUN echo "mamba activate modyn" >> /home/appuser/.bashrc
 
 # set environment variable to tell modyn that it is running in a container
