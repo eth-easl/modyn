@@ -6,4 +6,4 @@ RUN chown appuser /tmp/evaluation_results
 RUN chmod -R 777 /tmp/evaluation_results
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD mamba run -n modyn --no-capture-output ./modyn/supervisor/modyn-supervisor ./modyn/config/examples/modyn_config.yaml
+CMD mamba run -n modyn -a "" ./modyn/supervisor/modyn-supervisor ./modyn/config/examples/modyn_config.yaml
