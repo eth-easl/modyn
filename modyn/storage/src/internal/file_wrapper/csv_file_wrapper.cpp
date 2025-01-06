@@ -17,7 +17,6 @@ void CsvFileWrapper::setup_document(const std::string& path) {
 }
 
 void CsvFileWrapper::validate_file_extension() {
-  std::cout << file_path_ << std::endl;
   if (file_path_.substr(file_path_.find_last_of('.') + 1) != "csv") {
     FAIL("The file extension must be .csv");
   }
