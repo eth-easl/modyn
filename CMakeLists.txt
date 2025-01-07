@@ -57,7 +57,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
 
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  list(APPEND MODYN_COMPILE_OPTIONS "-Wno-missing-requires") # causes issues since gcc 12 and grpc 1.69
+  list(APPEND MODYN_COMPILE_OPTIONS "-Wno-missing-requires" "-Wno-unknown-warning-option") # causes issues since gcc 12 and grpc 1.69
 endif()
 
 
