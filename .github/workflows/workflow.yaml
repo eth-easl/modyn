@@ -18,7 +18,7 @@ jobs:
   pre-commit-checks:
     name: Pre-commit Checks
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
 
   mypy-typechecking:
     name: Mypy Type Checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     defaults:
       run:
@@ -52,7 +52,7 @@ jobs:
 
   pylint:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
@@ -68,7 +68,7 @@ jobs:
 
   unittests:
     timeout-minutes: 25
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
@@ -90,7 +90,7 @@ jobs:
 
   format:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 
   tidy:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       CLANG_TIDY: clang-tidy-15
       RUN_CLANG_TIDY: run-clang-tidy-15
@@ -126,7 +126,7 @@ jobs:
 
   cpp_build_and_test:
     name: Build + Test (C++)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     outputs:
       line-coverage: ${{steps.run_test_with_coverage.outputs.LINE_COVERAGE}}
@@ -136,10 +136,10 @@ jobs:
       matrix:
         build-type: [Release, Debug]
         compiler:
+          - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
-          - { c: gcc, cxx: g++, version: 14 }
-          - { c: clang, cxx: clang++, version: 18 }
-          - { c: clang, cxx: clang++, version: 18, coverage: true }
+          - { c: clang, cxx: clang++, version: 17 }
+          - { c: clang, cxx: clang++, version: 14, coverage: true }
         include:
           # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
           # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
@@ -223,7 +223,7 @@ jobs:
 
   cpp_coverage_main:
     name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
       CC: clang-17
@@ -274,7 +274,7 @@ jobs:
 
   cpp_comment_on_pr:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Comment Coverage Results
     needs: [cpp_build_and_test, cpp_coverage_main]
     timeout-minutes: 5
@@ -299,7 +299,7 @@ jobs:
   # Checks whether the base container works correctly.
   dockerized-unittests:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -321,7 +321,7 @@ jobs:
 
   integrationtests-debug:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -338,7 +338,7 @@ jobs:
 
   integrationtests-asan:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -354,7 +354,7 @@ jobs:
 
   integrationtests-tsan:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -371,7 +371,7 @@ jobs:
 
   integrationtests-release:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
