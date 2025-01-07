@@ -110,6 +110,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install clang
+        uses: KyleMayes/install-llvm-action@v2.0.5
+        with:
+          version: 15
+          env: true
+
       - name: Install clang-tidy
         run: |
           sudo apt update
