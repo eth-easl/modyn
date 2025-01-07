@@ -66,6 +66,7 @@ Checks: >
   -readability-uppercase-literal-suffix,
   -misc-confusable-identifiers,
   -portability-simd-intrinsics,
+  -clang-diagnostic-unknown-warning-option
 ### Reasons for exclusions
 ## Generally not applicable
 # abseil                                                we don't use the abseil library
