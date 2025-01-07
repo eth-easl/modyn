@@ -147,10 +147,6 @@ jobs:
             build-type: Tsan
           - compiler: { c: clang, cxx: clang++, version: 14 }
             build-type: Asan
-        #exclude:
-        # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
-        #- compiler: { c: gcc, cxx: g++, version: 12 }
-        #  build-type: Release
 
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
@@ -160,10 +156,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install ccache
+      - name: Install ccache and sqlite
         run: |
           sudo apt update
-          sudo apt install -y ccache
+          sudo apt install -y ccache libsqlite3-dev
 
       - name: Install clang version
         if: ${{ matrix.compiler.c == 'clang' }}
