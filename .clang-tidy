@@ -65,6 +65,7 @@ Checks: >
   -readability-magic-numbers,
   -readability-uppercase-literal-suffix,
   -misc-confusable-identifiers,
+  -portability-simd-intrinsics,
 ### Reasons for exclusions
 ## Generally not applicable
 # abseil                                                we don't use the abseil library
