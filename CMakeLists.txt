@@ -40,7 +40,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(MODYN_COMPILE_DEFINITIONS "")
 set(MODYN_COMPILE_OPTIONS "-Wall" "-Wextra" "-Werror" "-Wpedantic" "-Wextra-semi" "-Wnon-virtual-dtor" "-Wunused"
-  "-Wzero-as-null-pointer-constant" "-Wno-missing-requires"
+  "-Wzero-as-null-pointer-constant"
 )
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Additional checks not supported by GCC -- some are supported on GCC, but not ignorable / not filterable
@@ -55,6 +55,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Without this, we get compilation errors for the chrono header. We need to set this globally
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++20")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  list(APPEND MODYN_COMPILE_OPTIONS "-Wno-missing-requires") # causes issues since gcc 12 and grpc 1.69
 endif()
 
 if (${MODYN_TEST_COVERAGE})
