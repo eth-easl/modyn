@@ -139,7 +139,7 @@ jobs:
           - { c: gcc, cxx: g++, version: 12 }
           - { c: gcc, cxx: g++, version: 14 }
           - { c: clang, cxx: clang++, version: 18 }
-          - { c: clang, cxx: clang++, version: 19, coverage: true }
+          - { c: clang, cxx: clang++, version: 18, coverage: true }
         include:
           # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
           # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
@@ -163,7 +163,7 @@ jobs:
 
       - name: Install clang version
         if: ${{ matrix.compiler.c == 'clang' }}
-        uses: KyleMayes/install-llvm-action@v1
+        uses: KyleMayes/install-llvm-action@v2.0.5
         with:
           version: ${{ matrix.compiler.version }}.0
           env: true
