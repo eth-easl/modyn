@@ -17,7 +17,7 @@ message(STATUS "Making rapidcsv available.")
 FetchContent_Declare(
   rapidcsv
   GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
-  GIT_TAG v8.80
+  GIT_TAG v8.84
 )
 FetchContent_MakeAvailable(rapidcsv)
 
@@ -102,7 +102,7 @@ if((NOT MODYN_TRY_LOCAL_GRPC) OR (NOT gRPC_FOUND))
   FetchContent_Declare(
     gRPC
     GIT_REPOSITORY https://github.com/grpc/grpc
-    GIT_TAG        v1.59.2 # When updating this, make sure to also update the modynbase dockerfile
+    GIT_TAG        v1.69.0 # When updating this, make sure to also update the modynbase dockerfile
     GIT_SHALLOW TRUE
   )
   set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -115,7 +115,7 @@ if((NOT MODYN_TRY_LOCAL_GRPC) OR (NOT gRPC_FOUND))
 endif()
 
 file(DOWNLOAD
-https://raw.githubusercontent.com/protocolbuffers/protobuf/v23.1/cmake/protobuf-generate.cmake
+https://raw.githubusercontent.com/protocolbuffers/protobuf/v29.2/cmake/protobuf-generate.cmake
 ${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/protobuf-generate.cmake)
 

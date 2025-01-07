@@ -8,7 +8,7 @@ message(STATUS "Making fmt available.")
 FetchContent_Declare(
   fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 10.1.1
+  GIT_TAG 11.1.1
 )
 FetchContent_MakeAvailable(fmt)
 
@@ -18,7 +18,7 @@ set(SPDLOG_FMT_EXTERNAL ON) # Otherwise, we run into linking errors since the fm
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG v1.12.0
+  GIT_TAG v1.15.0
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -27,7 +27,7 @@ message(STATUS "Making argparse available.")
 FetchContent_Declare(
   argparse
   GIT_REPOSITORY https://github.com/p-ranav/argparse.git
-  GIT_TAG v2.9
+  GIT_TAG v3.1
 )
 FetchContent_MakeAvailable(argparse)
 
@@ -37,7 +37,7 @@ message(STATUS "Making googletest available.")
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG v1.14.0
+  GIT_TAG v1.15.2
 )
 FetchContent_MakeAvailable(googletest)
 
