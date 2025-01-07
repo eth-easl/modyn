@@ -138,8 +138,8 @@ jobs:
         compiler:
           - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
-          - { c: clang, cxx: clang++, version: 17 }
-          - { c: clang, cxx: clang++, version: 14, coverage: true }
+          - { c: clang, cxx: clang++, version: 14 }
+          - { c: clang, cxx: clang++, version: 17, coverage: true }
         include:
           # Currently, there is a linking error with zlib if we use clang 16 for sanitizers
           # Let's investigate this when clang > 14 is os default - one problem could be the external clang installation
@@ -162,7 +162,7 @@ jobs:
           sudo apt install -y ccache libsqlite3-dev
 
       - name: Install clang version
-        if: ${{ matrix.compiler.c == 'clang' }}
+        if: ${{ matrix.compiler.c == 'clang' && matrix.compiler.version > 14 }}
         uses: KyleMayes/install-llvm-action@v2.0.5
         with:
           version: ${{ matrix.compiler.version }}.0
