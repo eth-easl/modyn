@@ -136,8 +136,8 @@ jobs:
       matrix:
         build-type: [Release, Debug]
         compiler:
-          - { c: gcc, cxx: g++, version: 11 }
           - { c: gcc, cxx: g++, version: 12 }
+          - { c: gcc, cxx: g++, version: 13 }
           - { c: clang, cxx: clang++, version: 14 }
           - { c: clang, cxx: clang++, version: 17, coverage: true }
         include:
