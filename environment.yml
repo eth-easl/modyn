@@ -30,7 +30,7 @@ dependencies:
   - psycopg2
   - sqlalchemy>=2.0
   - pyaml
-  - pydantic==2.9.2
+  - pydantic
   - numpy==1.26.*
   - pandas
   - bitstring
@@ -43,10 +43,11 @@ dependencies:
   - nltk
   - pytorch::pytorch=2.2.1
   - pytorch::torchvision
-  - pytorch::pytorch-cuda=12.1
-  - nvidia::cuda-libraries-dev=12.1.*
-  - nvidia::cuda-nvcc=12.1.*
-  - nvidia::cuda-nvtx=12.1.*
-  - nvidia::cuda-cupti=12.1.*
-  - nvidia::cuda-cudart-dev=12.1.*
-  - nvidia::cuda-profiler-api==12.1.*
+  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
+#  - pytorch::pytorch-cuda=12.1
+#  - nvidia::cuda-libraries-dev=12.1.*
+#  - nvidia::cuda-nvcc=12.1.*
+#  - nvidia::cuda-nvtx=12.1.*
+#  - nvidia::cuda-cupti=12.1.*
+#  - nvidia::cuda-cudart-dev=12.1.*
+#  - nvidia::cuda-profiler-api=12.1.*
