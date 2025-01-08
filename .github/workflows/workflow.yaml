@@ -18,7 +18,7 @@ jobs:
   pre-commit-checks:
     name: Pre-commit Checks
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
 
   mypy-typechecking:
     name: Mypy Type Checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     defaults:
       run:
@@ -52,7 +52,7 @@ jobs:
 
   pylint:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
@@ -68,7 +68,7 @@ jobs:
 
   unittests:
     timeout-minutes: 25
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
@@ -90,7 +90,7 @@ jobs:
 
   format:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -102,7 +102,7 @@ jobs:
 
   tidy:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       CLANG_TIDY: clang-tidy-15
       RUN_CLANG_TIDY: run-clang-tidy-15
@@ -113,7 +113,7 @@ jobs:
       - name: Install clang-tidy
         run: |
           sudo apt update
-          sudo apt install -y clang-tidy-15
+          sudo apt install -y clang-tidy-15 libsqlite3-dev
           cmake --version
 
       - name: Configure CMake
@@ -126,7 +126,7 @@ jobs:
 
   cpp_build_and_test:
     name: Build + Test (C++)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     outputs:
       line-coverage: ${{steps.run_test_with_coverage.outputs.LINE_COVERAGE}}
@@ -147,10 +147,6 @@ jobs:
             build-type: Tsan
           - compiler: { c: clang, cxx: clang++, version: 14 }
             build-type: Asan
-        exclude:
-          # gcc-12 causes a false-positive memory error in release (https://github.com/google/googletest/issues/4108)
-          - compiler: { c: gcc, cxx: g++, version: 12 }
-            build-type: Release
 
     env:
       CC: ${{matrix.compiler.c}}-${{matrix.compiler.version}}
@@ -160,14 +156,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install ccache
+      - name: Install ccache and sqlite
         run: |
           sudo apt update
-          sudo apt install -y ccache
+          sudo apt install -y ccache libsqlite3-dev
 
       - name: Install clang version
-        if: ${{ matrix.compiler.version > 14 }}
-        uses: KyleMayes/install-llvm-action@v1
+        if: ${{ matrix.compiler.c == 'clang' && matrix.compiler.version > 14 }}
+        uses: KyleMayes/install-llvm-action@v2.0.5
         with:
           version: ${{ matrix.compiler.version }}.0
           env: true
@@ -227,7 +223,7 @@ jobs:
 
   cpp_coverage_main:
     name: C++ Test Coverage (gets coverage of main branch, currently not main branch because no C++ on main)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
       CC: clang-17
@@ -278,7 +274,7 @@ jobs:
 
   cpp_comment_on_pr:
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Comment Coverage Results
     needs: [cpp_build_and_test, cpp_coverage_main]
     timeout-minutes: 5
@@ -303,7 +299,7 @@ jobs:
   # Checks whether the base container works correctly.
   dockerized-unittests:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -325,7 +321,7 @@ jobs:
 
   integrationtests-debug:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -336,13 +332,55 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Check disk space 1
+        run: df . -h
+
+      - name: Free disk space
+        run: |
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf \
+            /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm || true
+          echo "some directories deleted"
+          sudo apt install aptitude -y >/dev/null 2>&1
+          sudo aptitude purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev \
+            snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org azure-cli microsoft-edge-stable \
+            -y -f >/dev/null 2>&1
+          sudo aptitude purge google-cloud-sdk -f -y >/dev/null 2>&1
+          sudo aptitude purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo apt purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo aptitude purge '~n ^mysql' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^php' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^dotnet' -f -y >/dev/null 2>&1
+          sudo apt-get autoremove -y >/dev/null 2>&1
+          sudo apt-get autoclean -y >/dev/null 2>&1
+          echo "some packages purged"
+
+      - name: Check disk space 2
+        run: df . -h
+
+      - name: Get more space
+        run: |
+          sudo rm -rf ${GITHUB_WORKSPACE}/.git
+
+      - name: Check disk space 3
+        run: df . -h
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Debug
 
   integrationtests-asan:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -352,13 +390,55 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Check disk space 1
+        run: df . -h
+
+      - name: Free disk space
+        run: |
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf \
+            /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm || true
+          echo "some directories deleted"
+          sudo apt install aptitude -y >/dev/null 2>&1
+          sudo aptitude purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev \
+            snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org azure-cli microsoft-edge-stable \
+            -y -f >/dev/null 2>&1
+          sudo aptitude purge google-cloud-sdk -f -y >/dev/null 2>&1
+          sudo aptitude purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo apt purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo aptitude purge '~n ^mysql' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^php' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^dotnet' -f -y >/dev/null 2>&1
+          sudo apt-get autoremove -y >/dev/null 2>&1
+          sudo apt-get autoclean -y >/dev/null 2>&1
+          echo "some packages purged"
+
+      - name: Check disk space 2
+        run: df . -h
+
+      - name: Get more space
+        run: |
+          sudo rm -rf ${GITHUB_WORKSPACE}/.git
+
+      - name: Check disk space 3
+        run: df . -h
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Asan
 
   integrationtests-tsan:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -369,13 +449,55 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Check disk space 1
+        run: df . -h
+
+      - name: Free disk space
+        run: |
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf \
+            /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm || true
+          echo "some directories deleted"
+          sudo apt install aptitude -y >/dev/null 2>&1
+          sudo aptitude purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev \
+            snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org azure-cli microsoft-edge-stable \
+            -y -f >/dev/null 2>&1
+          sudo aptitude purge google-cloud-sdk -f -y >/dev/null 2>&1
+          sudo aptitude purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo apt purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo aptitude purge '~n ^mysql' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^php' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^dotnet' -f -y >/dev/null 2>&1
+          sudo apt-get autoremove -y >/dev/null 2>&1
+          sudo apt-get autoclean -y >/dev/null 2>&1
+          echo "some packages purged"
+
+      - name: Check disk space 2
+        run: df . -h
+
+      - name: Get more space
+        run: |
+          sudo rm -rf ${GITHUB_WORKSPACE}/.git
+
+      - name: Check disk space 3
+        run: df . -h
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Tsan
 
   integrationtests-release:
     timeout-minutes: 180
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - pre-commit-checks
       - mypy-typechecking
@@ -386,6 +508,48 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Check disk space 1
+        run: df . -h
+
+      - name: Free disk space
+        run: |
+          sudo docker rmi $(docker image ls -aq) >/dev/null 2>&1 || true
+          sudo rm -rf \
+            /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/powershell /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm || true
+          echo "some directories deleted"
+          sudo apt install aptitude -y >/dev/null 2>&1
+          sudo aptitude purge aria2 ansible azure-cli shellcheck rpm xorriso zsync \
+            esl-erlang firefox gfortran-8 gfortran-9 google-chrome-stable \
+            google-cloud-sdk imagemagick \
+            libmagickcore-dev libmagickwand-dev libmagic-dev ant ant-optional kubectl \
+            mercurial apt-transport-https mono-complete libmysqlclient \
+            unixodbc-dev yarn chrpath libssl-dev libxft-dev \
+            libfreetype6 libfreetype6-dev libfontconfig1 libfontconfig1-dev \
+            snmp pollinate libpq-dev postgresql-client powershell ruby-full \
+            sphinxsearch subversion mongodb-org azure-cli microsoft-edge-stable \
+            -y -f >/dev/null 2>&1
+          sudo aptitude purge google-cloud-sdk -f -y >/dev/null 2>&1
+          sudo aptitude purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo apt purge microsoft-edge-stable -f -y >/dev/null 2>&1 || true
+          sudo aptitude purge '~n ^mysql' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^php' -f -y >/dev/null 2>&1
+          sudo aptitude purge '~n ^dotnet' -f -y >/dev/null 2>&1
+          sudo apt-get autoremove -y >/dev/null 2>&1
+          sudo apt-get autoclean -y >/dev/null 2>&1
+          echo "some packages purged"
+
+      - name: Check disk space 2
+        run: df . -h
+
+      - name: Get more space
+        run: |
+          sudo rm -rf ${GITHUB_WORKSPACE}/.git
+
+      - name: Check disk space 3
+        run: df . -h
 
       - name: Start docker compose and exit when tests run through
         run: bash scripts/run_integrationtests.sh Release
