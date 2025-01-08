@@ -102,7 +102,7 @@ if((NOT MODYN_TRY_LOCAL_GRPC) OR (NOT gRPC_FOUND))
   FetchContent_Declare(
     gRPC
     GIT_REPOSITORY https://github.com/grpc/grpc
-    GIT_TAG        v1.69.0 # When updating this, make sure to also update the modynbase dockerfile
+    GIT_TAG        v1.64.3 # When updating this, make sure to also update the modynbase dockerfile
     GIT_SHALLOW TRUE
   )
   set(gRPC_BUILD_TESTS OFF CACHE BOOL "" FORCE)
