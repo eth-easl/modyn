@@ -11,23 +11,15 @@ using namespace modyn::storage;
 
 void setup_logger() { spdlog::set_pattern("[%Y-%m-%d:%H:%M:%S] [%s:%#] [%l] [p%P:t%t] %v"); }
 
-argparse::ArgumentParser setup_argparser() {
-  argparse::ArgumentParser parser("Modyn Storage");
-
-  parser.add_argument("config").help("Modyn infrastructure configuration file");
-
-  return parser;
-}
-
 int main(int argc, char* argv[]) {
   /* Entrypoint for the storage service. */
   setup_logger();
 
-  auto parser = setup_argparser();
-
+  argparse::ArgumentParser parser("Modyn Storage");
+  parser.add_argument("config").help("Modyn infrastructure configuration file");
   parser.parse_args(argc, argv);
 
-  const std::string config_file = parser.get<std::string>("config");
+  const auto config_file = parser.get<std::string>("config");
 
   ASSERT(std::filesystem::exists(config_file), "Config file does not exist.");
 
