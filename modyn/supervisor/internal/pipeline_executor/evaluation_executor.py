@@ -84,7 +84,6 @@ class EvaluationExecutor:
             tracking_dfs: A dictionary of dataframes containing tracking information.
             dataset_end_time: Timestamp of the last sample in the dataset.
         """
-        print(PipelineStage.STORE_TRAINED_MODEL.name)
         assert tracking_dfs.get(PipelineStage.HANDLE_SINGLE_TRIGGER.name) is not None
         assert tracking_dfs.get(PipelineStage.STORE_TRAINED_MODEL.name) is not None
         self.context = AfterPipelineEvalContext(tracking_dfs=tracking_dfs, dataset_end_time=dataset_end_time)

@@ -555,6 +555,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
       WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& sample_keys,
       const DatasetData& dataset_data, soci::session& session, int64_t /*sample_batch_size*/, bool generative = false) {
+    // Note that we currently ignore the sample batch size here, under the assumption that users do not request more
+    // keys than this
     try {
       const uint64_t num_keys = sample_keys.size();
 
@@ -576,8 +578,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       if (sample_fileids.size() != num_keys) {
         SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+        SPDLOG_ERROR(fmt::format("num_keys = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+                        "sample_fileids = [{}]",
+                        num_keys, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
+                        fmt::join(sample_fileids, ", ")));
         throw modyn::utils::ModynException(
-            fmt::format("Got back {} samples from DB, while asking for {} keys.", sample_fileids.size(), num_keys));
+        fmt::format("Got back {} samples from DB, while asking for {} keys. You might have asked for duplicate "
+        "keys, which is not supported.", sample_fileids.size(), num_keys));
       }
 
       int64_t current_file_id = sample_fileids.at(0);
@@ -587,6 +594,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
 
       if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
+        SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+        SPDLOG_ERROR(fmt::format("num_keys = {}, current_file_id = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+        "sample_fileids = [{}]",
+        num_keys, current_file_id, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
+        fmt::join(sample_fileids, ", ")));
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
@@ -607,12 +619,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
               sample_indices.begin() + static_cast<int64_t>(sample_idx));
           std::vector<std::vector<unsigned char>> data =
               file_wrapper->get_samples_from_indices(file_indexes, generative);
-
+          // Protobuf expects the data as std::string...
           std::vector<std::string> stringified_data;
           stringified_data.reserve(data.size());
           for (const std::vector<unsigned char>& char_vec : data) {
             stringified_data.emplace_back(char_vec.begin(), char_vec.end());
           }
+          data.clear();
+          data.shrink_to_fit();
 
           modyn::storage::GetResponse response;
           response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
@@ -629,9 +643,20 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           const std::lock_guard<std::mutex> lock(writer_mutex);
           writer->Write(response);
 
-          current_file_id = sample_fileid;
+          current_file_path = "",
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
-              soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
+          soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
+          if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
+            SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
+            const int64_t& previous_fid = sample_fileids.at(sample_idx - 1);
+            SPDLOG_ERROR(
+                fmt::format("num_keys = {}, sample_idx = {}, previous_fid = {}\n sample_labels = [{}]\n sample_indices "
+                            "= [{}]\n sample_fileids = [{}]",
+                            num_keys, sample_idx, previous_fid, fmt::join(sample_labels, ", "),
+                            fmt::join(sample_indices, ", "), fmt::join(sample_fileids, ", ")));
+            throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
+                                                           current_file_id, dataset_data.dataset_id));
+          }
           file_wrapper->set_file_path(current_file_path);
           current_file_start_idx = sample_idx;
         }

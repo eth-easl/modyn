@@ -278,7 +278,7 @@ selector:
   local_storage_directory: "/tmp/local_storage"
   local_storage_max_samples_in_file: 1000000
   cleanup_storage_directories_after_shutdown: true
-  ignore_existing_trigger_samples: true
+  ignore_existing_trigger_samples: false
 
 trainer_server:
   hostname: "trainer_server"

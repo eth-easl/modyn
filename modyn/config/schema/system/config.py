@@ -255,7 +255,7 @@ class SelectorConfig(HostnamePortMixin):
         ),
     )
     ignore_existing_trigger_samples: bool = Field(
-        True,
+        False,
         description=(
             "Whether to ignore existing trigger samples when starting the selector. If set to false, the trigger "
             "sample directory has to be empty upon startup. May lead to unexpected behaviour if set to true and the "
