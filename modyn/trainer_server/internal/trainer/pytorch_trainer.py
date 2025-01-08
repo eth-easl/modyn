@@ -17,7 +17,7 @@ import tempfile
 import traceback
 from collections.abc import Iterable
 from typing import Any, Literal
-import time
+
 import grpc
 import numpy as np
 import torch
@@ -86,7 +86,7 @@ class PytorchTrainer:
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
-        self.generative=training_info.generative
+        self.generative = training_info.generative
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -245,9 +245,8 @@ class PytorchTrainer:
 
         trained_batches = 0
         passed_batches = 0
-        
+
         for epoch in epoch_num_generator:
-            
             stopw = Stopwatch()  # Reset timings per epoch
             self._log["epochs"].append({})
             batch_timings = []
@@ -261,7 +260,7 @@ class PytorchTrainer:
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
-            
+
             for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
@@ -274,7 +273,7 @@ class PytorchTrainer:
                 passed_batches += 1
                 with GPUMeasurement(self._measure_gpu_ops, "PreprocessBatch", self._device, stopw, resume=True):
                     sample_ids, target, data = self.preprocess_batch(batch, stopw)
-                   
+
                 if retrieve_weights_from_dataloader:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
@@ -296,7 +295,7 @@ class PytorchTrainer:
                         data, sample_ids, target, weights = batch_accumulator.get_accumulated_batch()
 
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
-                    
+
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         if self.generative:
                             output = self._model.model(data)
@@ -307,11 +306,13 @@ class PytorchTrainer:
                         if self.generative:
                             # Shift logits and labels for next-token prediction
                             output = output[..., :-1, :].contiguous()
-                            target = data[..., 1:,0].contiguous()
+                            target = data[..., 1:, 0].contiguous()
                             # Calculate loss
-                            output = output.view(-1, output.size(-1))  # Shape: (batch_size * (sequence_length - 1), vocab_size)
+                            output = output.view(
+                                -1, output.size(-1)
+                            )  # Shape: (batch_size * (sequence_length - 1), vocab_size)
                             target = target.view(-1)  # Shape: (batch_size * (sequence_length - 1))
-                            loss = self._criterion(output,target)
+                            loss = self._criterion(output, target)
                         else:
                             if weighted_optimization:
                                 # Weighted gradient descent
@@ -361,9 +362,7 @@ class PytorchTrainer:
                     break
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
-                
 
-    
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
@@ -532,7 +531,7 @@ class PytorchTrainer:
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
         if self.generative:
-            target=None
+            target = None
         else:
             stopw.start("LabelTransform", resume=True)
             if self._label_transformer_function is not None:
@@ -932,14 +931,11 @@ class PytorchTrainer:
             context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):
-                    model_output = (
-                        self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
-                    )
+                    model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
                     embeddings = self.get_embeddings_if_recorded()
                     # Inform the downsampler
                     self._downsampler.inform_samples(sample_ids, data, model_output, target, embeddings)
         return batch_number, number_of_samples
-
 
     # ---------------------------------------------------- Logging --------------------------------------------------- #
 

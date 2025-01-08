@@ -75,7 +75,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   Status Get(ServerContext* context, const modyn::storage::GetRequest* request,
              ServerWriter<modyn::storage::GetResponse>* writer) override;
   Status GetNL(ServerContext* context, const modyn::storage::GetRequest* request,
-             ServerWriter<modyn::storage::GetResponse>* writer) override;
+               ServerWriter<modyn::storage::GetResponse>* writer) override;
   Status GetNewDataSince(ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
                          ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override;
   Status GetDataInInterval(ServerContext* context, const modyn::storage::GetDataInIntervalRequest* request,
@@ -137,13 +137,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       return {StatusCode::INTERNAL, fmt::format("Error in Get: {}", e.what())};
     }
   }
-
-
-
-
-
-
-
 
   template <typename WriterT>
   Status GetNewDataSince_Impl(  // NOLINT (readability-identifier-naming)
@@ -330,7 +323,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const std::vector<int64_t>::const_iterator begin = request_keys.begin();  // NOLINT (modernize-use-auto)
       const std::vector<int64_t>::const_iterator end = request_keys.end();      // NOLINT (modernize-use-auto)
 
-      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_, generative);
+      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
+                                    generative);
 
     } else {
       std::vector<std::exception_ptr> thread_exceptions(retrieval_threads_);
@@ -343,12 +337,14 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         const std::vector<int64_t>::const_iterator end = its_per_thread[thread_id].second;
 
         retrieval_threads_vector[thread_id] = std::thread([thread_id, begin, end, writer, &writer_mutex, &dataset_data,
-                                                          &thread_exceptions, &exception_mutex, this, generative]() {
+                                                           &thread_exceptions, &exception_mutex, this, generative]() {
           try {
-            get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_, generative);
+            get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_,
+                                          sample_batch_size_, generative);
           } catch (const std::exception& e) {
             const std::lock_guard<std::mutex> lock(exception_mutex);
-            spdlog::error(fmt::format("Error in thread {} started by send_sample_data_from_keys: {}", thread_id, e.what()));
+            spdlog::error(
+                fmt::format("Error in thread {} started by send_sample_data_from_keys: {}", thread_id, e.what()));
             thread_exceptions[thread_id] = std::current_exception();
           }
         });
@@ -373,10 +369,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
     }
   }
-
-
-
-
 
   template <typename ResponseT, typename WriterT = ServerWriter<ResponseT>>
   void send_file_ids_and_labels(WriterT* writer, const int64_t dataset_id, const int64_t start_timestamp = -1,
@@ -559,7 +551,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
   }
 
-
   template <typename WriterT>
   static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
       WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& sample_keys,
@@ -577,14 +568,16 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<int64_t> sample_fileids(num_keys);
 
       const std::string sample_query = fmt::format(
-          "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER BY file_id",
+          "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER "
+          "BY file_id",
           fmt::join(sample_keys, ","));
       session << sample_query, soci::into(sample_labels), soci::into(sample_indices), soci::into(sample_fileids),
           soci::use(dataset_data.dataset_id);
 
       if (sample_fileids.size() != num_keys) {
         SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
-        throw modyn::utils::ModynException(fmt::format("Got back {} samples from DB, while asking for {} keys.", sample_fileids.size(), num_keys));
+        throw modyn::utils::ModynException(
+            fmt::format("Got back {} samples from DB, while asking for {} keys.", sample_fileids.size(), num_keys));
       }
 
       int64_t current_file_id = sample_fileids.at(0);
@@ -594,21 +587,26 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
 
       if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
-        throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}", current_file_id, dataset_data.dataset_id));
+        throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
+                                                       current_file_id, dataset_data.dataset_id));
       }
 
       const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
-      auto filesystem_wrapper = get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
-      auto file_wrapper = get_file_wrapper(current_file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
-                                          file_wrapper_config_node, filesystem_wrapper);
+      auto filesystem_wrapper =
+          get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
+      auto file_wrapper =
+          get_file_wrapper(current_file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
+                           file_wrapper_config_node, filesystem_wrapper);
 
       for (uint64_t sample_idx = 0; sample_idx < num_keys; ++sample_idx) {
         const int64_t& sample_fileid = sample_fileids.at(sample_idx);
 
         if (sample_fileid != current_file_id) {
-          const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
-                                                  sample_indices.begin() + static_cast<int64_t>(sample_idx));
-          std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes,generative);
+          const std::vector<uint64_t> file_indexes(
+              sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
+              sample_indices.begin() + static_cast<int64_t>(sample_idx));
+          std::vector<std::vector<unsigned char>> data =
+              file_wrapper->get_samples_from_indices(file_indexes, generative);
 
           std::vector<std::string> stringified_data;
           stringified_data.reserve(data.size());
@@ -641,8 +639,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       // Send leftovers
       const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
-                                              sample_indices.end());
-      const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes,generative);
+                                               sample_indices.end());
+      const std::vector<std::vector<unsigned char>> data =
+          file_wrapper->get_samples_from_indices(file_indexes, generative);
 
       std::vector<std::string> stringified_data;
       stringified_data.reserve(data.size());
@@ -671,32 +670,24 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     }
   }
 
+  template <typename WriterT>
+  static void get_samples_and_send(const std::vector<int64_t>::const_iterator begin,
+                                   const std::vector<int64_t>::const_iterator end, WriterT* writer,
+                                   std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
+                                   int64_t sample_batch_size, bool generative = false) {
+    if (begin >= end) {
+      return;
+    }
+    const StorageDatabaseConnection storage_database_connection(*config);
+    soci::session session = storage_database_connection.get_session();
+    const std::vector<int64_t> sample_keys(begin, end);
 
+    // Call the appropriate function based on the generative flag
+    send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
+                                                sample_batch_size, generative);
 
-
-
-
-
-
-
-template <typename WriterT>
-static void get_samples_and_send(const std::vector<int64_t>::const_iterator begin,
-                                 const std::vector<int64_t>::const_iterator end, WriterT* writer,
-                                 std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
-                                 int64_t sample_batch_size, bool generative = false) {
-  if (begin >= end) {
-    return;
+    session.close();
   }
-  const StorageDatabaseConnection storage_database_connection(*config);
-  soci::session session = storage_database_connection.get_session();
-  const std::vector<int64_t> sample_keys(begin, end);
-
-  // Call the appropriate function based on the generative flag
-  send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
-                                              sample_batch_size, generative);
-
-  session.close();
-}
 
   static std::string get_timestamp_condition(const int64_t start_timestamp = -1, const int64_t end_timestamp = -1) {
     std::string timestamp_filter;

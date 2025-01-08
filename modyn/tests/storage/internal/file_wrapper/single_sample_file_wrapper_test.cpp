@@ -87,7 +87,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndices) {
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
   ::SingleSampleFileWrapper file_wrapper = ::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
   const std::vector<uint64_t> indices = {0};
-  const std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(indices);
+  const std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(indices, false);
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ(samples[0].size(), 8);
   ASSERT_EQ((samples)[0][0], '1');

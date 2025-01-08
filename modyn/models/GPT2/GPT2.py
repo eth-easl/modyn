@@ -1,18 +1,17 @@
+from typing import Any
+
 import torch
 from torch import nn
 from transformers import GPT2LMHeadModel
-from typing import Any
+
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 
+# from modyn.models.GPT2.RecAdam import RecAdam
 
 
-
-#from modyn.models.GPT2.RecAdam import RecAdam
-
-
-#from deepspeed.runtime.lr_schedules import WarmupDecayLR
-#import deepspeed
-  #as GPT2_Lora
+# from deepspeed.runtime.lr_schedules import WarmupDecayLR
+# import deepspeed
+# as GPT2_Lora
 
 
 class GPT2:
@@ -27,15 +26,11 @@ class GPT2:
 
 
 class GPT2Modyn(CoresetSupportingModule):
-
     def __init__(self, hparams: Any) -> None:
         super().__init__()
-        
 
         self.model = GPT2LMHeadModel.from_pretrained("gpt2-large")  # hparams.model_name_or_path
 
-     
-    
     def forward(self, data: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         """
         Forward method for text generation or language modeling tasks.
@@ -50,21 +45,16 @@ class GPT2Modyn(CoresetSupportingModule):
         """
         # Split input into token IDs and attention masks
         input_ids = data[:, :, 0]
-        attention_mask = data[:, :, 1]   
+        attention_mask = data[:, :, 1]
         # Forward pass through GPT-2
-        output = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=labels
-        )
-        return output [0]
-        
+        output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+        return output[0]
+
     def get_last_layer(self) -> nn.Module:
-      """
-      Retrieve the last layer (lm_head) of the model.
+        """
+        Retrieve the last layer (lm_head) of the model.
 
-      Returns:
-          The final linear layer of the GPT-2 model.
-      """
-      return self.model.lm_head
-
+        Returns:
+            The final linear layer of the GPT-2 model.
+        """
+        return self.model.lm_head

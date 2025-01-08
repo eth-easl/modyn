@@ -92,7 +92,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t 
 
     samples[index] = sample_vec;
   }
-   
+
   return samples;
 }
 

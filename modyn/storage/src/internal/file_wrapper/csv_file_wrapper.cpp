@@ -55,8 +55,8 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(
-    const std::vector<uint64_t>& indices, bool generative) {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
+                                                                                 bool generative) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
@@ -64,7 +64,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
 
-    //Erase label based on the generative flag
+    // Erase label based on the generative flag
     if (!generative) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
     }
@@ -73,13 +73,12 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
     for (const auto& cell : row) {
       row_string += cell + separator_;
     }
-    row_string.pop_back();  
+    row_string.pop_back();
 
     samples.emplace_back(row_string.begin(), row_string.end());
   }
   return samples;
 }
-
 
 int64_t CsvFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");

@@ -119,10 +119,11 @@ class TrainingConfig(ModynBaseModel):
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
     )
-    generative: bool = Field(False,
+    generative: bool = Field(
+        False,
         description=(
             "If True then, then the training pipeline goes into the generative branch, data is sampled without expecting labels."
-        )
+        ),
     )
     seed: int | None = Field(
         None,
