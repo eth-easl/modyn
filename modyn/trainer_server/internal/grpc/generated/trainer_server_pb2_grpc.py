@@ -2,8 +2,27 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import grpc
-
 import modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 as trainer__server__pb2
+
+GRPC_GENERATED_VERSION = "1.67.1"
+GRPC_VERSION = grpc.__version__
+_version_not_supported = False
+
+try:
+    from grpc._utilities import first_version_is_lower
+
+    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
+except ImportError:
+    _version_not_supported = True
+
+if _version_not_supported:
+    raise RuntimeError(
+        f"The grpc package installed is at version {GRPC_VERSION},"
+        + f" but the generated code in trainer_server_pb2_grpc.py depends on"
+        + f" grpcio>={GRPC_GENERATED_VERSION}."
+        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
+        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
+    )
 
 
 class TrainerServerStub(object):
@@ -19,26 +38,31 @@ class TrainerServerStub(object):
             "/trainer.TrainerServer/trainer_available",
             request_serializer=trainer__server__pb2.TrainerAvailableRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.TrainerAvailableResponse.FromString,
+            _registered_method=True,
         )
         self.start_training = channel.unary_unary(
             "/trainer.TrainerServer/start_training",
             request_serializer=trainer__server__pb2.StartTrainingRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.StartTrainingResponse.FromString,
+            _registered_method=True,
         )
         self.get_training_status = channel.unary_unary(
             "/trainer.TrainerServer/get_training_status",
             request_serializer=trainer__server__pb2.TrainingStatusRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.TrainingStatusResponse.FromString,
+            _registered_method=True,
         )
         self.store_final_model = channel.unary_unary(
             "/trainer.TrainerServer/store_final_model",
             request_serializer=trainer__server__pb2.StoreFinalModelRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.StoreFinalModelResponse.FromString,
+            _registered_method=True,
         )
         self.get_latest_model = channel.unary_unary(
             "/trainer.TrainerServer/get_latest_model",
             request_serializer=trainer__server__pb2.GetLatestModelRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.GetLatestModelResponse.FromString,
+            _registered_method=True,
         )
 
 
@@ -106,6 +130,7 @@ def add_TrainerServerServicer_to_server(servicer, server):
     }
     generic_handler = grpc.method_handlers_generic_handler("trainer.TrainerServer", rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers("trainer.TrainerServer", rpc_method_handlers)
 
 
 # This class is part of an EXPERIMENTAL API.
@@ -139,6 +164,7 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -168,6 +194,7 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -197,6 +224,7 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -226,6 +254,7 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -255,4 +284,5 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )

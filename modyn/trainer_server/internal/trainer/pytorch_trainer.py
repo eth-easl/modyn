@@ -87,6 +87,7 @@ class PytorchTrainer:
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
         self.generative = training_info.generative
+        self.no_labels = training_info.no_labels
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -191,7 +192,7 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
-            generative=training_info.generative,
+            generative=training_info.no_labels,
         )
 
         # Create callbacks

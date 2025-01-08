@@ -58,6 +58,7 @@ class TrainingInfo:
         self.shuffle = request.shuffle
         self.enable_accurate_gpu_measurements = request.enable_accurate_gpu_measurements
         self.generative = request.generative
+        self.no_labels = request.no_labels
         assert (
             self.pretrained_model_path or not self.use_pretrained_model
         ), "Inconsistent pretrained model configuration"

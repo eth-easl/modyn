@@ -8,11 +8,17 @@ import collections.abc
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
+import sys
 import typing
+
+if sys.version_info >= (3, 8):
+    import typing as typing_extensions
+else:
+    import typing_extensions
 
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
-@typing.final
+@typing_extensions.final
 class JsonString(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -23,11 +29,11 @@ class JsonString(google.protobuf.message.Message):
         *,
         value: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["value", b"value"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["value", b"value"]) -> None: ...
 
 global___JsonString = JsonString
 
-@typing.final
+@typing_extensions.final
 class PythonString(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -38,11 +44,11 @@ class PythonString(google.protobuf.message.Message):
         *,
         value: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["value", b"value"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["value", b"value"]) -> None: ...
 
 global___PythonString = PythonString
 
-@typing.final
+@typing_extensions.final
 class Data(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -57,12 +63,12 @@ class Data(google.protobuf.message.Message):
         num_dataloaders: builtins.int = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]
+        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]
     ) -> None: ...
 
 global___Data = Data
 
-@typing.final
+@typing_extensions.final
 class TrainerAvailableRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -72,7 +78,7 @@ class TrainerAvailableRequest(google.protobuf.message.Message):
 
 global___TrainerAvailableRequest = TrainerAvailableRequest
 
-@typing.final
+@typing_extensions.final
 class TrainerAvailableResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -83,11 +89,11 @@ class TrainerAvailableResponse(google.protobuf.message.Message):
         *,
         available: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["available", b"available"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
 
 global___TrainerAvailableResponse = TrainerAvailableResponse
 
-@typing.final
+@typing_extensions.final
 class CheckpointInfo(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -103,16 +109,17 @@ class CheckpointInfo(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "checkpoint_interval", b"checkpoint_interval", "checkpoint_path", b"checkpoint_path"
         ],
     ) -> None: ...
 
 global___CheckpointInfo = CheckpointInfo
 
-@typing.final
+@typing_extensions.final
 class StartTrainingRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
     PIPELINE_ID_FIELD_NUMBER: builtins.int
     TRIGGER_ID_FIELD_NUMBER: builtins.int
     DEVICE_FIELD_NUMBER: builtins.int
@@ -141,6 +148,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
     GENERATIVE_FIELD_NUMBER: builtins.int
+    NO_LABELS_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -148,19 +156,9 @@ class StartTrainingRequest(google.protobuf.message.Message):
     load_optimizer_state: builtins.bool
     pretrained_model_id: builtins.int
     batch_size: builtins.int
-    torch_criterion: builtins.str
-    epochs_per_trigger: builtins.int
-    num_prefetched_partitions: builtins.int
-    parallel_prefetch_requests: builtins.int
-    seed: builtins.int
-    num_samples_to_pass: builtins.int
-    shuffle: builtins.bool
-    enable_accurate_gpu_measurements: builtins.bool
-    record_loss_every: builtins.int
-    drop_last_batch: builtins.bool
-    generative: builtins.bool
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
+    torch_criterion: builtins.str
     @property
     def criterion_parameters(self) -> global___JsonString: ...
     @property
@@ -177,8 +175,19 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def label_transformer(self) -> global___PythonString: ...
     @property
     def grad_scaler_configuration(self) -> global___JsonString: ...
+    epochs_per_trigger: builtins.int
+    num_prefetched_partitions: builtins.int
+    parallel_prefetch_requests: builtins.int
+    seed: builtins.int
     @property
     def tokenizer(self) -> global___PythonString: ...
+    num_samples_to_pass: builtins.int
+    shuffle: builtins.bool
+    enable_accurate_gpu_measurements: builtins.bool
+    record_loss_every: builtins.int
+    drop_last_batch: builtins.bool
+    generative: builtins.bool
+    no_labels: builtins.bool
     def __init__(
         self,
         *,
@@ -210,10 +219,11 @@ class StartTrainingRequest(google.protobuf.message.Message):
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
         generative: builtins.bool = ...,
+        no_labels: builtins.bool = ...,
     ) -> None: ...
     def HasField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -242,7 +252,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ) -> builtins.bool: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -275,6 +285,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"load_optimizer_state",
             "lr_scheduler",
             b"lr_scheduler",
+            "no_labels",
+            b"no_labels",
             "num_prefetched_partitions",
             b"num_prefetched_partitions",
             "num_samples_to_pass",
@@ -306,15 +318,17 @@ class StartTrainingRequest(google.protobuf.message.Message):
         ],
     ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_seed", b"_seed"]) -> typing.Literal["seed"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing_extensions.Literal["_seed", b"_seed"]
+    ) -> typing_extensions.Literal["seed"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
-    ) -> typing.Literal["tokenizer"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_tokenizer", b"_tokenizer"]
+    ) -> typing_extensions.Literal["tokenizer"] | None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 
-@typing.final
+@typing_extensions.final
 class StartTrainingResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -329,12 +343,13 @@ class StartTrainingResponse(google.protobuf.message.Message):
         training_id: builtins.int = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["training_id", b"training_id", "training_started", b"training_started"]
+        self,
+        field_name: typing_extensions.Literal["training_id", b"training_id", "training_started", b"training_started"],
     ) -> None: ...
 
 global___StartTrainingResponse = StartTrainingResponse
 
-@typing.final
+@typing_extensions.final
 class TrainingStatusRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -345,11 +360,11 @@ class TrainingStatusRequest(google.protobuf.message.Message):
         *,
         training_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["training_id", b"training_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
 
 global___TrainingStatusRequest = TrainingStatusRequest
 
-@typing.final
+@typing_extensions.final
 class TrainingStatusResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -369,13 +384,13 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     is_training: builtins.bool
     state_available: builtins.bool
     blocked: builtins.bool
+    @property
+    def log(self) -> global___JsonString: ...
     exception: builtins.str
     batches_seen: builtins.int
     samples_seen: builtins.int
     downsampling_batches_seen: builtins.int
     downsampling_samples_seen: builtins.int
-    @property
-    def log(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -393,7 +408,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     ) -> None: ...
     def HasField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_batches_seen",
             b"_batches_seen",
             "_downsampling_batches_seen",
@@ -420,7 +435,7 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     ) -> builtins.bool: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_batches_seen",
             b"_batches_seen",
             "_downsampling_batches_seen",
@@ -457,28 +472,28 @@ class TrainingStatusResponse(google.protobuf.message.Message):
     ) -> None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_batches_seen", b"_batches_seen"]
-    ) -> typing.Literal["batches_seen"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_batches_seen", b"_batches_seen"]
+    ) -> typing_extensions.Literal["batches_seen"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_downsampling_batches_seen", b"_downsampling_batches_seen"]
-    ) -> typing.Literal["downsampling_batches_seen"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_downsampling_batches_seen", b"_downsampling_batches_seen"]
+    ) -> typing_extensions.Literal["downsampling_batches_seen"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_downsampling_samples_seen", b"_downsampling_samples_seen"]
-    ) -> typing.Literal["downsampling_samples_seen"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_downsampling_samples_seen", b"_downsampling_samples_seen"]
+    ) -> typing_extensions.Literal["downsampling_samples_seen"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_exception", b"_exception"]
-    ) -> typing.Literal["exception"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_exception", b"_exception"]
+    ) -> typing_extensions.Literal["exception"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_samples_seen", b"_samples_seen"]
-    ) -> typing.Literal["samples_seen"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_samples_seen", b"_samples_seen"]
+    ) -> typing_extensions.Literal["samples_seen"] | None: ...
 
 global___TrainingStatusResponse = TrainingStatusResponse
 
-@typing.final
+@typing_extensions.final
 class StoreFinalModelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -489,11 +504,11 @@ class StoreFinalModelRequest(google.protobuf.message.Message):
         *,
         training_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["training_id", b"training_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
 
 global___StoreFinalModelRequest = StoreFinalModelRequest
 
-@typing.final
+@typing_extensions.final
 class StoreFinalModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -508,12 +523,12 @@ class StoreFinalModelResponse(google.protobuf.message.Message):
         model_id: builtins.int = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["model_id", b"model_id", "valid_state", b"valid_state"]
+        self, field_name: typing_extensions.Literal["model_id", b"model_id", "valid_state", b"valid_state"]
     ) -> None: ...
 
 global___StoreFinalModelResponse = StoreFinalModelResponse
 
-@typing.final
+@typing_extensions.final
 class GetLatestModelRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -524,11 +539,11 @@ class GetLatestModelRequest(google.protobuf.message.Message):
         *,
         training_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["training_id", b"training_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["training_id", b"training_id"]) -> None: ...
 
 global___GetLatestModelRequest = GetLatestModelRequest
 
-@typing.final
+@typing_extensions.final
 class GetLatestModelResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -543,7 +558,7 @@ class GetLatestModelResponse(google.protobuf.message.Message):
         model_path: builtins.str = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["model_path", b"model_path", "valid_state", b"valid_state"]
+        self, field_name: typing_extensions.Literal["model_path", b"model_path", "valid_state", b"valid_state"]
     ) -> None: ...
 
 global___GetLatestModelResponse = GetLatestModelResponse

@@ -2,8 +2,29 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import grpc
+import warnings
 
 import modyn.storage.internal.grpc.generated.storage_pb2 as storage__pb2
+
+GRPC_GENERATED_VERSION = "1.67.1"
+GRPC_VERSION = grpc.__version__
+_version_not_supported = False
+
+try:
+    from grpc._utilities import first_version_is_lower
+
+    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
+except ImportError:
+    _version_not_supported = True
+
+if _version_not_supported:
+    raise RuntimeError(
+        f"The grpc package installed is at version {GRPC_VERSION},"
+        + f" but the generated code in storage_pb2_grpc.py depends on"
+        + f" grpcio>={GRPC_GENERATED_VERSION}."
+        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
+        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
+    )
 
 
 class StorageStub(object):
@@ -19,56 +40,67 @@ class StorageStub(object):
             "/modyn.storage.Storage/Get",
             request_serializer=storage__pb2.GetRequest.SerializeToString,
             response_deserializer=storage__pb2.GetResponse.FromString,
+            _registered_method=True,
         )
         self.GetNL = channel.unary_stream(
             "/modyn.storage.Storage/GetNL",
             request_serializer=storage__pb2.GetRequest.SerializeToString,
             response_deserializer=storage__pb2.GetResponse.FromString,
+            _registered_method=True,
         )
         self.GetNewDataSince = channel.unary_stream(
             "/modyn.storage.Storage/GetNewDataSince",
             request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
             response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
+            _registered_method=True,
         )
         self.GetDataInInterval = channel.unary_stream(
             "/modyn.storage.Storage/GetDataInInterval",
             request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
+            _registered_method=True,
         )
         self.GetDataPerWorker = channel.unary_stream(
             "/modyn.storage.Storage/GetDataPerWorker",
             request_serializer=storage__pb2.GetDataPerWorkerRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDataPerWorkerResponse.FromString,
+            _registered_method=True,
         )
         self.GetDatasetSize = channel.unary_unary(
             "/modyn.storage.Storage/GetDatasetSize",
             request_serializer=storage__pb2.GetDatasetSizeRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDatasetSizeResponse.FromString,
+            _registered_method=True,
         )
         self.CheckAvailability = channel.unary_unary(
             "/modyn.storage.Storage/CheckAvailability",
             request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
             response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
+            _registered_method=True,
         )
         self.RegisterNewDataset = channel.unary_unary(
             "/modyn.storage.Storage/RegisterNewDataset",
             request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
             response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
+            _registered_method=True,
         )
         self.GetCurrentTimestamp = channel.unary_unary(
             "/modyn.storage.Storage/GetCurrentTimestamp",
             request_serializer=storage__pb2.GetCurrentTimestampRequest.SerializeToString,
             response_deserializer=storage__pb2.GetCurrentTimestampResponse.FromString,
+            _registered_method=True,
         )
         self.DeleteDataset = channel.unary_unary(
             "/modyn.storage.Storage/DeleteDataset",
             request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
             response_deserializer=storage__pb2.DeleteDatasetResponse.FromString,
+            _registered_method=True,
         )
         self.DeleteData = channel.unary_unary(
             "/modyn.storage.Storage/DeleteData",
             request_serializer=storage__pb2.DeleteDataRequest.SerializeToString,
             response_deserializer=storage__pb2.DeleteDataResponse.FromString,
+            _registered_method=True,
         )
 
 
@@ -202,6 +234,7 @@ def add_StorageServicer_to_server(servicer, server):
     }
     generic_handler = grpc.method_handlers_generic_handler("modyn.storage.Storage", rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers("modyn.storage.Storage", rpc_method_handlers)
 
 
 # This class is part of an EXPERIMENTAL API.
@@ -235,6 +268,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -264,6 +298,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -293,6 +328,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -322,6 +358,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -351,6 +388,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -380,6 +418,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -409,6 +448,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -438,6 +478,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -467,6 +508,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -496,6 +538,7 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )
 
     @staticmethod
@@ -525,4 +568,5 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
+            _registered_method=True,
         )

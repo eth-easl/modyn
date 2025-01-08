@@ -59,7 +59,8 @@ message StartTrainingRequest {
   bool enable_accurate_gpu_measurements = 25;
   int64 record_loss_every = 26;
   bool drop_last_batch = 27;
-  bool generative=28;
+  bool generative = 28;
+  bool no_labels = 29;
 }
 
 message StartTrainingResponse {

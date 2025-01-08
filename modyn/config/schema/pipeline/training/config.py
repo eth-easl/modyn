@@ -125,6 +125,7 @@ class TrainingConfig(ModynBaseModel):
             "If True then, then the training pipeline goes into the generative branch, data is sampled without expecting labels."
         ),
     )
+
     seed: int | None = Field(
         None,
         description=(
