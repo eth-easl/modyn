@@ -578,13 +578,15 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       if (sample_fileids.size() != num_keys) {
         SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
-        SPDLOG_ERROR(fmt::format("num_keys = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+        SPDLOG_ERROR(
+            fmt::format("num_keys = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
                         "sample_fileids = [{}]",
                         num_keys, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
                         fmt::join(sample_fileids, ", ")));
         throw modyn::utils::ModynException(
-        fmt::format("Got back {} samples from DB, while asking for {} keys. You might have asked for duplicate "
-        "keys, which is not supported.", sample_fileids.size(), num_keys));
+            fmt::format("Got back {} samples from DB, while asking for {} keys. You might have asked for duplicate "
+                        "keys, which is not supported.",
+                        sample_fileids.size(), num_keys));
       }
 
       int64_t current_file_id = sample_fileids.at(0);
@@ -595,10 +597,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
       if (current_file_path.empty() || current_file_path.find_first_not_of(' ') == std::string::npos) {
         SPDLOG_ERROR(fmt::format("Sample query is {}", sample_query));
-        SPDLOG_ERROR(fmt::format("num_keys = {}, current_file_id = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
-        "sample_fileids = [{}]",
-        num_keys, current_file_id, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
-        fmt::join(sample_fileids, ", ")));
+        SPDLOG_ERROR(
+            fmt::format("num_keys = {}, current_file_id = {}\n sample_labels = [{}]\n sample_indices = [{}]\n "
+                        "sample_fileids = [{}]",
+                        num_keys, current_file_id, fmt::join(sample_labels, ", "), fmt::join(sample_indices, ", "),
+                        fmt::join(sample_fileids, ", ")));
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
