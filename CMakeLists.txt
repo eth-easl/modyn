@@ -55,7 +55,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   # Without this, we get compilation errors for the chrono header. We need to set this globally
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -std=c++20")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  list(APPEND MODYN_COMPILE_OPTIONS "-Wno-missing-requires" "-Wno-unknown-warning-option") # causes issues since gcc 12 and grpc 1.69
 endif()
+
+
 
 if (${MODYN_TEST_COVERAGE})
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
