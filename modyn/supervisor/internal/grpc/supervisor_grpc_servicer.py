@@ -30,7 +30,6 @@ class SupervisorGRPCServicer(SupervisorServicer):
     def start_pipeline(self, request: StartPipelineRequest, context: grpc.ServicerContext) -> PipelineResponse:
         tid = threading.get_native_id()
         pid = os.getpid()
-
         logger.info(f"[{pid}][{tid}]: Starting pipeline with request - {request}")
 
         start_replay_at: int | None = None
@@ -44,7 +43,6 @@ class SupervisorGRPCServicer(SupervisorServicer):
             maximum_triggers = request.maximum_triggers
 
         pipeline_config = json.loads(request.pipeline_config.value)
-
         msg = self._supervisor.start_pipeline(
             pipeline_config,
             self.modyn_config["supervisor"]["eval_directory"],

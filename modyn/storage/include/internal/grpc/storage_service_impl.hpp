@@ -74,6 +74,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   Status Get(ServerContext* context, const modyn::storage::GetRequest* request,
              ServerWriter<modyn::storage::GetResponse>* writer) override;
+  Status GetNL(ServerContext* context, const modyn::storage::GetRequest* request,
+               ServerWriter<modyn::storage::GetResponse>* writer) override;
   Status GetNewDataSince(ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
                          ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override;
   Status GetDataInInterval(ServerContext* context, const modyn::storage::GetDataInIntervalRequest* request,
@@ -95,7 +97,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT>
   Status Get_Impl(  // NOLINT (readability-identifier-naming)
-      ServerContext* /*context*/, const modyn::storage::GetRequest* request, WriterT* writer) {
+      ServerContext* /*context*/, const modyn::storage::GetRequest* request, WriterT* writer,
+      bool include_labels = true) {
     try {
       soci::session session = storage_database_connection_.get_session();
 
@@ -121,7 +124,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       request_keys.reserve(keys_size);
       std::copy(request->keys().begin(), request->keys().end(), std::back_inserter(request_keys));
 
-      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data);
+      // Call the appropriate function based on the include_labels flag
+      send_sample_data_from_keys<WriterT>(writer, request_keys, dataset_data, include_labels);
 
       // sqlite causes memory leaks otherwise
       if (session.get_backend_name() != "sqlite3" && session.is_connected()) {
@@ -312,7 +316,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   void send_sample_data_from_keys(WriterT* writer, const std::vector<int64_t>& request_keys,
-                                  const DatasetData& dataset_data) {
+                                  const DatasetData& dataset_data, bool include_labels = true) {
     // Create mutex to protect the writer from concurrent writes as this is not supported by gRPC
     std::mutex writer_mutex;
 
@@ -320,7 +324,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       const std::vector<int64_t>::const_iterator begin = request_keys.begin();  // NOLINT (modernize-use-auto)
       const std::vector<int64_t>::const_iterator end = request_keys.end();      // NOLINT (modernize-use-auto)
 
-      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_);
+      get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_, sample_batch_size_,
+                                    include_labels);
 
     } else {
       std::vector<std::exception_ptr> thread_exceptions(retrieval_threads_);
@@ -332,18 +337,19 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         const std::vector<int64_t>::const_iterator begin = its_per_thread[thread_id].first;
         const std::vector<int64_t>::const_iterator end = its_per_thread[thread_id].second;
 
-        retrieval_threads_vector[thread_id] = std::thread([thread_id, begin, end, writer, &writer_mutex, &dataset_data,
-                                                           &thread_exceptions, &exception_mutex, this]() {
-          try {
-            get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_,
-                                          sample_batch_size_);
-          } catch (const std::exception& e) {
-            const std::lock_guard<std::mutex> lock(exception_mutex);
-            spdlog::error(
-                fmt::format("Error in thread {} started by send_sample_data_from_keys: {}", thread_id, e.what()));
-            thread_exceptions[thread_id] = std::current_exception();
-          }
-        });
+        retrieval_threads_vector[thread_id] =
+            std::thread([thread_id, begin, end, writer, &writer_mutex, &dataset_data, &thread_exceptions,
+                         &exception_mutex, this, include_labels]() {
+              try {
+                get_samples_and_send<WriterT>(begin, end, writer, &writer_mutex, &dataset_data, &config_,
+                                              sample_batch_size_, include_labels);
+              } catch (const std::exception& e) {
+                const std::lock_guard<std::mutex> lock(exception_mutex);
+                spdlog::error(
+                    fmt::format("Error in thread {} started by send_sample_data_from_keys: {}", thread_id, e.what()));
+                thread_exceptions[thread_id] = std::current_exception();
+              }
+            });
       }
 
       for (uint64_t thread_id = 0; thread_id < retrieval_threads_; ++thread_id) {
@@ -550,7 +556,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   template <typename WriterT = ServerWriter<modyn::storage::GetResponse>>
   static void send_sample_data_for_keys_and_file(  // NOLINT(readability-function-cognitive-complexity)
       WriterT* writer, std::mutex& writer_mutex, const std::vector<int64_t>& sample_keys,
-      const DatasetData& dataset_data, soci::session& session, int64_t /*sample_batch_size*/) {
+      const DatasetData& dataset_data, soci::session& session, int64_t /*sample_batch_size*/,
+      bool include_labels = true) {
     // Note that we currently ignore the sample batch size here, under the assumption that users do not request more
     // keys than this
     try {
@@ -564,6 +571,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       std::vector<int64_t> sample_labels(num_keys);
       std::vector<uint64_t> sample_indices(num_keys);
       std::vector<int64_t> sample_fileids(num_keys);
+
       const std::string sample_query = fmt::format(
           "SELECT label, sample_index, file_id FROM samples WHERE dataset_id = :dataset_id AND sample_id IN ({}) ORDER "
           "BY file_id",
@@ -600,10 +608,10 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         throw modyn::utils::ModynException(fmt::format("Could not obtain full path of file id {} in dataset {}",
                                                        current_file_id, dataset_data.dataset_id));
       }
+
       const YAML::Node file_wrapper_config_node = YAML::Load(dataset_data.file_wrapper_config);
       auto filesystem_wrapper =
           get_filesystem_wrapper(static_cast<FilesystemWrapperType>(dataset_data.filesystem_wrapper_type));
-
       auto file_wrapper =
           get_file_wrapper(current_file_path, static_cast<FileWrapperType>(dataset_data.file_wrapper_type),
                            file_wrapper_config_node, filesystem_wrapper);
@@ -612,12 +620,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         const int64_t& sample_fileid = sample_fileids.at(sample_idx);
 
         if (sample_fileid != current_file_id) {
-          // 1. Prepare response
           const std::vector<uint64_t> file_indexes(
               sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
               sample_indices.begin() + static_cast<int64_t>(sample_idx));
-          std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
-
+          std::vector<std::vector<unsigned char>> data =
+              file_wrapper->get_samples_from_indices(file_indexes, include_labels);
           // Protobuf expects the data as std::string...
           std::vector<std::string> stringified_data;
           stringified_data.reserve(data.size());
@@ -631,17 +638,17 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
           response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
                                           sample_keys.begin() + static_cast<int64_t>(sample_idx));
-          response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
-                                            sample_labels.begin() + static_cast<int64_t>(sample_idx));
 
-          // 2. Send response
-          {
-            const std::lock_guard<std::mutex> lock(writer_mutex);
-            writer->Write(response);
+          if (!include_labels) {
+            response.mutable_labels()->Clear();  // Return empty labels if include_labels is true
+          } else {
+            response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                              sample_labels.begin() + static_cast<int64_t>(sample_idx));
           }
 
-          // 3. Update state
-          current_file_id = sample_fileid;
+          const std::lock_guard<std::mutex> lock(writer_mutex);
+          writer->Write(response);
+
           current_file_path = "",
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
@@ -664,8 +671,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       // Send leftovers
       const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
                                                sample_indices.end());
-      const std::vector<std::vector<unsigned char>> data = file_wrapper->get_samples_from_indices(file_indexes);
-      // Protobuf expects the data as std::string...
+      const std::vector<std::vector<unsigned char>> data =
+          file_wrapper->get_samples_from_indices(file_indexes, include_labels);
+
       std::vector<std::string> stringified_data;
       stringified_data.reserve(data.size());
       for (const std::vector<unsigned char>& char_vec : data) {
@@ -676,13 +684,16 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       response.mutable_samples()->Assign(stringified_data.begin(), stringified_data.end());
       response.mutable_keys()->Assign(sample_keys.begin() + static_cast<int64_t>(current_file_start_idx),
                                       sample_keys.end());
-      response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
-                                        sample_labels.end());
 
-      {
-        const std::lock_guard<std::mutex> lock(writer_mutex);
-        writer->Write(response);
+      if (!include_labels) {
+        response.mutable_labels()->Clear();  // Return empty labels if include_labels is true
+      } else {
+        response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
+                                          sample_labels.end());
       }
+
+      const std::lock_guard<std::mutex> lock(writer_mutex);
+      writer->Write(response);
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file: {}", e.what());
       SPDLOG_ERROR("Propagating error up the call chain to handle gRPC calls.");
@@ -694,15 +705,18 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
   static void get_samples_and_send(const std::vector<int64_t>::const_iterator begin,
                                    const std::vector<int64_t>::const_iterator end, WriterT* writer,
                                    std::mutex* writer_mutex, const DatasetData* dataset_data, const YAML::Node* config,
-                                   int64_t sample_batch_size) {
+                                   int64_t sample_batch_size, bool include_labels = true) {
     if (begin >= end) {
       return;
     }
     const StorageDatabaseConnection storage_database_connection(*config);
     soci::session session = storage_database_connection.get_session();
     const std::vector<int64_t> sample_keys(begin, end);
+
+    // Call the appropriate function based on the include_labels flag
     send_sample_data_for_keys_and_file<WriterT>(writer, *writer_mutex, sample_keys, *dataset_data, session,
-                                                sample_batch_size);
+                                                sample_batch_size, include_labels);
+
     session.close();
   }
 
