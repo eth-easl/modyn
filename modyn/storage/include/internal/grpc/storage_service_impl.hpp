@@ -380,7 +380,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
     // return millions of files
     const std::vector<int64_t> file_ids = get_file_ids(session, dataset_id, start_timestamp, end_timestamp);
     session.close();
-
+     
     if (file_ids.empty()) {
       SPDLOG_INFO("No files found for dataset {} with start_timestamp = {} and end_timestamp = {}", dataset_id,
                   start_timestamp, end_timestamp);
@@ -645,10 +645,11 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
                                               sample_labels.begin() + static_cast<int64_t>(sample_idx));
           }
-
+          {
           const std::lock_guard<std::mutex> lock(writer_mutex);
           writer->Write(response);
-
+          }
+          current_file_id = sample_fileid;
           current_file_path = "",
           session << "SELECT path FROM files WHERE file_id = :file_id AND dataset_id = :dataset_id",
           soci::into(current_file_path), soci::use(current_file_id), soci::use(dataset_data.dataset_id);
@@ -671,6 +672,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       // Send leftovers
       const std::vector<uint64_t> file_indexes(sample_indices.begin() + static_cast<int64_t>(current_file_start_idx),
                                                sample_indices.end());
+      
       const std::vector<std::vector<unsigned char>> data =
           file_wrapper->get_samples_from_indices(file_indexes, include_labels);
 
@@ -691,9 +693,9 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
                                           sample_labels.end());
       }
-
+     {
       const std::lock_guard<std::mutex> lock(writer_mutex);
-      writer->Write(response);
+      writer->Write(response);}
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in send_sample_data_for_keys_and_file: {}", e.what());
       SPDLOG_ERROR("Propagating error up the call chain to handle gRPC calls.");
