@@ -21,7 +21,9 @@ from modyn.config.schema.system.config import ModynConfig
 from modyn.supervisor.internal.eval.handler import EvalRequest
 from modyn.supervisor.internal.grpc.enums import PipelineStage
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
-from modyn.supervisor.internal.utils.evaluation_status_reporter import EvaluationStatusReporter
+from modyn.supervisor.internal.utils.evaluation_status_reporter import (
+    EvaluationStatusReporter,
+)
 from modyn.supervisor.internal.utils.git_utils import get_head_sha
 
 logger = logging.getLogger(__name__)
@@ -279,12 +281,18 @@ class TrainingInfo(_TrainInfoMixin):
     def df_columns(self) -> list[str]:
         """Provide the column names of the DataFrame representation of the
         data."""
-        return ["trigger_id", "training_id", "num_batches", "num_samples"]
+        return ["trigger_id", "training_id", "num_batches", "num_samples", "train_time_at_trainer"]
 
     @override
     @property
     def df_row(self) -> tuple:
-        return (self.trigger_id, self.training_id, self.trainer_log["num_batches"], self.trainer_log["num_samples"])
+        return (
+            self.trigger_id,
+            self.training_id,
+            self.trainer_log["num_batches"],
+            self.trainer_log["num_samples"],
+            self.trainer_log["total_train"],
+        )
 
 
 class StoreModelInfo(_TrainInfoMixin):
@@ -605,7 +613,16 @@ class SupervisorLogs(BaseModel):
                 )
                 for stage in self.stage_runs
             ],
-            columns=["id", "start", "end", "duration", "batch_idx", "sample_idx", "sample_time", "trigger_idx"],
+            columns=[
+                "id",
+                "start",
+                "end",
+                "duration",
+                "batch_idx",
+                "sample_idx",
+                "sample_time",
+                "trigger_idx",
+            ],
         )
 
 

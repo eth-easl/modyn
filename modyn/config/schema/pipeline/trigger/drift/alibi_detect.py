@@ -88,7 +88,30 @@ class AlibiDetectCVMDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrect
     id: Literal["AlibiDetectCVMDriftMetric"] = Field("AlibiDetectCVMDriftMetric")
 
 
+class AlibiDetectLSDDDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin, AlibiDetectDeviceMixin):
+    id: Literal["AlibiDetectLSDDDriftMetric"] = Field("AlibiDetectLSDDDriftMetric")
+
+
+class AlibiDetectFETDriftMetric(
+    _AlibiDetectBaseDriftMetric,
+    _AlibiDetectCorrectionMixin,
+    _AlibiDetectAlternativeMixin,
+):
+    id: Literal["AlibiDetectFETDriftMetric"] = Field("AlibiDetectFETDriftMetric")
+    n_features: int | None = Field(None)
+
+
+class AlibiDetectChiSquareDriftMetric(_AlibiDetectBaseDriftMetric, _AlibiDetectCorrectionMixin):
+    id: Literal["AlibiDetectChiSquareDriftMetric"] = Field("AlibiDetectChiSquareDriftMetric")
+    n_features: int | None = Field(None)
+
+
 AlibiDetectDriftMetric = Annotated[
-    AlibiDetectMmdDriftMetric | AlibiDetectKSDriftMetric | AlibiDetectCVMDriftMetric,
+    AlibiDetectMmdDriftMetric
+    | AlibiDetectKSDriftMetric
+    | AlibiDetectCVMDriftMetric
+    | AlibiDetectLSDDDriftMetric
+    | AlibiDetectFETDriftMetric
+    | AlibiDetectChiSquareDriftMetric,
     Field(discriminator="id"),
 ]
