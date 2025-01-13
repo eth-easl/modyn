@@ -14,10 +14,10 @@ from modyn.models.coreset_methods_support import CoresetSupportingModule
 # as GPT2_Lora
 
 
-class gpt2:
+class Gpt2:
     # pylint: disable-next=unused-argument
     def __init__(self, hparams: Any, device: str, amp: bool) -> None:
-        self.model = gpt2Modyn(hparams)
+        self.model = Gpt2Modyn(hparams)
         self.model.to(device)
 
 
@@ -25,7 +25,7 @@ class gpt2:
 # torchvision https://github.com/pytorch/vision/blob/main/torchvision/models/resnet.py
 
 
-class gpt2Modyn(CoresetSupportingModule):
+class Gpt2Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()
 
