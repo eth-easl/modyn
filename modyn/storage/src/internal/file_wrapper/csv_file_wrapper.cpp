@@ -3,8 +3,11 @@
 #include <rapidcsv.h>
 
 #include <algorithm>
+#include <cassert>   // Include for ASSERT or use your custom assert macro
+#include <iostream>  // Include required for std::cout
 #include <numeric>
 #include <stdexcept>
+#include <vector>
 
 using namespace modyn::storage;
 
@@ -57,6 +60,19 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
                                                                                  bool include_labels) {
+  // Print include_labels
+  std::cout << "include_labels: " << (include_labels ? "true" : "false") << std::endl;
+
+  // Print indices
+  std::cout << "Indices: ";
+  for (const auto& index : indices) {
+    std::cout << index << " ";
+  }
+  std::cout << std::endl;
+
+  // Print number of samples
+  uint64_t num_samples = get_number_of_samples();
+  std::cout << "Number of samples: " << num_samples << std::endl;
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
