@@ -8,7 +8,7 @@ from .hf_tokenizer import HFTokenizerTransform
 class GPT2TokenizerTransform(HFTokenizerTransform):
     def __init__(self, max_token_length: int = 256):
         """Transformer for GPT-2.
-        
+
         Args:
             max_token_length: Maximum token length for GPT-2.
         """

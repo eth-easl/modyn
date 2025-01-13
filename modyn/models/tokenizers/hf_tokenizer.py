@@ -7,7 +7,7 @@ from transformers import PreTrainedTokenizer
 class HFTokenizerTransform:
     def __init__(self, tokenizer: PreTrainedTokenizer, max_token_length: int) -> None:
         """Parent class for tokenizers based on HuggingFace's Transformers.
-        
+
         Args:
             tokenizer: Preloaded tokenizer object.
             max_token_length: Maximum length for tokenization.
