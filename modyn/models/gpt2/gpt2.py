@@ -32,8 +32,7 @@ class Gpt2Modyn(CoresetSupportingModule):
         self.model = GPT2LMHeadModel.from_pretrained("gpt2-large")  # hparams.model_name_or_path
 
     def forward(self, data: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
-        """
-        Forward method for text generation or language modeling tasks.
+        """Forward method for text generation or language modeling tasks.
 
         Args:
         - data (torch.Tensor): Tensor of shape (batch_size, seq_len, 2), where
@@ -51,8 +50,7 @@ class Gpt2Modyn(CoresetSupportingModule):
         return output[0]
 
     def get_last_layer(self) -> nn.Module:
-        """
-        Retrieve the last layer (lm_head) of the model.
+        """Retrieve the last layer (lm_head) of the model.
 
         Returns:
             The final linear layer of the GPT-2 model.
