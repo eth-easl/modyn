@@ -189,6 +189,7 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
                                     const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
                                     std::atomic<bool>* exception_thrown) {
   try {
+    // SPDLOG_INFO("File paths: [{}]", fmt::join(file_paths_begin, file_paths_end, ", "));
     if (file_paths_begin >= file_paths_end) {
       return;
     }

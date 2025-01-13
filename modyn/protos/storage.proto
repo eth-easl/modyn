@@ -4,6 +4,7 @@ package modyn.storage;
 
 service Storage {
   rpc Get(GetRequest) returns (stream GetResponse) {}
+  rpc GetNL(GetRequest) returns (stream GetResponse) {}
   rpc GetNewDataSince(GetNewDataSinceRequest)
       returns (stream GetNewDataSinceResponse) {}
   rpc GetDataInInterval(GetDataInIntervalRequest)
@@ -32,6 +33,7 @@ message GetResponse {
   repeated int64 keys = 2;
   repeated int64 labels = 3;
 }
+
 
 // https://github.com/grpc/grpc/issues/15937
 message GetCurrentTimestampRequest {}

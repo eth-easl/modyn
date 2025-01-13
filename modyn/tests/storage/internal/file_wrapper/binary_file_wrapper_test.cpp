@@ -295,7 +295,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   std::vector<uint64_t> label_indices{0, 1, 2, 3};
-  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(label_indices);
+  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(label_indices, true);
   ASSERT_EQ(samples.size(), 4);
   ASSERT_EQ((samples)[0][0], 12);
   ASSERT_EQ((samples)[1][0], 13);
@@ -303,25 +303,25 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndices) {
   ASSERT_EQ((samples)[3][0], 15);
 
   label_indices = {1, 2, 3};
-  samples = file_wrapper.get_samples_from_indices(label_indices);
+  samples = file_wrapper.get_samples_from_indices(label_indices, true);
   ASSERT_EQ(samples.size(), 3);
   ASSERT_EQ((samples)[0][0], 13);
   ASSERT_EQ((samples)[1][0], 14);
   ASSERT_EQ((samples)[2][0], 15);
 
   label_indices = {2};
-  samples = file_wrapper.get_samples_from_indices(label_indices);
+  samples = file_wrapper.get_samples_from_indices(label_indices, true);
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ((samples)[0][0], 14);
 
   label_indices = {1, 3};
-  samples = file_wrapper.get_samples_from_indices(label_indices);
+  samples = file_wrapper.get_samples_from_indices(label_indices, true);
   ASSERT_EQ(samples.size(), 2);
   ASSERT_EQ((samples)[0][0], 13);
   ASSERT_EQ((samples)[1][0], 15);
 
   label_indices = {3, 1, 3};
-  samples = file_wrapper.get_samples_from_indices(label_indices);
+  samples = file_wrapper.get_samples_from_indices(label_indices, true);
   ASSERT_EQ(samples.size(), 3);
   ASSERT_EQ((samples)[0][0], 15);
   ASSERT_EQ((samples)[1][0], 13);

@@ -8,11 +8,17 @@ import collections.abc
 import google.protobuf.descriptor
 import google.protobuf.internal.containers
 import google.protobuf.message
+import sys
 import typing
+
+if sys.version_info >= (3, 8):
+    import typing as typing_extensions
+else:
+    import typing_extensions
 
 DESCRIPTOR: google.protobuf.descriptor.FileDescriptor
 
-@typing.final
+@typing_extensions.final
 class GetRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -27,11 +33,13 @@ class GetRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
+    def ClearField(
+        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]
+    ) -> None: ...
 
 global___GetRequest = GetRequest
 
-@typing.final
+@typing_extensions.final
 class GetResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -52,12 +60,12 @@ class GetResponse(google.protobuf.message.Message):
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]
+        self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]
     ) -> None: ...
 
 global___GetResponse = GetResponse
 
-@typing.final
+@typing_extensions.final
 class GetCurrentTimestampRequest(google.protobuf.message.Message):
     """https://github.com/grpc/grpc/issues/15937"""
 
@@ -69,7 +77,7 @@ class GetCurrentTimestampRequest(google.protobuf.message.Message):
 
 global___GetCurrentTimestampRequest = GetCurrentTimestampRequest
 
-@typing.final
+@typing_extensions.final
 class GetNewDataSinceRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -84,12 +92,12 @@ class GetNewDataSinceRequest(google.protobuf.message.Message):
         timestamp: builtins.int = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["dataset_id", b"dataset_id", "timestamp", b"timestamp"]
+        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "timestamp", b"timestamp"]
     ) -> None: ...
 
 global___GetNewDataSinceRequest = GetNewDataSinceRequest
 
-@typing.final
+@typing_extensions.final
 class GetNewDataSinceResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -110,12 +118,12 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
+        self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
     ) -> None: ...
 
 global___GetNewDataSinceResponse = GetNewDataSinceResponse
 
-@typing.final
+@typing_extensions.final
 class GetDataInIntervalRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -134,14 +142,14 @@ class GetDataInIntervalRequest(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"
         ],
     ) -> None: ...
 
 global___GetDataInIntervalRequest = GetDataInIntervalRequest
 
-@typing.final
+@typing_extensions.final
 class GetDataInIntervalResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -162,12 +170,12 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
+        self, field_name: typing_extensions.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
     ) -> None: ...
 
 global___GetDataInIntervalResponse = GetDataInIntervalResponse
 
-@typing.final
+@typing_extensions.final
 class GetDataPerWorkerRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -195,7 +203,7 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     ) -> None: ...
     def HasField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_end_timestamp",
             b"_end_timestamp",
             "_start_timestamp",
@@ -208,7 +216,7 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     ) -> builtins.bool: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_end_timestamp",
             b"_end_timestamp",
             "_start_timestamp",
@@ -227,16 +235,16 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
     ) -> None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]
-    ) -> typing.Literal["end_timestamp"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_end_timestamp", b"_end_timestamp"]
+    ) -> typing_extensions.Literal["end_timestamp"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]
-    ) -> typing.Literal["start_timestamp"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_start_timestamp", b"_start_timestamp"]
+    ) -> typing_extensions.Literal["start_timestamp"] | None: ...
 
 global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
 
-@typing.final
+@typing_extensions.final
 class GetDataPerWorkerResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -248,11 +256,11 @@ class GetDataPerWorkerResponse(google.protobuf.message.Message):
         *,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["keys", b"keys"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["keys", b"keys"]) -> None: ...
 
 global___GetDataPerWorkerResponse = GetDataPerWorkerResponse
 
-@typing.final
+@typing_extensions.final
 class GetDatasetSizeRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -274,7 +282,7 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     ) -> None: ...
     def HasField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_end_timestamp",
             b"_end_timestamp",
             "_start_timestamp",
@@ -287,7 +295,7 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     ) -> builtins.bool: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "_end_timestamp",
             b"_end_timestamp",
             "_start_timestamp",
@@ -302,16 +310,16 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
     ) -> None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]
-    ) -> typing.Literal["end_timestamp"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_end_timestamp", b"_end_timestamp"]
+    ) -> typing_extensions.Literal["end_timestamp"] | None: ...
     @typing.overload
     def WhichOneof(
-        self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]
-    ) -> typing.Literal["start_timestamp"] | None: ...
+        self, oneof_group: typing_extensions.Literal["_start_timestamp", b"_start_timestamp"]
+    ) -> typing_extensions.Literal["start_timestamp"] | None: ...
 
 global___GetDatasetSizeRequest = GetDatasetSizeRequest
 
-@typing.final
+@typing_extensions.final
 class GetDatasetSizeResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -325,11 +333,13 @@ class GetDatasetSizeResponse(google.protobuf.message.Message):
         success: builtins.bool = ...,
         num_keys: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["num_keys", b"num_keys", "success", b"success"]) -> None: ...
+    def ClearField(
+        self, field_name: typing_extensions.Literal["num_keys", b"num_keys", "success", b"success"]
+    ) -> None: ...
 
 global___GetDatasetSizeResponse = GetDatasetSizeResponse
 
-@typing.final
+@typing_extensions.final
 class DatasetAvailableRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -340,11 +350,11 @@ class DatasetAvailableRequest(google.protobuf.message.Message):
         *,
         dataset_id: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id"]) -> None: ...
 
 global___DatasetAvailableRequest = DatasetAvailableRequest
 
-@typing.final
+@typing_extensions.final
 class DatasetAvailableResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -355,11 +365,11 @@ class DatasetAvailableResponse(google.protobuf.message.Message):
         *,
         available: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["available", b"available"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["available", b"available"]) -> None: ...
 
 global___DatasetAvailableResponse = DatasetAvailableResponse
 
-@typing.final
+@typing_extensions.final
 class RegisterNewDatasetRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -396,7 +406,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
     ) -> None: ...
     def ClearField(
         self,
-        field_name: typing.Literal[
+        field_name: typing_extensions.Literal[
             "base_path",
             b"base_path",
             "dataset_id",
@@ -420,7 +430,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
 
 global___RegisterNewDatasetRequest = RegisterNewDatasetRequest
 
-@typing.final
+@typing_extensions.final
 class RegisterNewDatasetResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -431,11 +441,11 @@ class RegisterNewDatasetResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["success", b"success"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___RegisterNewDatasetResponse = RegisterNewDatasetResponse
 
-@typing.final
+@typing_extensions.final
 class GetCurrentTimestampResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -446,11 +456,11 @@ class GetCurrentTimestampResponse(google.protobuf.message.Message):
         *,
         timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["timestamp", b"timestamp"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["timestamp", b"timestamp"]) -> None: ...
 
 global___GetCurrentTimestampResponse = GetCurrentTimestampResponse
 
-@typing.final
+@typing_extensions.final
 class DeleteDatasetResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -461,11 +471,11 @@ class DeleteDatasetResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["success", b"success"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteDatasetResponse = DeleteDatasetResponse
 
-@typing.final
+@typing_extensions.final
 class DeleteDataRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -480,11 +490,13 @@ class DeleteDataRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "keys", b"keys"]) -> None: ...
+    def ClearField(
+        self, field_name: typing_extensions.Literal["dataset_id", b"dataset_id", "keys", b"keys"]
+    ) -> None: ...
 
 global___DeleteDataRequest = DeleteDataRequest
 
-@typing.final
+@typing_extensions.final
 class DeleteDataResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -495,6 +507,6 @@ class DeleteDataResponse(google.protobuf.message.Message):
         *,
         success: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["success", b"success"]) -> None: ...
+    def ClearField(self, field_name: typing_extensions.Literal["success", b"success"]) -> None: ...
 
 global___DeleteDataResponse = DeleteDataResponse

@@ -23,6 +23,7 @@ class PerClassOnlineDataset(OnlineDataset):
         parallel_prefetch_requests: int,
         shuffle: bool,
         tokenizer: str | None,
+        include_labels: bool = True,
     ):
         super().__init__(
             pipeline_id,
@@ -37,12 +38,14 @@ class PerClassOnlineDataset(OnlineDataset):
             parallel_prefetch_requests,
             shuffle,
             tokenizer,
-            None,
+            include_labels,  # type: ignore[arg-type]
         )
         assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label
 
-    def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int, weight: float | None) -> tuple | None:
+    def _get_transformed_data_tuple(
+        self, key: int, sample: memoryview, label: int | None = None, weight: float | None = None
+    ) -> tuple | None:
         assert self.filtered_label is not None
 
         if self.filtered_label != label:

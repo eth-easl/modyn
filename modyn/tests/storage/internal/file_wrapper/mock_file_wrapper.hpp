@@ -19,8 +19,8 @@ class MockFileWrapper : public FileWrapper {
   MOCK_METHOD(int64_t, get_label, (int64_t index), (override));
   MOCK_METHOD(std::vector<int32_t>*, get_all_labels, (), (override));
   MOCK_METHOD(std::vector<unsigned char>*, get_sample, (int64_t index), (override));
-  MOCK_METHOD(std::vector<std::vector<unsigned char>>*, get_samples_from_indices, (std::vector<int64_t> * indices),
-              (override));
+  MOCK_METHOD(std::vector<std::vector<unsigned char>>*, get_samples_from_indices,
+              (std::vector<int64_t> * indices, true), (override));
   MOCK_METHOD(FileWrapperType, get_type, (), (override));
   MOCK_METHOD(void, validate_file_extension, (), (override));
   MOCK_METHOD(void, delete_samples, (std::vector<int64_t> * indices), (override));

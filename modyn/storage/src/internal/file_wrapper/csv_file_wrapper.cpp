@@ -3,8 +3,11 @@
 #include <rapidcsv.h>
 
 #include <algorithm>
+#include <cassert>   // Include for ASSERT or use your custom assert macro
+#include <iostream>  // Include required for std::cout
 #include <numeric>
 #include <stdexcept>
+#include <vector>
 
 using namespace modyn::storage;
 
@@ -55,19 +58,39 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices) {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
+                                                                                 bool include_labels) {
+  // Print include_labels
+  std::cout << "include_labels: " << (include_labels ? "true" : "false") << std::endl;
+
+  // Print indices
+  std::cout << "Indices: ";
+  for (const auto& index : indices) {
+    std::cout << index << " ";
+  }
+  std::cout << std::endl;
+
+  // Print number of samples
+  uint64_t num_samples = get_number_of_samples();
+  std::cout << "Number of samples: " << num_samples << std::endl;
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
-    row.erase(row.begin() + static_cast<int64_t>(label_index_));
+
+    // Erase label based on the include_labels flag
+    if (include_labels) {
+      row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    }
+
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
     }
     row_string.pop_back();
+
     samples.emplace_back(row_string.begin(), row_string.end());
   }
   return samples;

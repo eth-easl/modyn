@@ -116,7 +116,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(uint64_t index) {
  * Offset calculation to retrieve the data of a sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<uint64_t>& indices) {
+    const std::vector<uint64_t>& indices, bool include_labels) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
@@ -127,7 +127,8 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   for (const uint64_t index : indices) {
     record_start = index * record_size_;
 
-    get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
+    // Adjust stream position based on the include_labels flag
+    get_stream()->seekg(static_cast<int64_t>(record_start + ((!include_labels) ? 0 : label_size_)), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
     get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));
