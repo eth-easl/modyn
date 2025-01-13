@@ -8,7 +8,7 @@ from .hf_tokenizer import HFTokenizerTransform
 class DistilBertTokenizerTransform(HFTokenizerTransform):
     def __init__(self, max_token_length: int = 300):
         """Transformer for DistilBERT.
-        
+
         Args:
             max_token_length: Maximum token length for DistilBERT.
         """
