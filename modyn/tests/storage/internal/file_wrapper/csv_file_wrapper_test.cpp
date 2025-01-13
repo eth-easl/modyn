@@ -144,7 +144,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndices) {
       {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e', ',', '2', '5'},
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n', ',', '3', '5'},
   };
-  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples_from_indices(indices);
+  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples_from_indices(indices, true);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
