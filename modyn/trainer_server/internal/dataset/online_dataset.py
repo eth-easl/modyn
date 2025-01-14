@@ -577,7 +577,7 @@ class OnlineDataset(IterableDataset):
         else:
             while not self._is_partition_fetched(partition_id):
                 self._wait_for_new_partition_data(partition_id)
-                self._shuffle_partition(partition_id, worker_id)
+            self._shuffle_partition(partition_id, worker_id)
 
         # Yield potential remaining data (when not shuffling) or all data (when shuffling)
         self._info(f"Joining thread for partition {partition_id}", worker_id)
