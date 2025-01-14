@@ -15,12 +15,12 @@ using namespace modyn::storage;
 Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ServerContext* context, const modyn::storage::GetRequest* request,
     ServerWriter<modyn::storage::GetResponse>* writer) {
-  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*use_labels=*/true);
+  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*include_labels=*/true);
 }
 Status StorageServiceImpl::GetNL(  // NOLINT readability-identifier-naming
     ServerContext* context, const modyn::storage::GetRequest* request,
     ServerWriter<modyn::storage::GetResponse>* writer) {
-  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*use_labels=*/false);
+  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*include_labels=*/false);
 }
 
 Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
