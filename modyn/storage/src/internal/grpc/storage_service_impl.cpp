@@ -15,12 +15,7 @@ using namespace modyn::storage;
 Status StorageServiceImpl::Get(  // NOLINT readability-identifier-naming
     ServerContext* context, const modyn::storage::GetRequest* request,
     ServerWriter<modyn::storage::GetResponse>* writer) {
-  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*include_labels=*/true);
-}
-Status StorageServiceImpl::GetNL(  // NOLINT readability-identifier-naming
-    ServerContext* context, const modyn::storage::GetRequest* request,
-    ServerWriter<modyn::storage::GetResponse>* writer) {
-  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer, /*include_labels=*/false);
+  return Get_Impl<ServerWriter<modyn::storage::GetResponse>>(context, request, writer);
 }
 
 Status StorageServiceImpl::GetNewDataSince(  // NOLINT readability-identifier-naming
@@ -497,19 +492,28 @@ std::vector<int64_t> StorageServiceImpl::get_file_ids_given_number_of_files(soci
   return file_ids;
 }
 
+
 DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::string& dataset_name) {
-  int64_t dataset_id = -1;
-  std::string base_path;
-  auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
-  auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
-  std::string file_wrapper_config;
+    int64_t dataset_id = -1;
+    std::string base_path;
+    auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
+    auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
+    std::string file_wrapper_config;
+    int has_labels_int = 1; 
 
-  session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
-             "datasets WHERE "
-             "name = :name",
-      soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
-      soci::into(file_wrapper_config), soci::use(dataset_name);
+    try {
+        session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config, has_labels "
+                   "FROM datasets WHERE name = :name",
+            soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
+            soci::into(file_wrapper_config), soci::into(has_labels_int), soci::use(dataset_name);
+    } catch (const soci::soci_error& e) {
+        // Handle the error if needed (e.g., log or rethrow)
+    }
 
-  return {dataset_id, base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
-          static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config};
+    // Convert int to bool
+    bool has_labels = (has_labels_int != 0);
+
+    return {dataset_id, base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
+            static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config, has_labels};
 }
+

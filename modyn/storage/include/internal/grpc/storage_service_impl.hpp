@@ -49,6 +49,7 @@ struct DatasetData {
   FilesystemWrapperType filesystem_wrapper_type = FilesystemWrapperType::INVALID_FSW;
   FileWrapperType file_wrapper_type = FileWrapperType::INVALID_FW;
   std::string file_wrapper_config;
+  const bool has_labels = true;
 };
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {
@@ -74,8 +75,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   Status Get(ServerContext* context, const modyn::storage::GetRequest* request,
              ServerWriter<modyn::storage::GetResponse>* writer) override;
-  Status GetNL(ServerContext* context, const modyn::storage::GetRequest* request,
-               ServerWriter<modyn::storage::GetResponse>* writer) override;
   Status GetNewDataSince(ServerContext* context, const modyn::storage::GetNewDataSinceRequest* request,
                          ServerWriter<modyn::storage::GetNewDataSinceResponse>* writer) override;
   Status GetDataInInterval(ServerContext* context, const modyn::storage::GetDataInIntervalRequest* request,
@@ -97,18 +96,17 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
 
   template <typename WriterT>
   Status Get_Impl(  // NOLINT (readability-identifier-naming)
-      ServerContext* /*context*/, const modyn::storage::GetRequest* request, WriterT* writer,
-      bool include_labels = true) {
+      ServerContext* /*context*/, const modyn::storage::GetRequest* request, WriterT* writer) {
     try {
       soci::session session = storage_database_connection_.get_session();
 
       // Check if the dataset exists
       std::string dataset_name = request->dataset_id();
       const DatasetData dataset_data = get_dataset_data(session, dataset_name);
-
+      bool include_labels = dataset_data.has_labels;
       SPDLOG_INFO(fmt::format("Received GetRequest for dataset {} (id = {}) with {} keys.", dataset_name,
                               dataset_data.dataset_id, request->keys_size()));
-
+      
       if (dataset_data.dataset_id == -1) {
         SPDLOG_ERROR("Dataset {} does not exist.", request->dataset_id());
         session.close();

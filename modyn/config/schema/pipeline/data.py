@@ -16,10 +16,6 @@ class DataConfig(ModynBaseModel):
             "(e.g. Tensors) This function is called before any other transformations are performed on the data."
         )
     )
-    no_labels: bool = Field(
-        False,
-        description=("If True, data is sampled without expecting labels."),
-    )
     transformations: list[str] = Field(
         default_factory=list,
         description=(

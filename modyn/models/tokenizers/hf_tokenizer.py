@@ -1,5 +1,3 @@
-# hf_tokenizer.py
-
 import torch
 from transformers import PreTrainedTokenizer
 
