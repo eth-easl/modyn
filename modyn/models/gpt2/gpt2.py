@@ -6,17 +6,21 @@ from transformers import GPT2LMHeadModel
 
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 
+
 class Gpt2:
     # pylint: disable-next=unused-argument
     def __init__(self, hparams: Any, device: str, amp: bool) -> None:
         self.model = Gpt2Modyn(hparams)
         self.model.to(device)
 
+
 """
 Adapted from an example implementation of a GPT-2 model.
 This implementation uses the GPT-2 tokenizer from Hugging Face's Transformers library:
 https://huggingface.co/docs/transformers/model_doc/gpt2
 """
+
+
 class Gpt2Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()

@@ -499,7 +499,7 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
     auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
     auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
     std::string file_wrapper_config;
-    int has_labels_int = 1; 
+    int has_labels_int = 1;
 
     try {
         session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config, has_labels "
@@ -516,4 +516,3 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
     return {dataset_id, base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
             static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config, has_labels};
 }
-
