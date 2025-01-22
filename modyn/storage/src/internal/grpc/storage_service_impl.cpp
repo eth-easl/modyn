@@ -498,16 +498,20 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
   auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
   std::string file_wrapper_config;
-  int has_labels_int;
+  int has_labels_int = 1;  // Default to true
+
+  // Main query to fetch dataset details
+  session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
+             "datasets WHERE name = :name",
+      soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
+      soci::into(file_wrapper_config), soci::use(dataset_name);
 
   try {
-    session
-        << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config, has_labels "
-           "FROM datasets WHERE name = :name",
-        soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
-        soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::into(has_labels_int),
+    // Separate query for has_labels
+    session << "SELECT has_labels FROM datasets WHERE name = :name", soci::into(has_labels_int),
         soci::use(dataset_name);
   } catch (const soci::soci_error& e [[maybe_unused]]) {
+    // If the field does not exist or the query fails, default to true
     has_labels_int = 1;
   }
 

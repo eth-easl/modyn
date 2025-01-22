@@ -179,10 +179,10 @@ TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
 TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   // Create a test CSV file without labels
   std::ofstream file_without_labels(file_name_);
-  file_without_labels << "id,first_name,last_name\n";
-  file_without_labels << "1,John,Doe\n";
-  file_without_labels << "2,Jane,Smith\n";
-  file_without_labels << "3,Michael,Johnson\n";
+  file_without_labels << "first_name,last_name\n";
+  file_without_labels << "John,Doe\n";
+  file_without_labels << "Jane,Smith\n";
+  file_without_labels << "Michael,Johnson\n";
   file_without_labels.close();
   ASSERT_TRUE(std::filesystem::exists(file_name_));
 
@@ -210,10 +210,10 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
 TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   // Create a test CSV file without labels
   std::ofstream file_without_labels(file_name_);
-  file_without_labels << "id,first_name,last_name\n";
-  file_without_labels << "1,John,Doe\n";
-  file_without_labels << "2,Jane,Smith\n";
-  file_without_labels << "3,Michael,Johnson\n";
+  file_without_labels << "first_name,last_name\n";
+  file_without_labels << "John,Doe\n";
+  file_without_labels << "Jane,Smith\n";
+  file_without_labels << "Michael,Johnson\n";
   file_without_labels.close();
   ASSERT_TRUE(std::filesystem::exists(file_name_));
 
