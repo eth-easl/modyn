@@ -498,7 +498,7 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
   auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
   std::string file_wrapper_config;
-  int has_labels_int = 1;
+  int has_labels_int;
 
   try {
     session
@@ -508,16 +508,18 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
         soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::into(has_labels_int),
         soci::use(dataset_name);
   } catch (const soci::soci_error& e) {
-    // Handle the error if needed (e.g., log or rethrow)
+    has_labels_int = 1;
   }
 
   // Convert int to bool
   const bool has_labels = (has_labels_int != 0);
 
-  return {dataset_id,
-          base_path,
-          static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
-          static_cast<FileWrapperType>(file_wrapper_type),
-          file_wrapper_config,
-          has_labels};
+  return DatasetData{
+    .dataset_id = dataset_id,
+    .base_path = base_path,
+    .filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
+    .file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type),
+    .file_wrapper_config = file_wrapper_config,
+    .has_labels = has_labels
+};
 }

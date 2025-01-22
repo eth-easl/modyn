@@ -49,7 +49,7 @@ struct DatasetData {
   FilesystemWrapperType filesystem_wrapper_type = FilesystemWrapperType::INVALID_FSW;
   FileWrapperType file_wrapper_type = FileWrapperType::INVALID_FW;
   std::string file_wrapper_config;
-  const bool has_labels = true;
+  bool has_labels = true;
 };
 
 class StorageServiceImpl final : public modyn::storage::Storage::Service {

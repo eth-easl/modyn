@@ -176,3 +176,93 @@ TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
 
   ASSERT_EQ(buffer, expected_samples[0]);
 }
+TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
+  // Create a test CSV file without labels
+  std::ofstream file_without_labels(file_name_);
+  file_without_labels << "id,first_name,last_name\n";
+  file_without_labels << "1,John,Doe\n";
+  file_without_labels << "2,Jane,Smith\n";
+  file_without_labels << "3,Michael,Johnson\n";
+  file_without_labels.close();
+  ASSERT_TRUE(std::filesystem::exists(file_name_));
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Test get_samples_from_indices without labels
+  const std::vector<uint64_t> indices = {0, 2};
+  const std::vector<std::vector<unsigned char>> expected_samples = {
+      {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'},
+      {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
+  };
+
+  const std::vector<std::vector<unsigned char>> actual_samples =
+      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+
+  ASSERT_EQ(actual_samples, expected_samples);
+}
+
+TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
+  // Create a test CSV file without labels
+  std::ofstream file_without_labels(file_name_);
+  file_without_labels << "id,first_name,last_name\n";
+  file_without_labels << "1,John,Doe\n";
+  file_without_labels << "2,Jane,Smith\n";
+  file_without_labels << "3,Michael,Johnson\n";
+  file_without_labels.close();
+  ASSERT_TRUE(std::filesystem::exists(file_name_));
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Test get_samples without labels
+  const uint64_t start = 0;
+  const uint64_t end = 3;
+  const std::vector<std::vector<unsigned char>> expected_samples = {
+      {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'},
+      {'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h'},
+      {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
+  };
+
+  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
+
+  ASSERT_EQ(actual_samples, expected_samples);
+}
+
+TEST_F(CsvFileWrapperTest, TestEmptyDatasetWithoutLabels) {
+  // Create an empty test CSV file without labels
+  std::ofstream empty_file(file_name_);
+  empty_file << "id,first_name,last_name\n";
+  empty_file.close();
+  ASSERT_TRUE(std::filesystem::exists(file_name_));
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Test get_samples_from_indices on empty dataset
+  const std::vector<uint64_t> indices = {};
+  const std::vector<std::vector<unsigned char>> expected_samples = {};
+
+  const std::vector<std::vector<unsigned char>> actual_samples =
+      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+
+  ASSERT_EQ(actual_samples, expected_samples);
+
+  // Test get_samples on empty dataset
+  ASSERT_EQ(file_wrapper.get_samples(0, 0).size(), 0);
+}
