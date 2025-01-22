@@ -38,7 +38,8 @@ std::vector<unsigned char> CsvFileWrapper::get_sample(uint64_t index) {
   return {row_string.begin(), row_string.end()};
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t start, uint64_t end) {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t start, uint64_t end,
+                                                                    const bool include_labels =true ) {
   ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;
@@ -46,7 +47,9 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   const uint64_t end_t = end;
   for (uint64_t i = start_t; i < end_t; ++i) {
     std::vector<std::string> row = doc_.GetRow<std::string>(static_cast<size_t>(i));
-    row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    if (!include_labels) {
+      row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    }
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;

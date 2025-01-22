@@ -45,7 +45,8 @@ std::vector<unsigned char> SingleSampleFileWrapper::get_sample(uint64_t index) {
   return filesystem_wrapper_->get(file_path_);
 }
 
-std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples(uint64_t start, uint64_t end) {
+std::vector<std::vector<unsigned char>> SingleSampleFileWrapper::get_samples(uint64_t start, uint64_t end,
+                                                                             const bool /*include_labels*/) {
   ASSERT(
       start == 0 && end == 1,
       fmt::format("Single sample file wrappers can only access the first sample. file_path = {}, start = {}, end = {}",
