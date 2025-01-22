@@ -72,7 +72,9 @@ int64_t LocalFilesystemWrapper::get_modified_time(const std::string& path) {
   static_assert(sizeof(int64_t) >= sizeof(std::time_t), "Cannot cast time_t to int64_t");
 
   // there is no portable way to get the modified time of a file in C++17 and earlier
-  struct stat file_attribute{};
+  // clang-format off
+  struct stat file_attribute {};//This line keeps getting changed by clang format in my machine and not passing the format test when pushed.
+  // clang-format on
   stat(path.c_str(), &file_attribute);
   return static_cast<int64_t>(file_attribute.st_mtime);
   /* C++20 version, not supported by compilers yet */
