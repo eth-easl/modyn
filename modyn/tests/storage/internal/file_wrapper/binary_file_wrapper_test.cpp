@@ -360,5 +360,4 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   ASSERT_EQ(samples.size(), 2);
 }
 
-
 }  // namespace modyn::storage
