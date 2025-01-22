@@ -507,7 +507,7 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
         soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type),
         soci::into(file_wrapper_type), soci::into(file_wrapper_config), soci::into(has_labels_int),
         soci::use(dataset_name);
-  } catch (const soci::soci_error& e) {
+  } catch (const soci::soci_error& e [[maybe_unused]]) {
     has_labels_int = 1;
   }
 

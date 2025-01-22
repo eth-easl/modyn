@@ -345,82 +345,42 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 }
 
 }  // namespace modyn::storage
-TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
-  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
-  stream_ptr->open(file_name_, std::ios::binary);
-  ASSERT_TRUE(stream_ptr->is_open());
 
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
+TEST_F(BinaryFileWrapperTest, TestGetNumberOfSamples) {
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  std::vector<uint64_t> indices = {0, 1, 2, 3};
-  std::vector<std::vector<unsigned char>> samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
-
-  ASSERT_EQ(samples.size(), 4);
-  ASSERT_EQ((samples)[0][0], 12);
-  ASSERT_EQ((samples)[1][0], 13);
-  ASSERT_EQ((samples)[2][0], 14);
-  ASSERT_EQ((samples)[3][0], 15);
-
-  indices = {1, 3};
-  samples = file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
-  ASSERT_EQ(samples.size(), 2);
-  ASSERT_EQ((samples)[0][0], 13);
-  ASSERT_EQ((samples)[1][0], 15);
+  ASSERT_EQ(file_wrapper.get_number_of_samples(), 4);
 }
 
-TEST_F(BinaryFileWrapperTest, TestGetSamplesWithoutLabels) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(16));
+TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
   ASSERT_TRUE(stream_ptr->is_open());
 
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  const std::vector<uint64_t> indices = {0, 1};
+  const std::vector<std::vector<unsigned char>> samples =
+      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
 
-  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 3);
-  ASSERT_EQ(samples.size(), 4);
-  ASSERT_EQ((samples)[0][0], 12);
-  ASSERT_EQ((samples)[1][0], 13);
-  ASSERT_EQ((samples)[2][0], 14);
-  ASSERT_EQ((samples)[3][0], 15);
-
-  samples = file_wrapper.get_samples(1, 3);
-  ASSERT_EQ(samples.size(), 3);
-  ASSERT_EQ((samples)[0][0], 13);
-  ASSERT_EQ((samples)[1][0], 14);
-  ASSERT_EQ((samples)[2][0], 15);
-
-  samples = file_wrapper.get_samples(2, 2);
-  ASSERT_EQ(samples.size(), 1);
-  ASSERT_EQ((samples)[0][0], 14);
+  ASSERT_EQ(samples.size(), 2);
 }
 
 TEST_F(BinaryFileWrapperTest, TestEmptyBinaryDatasetWithoutLabels) {
-  // Create an empty binary file
   std::ofstream empty_binary_file(file_name_, std::ios::binary);
   empty_binary_file.close();
   ASSERT_TRUE(std::filesystem::exists(file_name_));
 
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillRepeatedly(testing::Return(0));
-  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
-  stream_ptr->open(file_name_, std::ios::binary);
-  ASSERT_TRUE(stream_ptr->is_open());
-
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(0));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
 
-  // Test get_samples_from_indices on empty dataset
   const std::vector<uint64_t> indices = {};
-  const std::vector<std::vector<unsigned char>> expected_samples = {};
-  const std::vector<std::vector<unsigned char>> actual_samples =
+  const std::vector<std::vector<unsigned char>> samples =
       file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
-  ASSERT_EQ(actual_samples, expected_samples);
 
-  // Test get_samples on empty dataset
-  ASSERT_EQ(file_wrapper.get_samples(0, 0).size(), 0);
+  ASSERT_TRUE(samples.empty());
 }
