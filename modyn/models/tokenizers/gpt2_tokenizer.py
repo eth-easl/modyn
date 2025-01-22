@@ -6,7 +6,7 @@ from .hf_tokenizer import HFTokenizerTransform
 class GPT2TokenizerTransform(HFTokenizerTransform):
     def __init__(self, max_token_length: int = 256):
         """Adapted from an example implementation of a GPT-2 tokenizer.
-        
+
         This implementation uses the GPT-2 tokenizer from Hugging Face's
         Transformers library:
         https://huggingface.co/docs/transformers/model_doc/gpt2
