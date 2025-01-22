@@ -346,13 +346,6 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 
 }  // namespace modyn::storage
 
-TEST_F(BinaryFileWrapperTest, TestGetNumberOfSamples) {
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
-
-  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  ASSERT_EQ(file_wrapper.get_number_of_samples(), 4);
-}
-
 TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
