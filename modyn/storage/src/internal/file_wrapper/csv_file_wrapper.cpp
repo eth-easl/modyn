@@ -39,7 +39,7 @@ std::vector<unsigned char> CsvFileWrapper::get_sample(uint64_t index) {
 }
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t start, uint64_t end,
-                                                                    const bool include_labels = true) {
+                                                                    const bool include_labels) {
   ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   std::vector<std::vector<unsigned char>> samples;

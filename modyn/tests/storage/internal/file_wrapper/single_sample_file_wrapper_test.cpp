@@ -47,7 +47,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSamples) {
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));
   ::SingleSampleFileWrapper file_wrapper = ::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
-  const std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 1);
+  const std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 1, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ(samples[0].size(), 8);
   ASSERT_EQ((samples)[0][0], '1');

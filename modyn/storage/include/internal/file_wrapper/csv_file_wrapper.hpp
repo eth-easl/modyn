@@ -65,7 +65,7 @@ class CsvFileWrapper : public FileWrapper {
   int64_t get_label(uint64_t index) override;
   std::vector<int64_t> get_all_labels() override;
   std::vector<unsigned char> get_sample(uint64_t index) override;
-  std::vector<std::vector<unsigned char>> get_samples(uint64_t start, uint64_t end) override;
+  std::vector<std::vector<unsigned char>> get_samples(uint64_t start, uint64_t end, bool include_labels) override;
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<uint64_t>& indices,
                                                                    bool include_labels) override;
   void validate_file_extension() override;

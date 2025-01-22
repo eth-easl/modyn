@@ -255,31 +255,31 @@ TEST_F(BinaryFileWrapperTest, TestGetSamples) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillRepeatedly(testing::Return(stream_ptr));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 3);
+  std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples(0, 3, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 4);
   ASSERT_EQ((samples)[0][0], 12);
   ASSERT_EQ((samples)[1][0], 13);
   ASSERT_EQ((samples)[2][0], 14);
   ASSERT_EQ((samples)[3][0], 15);
 
-  samples = file_wrapper.get_samples(1, 3);
+  samples = file_wrapper.get_samples(1, 3, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 3);
   ASSERT_EQ((samples)[0][0], 13);
   ASSERT_EQ((samples)[1][0], 14);
   ASSERT_EQ((samples)[2][0], 15);
 
-  samples = file_wrapper.get_samples(2, 3);
+  samples = file_wrapper.get_samples(2, 3, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 2);
   ASSERT_EQ((samples)[0][0], 14);
   ASSERT_EQ((samples)[1][0], 15);
 
-  samples = file_wrapper.get_samples(3, 3);
+  samples = file_wrapper.get_samples(3, 3, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ((samples)[0][0], 15);
 
-  ASSERT_THROW(file_wrapper.get_samples(4, 3), modyn::utils::ModynException);
+  ASSERT_THROW(file_wrapper.get_samples(4, 3, /*include_labels=*/true), modyn::utils::ModynException);
 
-  samples = file_wrapper.get_samples(1, 2);
+  samples = file_wrapper.get_samples(1, 2, /*include_labels=*/true);
   ASSERT_EQ(samples.size(), 2);
   ASSERT_EQ((samples)[0][0], 13);
   ASSERT_EQ((samples)[1][0], 14);

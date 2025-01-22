@@ -109,7 +109,8 @@ TEST_F(CsvFileWrapperTest, TestGetSamples) {
       {'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h', ',', '3', '0'},
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n', ',', '3', '5'},
   };
-  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
+  const std::vector<std::vector<unsigned char>> actual_samples =
+      file_wrapper.get_samples(start, end, /*include_labels=*/true);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
@@ -234,7 +235,8 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
   };
 
-  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
+  const std::vector<std::vector<unsigned char>> actual_samples =
+      file_wrapper.get_samples(start, end, /*include_labels=*/false);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
