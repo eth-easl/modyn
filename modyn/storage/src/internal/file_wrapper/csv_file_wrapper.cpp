@@ -47,7 +47,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   const uint64_t end_t = end;
   for (uint64_t i = start_t; i < end_t; ++i) {
     std::vector<std::string> row = doc_.GetRow<std::string>(static_cast<size_t>(i));
-    if (!include_labels) {
+    if (include_labels) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
     }
     std::string row_string;
