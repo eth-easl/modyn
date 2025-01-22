@@ -116,7 +116,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(uint64_t index) {
  * Offset calculation to retrieve the data of a sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<uint64_t>& indices, bool include_labels) {
+    const std::vector<uint64_t>& indices, const bool include_labels) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 

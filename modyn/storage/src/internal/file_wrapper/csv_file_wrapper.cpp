@@ -59,7 +59,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
 }
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
-                                                                                 bool include_labels) {
+                                                                                const bool include_labels) {
   std::vector<std::vector<unsigned char>> samples;
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);

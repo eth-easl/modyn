@@ -512,7 +512,7 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   }
 
   // Convert int to bool
-  bool has_labels = (has_labels_int != 0);
+  const bool has_labels = (has_labels_int != 0);
 
   return {dataset_id,
           base_path,

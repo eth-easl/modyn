@@ -103,7 +103,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       // Check if the dataset exists
       std::string dataset_name = request->dataset_id();
       const DatasetData dataset_data = get_dataset_data(session, dataset_name);
-      bool include_labels = dataset_data.has_labels;
+      const bool include_labels = dataset_data.has_labels;
       SPDLOG_INFO(fmt::format("Received GetRequest for dataset {} (id = {}) with {} keys.", dataset_name,
                               dataset_data.dataset_id, request->keys_size()));
 
