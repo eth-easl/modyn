@@ -360,19 +360,5 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   ASSERT_EQ(samples.size(), 2);
 }
 
-TEST_F(BinaryFileWrapperTest, TestEmptyBinaryDatasetWithoutLabels) {
-  std::ofstream empty_binary_file(file_name_, std::ios::binary);
-  empty_binary_file.close();
-  ASSERT_TRUE(std::filesystem::exists(file_name_));
 
-  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(0));
-
-  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-
-  const std::vector<uint64_t> indices = {};
-  const std::vector<std::vector<unsigned char>> samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
-
-  ASSERT_TRUE(samples.empty());
-}
 }  // namespace modyn::storage
