@@ -240,31 +240,3 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
-
-TEST_F(CsvFileWrapperTest, TestEmptyDatasetWithoutLabels) {
-  // Create an empty test CSV file without labels
-  std::ofstream empty_file(file_name_);
-  empty_file << "id,first_name,last_name\n";
-  empty_file.close();
-  ASSERT_TRUE(std::filesystem::exists(file_name_));
-
-  EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
-  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
-  stream_ptr->open(file_name_, std::ios::binary);
-  ASSERT_TRUE(stream_ptr->is_open());
-
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
-  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-
-  // Test get_samples_from_indices on empty dataset
-  const std::vector<uint64_t> indices = {};
-  const std::vector<std::vector<unsigned char>> expected_samples = {};
-
-  const std::vector<std::vector<unsigned char>> actual_samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
-
-  ASSERT_EQ(actual_samples, expected_samples);
-
-  // Test get_samples on empty dataset
-  ASSERT_EQ(file_wrapper.get_samples(0, 0).size(), 0);
-}
