@@ -514,12 +514,10 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   // Convert int to bool
   const bool has_labels = (has_labels_int != 0);
 
-  return DatasetData{
-    .dataset_id = dataset_id,
-    .base_path = base_path,
-    .filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
-    .file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type),
-    .file_wrapper_config = file_wrapper_config,
-    .has_labels = has_labels
-};
+  return DatasetData{.dataset_id = dataset_id,
+                     .base_path = base_path,
+                     .filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
+                     .file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type),
+                     .file_wrapper_config = file_wrapper_config,
+                     .has_labels = has_labels};
 }
