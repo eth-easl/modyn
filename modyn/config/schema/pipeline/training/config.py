@@ -7,7 +7,7 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 
-OptimizerSource = Literal["PyTorch", "APEX"]
+OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace"]
 
 
 class OptimizerParamGroup(ModynBaseModel):

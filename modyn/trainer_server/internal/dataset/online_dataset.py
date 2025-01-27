@@ -188,12 +188,9 @@ class OnlineDataset(IterableDataset):
 
                     # Select appropriate response type
                     response: GetResponse
-                    if not self._include_labels:
-                        # response: GetResponseNoLabels
-                        rpc_call = self._storagestub.GetNL
-                    else:
-                        # response: GetResponse # type: ignore[no-redef]
-                        rpc_call = self._storagestub.Get
+
+                    # response: GetResponse # type: ignore[no-redef]
+                    rpc_call = self._storagestub.Get
 
                     # Request setup
                     req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)

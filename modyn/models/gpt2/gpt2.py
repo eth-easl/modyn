@@ -42,8 +42,10 @@ class Gpt2Modyn(CoresetSupportingModule):
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
         # Forward pass through GPT-2
+
         output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
-        return output[0]
+
+        return output.logits
 
     def get_last_layer(self) -> nn.Module:
         """Retrieve the last layer (lm_head) of the model.

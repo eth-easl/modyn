@@ -277,6 +277,7 @@ void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for
                                              const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
   const std::string file_path = files_for_insertion.front();
   std::vector<FileFrame> file_samples;
+
   auto file_wrapper = get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
 
   int64_t current_file_samples_to_be_inserted = 0;
@@ -299,6 +300,7 @@ void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for
         file_samples.clear();
         current_file_samples_to_be_inserted = 0;
       }
+
       file_samples.push_back({file_id, index, label});
       index++;
       current_file_samples_to_be_inserted++;

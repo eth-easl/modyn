@@ -85,15 +85,21 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
 
 int64_t CsvFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
+  if (!has_labels_) {
+    return -1;  // Return -1 to indicate no label
+  }
   return doc_.GetCell<int64_t>(static_cast<size_t>(label_index_), static_cast<size_t>(index));
 }
+
 
 std::vector<int64_t> CsvFileWrapper::get_all_labels() {
   std::vector<int64_t> labels;
   const uint64_t num_samples = get_number_of_samples();
+
   for (uint64_t i = 0; i < num_samples; i++) {
     labels.push_back(get_label(i));
   }
+
   return labels;
 }
 

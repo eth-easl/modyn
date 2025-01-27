@@ -21,6 +21,7 @@ from typing import Any, Literal
 import grpc
 import numpy as np
 import torch
+import transformers
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
@@ -297,21 +298,40 @@ class PytorchTrainer:
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
+                        # Measure memory usage before forward pass
+                        # initial_memory = torch.cuda.memory_allocated()
+                        # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
+                        torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+
                         if self.generative:
                             output = self._model.model(data)
+
                         else:
                             # Non-generative task: Pass data, and optionally sample_ids if required
                             output = self._model.model(data, sample_ids=sample_ids)
+
+                        # Measure memory usage after forward pass
+                        final_memory = torch.cuda.memory_allocated()
+                        peak_memory = torch.cuda.max_memory_allocated()
+                    # print(f"After forward pass: {final_memory / 1e9:.2f} GB")
+                    # print(f"Peak memory during forward pass: {peak_memory / 1e9:.2f} GB")
+
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
+                        # Measure memory usage before loss computation
+                        # initial_memory = torch.cuda.memory_allocated()
+                        # print(f"Before loss computation: {initial_memory / 1e9:.2f} GB")
+                        # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+
                         if self.generative:
                             # Shift logits and labels for next-token prediction
-                            output = output[..., :-1, :].contiguous()
-                            target = data[..., 1:, 0].contiguous()
+                            output = output[..., :-1, :]  # Output for all tokens except the last one
+                            target = data[..., 1:, 0]  # Target for all tokens except the first one
+
+                            # Use reshape instead of view to handle non-contiguous tensors safely
+                            output = output.reshape(-1, output.size(-1))
+                            target = target.reshape(-1)
+
                             # Calculate loss
-                            output = output.view(
-                                -1, output.size(-1)
-                            )  # Shape: (batch_size * (sequence_length - 1), vocab_size)
-                            target = target.view(-1)  # Shape: (batch_size * (sequence_length - 1))
                             loss = self._criterion(output, target)
                         else:
                             if weighted_optimization:
@@ -320,6 +340,12 @@ class PytorchTrainer:
                                 loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                             else:
                                 loss = self._criterion(output, target)
+
+                        # Measure memory usage after loss computation
+                        # final_memory = torch.cuda.memory_allocated()
+                        # peak_memory = torch.cuda.max_memory_allocated()
+                        # print(f"After loss computation: {final_memory / 1e9:.2f} GB")
+                        # print(f"Peak memory during loss computation: {peak_memory / 1e9:.2f} GB")
 
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
@@ -424,6 +450,8 @@ class PytorchTrainer:
         self._metadata_collector.cleanup()
 
         # save final model
+        print("Final checkpioint path")
+        print(self._final_checkpoint_path)
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
         self.save_state(final_checkpoint_file_name)
 
@@ -805,6 +833,8 @@ class PytorchTrainer:
                     optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
                 else:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
+            elif optimizer_config["source"] == "HuggingFace":
+                optimizer_func = getattr(transformers, optimizer_config["algorithm"])
             else:
                 raise ValueError(
                     f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
@@ -972,16 +1002,38 @@ class PytorchTrainer:
     def _assert_data_size(
         expected_size: int, data: torch.Tensor | dict[Any, torch.Tensor], sample_ids: list, target: torch.Tensor
     ) -> None:
+        def _get_tensor_size_in_gb(tensor: torch.Tensor) -> float:
+            """Calculate the size of a tensor in GB."""
+            return tensor.element_size() * tensor.nelement() / (1024**3)
+
+        # Calculate the size of the data in GB
+        if isinstance(data, dict):
+            data_size_gb = sum(_get_tensor_size_in_gb(tensor) for tensor in data.values())
+        else:
+            data_size_gb = _get_tensor_size_in_gb(data)
+
+        # Calculate the size of target in GB
+        target_size_gb = _get_tensor_size_in_gb(target)
+
+        # Log the size of the data and target in GBprint
+        print(f"Data size: {data_size_gb:.3f} GB")
+        print(f"Target size: {target_size_gb:.3f} GB")
+
+        # Perform size assertions
         assert (
             all(tensor.shape[0] == expected_size for tensor in data.values())
             if isinstance(data, dict)
             else data.shape[0] == expected_size
         ), (
-            f"expected size: {expected_size} actual size: "
+            f"expected size: {expected_size}, actual size: "
             + f"{data.shape[0] if isinstance(data, torch.Tensor) else 'n/a'}"
         )
-        assert len(sample_ids) == expected_size, f"expected size: {expected_size} actual size: {len(sample_ids)}"
-        assert target.shape[0] == expected_size, f"expected size: {expected_size} actual size: {target.shape[0]}"
+        assert len(sample_ids) == expected_size, f"expected size: {expected_size}, actual size: {len(sample_ids)}"
+        assert target.shape[0] == expected_size, f"expected size: {expected_size}, actual size: {target.shape[0]}"
+
+        # Calculate and log the size of sample_ids in memory
+        sample_ids_size_gb = sum(sys.getsizeof(item) for item in sample_ids) / (1024**3)
+        print(f"Sample IDs size: {sample_ids_size_gb:.3f} GB")
 
     def _assert_training_size(self, epoch: int, trained_batches: int) -> None:
         if self._lr_scheduler is not None:
