@@ -500,16 +500,14 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   std::string file_wrapper_config;
   int has_labels_int = 1;
 
-
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
-            "datasets WHERE name = :name",
+             "datasets WHERE name = :name",
       soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(dataset_name);
 
-
   YAML::Node config = YAML::Load(file_wrapper_config);
   if (config["has_labels"]) {
-      has_labels_int = config["has_labels"].as<bool>() ? 1 : 0;
+    has_labels_int = config["has_labels"].as<bool>() ? 1 : 0;
   }
 
   // Convert has_labels_int to bool

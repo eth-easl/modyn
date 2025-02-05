@@ -156,6 +156,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                               request->dataset_id(), dataset_id, request_timestamp));
 
       send_file_ids_and_labels<modyn::storage::GetNewDataSinceResponse, WriterT>(writer, dataset_id, request_timestamp);
+
     } catch (const std::exception& e) {
       SPDLOG_ERROR("Error in GetNewDataSince: {}", e.what());
       return {StatusCode::INTERNAL, fmt::format("Error in GetNewDataSince: {}", e.what())};

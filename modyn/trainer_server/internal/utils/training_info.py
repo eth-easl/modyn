@@ -31,7 +31,8 @@ class TrainingInfo:
         self.training_id = training_id
         self.num_prefetched_partitions = request.num_prefetched_partitions
         self.parallel_prefetch_requests = request.parallel_prefetch_requests
-
+        self.selector_address = selector_address
+        self.storage_address = storage_address
         self.dataset_id = request.data_info.dataset_id
         self.num_dataloaders = request.data_info.num_dataloaders
         self.epochs_per_trigger = request.epochs_per_trigger

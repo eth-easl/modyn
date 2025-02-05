@@ -2,8 +2,7 @@
 
 import os
 
-from .dlrm_lr_scheduler.dlrm_scheduler import DLRMScheduler  # noqa: F401
-from .WarmupDecayLR.warmupdecay import WarmupDecayLR, WarmupLR  # noqa: F401
+from .recadam.recadam import RecAdam  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

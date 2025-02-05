@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
+from typing import Any
 
 import torch
 
@@ -21,6 +22,7 @@ class PytorchEvaluator:
         evaluation_info: EvaluationInfo,
         logger: logging.Logger,
         metric_result_queue: mp.Queue,
+        light_tuning: bool = False, # pylint: disable=unused-argument
     ) -> None:
         self.logger = logger
         self._evaluation_id = evaluation_info.evaluation_id
@@ -108,6 +110,9 @@ class PytorchEvaluator:
             f"Queue size = {self._metric_result_queue.qsize()}"
         )
 
+    def _light_tune(self, light_tuning_info: Any) -> None:
+        pass
+
     def evaluate(self) -> None:
         for idx, interval_idx in enumerate(self._eval_info.not_failed_interval_ids):
             self._info(f"Evaluating interval {idx + 1}/{len(self._eval_info.not_failed_interval_ids)} ({interval_idx})")
@@ -124,6 +129,8 @@ def evaluate(
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
     metric_result_queue: mp.Queue,
+    light_tuning: bool = False,  # Flag to enable light tuning
+    light_tuning_info: dict | None = None,  # Dictionary to pass tuning parameters
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -135,8 +142,21 @@ def evaluate(
     logger.addHandler(file_handler)
 
     try:
-        evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue)
-        evaluator.evaluate()
+        evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue, light_tuning=light_tuning)
+
+        # Perform light tuning before evaluation if enabled
+        if light_tuning:
+            logger.info("Performing light tuning before evaluation.")
+
+            # Ensure light_tuning_info is valid
+            if not isinstance(light_tuning_info, dict):
+                raise ValueError("light_tuning_info must be a dictionary with tuning parameters.")
+
+            evaluator._light_tune(light_tuning_info)  # Pass tuning info
+
+            logger.info("Light tuning completed.")
+
+        evaluator.evaluate()  # Run evaluation after tuning
         logger.info("Evaluator returned.")
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()

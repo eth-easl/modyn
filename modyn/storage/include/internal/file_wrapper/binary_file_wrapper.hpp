@@ -17,10 +17,17 @@ class BinaryFileWrapper : public FileWrapper {
       : FileWrapper(path, fw_config, std::move(filesystem_wrapper)) {
     ASSERT(filesystem_wrapper_ != nullptr, "Filesystem wrapper cannot be null.");
     ASSERT(fw_config["record_size"], "record_size must be specified in the file wrapper config.");
-    ASSERT(fw_config["label_size"], "label_size be specified in the file wrapper config.");
 
     record_size_ = fw_config["record_size"].as<uint64_t>();
-    label_size_ = fw_config["label_size"].as<uint64_t>();
+    if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
+      has_labels_ = true;
+      ASSERT(fw_config["label_size"], "label_size be specified in the file wrapper config.");
+      label_size_ = fw_config["label_size"].as<uint64_t>();
+    } else {
+      has_labels_ = false;
+      label_size_ = 0;  // No labels exist
+    }
+
     sample_size_ = record_size_ - label_size_;
     validate_file_extension();
     file_size_ = filesystem_wrapper_->get_file_size(path);
@@ -64,7 +71,7 @@ class BinaryFileWrapper : public FileWrapper {
   uint64_t sample_size_;
   bool little_endian_;
   std::shared_ptr<std::ifstream> stream_;
-
+  bool has_labels_;
   friend class BinaryFileWrapperTest;  // let gtest access private members
 };
 }  // namespace modyn::storage

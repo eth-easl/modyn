@@ -32,7 +32,9 @@ void BinaryFileWrapper::validate_file_extension() {
  */
 int64_t BinaryFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
-
+  if (!has_labels_) {
+    return -1;  // Return -1 to indicate no label
+  }
   const uint64_t label_start = index * record_size_;
 
   get_stream()->seekg(static_cast<int64_t>(label_start), std::ios::beg);

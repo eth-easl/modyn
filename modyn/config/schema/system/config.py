@@ -74,7 +74,7 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
             "rows are the same size and that the 'label' column exists."
         ),
     )
-    has_labels: bool = Field(True, description=("Describes wether the dataset contains a label field or not"))
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
@@ -85,14 +85,14 @@ class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     )
     record_size: int = Field(description="The size of each full record in bytes (label + features).")
     label_size: int = Field(description="The size of the label field in bytes for a binary file wrapper.")
-    has_labels: bool = Field(True, description=("Describes wether the dataset contains a label field or not"))
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 class DatasetPngFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     """Represents a png dataset file used by modyn."""
 
     label_file_extension: str = Field(description="The label file extension of the dataset", pattern=r"^\..*$")
-    has_labels: bool = Field(True, description=("Describes wether the dataset contains a label field or not"))
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 DatasetFileWrapperConfig = Union[  # noqa: UP007

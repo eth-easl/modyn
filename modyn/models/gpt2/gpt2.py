@@ -25,7 +25,15 @@ class Gpt2Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()
 
-        self.model = GPT2LMHeadModel.from_pretrained("gpt2-large")  # hparams.model_name_or_path
+        # Use hparams to decide the GPT-2 version
+        model_name = hparams.model_name_or_path if hasattr(hparams, "model_name_or_path") else "gpt2-large"
+
+        # Assert that the model name is valid
+        valid_model_names = {"gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"}
+        assert model_name in valid_model_names, f"Invalid model name: {model_name}. Must be one of {valid_model_names}."
+
+        # Load the specified GPT-2 model
+        self.model = GPT2LMHeadModel.from_pretrained(model_name)
 
     def forward(self, data: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         """Forward method for text generation or language modeling tasks.
@@ -40,6 +48,7 @@ class Gpt2Modyn(CoresetSupportingModule):
         """
         # Split input into token IDs and attention masks
         input_ids = data[:, :, 0]
+
         attention_mask = data[:, :, 1]
         # Forward pass through GPT-2
 
@@ -54,3 +63,33 @@ class Gpt2Modyn(CoresetSupportingModule):
             The final linear layer of the GPT-2 model.
         """
         return self.model.lm_head
+
+    def freeze_params(self) -> None:
+        for par in self.model.parameters():
+            par.requires_grad = False
+
+    def unfreeze_params(self) -> None:
+        for par in self.model.parameters():
+            par.requires_grad = True
+
+    def generate(
+        self,
+        input_ids: torch.tensor,
+        max_length: int = 50,
+        temperature: float = 1.0,
+        top_k: int = 50,
+        top_p: float = 0.95,
+        num_return_sequences: int = 1,
+    ) -> list:
+        # Generate output sequences
+        outputs = self.model.generate(
+            input_ids=input_ids,
+            max_length=max_length,
+            temperature=temperature,
+            top_k=top_k,
+            top_p=top_p,
+            num_return_sequences=num_return_sequences,
+            pad_token_id=self.tokenizer.eos_token_id,
+        )
+
+        return [self.tokenizer.decode(output, skip_special_tokens=True) for output in outputs]

@@ -7,6 +7,7 @@ from .dlrm.dlrm import DLRM  # noqa: F401
 from .dummy.dummy import Dummy  # noqa: F401
 from .fmownet.fmownet import FmowNet  # noqa: F401
 from .gpt2.gpt2 import Gpt2  # noqa: F401
+from .modular_adapters import modular_adapters  # noqa: F401
 from .resnet18.resnet18 import ResNet18  # noqa: F401
 from .resnet50.resnet50 import ResNet50  # noqa: F401
 from .resnet152.resnet152 import ResNet152  # noqa: F401

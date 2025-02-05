@@ -91,7 +91,6 @@ int64_t CsvFileWrapper::get_label(uint64_t index) {
   return doc_.GetCell<int64_t>(static_cast<size_t>(label_index_), static_cast<size_t>(index));
 }
 
-
 std::vector<int64_t> CsvFileWrapper::get_all_labels() {
   std::vector<int64_t> labels;
   const uint64_t num_samples = get_number_of_samples();

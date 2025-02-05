@@ -6,8 +6,8 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
-  sample_batch_size: 2000000
-  sample_dbinsertion_batchsize: 1000000
+  sample_batch_size: 50000000
+  sample_dbinsertion_batchsize: 10000000
   insertion_threads: 8
   retrieval_threads: 8
   sample_table_unlogged: true
@@ -268,12 +268,12 @@ storage:
         selector_batch_size: 100000,
 
       },
-      # ------------------------------------ Wikipedia ------------------------------------ #
+      # ------------------------------------ Wikipedia_21_08 ------------------------------------ #
       {
-        name: "Wikipedia",
-        description: "Wikipedia text dump from 2021",
+        name: "Wikipedia_21_08",
+        description: "Wikipedia text dump from August 2021",
         version: "0.0.1",
-        base_path: "/datasets/readablewiki",
+        base_path: "/datasets/wikipedia_21_08",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {
@@ -283,7 +283,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 4096,
+        selector_batch_size: 5000000,
 
       },
     ]

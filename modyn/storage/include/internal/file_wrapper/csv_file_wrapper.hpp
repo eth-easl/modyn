@@ -16,12 +16,13 @@ class CsvFileWrapper : public FileWrapper {
                  std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
     if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
-    has_labels_ = true;
-    ASSERT(file_wrapper_config_["label_index"].as<int>() != -1, "Please specify the index of the column that contains the label.");
-    label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
+      has_labels_ = true;
+      ASSERT(file_wrapper_config_["label_index"].as<int>() != -1,
+             "Please specify the index of the column that contains the label.");
+      label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
     } else {
-        has_labels_ = false;
-        label_index_ = -1;  // No labels exist
+      has_labels_ = false;
+      label_index_ = -1;  // No labels exist
     }
 
     if (file_wrapper_config_["separator"]) {

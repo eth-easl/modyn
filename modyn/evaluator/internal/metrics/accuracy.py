@@ -12,6 +12,7 @@ class Accuracy(AbstractDecomposableMetric):
         self.samples_seen = 0
         self.total_correct = 0
 
+    # pylint: disable=unused-argument
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
         if self.config.topn == 1:
             labeled_correctly = torch.sum(torch.eq(y_pred, y_true)).item()

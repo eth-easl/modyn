@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import copy
 import glob
 import io
 import itertools
@@ -26,6 +27,7 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
+from modyn.models.modular_adapters.modular_adapters import apply_kadapter, apply_lora
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -88,6 +90,9 @@ class PytorchTrainer:
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
         self.generative = training_info.generative
+        self._grad_norm = 0.5  # remember add this to training infotraining_info.grad_norm
+        self._lora = False
+        self._kadapter = False
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -103,7 +108,10 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-
+        if self._lora:
+            apply_lora(self._model.model)
+        if self._kadapter:
+            apply_kadapter(self._model.model)
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
@@ -211,6 +219,8 @@ class PytorchTrainer:
         stopw = Stopwatch()
         total_stopw.start("TotalTrain")
 
+        # Initialize wandb
+
         self._model.model.train()
 
         stopw.start("OnBeginCallbacks")
@@ -311,8 +321,8 @@ class PytorchTrainer:
                             output = self._model.model(data, sample_ids=sample_ids)
 
                         # Measure memory usage after forward pass
-                        final_memory = torch.cuda.memory_allocated()
-                        peak_memory = torch.cuda.max_memory_allocated()
+                        # final_memory = torch.cuda.memory_allocated()
+                        # peak_memory = torch.cuda.max_memory_allocated()
                     # print(f"After forward pass: {final_memory / 1e9:.2f} GB")
                     # print(f"Peak memory during forward pass: {peak_memory / 1e9:.2f} GB")
 
@@ -330,9 +340,14 @@ class PytorchTrainer:
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
-
+                            target[target == 50256] = -100
                             # Calculate loss
-                            loss = self._criterion(output, target)
+                            if weighted_optimization:
+                                # Weighted gradient descent
+                                assert weights is not None
+                                loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                            else:
+                                loss = self._criterion(output, target)
                         else:
                             if weighted_optimization:
                                 # Weighted gradient descent
@@ -356,6 +371,8 @@ class PytorchTrainer:
 
                 with GPUMeasurement(self._measure_gpu_ops, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
+                    if self._grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._grad_norm)
 
                 with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
                     for _, optimizer in self._optimizers.items():
@@ -374,6 +391,14 @@ class PytorchTrainer:
 
                 if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
                     training_loss.append(loss.item())
+                    print(loss.item())
+                    # Log loss and batch number
+                    log_file = self._checkpoint_path / "training_log.txt"
+                    with (
+                        open(log_file, "a") as f  # pylint: disable=unspecified-encoding
+                    ):  # 'a' mode appends if the file exists, else creates it
+                        f.write(f"{trained_batches},{loss.item()}\n")
+                    # Example: Logging training losses in a loop
 
                 self._num_samples += len(sample_ids)
 
@@ -745,7 +770,7 @@ class PytorchTrainer:
 
         if iteration is not None:
             dict_to_save["iteration"] = iteration
-
+        print(destination)
         torch.save(dict_to_save, destination)
 
     def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
@@ -835,6 +860,9 @@ class PytorchTrainer:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
             elif optimizer_config["source"] == "HuggingFace":
                 optimizer_func = getattr(transformers, optimizer_config["algorithm"])
+            elif optimizer_config["source"] == "Custom":
+                optimizer_module = dynamic_module_import("modyn.trainer_server.custom_optimizers")
+                optimizer_func = getattr(optimizer_module, optimizer_config["algorithm"])
             else:
                 raise ValueError(
                     f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
@@ -842,10 +870,38 @@ class PytorchTrainer:
             optimizer_config_list = []
             for param_group in optimizer_config["param_groups"]:
                 module = param_group["module"]
-                param_group["config"]["params"] = eval(  # pylint: disable=eval-used
-                    f"self._model.{module}.parameters()"
-                )
-                optimizer_config_list.append(param_group["config"])
+
+                if optimizer_config["algorithm"] == "Adafactor":  # Check if optimizer is Adafactor
+                    # Debug: Print the type of self._model
+                    no_decay = ["bias", "LayerNorm.weight"]
+
+                    # Create separate parameter group dictionaries
+                    param_group_no_decay = copy.deepcopy(param_group["config"])
+                    param_group_decay = copy.deepcopy(param_group["config"])
+
+                    param_group_decay["params"] = [
+                        p
+                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        if not any(m in n for m in no_decay)
+                    ]
+                    param_group_decay["weight_decay"] = 0.01
+                    optimizer_config_list.append(param_group_decay)
+
+                    param_group_no_decay["params"] = [
+                        p
+                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        if any(m in n for m in no_decay)
+                    ]
+
+                    param_group_no_decay["weight_decay"] = 0.0
+                    optimizer_config_list.append(param_group_no_decay)
+
+                else:
+                    param_group["config"]["params"] = eval(  # pylint: disable=eval-used
+                        f"self._model.{module}.parameters()"
+                    )
+
+                    optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
 
     def _update_lr_config_dict(self, lr_scheduler_config: dict[str, Any]) -> dict[str, Any]:
@@ -1006,20 +1062,6 @@ class PytorchTrainer:
             """Calculate the size of a tensor in GB."""
             return tensor.element_size() * tensor.nelement() / (1024**3)
 
-        # Calculate the size of the data in GB
-        if isinstance(data, dict):
-            data_size_gb = sum(_get_tensor_size_in_gb(tensor) for tensor in data.values())
-        else:
-            data_size_gb = _get_tensor_size_in_gb(data)
-
-        # Calculate the size of target in GB
-        target_size_gb = _get_tensor_size_in_gb(target)
-
-        # Log the size of the data and target in GBprint
-        print(f"Data size: {data_size_gb:.3f} GB")
-        print(f"Target size: {target_size_gb:.3f} GB")
-
-        # Perform size assertions
         assert (
             all(tensor.shape[0] == expected_size for tensor in data.values())
             if isinstance(data, dict)
@@ -1030,10 +1072,6 @@ class PytorchTrainer:
         )
         assert len(sample_ids) == expected_size, f"expected size: {expected_size}, actual size: {len(sample_ids)}"
         assert target.shape[0] == expected_size, f"expected size: {expected_size}, actual size: {target.shape[0]}"
-
-        # Calculate and log the size of sample_ids in memory
-        sample_ids_size_gb = sum(sys.getsizeof(item) for item in sample_ids) / (1024**3)
-        print(f"Sample IDs size: {sample_ids_size_gb:.3f} GB")
 
     def _assert_training_size(self, epoch: int, trained_batches: int) -> None:
         if self._lr_scheduler is not None:
