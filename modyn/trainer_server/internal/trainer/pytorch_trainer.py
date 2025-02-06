@@ -311,7 +311,7 @@ class PytorchTrainer:
                         # Measure memory usage before forward pass
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
-                        torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+                        #torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
 
                         if self.generative:
                             output = self._model.model(data)
