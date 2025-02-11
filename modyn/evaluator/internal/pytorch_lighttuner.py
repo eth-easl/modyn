@@ -10,7 +10,6 @@ import os
 import pathlib
 import shutil
 import tempfile
-import traceback
 from typing import Any
 
 import torch
@@ -21,7 +20,6 @@ from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDatase
 from modyn.evaluator.internal.utils.tuning_info import TuningInfo
 from modyn.models.modular_adapters.modular_adapters import apply_kadapter, apply_lora
 from modyn.trainer_server.internal.trainer.gpu_measurement import GPUMeasurement
-from modyn.trainer_server.internal.utils.metric_type import MetricType
 from modyn.utils import (
     LABEL_TRANSFORMER_FUNC_NAME,
     deserialize_function,
@@ -34,9 +32,10 @@ from modyn.utils import (
 class PytorchTuner:
     # pylint: disable=too-many-instance-attributes, too-many-locals, too-many-branches, too-many-statements
 
-    def __init__(self, tuning_info: TuningInfo, device: str, logger: logging.Logger, model: Any) -> None:
+    def __init__(self, tuning_info: TuningInfo, logger: logging.Logger, model: Any, storage_address: Any) -> None:
         self.logger = logger
-
+        self.pipeline_id = tuning_info.pipeline_id
+        self._evaluation_id = tuning_info.evaluation_id
         self._info("Initializing Pytorch Tuner")
         self.generative = tuning_info.generative
         self._grad_norm = 0.5  # remember add this to training infotuning_info.grad_norm
@@ -46,7 +45,7 @@ class PytorchTuner:
         if tuning_info.seed is not None:
             self._seed_trainer_server(tuning_info.seed)
             self._info("Everything seeded")
-
+        self._storage_address = storage_address
         # setup model and optimizer
         self._model = model
         self._setup_optimizers(tuning_info)
@@ -55,9 +54,9 @@ class PytorchTuner:
         self._scaler = torch.cuda.amp.GradScaler(enabled=tuning_info.amp, **tuning_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
         if self._lora:
-            apply_lora(self._model.model)
+            apply_lora(self._model)
         if self._kadapter:
-            apply_kadapter(self._model.model)
+            apply_kadapter(self._model)
 
         criterion_func = getattr(torch.nn, tuning_info.torch_criterion)
         self._criterion = criterion_func(**tuning_info.criterion_dict)
@@ -69,7 +68,7 @@ class PytorchTuner:
             tuning_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
 
-        self._device = device
+        self._device = tuning_info.device
         self._device_type = "cuda" if "cuda" in self._device else "cpu"
         self._amp = tuning_info.amp
 
@@ -77,7 +76,6 @@ class PytorchTuner:
 
         self.epochs_per_trigger = tuning_info.epochs
 
-        self.pipeline_id = tuning_info.pipeline_id
         self._drop_last_batch = tuning_info.drop_last_batch
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
         self._log_file_path = tuning_info.log_file_path
@@ -98,58 +96,53 @@ class PytorchTuner:
         self._setup_lr_scheduler(tuning_info)
 
         self._info("LR scheduler created.")
-        self._evaluation_id = tuning_info.evaluation_id
-
-        def _prepare_dataloader(
-            tuning_info: TuningInfo,
-        ) -> torch.utils.data.DataLoader:
-            dataset = EvaluationDataset(
-                tuning_info.dataset_id,
-                tuning_info.bytes_parser,
-                tuning_info.transform_list,
-                tuning_info.storage_address,
-                tuning_info.evaluation_id,
-                tuning_info.tokenizer,
-            )
-            dataloader = torch.utils.data.DataLoader(
-                dataset,
-                batch_size=tuning_info.batch_size,
-                num_workers=tuning_info.num_dataloaders,
-                timeout=60 if tuning_info.num_dataloaders > 0 else 0,
-            )
-
-            return dataloader
 
         # setup dataloaders
         self._info("Setting up data loaders.")
-        self._train_dataloader, self._val_dataloader = _prepare_dataloader(tuning_info)
 
-        # Create callbacks
-        # TODO(#140): should be defined by the pipeline and passed with training request
-        self._callbacks: dict[MetricType, Any] = {
-            # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, tuning_info.criterion_dict)
-        }
+        self._tuning_info = tuning_info
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                       Core training pipeline orchestration                                       #
     # ---------------------------------------------------------------------------------------------------------------- #
+    def _prepare_dataloader(
+        self,
+        tuning_info: TuningInfo,
+    ) -> torch.utils.data.DataLoader:
+        dataset = EvaluationDataset(
+            tuning_info.dataset_id,
+            tuning_info.bytes_parser,
+            tuning_info.transform_list,
+            self._storage_address,
+            tuning_info.evaluation_id,
+            tuning_info.tokenizer,
+        )
+        dataloader = torch.utils.data.DataLoader(
+            dataset,
+            batch_size=tuning_info.batch_size,
+            num_workers=tuning_info.num_dataloaders,
+            timeout=60 if tuning_info.num_dataloaders > 0 else 0,
+        )
+
+        return dataloader
 
     def train(self) -> None:
         """Performs light tuning for a few steps before evaluation."""
         self._info(f"Process {os.getpid()} starts light tuning")
-
+        _train_dataloader = self._prepare_dataloader(self._tuning_info)
         stopw = Stopwatch()
-
+        model_device = self._model.device
+        self._model.to(self._device)
         stopw.start("TotalLightTuning")
-        self._model.model.train()
+        self._model.train()
 
-        for step, batch in enumerate(self._train_dataloader):
+        for step, batch in enumerate(_train_dataloader):
             if step >= self._light_tuning_steps:
                 break  # Stop after defined steps
 
             stopw.start("FetchBatch", resume=True)
             sample_ids, target, data = self.preprocess_batch(batch, stopw)
-
+            stopw.stop("FetchBatch")
             for _, optimizer in self._optimizers.items():
                 optimizer.zero_grad()
 
@@ -158,7 +151,7 @@ class PytorchTuner:
                 stopw.start("Forward", resume=True)
 
                 if self.generative:
-                    output = self._model.model(data)
+                    output = self._model(data)
                     output = output[..., :-1, :]  # Ignore last token prediction
                     target = data[..., 1:, 0]  # Shift target labels
 
@@ -168,20 +161,21 @@ class PytorchTuner:
                     target[target == 50256] = -100  # Mask padding tokens for GPT-style models
 
                 else:
-                    output = self._model.model(data, sample_ids=sample_ids)
+                    output = self._model(data, sample_ids=sample_ids)
 
                 stopw.stop("Forward")
 
                 # Compute loss
                 stopw.start("Loss", resume=True)
                 loss = self._criterion(output, target)
+
                 stopw.stop("Loss")
 
             # Backward pass and optimizer step
             stopw.start("Backward", resume=True)
             self._scaler.scale(loss).backward()
             if self._grad_norm is not None:
-                torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._grad_norm)
+                torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=self._grad_norm)
             stopw.stop("Backward")
 
             stopw.start("OptimizerStep", resume=True)
@@ -195,6 +189,7 @@ class PytorchTuner:
 
         stopw.stop("TotalLightTuning")
         self._info(f"Light tuning complete! Total time: {stopw.measurements.get('TotalLightTuning', 0)} seconds")
+        self._model.to(model_device)
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                  Training stages                                                 #
@@ -257,7 +252,7 @@ class PytorchTuner:
 
     def save_state(self, destination: pathlib.Path | io.BytesIO, iteration: int | None = None) -> None:
         dict_to_save = {}
-        dict_to_save["model"] = self._model.model.state_dict()
+        dict_to_save["model"] = self._model.state_dict()
         for optimizer_name, optimizer in self._optimizers.items():
             dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
 
@@ -298,7 +293,7 @@ class PytorchTuner:
 
                     param_group_decay["params"] = [
                         p
-                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        for n, p in eval(f"self._{module}.named_parameters()")  # pylint: disable=eval-used
                         if not any(m in n for m in no_decay)
                     ]
                     param_group_decay["weight_decay"] = 0.01
@@ -306,7 +301,7 @@ class PytorchTuner:
 
                     param_group_no_decay["params"] = [
                         p
-                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        for n, p in eval(f"self._{module}.named_parameters()")  # pylint: disable=eval-used
                         if any(m in n for m in no_decay)
                     ]
 
@@ -315,7 +310,7 @@ class PytorchTuner:
 
                 else:
                     param_group["config"]["params"] = eval(  # pylint: disable=eval-used
-                        f"self._model.{module}.parameters()"
+                        f"self._{module}.parameters()"
                     )
 
                     optimizer_config_list.append(param_group["config"])
@@ -429,28 +424,3 @@ class PytorchTuner:
                     + f"We expected to train on {self._expected_num_batches},"
                     + f" but trained for {trained_batches} batches!"
                 )
-
-    # ---------------------------------------------------- Cleanup --------------------------------------------------- #
-
-
-def tune(
-    tuning_info: TuningInfo,
-    device: str,
-    log_path: pathlib.Path,
-    model: Any,
-) -> None:
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
-        datefmt="%Y-%m-%d:%H:%M:%S",
-    )
-    file_handler = logging.FileHandler(log_path)
-    logger = logging.getLogger(__name__)
-    logger.addHandler(file_handler)
-
-    try:
-        tuner = PytorchTuner(tuning_info, device, logger, model)
-        tuner.train()
-    except Exception:  # pylint: disable=broad-except
-        exception_msg = traceback.format_exc()
-        logger.error(exception_msg)

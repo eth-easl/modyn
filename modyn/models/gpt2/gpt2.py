@@ -2,7 +2,7 @@ from typing import Any
 
 import torch
 from torch import nn
-from transformers import GPT2LMHeadModel
+from transformers import AutoTokenizer, GPT2Config, GPT2LMHeadModel, GPT2Model
 
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 
@@ -31,9 +31,13 @@ class Gpt2Modyn(CoresetSupportingModule):
         # Assert that the model name is valid
         valid_model_names = {"gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"}
         assert model_name in valid_model_names, f"Invalid model name: {model_name}. Must be one of {valid_model_names}."
-
+        self.tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+        self.tokenizer.pad_token = self.tokenizer.eos_token
         # Load the specified GPT-2 model
+
         self.model = GPT2LMHeadModel.from_pretrained(model_name)
+        self.config = GPT2Config.from_pretrained(model_name)
+        self.transformer = GPT2Model(self.config)
 
     def forward(self, data: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         """Forward method for text generation or language modeling tasks.
@@ -54,7 +58,7 @@ class Gpt2Modyn(CoresetSupportingModule):
 
         output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
 
-        return output.logits
+        return output
 
     def get_last_layer(self) -> nn.Module:
         """Retrieve the last layer (lm_head) of the model.
@@ -66,6 +70,8 @@ class Gpt2Modyn(CoresetSupportingModule):
 
     def freeze_params(self) -> None:
         for par in self.model.parameters():
+            par.requires_grad = False
+        for par in self.transformer.parameters():
             par.requires_grad = False
 
     def unfreeze_params(self) -> None:

@@ -2,34 +2,9 @@
 """Client and server classes corresponding to protobuf-defined services."""
 
 import warnings
-
 import grpc
+
 import modyn.evaluator.internal.grpc.generated.evaluator_pb2 as evaluator__pb2
-
-GRPC_GENERATED_VERSION = "1.63.0"
-GRPC_VERSION = grpc.__version__
-EXPECTED_ERROR_RELEASE = "1.65.0"
-SCHEDULED_RELEASE_DATE = "June 25, 2024"
-_version_not_supported = False
-
-try:
-    from grpc._utilities import first_version_is_lower
-
-    _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
-except ImportError:
-    _version_not_supported = True
-
-if _version_not_supported:
-    warnings.warn(
-        f"The grpc package installed is at version {GRPC_VERSION},"
-        + f" but the generated code in evaluator_pb2_grpc.py depends on"
-        + f" grpcio>={GRPC_GENERATED_VERSION}."
-        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
-        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
-        + f" This warning will become an error in {EXPECTED_ERROR_RELEASE},"
-        + f" scheduled for release on {SCHEDULED_RELEASE_DATE}.",
-        RuntimeWarning,
-    )
 
 
 class EvaluatorStub(object):
@@ -45,25 +20,21 @@ class EvaluatorStub(object):
             "/modyn.evaluator.Evaluator/evaluate_model",
             request_serializer=evaluator__pb2.EvaluateModelRequest.SerializeToString,
             response_deserializer=evaluator__pb2.EvaluateModelResponse.FromString,
-            _registered_method=True,
         )
         self.get_evaluation_status = channel.unary_unary(
             "/modyn.evaluator.Evaluator/get_evaluation_status",
             request_serializer=evaluator__pb2.EvaluationStatusRequest.SerializeToString,
             response_deserializer=evaluator__pb2.EvaluationStatusResponse.FromString,
-            _registered_method=True,
         )
         self.get_evaluation_result = channel.unary_unary(
             "/modyn.evaluator.Evaluator/get_evaluation_result",
             request_serializer=evaluator__pb2.EvaluationResultRequest.SerializeToString,
             response_deserializer=evaluator__pb2.EvaluationResultResponse.FromString,
-            _registered_method=True,
         )
         self.cleanup_evaluations = channel.unary_unary(
             "/modyn.evaluator.Evaluator/cleanup_evaluations",
             request_serializer=evaluator__pb2.EvaluationCleanupRequest.SerializeToString,
             response_deserializer=evaluator__pb2.EvaluationCleanupResponse.FromString,
-            _registered_method=True,
         )
 
 
@@ -153,7 +124,6 @@ class Evaluator(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -183,7 +153,6 @@ class Evaluator(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -213,7 +182,6 @@ class Evaluator(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -243,5 +211,4 @@ class Evaluator(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )

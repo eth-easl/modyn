@@ -60,7 +60,9 @@ message StartTrainingRequest {
   int64 record_loss_every = 26;
   bool drop_last_batch = 27;
   bool generative = 28;
-  bool no_labels = 29;
+  optional float grad_norm = 29;
+  bool lora = 30;
+  bool kadapter = 31;
 }
 
 message StartTrainingResponse {

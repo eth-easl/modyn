@@ -125,6 +125,14 @@ class TrainingConfig(ModynBaseModel):
             "If True then, then the training pipeline goes into the generative branch, data is sampled without expecting labels."
         ),
     )
+    lora: bool = Field(
+        False,
+        description=("Applies Lora layers to the model"),
+    )
+    kadapter: bool = Field(
+        False,
+        description=("Applies kadapter layers to the model"),
+    )
 
     seed: int | None = Field(
         None,
@@ -160,6 +168,10 @@ class TrainingConfig(ModynBaseModel):
     grad_scaler_config: dict[str, Any] | None = Field(
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
+    )
+    grad_norm: int = Field(
+        default=0,
+        description="Clips the gradients normed over this value, if its 0 it will not be used.",
     )
 
     # [Additional validation]

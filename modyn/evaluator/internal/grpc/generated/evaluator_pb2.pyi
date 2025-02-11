@@ -174,9 +174,12 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
+    LIGHT_TUNING_FIELD_NUMBER: builtins.int
+    TUNING_CONFIG_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
+    light_tuning: builtins.bool
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
@@ -189,6 +192,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def label_transformer(self) -> global___PythonString: ...
     @property
     def tokenizer(self) -> global___PythonString: ...
+    @property
+    def tuning_config(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -201,6 +206,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
         tokenizer: global___PythonString | None = ...,
+        light_tuning: builtins.bool = ...,
+        tuning_config: global___JsonString | None = ...,
     ) -> None: ...
     def HasField(
         self,
@@ -215,6 +222,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"label_transformer",
             "tokenizer",
             b"tokenizer",
+            "tuning_config",
+            b"tuning_config",
         ],
     ) -> builtins.bool: ...
     def ClearField(
@@ -232,6 +241,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"device",
             "label_transformer",
             b"label_transformer",
+            "light_tuning",
+            b"light_tuning",
             "metrics",
             b"metrics",
             "model_id",
@@ -240,6 +251,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"tokenizer",
             "transform_list",
             b"transform_list",
+            "tuning_config",
+            b"tuning_config",
         ],
     ) -> None: ...
     def WhichOneof(
@@ -277,7 +290,10 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     INTERVAL_RESPONSES_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
-    """only when all interval evaluations failed, this field will be set to false"""
+    """only when all interval evaluations failed, this field will be set to false
+    it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+    the client can always check the interval_responses
+    """
     evaluation_id: builtins.int
     @property
     def interval_responses(
@@ -378,7 +394,14 @@ class EvaluationIntervalData(google.protobuf.message.Message):
     INTERVAL_INDEX_FIELD_NUMBER: builtins.int
     EVALUATION_DATA_FIELD_NUMBER: builtins.int
     interval_index: builtins.int
-    """multiple metrics are required on on evaluation on one interval"""
+    """Since not every interval evaluation from EvaluateModelRequest may be successful,
+    the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+    evaluation data corresponds to. The interval_index is the index of the interval in the list
+    Datainfo.evaluation_intervals in the EvaluateModelRequest.
+    For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+    and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+    0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
+    """
     @property
     def evaluation_data(
         self,

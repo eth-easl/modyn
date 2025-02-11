@@ -247,7 +247,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         dataset_id = dataset_config["dataset_id"]
         transform_list = dataset_config.get("transformations") or []
         label_transformer = dataset_config.get("label_transformer_function") or ""
-
         bytes_parser_function = dataset_config["bytes_parser_function"]
         batch_size = dataset_config["batch_size"]
         dataloader_workers = dataset_config["dataloader_workers"]
@@ -262,6 +261,11 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             tokenizer_arg = EvaluatorPythonString(value=tokenizer)
         else:
             tokenizer_arg = None
+        light_tuning = False
+        tuning_config = None
+        if dataset_config["light_tuning"]:
+            light_tuning = dataset_config["light_tuning"]
+            tuning_config = dataset_config["tuning_config"]
 
         return EvaluateModelRequest(
             model_id=model_id,
@@ -277,6 +281,8 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
             label_transformer=EvaluatorPythonString(value=label_transformer),
             tokenizer=tokenizer_arg,
+            light_tuning=light_tuning,
+            tuning_config=tuning_config,
         )
 
     # pylint: disable=too-many-branches

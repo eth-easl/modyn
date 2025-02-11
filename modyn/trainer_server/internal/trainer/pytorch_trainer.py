@@ -90,9 +90,9 @@ class PytorchTrainer:
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
         self.generative = training_info.generative
-        self._grad_norm = 0.5  # remember add this to training infotraining_info.grad_norm
-        self._lora = False
-        self._kadapter = False
+        self._grad_norm = training_info.grad_norm  # 0.5  # remember add this to training infotraining_info.grad_norm
+        self._lora = training_info.lora
+        self._kadapter = training_info.kadapter
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -311,7 +311,7 @@ class PytorchTrainer:
                         # Measure memory usage before forward pass
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
-                        #torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+                        # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
 
                         if self.generative:
                             output = self._model.model(data)
