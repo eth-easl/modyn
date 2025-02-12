@@ -54,4 +54,4 @@ class EvaluationInfo:
         self.storage_address = storage_address
         self.model_path = model_path
         self.light_tuning = request.light_tuning
-        self.tuning_info = json.loads(request.tuning_info)
+        self.tuning_info = json.loads(request.tuning_config) if request.HasField("tuning_config") else None

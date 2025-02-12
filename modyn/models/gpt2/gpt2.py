@@ -77,6 +77,9 @@ class Gpt2Modyn(CoresetSupportingModule):
     def unfreeze_params(self) -> None:
         for par in self.model.parameters():
             par.requires_grad = True
+        for par in self.transformer.parameters():
+            par.requires_grad = True
+
 
     def generate(
         self,

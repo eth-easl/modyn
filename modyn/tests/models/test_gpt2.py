@@ -24,7 +24,7 @@ def test_forward_pass():
     input_data = torch.stack([tokens.input_ids, tokens.attention_mask], dim=-1)
     output = model.model(input_data)  # Fix incorrect model call
     
-    assert output.shape[-1] == tokenizer.vocab_size  # Logits over vocab size
+    assert output.logits.shape[-1] == tokenizer.vocab_size  # Logits over vocab size
 
 def test_get_last_layer():
     hparams = HParams()
@@ -40,7 +40,6 @@ def test_freeze_unfreeze_params():
     
     model.model.freeze_params()
     assert all(not param.requires_grad for param in model.model.parameters())
-    
     model.model.unfreeze_params()
     assert all(param.requires_grad for param in model.model.parameters())
 

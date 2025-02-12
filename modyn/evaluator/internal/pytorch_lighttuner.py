@@ -284,7 +284,6 @@ class PytorchTuner:
                 module = param_group["module"]
 
                 if optimizer_config["algorithm"] == "Adafactor":  # Check if optimizer is Adafactor
-                    # Debug: Print the type of self._model
                     no_decay = ["bias", "LayerNorm.weight"]
 
                     # Create separate parameter group dictionaries
@@ -293,25 +292,26 @@ class PytorchTuner:
 
                     param_group_decay["params"] = [
                         p
-                        for n, p in eval(f"self._{module}.named_parameters()")  # pylint: disable=eval-used
-                        if not any(m in n for m in no_decay)
+                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        if p.requires_grad and not any(nd in n for nd in no_decay)
                     ]
                     param_group_decay["weight_decay"] = 0.01
                     optimizer_config_list.append(param_group_decay)
 
                     param_group_no_decay["params"] = [
                         p
-                        for n, p in eval(f"self._{module}.named_parameters()")  # pylint: disable=eval-used
-                        if any(m in n for m in no_decay)
+                        for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
+                        if p.requires_grad and any(nd in n for nd in no_decay)
                     ]
-
                     param_group_no_decay["weight_decay"] = 0.0
                     optimizer_config_list.append(param_group_no_decay)
 
                 else:
-                    param_group["config"]["params"] = eval(  # pylint: disable=eval-used
-                        f"self._{module}.parameters()"
-                    )
+                    param_group["config"]["params"] = [
+                        p
+                        for p in eval(f"self._model.{module}.parameters()")  # pylint: disable=eval-used
+                        if p.requires_grad
+                    ]
 
                     optimizer_config_list.append(param_group["config"])
             self._optimizers[name] = optimizer_func(optimizer_config_list)
