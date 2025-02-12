@@ -80,7 +80,6 @@ class Gpt2Modyn(CoresetSupportingModule):
         for par in self.transformer.parameters():
             par.requires_grad = True
 
-
     def generate(
         self,
         input_ids: torch.tensor,

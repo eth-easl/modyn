@@ -1,41 +1,30 @@
 # pylint: disable=no-name-in-module
+# pylint: disable=unused-argument, no-name-in-module, no-value-for-parameter
+# ruff: noqa: N802  # grpc functions are not snake case
+
 from __future__ import annotations
 
-
-import io
+import copy
 import json
 import logging
-import os
-import pathlib
-import shutil
-import tempfile
-import traceback
-from typing import Any
-from unittest.mock import MagicMock, call, patch
 from types import SimpleNamespace
-import grpc
-import pytest
+from typing import Any
+from unittest.mock import MagicMock, patch
+
 import torch
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from torch.utils.data import IterableDataset
-import copy
-from modyn.evaluator.internal.utils.tuning_info import TuningInfo
-from modyn.evaluator.internal.pytorch_lighttuner import PytorchTuner
 
 from modyn.config import ModynConfig
-from torch.utils.data import DataLoader, Dataset
-from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
-from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
-from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
-from modyn.trainer_server.custom_lr_schedulers.WarmupDecayLR.warmupdecay import WarmupDecayLR
-from modyn.trainer_server.internal.metadata_collector.metadata_collector import MetadataCollector
-from modyn.trainer_server.internal.trainer.metadata_pytorch_callbacks.base_callback import BaseCallback
-from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
-    JsonString,
-    DatasetInfo,
-    PythonString
-   
+from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import DatasetInfo, JsonString, PythonString
+from modyn.evaluator.internal.pytorch_lighttuner import PytorchTuner
+from modyn.evaluator.internal.utils.tuning_info import TuningInfo
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
+    GetDataPerWorkerRequest,
+    GetDataPerWorkerResponse,
+    GetRequest,
+    GetResponse,
 )
+from modyn.trainer_server.custom_lr_schedulers.WarmupDecayLR.warmupdecay import WarmupDecayLR
+
 
 class MockStorageStub:
     def __init__(self, channel) -> None:
@@ -82,8 +71,6 @@ class MockSuperModelWrapper:
         self.model = MockSuperModel()
 
 
- 
-
 class MockSuperModel(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -123,21 +110,20 @@ def get_mock_bytes_parser():
 
 
 def get_mock_label_transformer():
-    return (
-        "import torch\ndef label_transformer_function(x: torch.Tensor) -> "
-        "torch.Tensor:\n\treturn x"
-    )
+    return "import torch\ndef label_transformer_function(x: torch.Tensor) -> " "torch.Tensor:\n\treturn x"
 
 
 class MockModel(torch.nn.Module):
-    def __init__(self, num_classes=10, input_dim=10):  
+    def __init__(self, num_classes=10, input_dim=10):
         super().__init__()
         self.fc = torch.nn.Linear(input_dim, num_classes)  # Adjusted to match data input shape
+        self.device = "cpu"
 
     def forward(self, data, sample_ids=None):
         data = data.to(torch.float32)  # Ensure float dtype for model input
         return self.fc(data)
-    
+
+
 class MockDataloader:
     def __init__(self, tuning_info, num_batches=20):
         self.batch_size = tuning_info.batch_size
@@ -158,10 +144,11 @@ class MockDataloader:
 
     def __len__(self):
         return self.num_batches
-    
-def mock_get_dataloader(self,tuning_info):
+
+
+def mock_get_dataloader(self, tuning_info):
     """Creates a DataLoader similar to _prepare_dataloader."""
-    mock_dataloader=MockDataloader(tuning_info)
+    mock_dataloader = MockDataloader(tuning_info)
     return mock_dataloader
 
 
@@ -169,13 +156,11 @@ def noop_constructor_mock(self, channel):
     pass
 
 
-
 def get_tuning_info(
     evaluation_id: int,
     batch_size: int,
     num_optimizers: int,
     lr_scheduler: str,
-    
 ):
     if num_optimizers == 1:
         torch_optimizers_configuration = {
@@ -229,74 +214,60 @@ def get_tuning_info(
     else:
         lr_scheduler_config = {}
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        with tempfile.TemporaryDirectory() as final_tmpdirname:
-            
-            tuning_info = SimpleNamespace(
-                    pipeline_id=1,
-                    data_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=2),
-                    evaluation_id=42, 
-                    batch_size=32,  
-                    num_samples_to_pass=500,
-                    transform_list=[],
-                    bytes_parser=PythonString(value=get_mock_bytes_parser()),
-                    torch_optimizers_configuration=JsonString(value=json.dumps(torch_optimizers_configuration)),
-                    criterion_parameters=JsonString(value=json.dumps({})),
-                    torch_criterion="CrossEntropyLoss",
-                    lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
-                    grad_scaler_configuration=JsonString(value=json.dumps({})),
-                    epochs=10,  
-                    label_transformer=PythonString(value=get_mock_label_transformer()),
-                    device="cpu",
-                    amp=False,
-                    shuffle=True,  
-                    enable_accurate_gpu_measurements=False,
+    tuning_info = SimpleNamespace(
+        pipeline_id=1,
+        data_info=DatasetInfo(dataset_id="MNIST", num_dataloaders=2),
+        evaluation_id=42,
+        batch_size=32,
+        num_samples_to_pass=500,
+        transform_list=[],
+        bytes_parser=PythonString(value=get_mock_bytes_parser()),
+        torch_optimizers_configuration=JsonString(value=json.dumps(torch_optimizers_configuration)),
+        criterion_parameters=JsonString(value=json.dumps({})),
+        torch_criterion="CrossEntropyLoss",
+        lr_scheduler=JsonString(value=json.dumps(lr_scheduler_config)),
+        grad_scaler_configuration=JsonString(value=json.dumps({})),
+        epochs=10,
+        label_transformer=PythonString(value=get_mock_label_transformer()),
+        device="cpu",
+        amp=False,
+        shuffle=True,
+        enable_accurate_gpu_measurements=False,
+        generative=False,
+        steps=100,
+        drop_last_batch=False,
+        record_loss_every=10,
+        seed=42,
+        tokenizer=None,
+    )
 
-                   
-                    generative=False,
-                    steps=100,  
-                    drop_last_batch=False, 
-                    
-                    record_loss_every=10, 
-                    seed=42,  
-                    tokenizer=None, 
-                    
-                )
-
-          
-            return TuningInfo(
-                tuning_info,
-                1,
-                None,
-                None,
-
-                
-            )
-
+    return TuningInfo(
+        tuning_info,
+        1,
+        None,
+        None,
+    )
 
 
 def get_mock_tuner(
     modyn_config: ModynConfig,
     num_optimizers: int,
     lr_scheduler: str,
-    
     lr_scheduler_dynamic_module_patch: MagicMock,
     model_dynamic_module_patch: MagicMock,
     batch_size: int,
-    model:Any 
-
+    model: Any,
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
-  
+
     tuning_info = get_tuning_info(
         0,
         batch_size,
         num_optimizers,
         lr_scheduler,
-       
     )
-    
+
     # Fixing argument order:
     tuner = PytorchTuner(
         tuning_info,  # ✅ Matches `tuning_info`
@@ -304,15 +275,15 @@ def get_mock_tuner(
         model,  # ✅ Correctly assigned `model`
         "localhost:1234",
     )
-    
+
     return tuner
 
 
 def test_tuner_init(dummy_system_config: ModynConfig):
-    tuner = get_mock_tuner(dummy_system_config,1,"",MagicMock(),MagicMock(),32,MockModel())
+    tuner = get_mock_tuner(dummy_system_config, 1, "", MagicMock(), MagicMock(), 32, MockModelWrapper())
 
     # Ensure model initialization is correct
-    assert isinstance(tuner._model, MockModel), "Expected tuner._model to be an instance of MockModule"
+    assert isinstance(tuner._model, MockModelWrapper), "Expected tuner._model to be an instance of MockModule"
 
     # Validate optimizer setup
     assert len(tuner._optimizers) == 1, "Expected one optimizer to be initialized"
@@ -328,14 +299,10 @@ def test_tuner_init(dummy_system_config: ModynConfig):
     assert tuner._device == "cpu", "Expected tuner to run on CPU"
     assert tuner._batch_size > 0, "Batch size should be greater than 0"
 
-   
-   
-
-
 
 def test_tuner_init_multi_optimizers(dummy_system_config: ModynConfig):
-    tuner = get_mock_tuner(dummy_system_config,2,"",MagicMock(),MagicMock(),32,MockSuperModel())
-    assert isinstance(tuner._model, MockSuperModel)
+    tuner = get_mock_tuner(dummy_system_config, 2, "", MagicMock(), MagicMock(), 32, MockSuperModelWrapper())
+    assert isinstance(tuner._model, MockSuperModelWrapper)
     assert len(tuner._optimizers) == 2
     assert isinstance(tuner._optimizers["opt1"], torch.optim.SGD)
     assert isinstance(tuner._optimizers["opt2"], torch.optim.Adam)
@@ -344,25 +311,22 @@ def test_tuner_init_multi_optimizers(dummy_system_config: ModynConfig):
     assert tuner._device == "cpu"
     assert tuner._batch_size > 0
     assert tuner._dataset_log_path is not None
-   
 
 
 def test_tuner_init_torch_lr_scheduler(dummy_system_config: ModynConfig):
-    tuner = get_mock_tuner(dummy_system_config,1,"torch",MagicMock(),MagicMock(),32,MockModel())
-    assert isinstance(tuner._model, MockModel)
+    tuner = get_mock_tuner(dummy_system_config, 1, "torch", MagicMock(), MagicMock(), 32, MockModelWrapper())
+    assert isinstance(tuner._model, MockModelWrapper)
     assert len(tuner._optimizers) == 1
     assert isinstance(tuner._optimizers["default"], torch.optim.SGD)
     assert isinstance(tuner._criterion, torch.nn.CrossEntropyLoss)
     assert isinstance(tuner._lr_scheduler, torch.optim.lr_scheduler.StepLR)
     assert tuner._device == "cpu"
     assert tuner._batch_size > 0
-   
-   
 
 
 def test_tuner_init_custom_lr_scheduler(dummy_system_config: ModynConfig):
-    tuner = get_mock_tuner(dummy_system_config,1,"custom",MagicMock(),MagicMock(),32,MockModel())
-    assert isinstance(tuner._model, MockModel)
+    tuner = get_mock_tuner(dummy_system_config, 1, "custom", MagicMock(), MagicMock(), 32, MockModelWrapper())
+    assert isinstance(tuner._model, MockModelWrapper)
     assert len(tuner._optimizers) == 1
     assert isinstance(tuner._optimizers["default"], torch.optim.SGD)
     assert isinstance(tuner._criterion, torch.nn.CrossEntropyLoss)
@@ -371,51 +335,34 @@ def test_tuner_init_custom_lr_scheduler(dummy_system_config: ModynConfig):
     assert tuner._batch_size > 0
 
 
-
-
-
-
-   
 @patch("modyn.evaluator.internal.pytorch_lighttuner.PytorchTuner._prepare_dataloader", mock_get_dataloader)
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.StorageStub", MockStorageStub)
 @patch("modyn.evaluator.internal.dataset.evaluation_dataset.grpc_connection_established", return_value=True)
 def test_tuner_light_tuning(
-    
-   
-    
     dummy_system_config: ModynConfig,
 ):
-    model=MockModel()
-    tuner = get_mock_tuner(dummy_system_config,1,"",MagicMock(),MagicMock(),32,model)
-    
+    model = MockModelWrapper()
+    tuner = get_mock_tuner(dummy_system_config, 1, "", MagicMock(), MagicMock(), 32, model)
 
     # Limit the tuning to 2 steps
     tuner._light_tuning_steps = 2
 
     # Capture old state before training
-    old_model_state = copy.deepcopy(model.state_dict())
-    old_optim_states = {
-        name: copy.deepcopy(opt.state_dict()) for name, opt in tuner._optimizers.items()
-    }
+    old_model_state = copy.deepcopy(model.model.state_dict())
+    old_optim_states = {name: copy.deepcopy(opt.state_dict()) for name, opt in tuner._optimizers.items()}
 
     # Run the light tuning process
     tuner.train()
 
-    
-
     # Check that at least one model parameter changed
-    new_model_state =model.state_dict()
-    
-    change_detected = any(
-        not torch.equal(old_model_state[p], new_model_state[p]) for p in old_model_state
-    )
+    new_model_state = model.model.state_dict()
+
+    change_detected = any(not torch.equal(old_model_state[p], new_model_state[p]) for p in old_model_state)
     assert change_detected, "Expected at least one model parameter to change after light tuning."
 
     # Check that optimizer states changed
-    new_optim_states = {
-        name: opt.state_dict() for name, opt in tuner._optimizers.items()
-    }
+    new_optim_states = {name: opt.state_dict() for name, opt in tuner._optimizers.items()}
     for opt_name in old_optim_states:
-        assert old_optim_states[opt_name] != new_optim_states[opt_name], \
-            f"Expected optimizer {opt_name} state to change after light tuning."
-
+        assert (
+            old_optim_states[opt_name] != new_optim_states[opt_name]
+        ), f"Expected optimizer {opt_name} state to change after light tuning."

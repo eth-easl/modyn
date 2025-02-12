@@ -131,10 +131,10 @@ class PytorchTuner:
         self._info(f"Process {os.getpid()} starts light tuning")
         _train_dataloader = self._prepare_dataloader(self._tuning_info)
         stopw = Stopwatch()
-        model_device = self._model.device
-        self._model.to(self._device)
+        model_device = self._model.model.device
+        self._model.model.to(self._device)
         stopw.start("TotalLightTuning")
-        self._model.train()
+        self._model.model.train()
 
         for step, batch in enumerate(_train_dataloader):
             if step >= self._light_tuning_steps:
@@ -151,7 +151,7 @@ class PytorchTuner:
                 stopw.start("Forward", resume=True)
 
                 if self.generative:
-                    output = self._model(data)
+                    output = self._model.model(data)
                     output = output[..., :-1, :]  # Ignore last token prediction
                     target = data[..., 1:, 0]  # Shift target labels
 
@@ -161,7 +161,7 @@ class PytorchTuner:
                     target[target == 50256] = -100  # Mask padding tokens for GPT-style models
 
                 else:
-                    output = self._model(data, sample_ids=sample_ids)
+                    output = self._model.model(data, sample_ids=sample_ids)
 
                 stopw.stop("Forward")
 
@@ -175,7 +175,7 @@ class PytorchTuner:
             stopw.start("Backward", resume=True)
             self._scaler.scale(loss).backward()
             if self._grad_norm is not None:
-                torch.nn.utils.clip_grad_norm_(self._model.parameters(), max_norm=self._grad_norm)
+                torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._grad_norm)
             stopw.stop("Backward")
 
             stopw.start("OptimizerStep", resume=True)
@@ -189,7 +189,7 @@ class PytorchTuner:
 
         stopw.stop("TotalLightTuning")
         self._info(f"Light tuning complete! Total time: {stopw.measurements.get('TotalLightTuning', 0)} seconds")
-        self._model.to(model_device)
+        self._model.model.to(model_device)
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                                  Training stages                                                 #
@@ -293,7 +293,7 @@ class PytorchTuner:
                     param_group_decay["params"] = [
                         p
                         for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
-                        if p.requires_grad and not any(nd in n for nd in no_decay)
+                        if p.requires_grad and not any(m in n for m in no_decay)
                     ]
                     param_group_decay["weight_decay"] = 0.01
                     optimizer_config_list.append(param_group_decay)
@@ -301,7 +301,7 @@ class PytorchTuner:
                     param_group_no_decay["params"] = [
                         p
                         for n, p in eval(f"self._model.{module}.named_parameters()")  # pylint: disable=eval-used
-                        if p.requires_grad and any(nd in n for nd in no_decay)
+                        if p.requires_grad and any(m in n for m in no_decay)
                     ]
                     param_group_no_decay["weight_decay"] = 0.0
                     optimizer_config_list.append(param_group_no_decay)

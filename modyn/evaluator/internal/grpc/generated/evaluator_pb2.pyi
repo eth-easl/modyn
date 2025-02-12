@@ -23,7 +23,9 @@ class _EvaluationAbortedReason:
     ValueType = typing.NewType("ValueType", builtins.int)
     V: typing_extensions.TypeAlias = ValueType
 
-class _EvaluationAbortedReasonEnumTypeWrapper(google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_EvaluationAbortedReason.ValueType], builtins.type):
+class _EvaluationAbortedReasonEnumTypeWrapper(
+    google.protobuf.internal.enum_type_wrapper._EnumTypeWrapper[_EvaluationAbortedReason.ValueType], builtins.type
+):
     DESCRIPTOR: google.protobuf.descriptor.EnumDescriptor
     NOT_ABORTED: _EvaluationAbortedReason.ValueType  # 0
     MODEL_NOT_EXIST_IN_METADATA: _EvaluationAbortedReason.ValueType  # 1
@@ -58,12 +60,40 @@ class EvaluationInterval(google.protobuf.message.Message):
         start_timestamp: builtins.int | None = ...,
         end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_end_timestamp",
+            b"_end_timestamp",
+            "_start_timestamp",
+            b"_start_timestamp",
+            "end_timestamp",
+            b"end_timestamp",
+            "start_timestamp",
+            b"start_timestamp",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_end_timestamp",
+            b"_end_timestamp",
+            "_start_timestamp",
+            b"_start_timestamp",
+            "end_timestamp",
+            b"end_timestamp",
+            "start_timestamp",
+            b"start_timestamp",
+        ],
+    ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]
+    ) -> typing.Literal["end_timestamp"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]
+    ) -> typing.Literal["start_timestamp"] | None: ...
 
 global___EvaluationInterval = EvaluationInterval
 
@@ -77,7 +107,9 @@ class DatasetInfo(google.protobuf.message.Message):
     dataset_id: builtins.str
     num_dataloaders: builtins.int
     @property
-    def evaluation_intervals(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationInterval]: ...
+    def evaluation_intervals(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationInterval]: ...
     def __init__(
         self,
         *,
@@ -85,7 +117,17 @@ class DatasetInfo(google.protobuf.message.Message):
         num_dataloaders: builtins.int = ...,
         evaluation_intervals: collections.abc.Iterable[global___EvaluationInterval] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "evaluation_intervals", b"evaluation_intervals", "num_dataloaders", b"num_dataloaders"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "dataset_id",
+            b"dataset_id",
+            "evaluation_intervals",
+            b"evaluation_intervals",
+            "num_dataloaders",
+            b"num_dataloaders",
+        ],
+    ) -> None: ...
 
 global___DatasetInfo = DatasetInfo
 
@@ -167,12 +209,64 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         light_tuning: builtins.bool = ...,
         tuning_config: global___JsonString | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_tokenizer", b"_tokenizer", "_tuning_config", b"_tuning_config", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "label_transformer", b"label_transformer", "tokenizer", b"tokenizer", "tuning_config", b"tuning_config"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_tokenizer", b"_tokenizer", "_tuning_config", b"_tuning_config", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "dataset_info", b"dataset_info", "device", b"device", "label_transformer", b"label_transformer", "light_tuning", b"light_tuning", "metrics", b"metrics", "model_id", b"model_id", "tokenizer", b"tokenizer", "transform_list", b"transform_list", "tuning_config", b"tuning_config"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_tokenizer",
+            b"_tokenizer",
+            "_tuning_config",
+            b"_tuning_config",
+            "bytes_parser",
+            b"bytes_parser",
+            "dataset_info",
+            b"dataset_info",
+            "label_transformer",
+            b"label_transformer",
+            "tokenizer",
+            b"tokenizer",
+            "tuning_config",
+            b"tuning_config",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_tokenizer",
+            b"_tokenizer",
+            "_tuning_config",
+            b"_tuning_config",
+            "batch_size",
+            b"batch_size",
+            "bytes_parser",
+            b"bytes_parser",
+            "dataset_info",
+            b"dataset_info",
+            "device",
+            b"device",
+            "label_transformer",
+            b"label_transformer",
+            "light_tuning",
+            b"light_tuning",
+            "metrics",
+            b"metrics",
+            "model_id",
+            b"model_id",
+            "tokenizer",
+            b"tokenizer",
+            "transform_list",
+            b"transform_list",
+            "tuning_config",
+            b"tuning_config",
+        ],
+    ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]) -> typing.Literal["tokenizer"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
+    ) -> typing.Literal["tokenizer"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_tuning_config", b"_tuning_config"]) -> typing.Literal["tuning_config"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_tuning_config", b"_tuning_config"]
+    ) -> typing.Literal["tuning_config"] | None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 
@@ -191,7 +285,9 @@ class EvaluateModelIntervalResponse(google.protobuf.message.Message):
         dataset_size: builtins.int = ...,
         eval_aborted_reason: global___EvaluationAbortedReason.ValueType = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_size", b"dataset_size", "eval_aborted_reason", b"eval_aborted_reason"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["dataset_size", b"dataset_size", "eval_aborted_reason", b"eval_aborted_reason"]
+    ) -> None: ...
 
 global___EvaluateModelIntervalResponse = EvaluateModelIntervalResponse
 
@@ -209,7 +305,9 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     """
     evaluation_id: builtins.int
     @property
-    def interval_responses(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluateModelIntervalResponse]:
+    def interval_responses(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluateModelIntervalResponse]:
         """always has the same size as the number of intervals"""
 
     def __init__(
@@ -219,7 +317,17 @@ class EvaluateModelResponse(google.protobuf.message.Message):
         evaluation_id: builtins.int = ...,
         interval_responses: collections.abc.Iterable[global___EvaluateModelIntervalResponse] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["evaluation_id", b"evaluation_id", "evaluation_started", b"evaluation_started", "interval_responses", b"interval_responses"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "evaluation_id",
+            b"evaluation_id",
+            "evaluation_started",
+            b"evaluation_started",
+            "interval_responses",
+            b"interval_responses",
+        ],
+    ) -> None: ...
 
 global___EvaluateModelResponse = EvaluateModelResponse
 
@@ -255,9 +363,18 @@ class EvaluationStatusResponse(google.protobuf.message.Message):
         is_running: builtins.bool = ...,
         exception: builtins.str | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "valid", b"valid"]) -> None: ...
-    def WhichOneof(self, oneof_group: typing.Literal["_exception", b"_exception"]) -> typing.Literal["exception"] | None: ...
+    def HasField(
+        self, field_name: typing.Literal["_exception", b"_exception", "exception", b"exception"]
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_exception", b"_exception", "exception", b"exception", "is_running", b"is_running", "valid", b"valid"
+        ],
+    ) -> None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_exception", b"_exception"]
+    ) -> typing.Literal["exception"] | None: ...
 
 global___EvaluationStatusResponse = EvaluationStatusResponse
 
@@ -295,14 +412,18 @@ class EvaluationIntervalData(google.protobuf.message.Message):
     0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
     """
     @property
-    def evaluation_data(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleMetricResult]: ...
+    def evaluation_data(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___SingleMetricResult]: ...
     def __init__(
         self,
         *,
         interval_index: builtins.int = ...,
         evaluation_data: collections.abc.Iterable[global___SingleMetricResult] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["evaluation_data", b"evaluation_data", "interval_index", b"interval_index"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["evaluation_data", b"evaluation_data", "interval_index", b"interval_index"]
+    ) -> None: ...
 
 global___EvaluationIntervalData = EvaluationIntervalData
 
@@ -345,7 +466,9 @@ class EvaluationResultResponse(google.protobuf.message.Message):
     EVALUATION_RESULTS_FIELD_NUMBER: builtins.int
     valid: builtins.bool
     @property
-    def evaluation_results(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationIntervalData]:
+    def evaluation_results(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___EvaluationIntervalData]:
         """each element in the list corresponds to the evaluation results on a single interval"""
 
     def __init__(
@@ -354,7 +477,9 @@ class EvaluationResultResponse(google.protobuf.message.Message):
         valid: builtins.bool = ...,
         evaluation_results: collections.abc.Iterable[global___EvaluationIntervalData] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["evaluation_results", b"evaluation_results", "valid", b"valid"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["evaluation_results", b"evaluation_results", "valid", b"valid"]
+    ) -> None: ...
 
 global___EvaluationResultResponse = EvaluationResultResponse
 
