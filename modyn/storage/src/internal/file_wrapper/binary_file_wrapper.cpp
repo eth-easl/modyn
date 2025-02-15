@@ -32,7 +32,9 @@ void BinaryFileWrapper::validate_file_extension() {
  */
 int64_t BinaryFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
-
+  if (!has_labels_) {
+    return -1;  // Return -1 to indicate no label
+  }
   const uint64_t label_start = index * record_size_;
 
   get_stream()->seekg(static_cast<int64_t>(label_start), std::ios::beg);
@@ -76,7 +78,8 @@ std::vector<int64_t> BinaryFileWrapper::get_all_labels() {
 /*
  * Offset calculation to retrieve the data of a sample interval.
  */
-std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t start, uint64_t end) {
+std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t start, uint64_t end,
+                                                                       const bool include_labels) {
   ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   const uint64_t num_samples = end - start + 1;
@@ -85,7 +88,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples(uint64_t 
   uint64_t record_start;
   for (uint64_t index = 0; index < num_samples; ++index) {
     record_start = (start + index) * record_size_;
-    get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
+    get_stream()->seekg(static_cast<int64_t>(record_start + ((!include_labels) ? 0 : label_size_)), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
     get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));
@@ -116,7 +119,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_sample(uint64_t index) {
  * Offset calculation to retrieve the data of a sample interval.
  */
 std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indices(
-    const std::vector<uint64_t>& indices) {
+    const std::vector<uint64_t>& indices, const bool include_labels) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
          "Invalid indices");
 
@@ -127,7 +130,8 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   for (const uint64_t index : indices) {
     record_start = index * record_size_;
 
-    get_stream()->seekg(static_cast<int64_t>(record_start + label_size_), std::ios::beg);
+    // Adjust stream position based on the include_labels flag
+    get_stream()->seekg(static_cast<int64_t>(record_start + ((!include_labels) ? 0 : label_size_)), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
     get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));

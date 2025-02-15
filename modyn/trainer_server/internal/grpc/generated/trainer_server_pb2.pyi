@@ -141,6 +141,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ENABLE_ACCURATE_GPU_MEASUREMENTS_FIELD_NUMBER: builtins.int
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
+    GENERATIVE_FIELD_NUMBER: builtins.int
+    GRAD_NORM_FIELD_NUMBER: builtins.int
+    LORA_FIELD_NUMBER: builtins.int
+    KADAPTER_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -158,6 +162,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
     enable_accurate_gpu_measurements: builtins.bool
     record_loss_every: builtins.int
     drop_last_batch: builtins.bool
+    generative: builtins.bool
+    grad_norm: builtins.float
+    lora: builtins.bool
+    kadapter: builtins.bool
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
     @property
@@ -208,10 +216,16 @@ class StartTrainingRequest(google.protobuf.message.Message):
         enable_accurate_gpu_measurements: builtins.bool = ...,
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
+        generative: builtins.bool = ...,
+        grad_norm: builtins.float | None = ...,
+        lora: builtins.bool = ...,
+        kadapter: builtins.bool = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_grad_norm",
+            b"_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -224,6 +238,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"criterion_parameters",
             "data_info",
             b"data_info",
+            "grad_norm",
+            b"grad_norm",
             "grad_scaler_configuration",
             b"grad_scaler_configuration",
             "label_transformer",
@@ -241,6 +257,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_grad_norm",
+            b"_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -263,12 +281,20 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"enable_accurate_gpu_measurements",
             "epochs_per_trigger",
             b"epochs_per_trigger",
+            "generative",
+            b"generative",
+            "grad_norm",
+            b"grad_norm",
             "grad_scaler_configuration",
             b"grad_scaler_configuration",
+            "kadapter",
+            b"kadapter",
             "label_transformer",
             b"label_transformer",
             "load_optimizer_state",
             b"load_optimizer_state",
+            "lora",
+            b"lora",
             "lr_scheduler",
             b"lr_scheduler",
             "num_prefetched_partitions",
@@ -301,6 +327,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"use_pretrained_model",
         ],
     ) -> None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_grad_norm", b"_grad_norm"]
+    ) -> typing.Literal["grad_norm"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_seed", b"_seed"]) -> typing.Literal["seed"] | None: ...
     @typing.overload

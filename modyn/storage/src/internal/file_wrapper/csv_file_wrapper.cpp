@@ -55,19 +55,23 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices) {
-  ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
-         "Invalid indices");
-
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
+                                                                                 const bool include_labels) {
   std::vector<std::vector<unsigned char>> samples;
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
+
+    // Erase label based on the include_labels flag
+    if (has_labels) {
     row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    }
+
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
     }
     row_string.pop_back();
+
     samples.emplace_back(row_string.begin(), row_string.end());
   }
   return samples;
@@ -75,6 +79,9 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
 
 int64_t CsvFileWrapper::get_label(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
+  if (!has_labels_) {
+    return -1;  // Return -1 to indicate no label
+  }
   return doc_.GetCell<int64_t>(static_cast<size_t>(label_index_), static_cast<size_t>(index));
 }
 

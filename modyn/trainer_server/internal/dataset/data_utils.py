@@ -28,6 +28,7 @@ def prepare_dataloaders(
     tokenizer: str | None,
     log_path: pathlib.Path | None,
     drop_last: bool = True,
+    include_labels: bool = True,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
     """Gets the proper dataset according to the dataset id, and creates the
     proper dataloaders.
@@ -63,6 +64,7 @@ def prepare_dataloaders(
         shuffle,
         tokenizer,
         log_path,
+        include_labels,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
@@ -100,5 +102,6 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._parallel_prefetch_requests,
         online_dataset._shuffle,
         online_dataset._tokenizer_name,
+        online_dataset._include_labels,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last)

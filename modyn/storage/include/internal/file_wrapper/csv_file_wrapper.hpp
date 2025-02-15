@@ -15,8 +15,15 @@ class CsvFileWrapper : public FileWrapper {
   CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
                  std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
-    ASSERT(file_wrapper_config_["label_index"], "Please specify the index of the column that contains the label.");
+    if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
+      has_labels_ = true;
+      ASSERT(file_wrapper_config_["label_index"].as<int>() != -1,
+             "Please specify the index of the column that contains the label.");
     label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
+    } else {
+      has_labels_ = false;
+      label_index_ = -1;  // No labels exist
+    }
 
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
@@ -79,5 +86,6 @@ class CsvFileWrapper : public FileWrapper {
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
   std::shared_ptr<std::ifstream> stream_;
+  bool has_labels_;
 };
 }  // namespace modyn::storage

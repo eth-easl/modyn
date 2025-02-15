@@ -38,6 +38,7 @@ class EvaluationDataset(IterableDataset):
         tokenizer: str | None = None,
         start_timestamp: int | None = None,
         end_timestamp: int | None = None,
+        generative: bool = False,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -52,7 +53,7 @@ class EvaluationDataset(IterableDataset):
         self._bytes_parser_function: Callable | None = None
         self._start_timestamp = start_timestamp
         self._end_timestamp = end_timestamp
-
+        self._generative = generative
         # tokenizer for NLP tasks
         self._tokenizer = None
         self._tokenizer_name = tokenizer
@@ -156,7 +157,7 @@ class EvaluationDataset(IterableDataset):
 
     def _get_data_from_storage(
         self, keys: list[int], worker_id: int | None = None
-    ) -> Iterable[list[tuple[int, bytes, int]]]:
+    ) -> Iterable[list[tuple[int, bytes, int | None]]]:
         processed_keys: set[int] | list[int] = []
         has_failed = False
         for attempt in Retrying(
@@ -170,7 +171,10 @@ class EvaluationDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(response.keys)
-                            yield list(zip(response.keys, response.samples, response.labels))
+                            if not self._generative:
+                                yield list(zip(response.keys, response.samples, response.labels))
+                            else:
+                                yield list(zip(response.keys, response.samples, [None] * len(processed_keys)))
                         else:
                             assert isinstance(processed_keys, set)
                             new_keys: list[int] = [key for key in response.keys if key not in processed_keys]
@@ -179,11 +183,17 @@ class EvaluationDataset(IterableDataset):
                                 for key, sample in zip(response.keys, response.samples)
                                 if key not in processed_keys
                             ]
-                            new_labels: list[int] = [
-                                label for key, label in zip(response.keys, response.labels) if key not in processed_keys
-                            ]
-                            processed_keys.update(keys)
-                            yield list(zip(new_keys, new_samples, new_labels))
+                            if not self.generative:
+                                new_labels: list[int] = [
+                                    label
+                                    for key, label in zip(response.keys, response.labels)
+                                    if key not in processed_keys
+                                ]
+                                processed_keys.update(keys)
+                                yield list(zip(new_keys, new_samples, new_labels))
+                            else:
+                                processed_keys.update(keys)
+                                yield list(zip(new_keys, new_samples, [None] * len(new_keys)))
 
                 except grpc.RpcError as e:  # We catch and reraise to log and reconnect
                     has_failed = True

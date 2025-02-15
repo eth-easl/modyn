@@ -76,7 +76,42 @@ class RocAucMetricConfig(_BaseMetricConfig):
     name: Literal["RocAuc"] = Field("RocAuc")
 
 
-MetricConfig = Annotated[AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig, Field(discriminator="name")]
+class PerplexityMetricConfig(_BaseMetricConfig):
+    name: Literal["Perplexity"] = Field("Perplexity")
+
+
+class GlueScoreMetricConfig(_BaseMetricConfig):
+    name: Literal["GLUEScore"] = Field("GLUEScore")
+
+
+class TwikiF1MetricConfig(_BaseMetricConfig):
+    name: Literal["TwikiF1Score"] = Field("TwikiF1Score")
+
+
+class PerplexityWithLightTuningMetricConfig(_BaseMetricConfig):
+    name: Literal["PerplexityWithLightTuning"] = Field("PerplexityWithLightTuning")
+
+
+class BleuMetricConfig(_BaseMetricConfig):
+    name: Literal["Bleuscore"] = Field("Bleuscore")
+
+
+class RougeMetricConfig(_BaseMetricConfig):
+    name: Literal["RougeScore"] = Field("RougeScore")
+
+
+MetricConfig = Annotated[
+    AccuracyMetricConfig
+    | F1ScoreMetricConfig
+    | RocAucMetricConfig
+    | PerplexityMetricConfig
+    | GlueScoreMetricConfig
+    | TwikiF1MetricConfig
+    | PerplexityWithLightTuningMetricConfig
+    | BleuMetricConfig
+    | RougeMetricConfig,
+    Field(discriminator="name"),
+]
 
 
 class _MetricWrapper(BaseModel):

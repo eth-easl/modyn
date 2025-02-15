@@ -251,6 +251,10 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
+            generative=training_config.generative,
+            grad_norm=training_config.grad_norm if training_config.grad_norm != 0.0 else None,
+            lora=training_config.lora,
+            kadapter=training_config.kadapter,
         )
 
     def start_training(

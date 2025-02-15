@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import Field, field_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
+from modyn.config.schema.pipeline.training.config import LrSchedulerConfig, OptimizationCriterion, OptimizerConfig
 
 from ..data import DataConfig
 from .handler import EvalHandlerConfig
@@ -20,6 +21,10 @@ class EvalDataConfig(DataConfig):
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
+    light_tuning: bool = Field(False, description="Whether to perform a light tuning.")
+    tuning_config: TuningConfig = Field(
+        None, description="Configuration for tuning parameters. Unnecessary if light_tuning is false"
+    )
 
 
 class ResultWriter(ModynBaseModel):
@@ -32,6 +37,38 @@ ResultWriterType = Literal["json", "json_dedicated", "tensorboard"]
 - json: appends the evaluations to the standard json logfile.
 - json_dedicated: dumps the results into dedicated json files for each evaluation.
 - tensorboard: output the evaluation to dedicated tensorboard files."""
+
+
+class TuningConfig(ModynBaseModel):
+    epochs: int = Field(1, description="Number of epochs for tuning.", ge=1)
+    num_samples_to_pass: list[int] | None = Field(None, description="Number of samples to pass per epoch.")
+
+    batch_size: int = Field(1, description="Batch size used in tuning.", ge=1)
+    dataloader_workers: int = Field(1, description="Number of workers for data loading.", ge=1)
+    drop_last_batch: bool = Field(True, description="Whether to drop the last batch if smaller than batch size.")
+    shuffle: bool = Field(True, description="Whether data is shuffled during tuning.")
+    enable_accurate_gpu_measurements: bool = Field(False, description="Enable precise GPU measurement during tuning.")
+
+    amp: bool = Field(False, description="Whether automatic mixed precision is enabled.")
+    lr_scheduler: LrSchedulerConfig | None = Field(None, description="Learning rate scheduler configuration.")
+    device: str = Field(
+        "cpu",
+        description="The device the model should be put on.",
+        pattern=r"^(cpu|cuda:\d+)$",
+    )
+
+    seed: int | None = Field(None, description="Random seed for reproducibility, if provided.")
+    optimizers: list[OptimizerConfig] = Field(
+        description="An array of the optimizers for the training",
+        min_length=1,
+    )
+    optimization_criterion: OptimizationCriterion = Field(
+        description="Configuration for the optimization criterion that we optimize",
+    )
+    datasets: EvalDataConfig = Field(
+        description="Dataset used for light tuning",
+        min_length=1,
+    )
 
 
 class EvaluationConfig(ModynBaseModel):
