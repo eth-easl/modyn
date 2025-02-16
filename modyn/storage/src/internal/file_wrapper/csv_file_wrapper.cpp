@@ -43,7 +43,9 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   const uint64_t end_t = end;
   for (uint64_t i = start_t; i < end_t; ++i) {
     std::vector<std::string> row = doc_.GetRow<std::string>(static_cast<size_t>(i));
+    if (has_labels_) {
     row.erase(row.begin() + static_cast<int64_t>(label_index_));
+    }
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
@@ -62,7 +64,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
 
     // Erase label based on the include_labels flag
-    if (has_labels) {
+    if (has_labels_) {
     row.erase(row.begin() + static_cast<int64_t>(label_index_));
     }
 
