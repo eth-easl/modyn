@@ -59,6 +59,8 @@ message StartTrainingRequest {
   bool enable_accurate_gpu_measurements = 25;
   int64 record_loss_every = 26;
   bool drop_last_batch = 27;
+  optional float grad_norm = 29;
+  optional int64 gradient_accumulation_steps = 30;
 }
 
 message StartTrainingResponse {

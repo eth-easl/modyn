@@ -85,9 +85,9 @@ class PytorchTrainer:
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
-
+        self._grad_norm = training_info.grad_norm
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
-
+        self.gradient_accumulation_steps = training_info.gradient_accumulation_steps
         if training_info.seed is not None:
             self._seed_trainer_server(training_info.seed)
             self._info("Everything seeded")
@@ -258,6 +258,8 @@ class PytorchTrainer:
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
+
+            accumulation_counter = 0  # Initialize accumulation counter.
             for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
@@ -277,9 +279,9 @@ class PytorchTrainer:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
                     weights = batch[3].float().to(self._device)
-
-                for _, optimizer in self._optimizers.items():
-                    optimizer.zero_grad()
+                if accumulation_counter == 0:  # zero grad is moved here
+                    for _, optimizer in self._optimizers.items():
+                        optimizer.zero_grad()
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
@@ -316,39 +318,46 @@ class PytorchTrainer:
 
                 with GPUMeasurement(self._measure_gpu_ops, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
+                    if self._grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._grad_norm)
+                accumulation_counter += 1
+                if accumulation_counter == self.gradient_accumulation_steps:
+                    with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
+                        for _, optimizer in self._optimizers.items():
+                            self._scaler.step(optimizer)
+                        self._scaler.update()
+                    trained_batches += 1  # Increment trained_batches only on optimizer update.
+                    accumulation_counter = 0  # Reset accumulation counter.
+                    self._step_lr_if_necessary(True)  # Step LR scheduler after optimizer update.
+                    if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
+                        stopw.start("Checkpoint", resume=True)
+                        checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
+                        self.save_state(checkpoint_file_name, trained_batches)
+                        stopw.stop("Checkpoint")
+                    if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
+                        training_loss.append(loss.item())
+                        print(loss.item())
+                        # Log loss and batch number
+                        log_file = self._checkpoint_path / "training_log.txt"
+                        with (
+                            open(log_file, "a") as f  # pylint: disable=unspecified-encoding
+                        ):  # 'a' mode appends if the file exists, else creates it
+                            f.write(f"{trained_batches},{loss.item()}\n")
+                        # Example: Logging training losses in a loop
 
-                with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
-                    for _, optimizer in self._optimizers.items():
-                        self._scaler.step(optimizer)
+                    self._num_samples += len(sample_ids)
 
-                    self._scaler.update()
-                trained_batches += 1
-
-                self._step_lr_if_necessary(True)
-
-                if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
-                    stopw.start("Checkpoint", resume=True)
-                    checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
-                    self.save_state(checkpoint_file_name, trained_batches)
-                    stopw.stop("Checkpoint")
-
-                if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
-                    training_loss.append(loss.item())
-
-                self._num_samples += len(sample_ids)
-
-                stopw.start("OnBatchEnd", resume=True)
-                for _, callback in self._callbacks.items():
-                    callback.on_batch_end(
-                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
-                    )
-                stopw.stop()
-                if 0 < self.num_samples_to_pass <= self._num_samples:
-                    self._info("Stopping training as we have reached the sample threshold.")
-                    break
-                stopw.start("FetchBatch", resume=True)
-                stopw.start("IndivFetchBatch", overwrite=True)
-
+                    stopw.start("OnBatchEnd", resume=True)
+                    for _, callback in self._callbacks.items():
+                        callback.on_batch_end(
+                            self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
+                        )
+                    stopw.stop()
+                    if 0 < self.num_samples_to_pass <= self._num_samples:
+                        self._info("Stopping training as we have reached the sample threshold.")
+                        break
+                    stopw.start("FetchBatch", resume=True)
+                    stopw.start("IndivFetchBatch", overwrite=True)
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:

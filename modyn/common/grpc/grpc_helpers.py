@@ -218,7 +218,7 @@ class TrainerServerGRPCHandlerMixin:
             checkpoint_info = CheckpointInfo(checkpoint_interval=0, checkpoint_path="")
 
         grad_scaler_config = training_config.grad_scaler_config if training_config.grad_scaler_config else {}
-
+        assert training_config.gradient_accumulation_steps > 0, "Gradient accumulation steps should be greater than 0"
         return StartTrainingRequest(
             pipeline_id=pipeline_id,
             trigger_id=trigger_id,
@@ -251,6 +251,8 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
+            grad_norm=training_config.grad_norm if training_config.grad_norm != 0.0 else None,
+            gradient_accumulation_steps=training_config.gradient_accumulation_steps,
         )
 
     def start_training(
