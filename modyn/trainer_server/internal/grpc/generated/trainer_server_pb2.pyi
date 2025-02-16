@@ -141,6 +141,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ENABLE_ACCURATE_GPU_MEASUREMENTS_FIELD_NUMBER: builtins.int
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
+    LORA_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -158,6 +159,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
     enable_accurate_gpu_measurements: builtins.bool
     record_loss_every: builtins.int
     drop_last_batch: builtins.bool
+    lora: builtins.bool
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
     @property
@@ -208,6 +210,7 @@ class StartTrainingRequest(google.protobuf.message.Message):
         enable_accurate_gpu_measurements: builtins.bool = ...,
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
+        lora: builtins.bool = ...,
     ) -> None: ...
     def HasField(
         self,
@@ -269,6 +272,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"label_transformer",
             "load_optimizer_state",
             b"load_optimizer_state",
+            "lora",
+            b"lora",
             "lr_scheduler",
             b"lr_scheduler",
             "num_prefetched_partitions",

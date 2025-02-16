@@ -7,7 +7,7 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 
-OptimizerSource = Literal["PyTorch", "APEX"]
+OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace"]
 
 
 class OptimizerParamGroup(ModynBaseModel):
@@ -119,6 +119,12 @@ class TrainingConfig(ModynBaseModel):
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
     )
+
+    lora: bool = Field(
+        False,
+        description=("Applies Lora layers to the model"),
+    )
+
     seed: int | None = Field(
         None,
         description=(
@@ -153,6 +159,10 @@ class TrainingConfig(ModynBaseModel):
     grad_scaler_config: dict[str, Any] | None = Field(
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
+    )
+    grad_norm: float = Field(
+        default=0,
+        description="Clips the gradients normed over this value, if its 0 it will not be used.",
     )
 
     # [Additional validation]

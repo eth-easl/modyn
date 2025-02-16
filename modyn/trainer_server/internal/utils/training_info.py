@@ -57,7 +57,7 @@ class TrainingInfo:
 
         self.shuffle = request.shuffle
         self.enable_accurate_gpu_measurements = request.enable_accurate_gpu_measurements
-
+        self.generative = request.generative
         assert (
             self.pretrained_model_path or not self.use_pretrained_model
         ), "Inconsistent pretrained model configuration"
@@ -80,5 +80,5 @@ class TrainingInfo:
 
         self.seed: int | None = request.seed if request.HasField("seed") else None
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
-
+        self.lora = request.lora
         self.offline_dataset_path = offline_dataset_path

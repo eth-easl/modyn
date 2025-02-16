@@ -21,7 +21,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+datasets/
 # Distribution / packaging
 bin/
 build/

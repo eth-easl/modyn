@@ -25,6 +25,7 @@ import torch
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
+from modyn.models.modular_adapters.modular_adapters import apply_lora
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -85,7 +86,7 @@ class PytorchTrainer:
         self.pipeline_id = training_info.pipeline_id
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
-
+        self._lora = training_info.lora
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
 
         if training_info.seed is not None:
@@ -96,6 +97,9 @@ class PytorchTrainer:
 
         # setup model and optimizer
         self._model = training_info.model_handler(training_info.model_configuration_dict, device, training_info.amp)
+        if self._lora:  # Not sure if this is the perfect place to apply this
+            self._model.model = apply_lora(self._model.model)
+
         self._setup_optimizers(training_info)
         self._info("Model and optimizer created.")
 
