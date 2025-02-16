@@ -20,6 +20,7 @@ services:
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -40,6 +41,7 @@ services:
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -55,7 +57,9 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
-  #      - /mnt/datasets:/datasets
+      - /scratch/sjohn/modyn/datasets:/datasets
+      - /scratch/sjohn/modyn/modyn:/src/modyn
+
   #      - .:/modyn_host
   metadata_processor:
     restart: on-failure
@@ -74,7 +78,19 @@ services:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
     volumes:
-      - model_storage-data:/tmp/models
+      - /scratch/sjohn/checkpoints:/tmp/models
+      - /scratch/sjohn/modyn/modyn:/src/modyn
+   # CUDASTART (ignore/delete if enabling cuda manually)
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
+  #CUDAEND (ignore/delete if enabling cuda manually)
+
   evaluator:
     restart: on-failure
     depends_on:
@@ -83,6 +99,7 @@ services:
     build:
       context: .
       dockerfile: docker/Evaluator/Dockerfile
+
   trainer_server:
     restart: on-failure
     depends_on:
@@ -95,19 +112,22 @@ services:
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
       - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
+      - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /pub/nfs-data/sjohn/checkpoints:/checkpoints
   #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
   #      - .:/modyn_host
-  #    shm_size: 4gb
+    shm_size: 8gb
   # CUDASTART (ignore/delete if enabling cuda manually)
-  #    runtime: nvidia
-  #    deploy:
-  #      resources:
-  #        reservations:
-  #          devices:
-  #            - driver: nvidia
-  #              count: 1
-  #              capabilities: [gpu, utility, compute]
-  # CUDAEND (ignore/delete if enabling cuda manually)
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, utility, compute]
+
+  #CUDAEND (ignore/delete if enabling cuda manually)
   selector:
     restart: on-failure
     depends_on:
@@ -119,6 +139,7 @@ services:
     volumes:
       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
+      - /scratch/sjohn/modyn/modyn:/src/modyn
   #      - /mnt/ssd/local_storage:/tmp/local_storage
   #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
   #      - .:/modyn_host
@@ -138,6 +159,7 @@ services:
       dockerfile: docker/Supervisor/Dockerfile
     volumes:
       - supervisor-evaluation-data:/tmp/evaluation_results
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     #      - .:/modyn_host
     container_name: supervisor
     ports:
@@ -167,6 +189,8 @@ services:
       dockerfile: docker/Tests/Dockerfile
     volumes:
       - storage-data:/app/storage
+      - /scratch/sjohn/modyn/modyn:/src/modyn
+
 volumes:
   storage-data:
   selector-data:

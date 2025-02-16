@@ -82,6 +82,7 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -267,6 +268,24 @@ storage:
         description: "Wikipedia text dump from August 2021",
         version: "0.0.1",
         base_path: "/datasets/wikipedia_21_08",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ Wikipedia_21_09 ------------------------------------ #
+      {
+        name: "Wikipedia_21_08",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipedia_21_09",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {

@@ -4,7 +4,7 @@
 
 # Logging files
 *.log
-
+datasets/
 # Database files
 *.db
 
