@@ -58,9 +58,10 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     quoted_linebreaks: bool = Field(True, description="Whether linebreaks are quoted in CSV files.")
 
     label_index: int = Field(
+        -1,
         description=(
             "Column index of the label. For columns 'width, 'height, 'age', 'label' you should set label_index to 3."
-        )
+        ),
     )
     ignore_first_line: bool = Field(
         False, description="If the first line is the table header, you can skip it setting this parameter to True."
@@ -73,6 +74,7 @@ class DatasetCsvFileWrapperConfig(_DatasetBaseFileWrapperConfig):
             "rows are the same size and that the 'label' column exists."
         ),
     )
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
@@ -83,12 +85,14 @@ class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     )
     record_size: int = Field(description="The size of each full record in bytes (label + features).")
     label_size: int = Field(description="The size of the label field in bytes for a binary file wrapper.")
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 class DatasetPngFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     """Represents a png dataset file used by modyn."""
 
     label_file_extension: str = Field(description="The label file extension of the dataset", pattern=r"^\..*$")
+    has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
 
 
 DatasetFileWrapperConfig = Union[  # noqa: UP007

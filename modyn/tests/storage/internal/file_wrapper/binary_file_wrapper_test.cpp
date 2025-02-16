@@ -343,4 +343,20 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
 }
 
+TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  const std::vector<uint64_t> indices = {0, 1};
+  const std::vector<std::vector<unsigned char>> samples =
+      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+
+  ASSERT_EQ(samples.size(), 2);
+}
+
 }  // namespace modyn::storage
