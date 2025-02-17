@@ -352,7 +352,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  file_wrapper.has_labels = false;
+  file_wrapper.has_labels_= false;
   const std::vector<uint64_t> indices = {0, 1};
   const std::vector<std::vector<unsigned char>> samples =
       file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
