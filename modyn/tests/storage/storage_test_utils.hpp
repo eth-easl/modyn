@@ -12,6 +12,8 @@ class StorageTestUtils {
  public:
   static YAML::Node get_dummy_file_wrapper_config(const std::string& byteorder = "little");
   static std::string get_dummy_file_wrapper_config_inline(const std::string& byteorder = "little");
+  static YAML::Node get_dummy_file_wrapper_config_unlabeled(const std::string& byteorder = "little");
+  static std::string get_dummy_file_wrapper_config_inline_unlabeled(const std::string& byteorder = "little");
 };
 
 template <typename T>
