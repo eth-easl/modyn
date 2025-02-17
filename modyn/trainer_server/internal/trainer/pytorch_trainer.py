@@ -308,7 +308,7 @@ class PytorchTrainer:
                             loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                         else:
                             loss = self._criterion(output, target)
-
+                        loss = loss / self.gradient_accumulation_steps
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
@@ -326,7 +326,7 @@ class PytorchTrainer:
                         for _, optimizer in self._optimizers.items():
                             self._scaler.step(optimizer)
                         self._scaler.update()
-                    trained_batches += 1  # Increment trained_batches only on optimizer update.
+                    # Increment trained_batches only on optimizer update.
                     accumulation_counter = 0  # Reset accumulation counter.
                     self._step_lr_if_necessary(True)  # Step LR scheduler after optimizer update.
                     if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
@@ -337,18 +337,18 @@ class PytorchTrainer:
                     if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
                         training_loss.append(loss.item())
                     self._num_samples += len(sample_ids)
-
-                    stopw.start("OnBatchEnd", resume=True)
-                    for _, callback in self._callbacks.items():
-                        callback.on_batch_end(
-                            self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
-                        )
-                    stopw.stop()
-                    if 0 < self.num_samples_to_pass <= self._num_samples:
-                        self._info("Stopping training as we have reached the sample threshold.")
-                        break
-                    stopw.start("FetchBatch", resume=True)
-                    stopw.start("IndivFetchBatch", overwrite=True)
+                trained_batches += 1
+                stopw.start("OnBatchEnd", resume=True)
+                for _, callback in self._callbacks.items():
+                    callback.on_batch_end(
+                        self._model.model, self._optimizers, trained_batches, sample_ids, data, target, output, loss
+                    )
+                stopw.stop()
+                if 0 < self.num_samples_to_pass <= self._num_samples:
+                    self._info("Stopping training as we have reached the sample threshold.")
+                    break
+                stopw.start("FetchBatch", resume=True)
+                stopw.start("IndivFetchBatch", overwrite=True)
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
