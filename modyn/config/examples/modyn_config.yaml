@@ -22,7 +22,11 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label",has_labels: true },
+          {
+            file_extension: ".png",
+            label_file_extension: ".label",
+            has_labels: true
+          },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 128,
@@ -115,9 +119,10 @@ storage:
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
           {
-          file_extension: ".png", 
-          label_file_extension: ".label",
-          has_labels: true, },
+           file_extension: ".png", 
+           label_file_extension: ".label",
+           has_labels: true,
+          },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 1024,
@@ -280,9 +285,7 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 250000,
-
       },
-
     ]
   database:
     drivername: "postgresql"

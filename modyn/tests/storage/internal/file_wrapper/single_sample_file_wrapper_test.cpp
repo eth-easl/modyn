@@ -113,7 +113,7 @@ TEST(SingleSampleFileWrapperTest, TestDeleteSamples) {
 }
 TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   const std::string file_name = "test.txt";
-  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
+  const YAML::Node config = StorageTestUtils::get_dummy_file_wrapper_config_unlabeled();
   const std::vector<unsigned char> bytes = {'1', '2', '3', '4', '5', '6', '7', '8'};
   const std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper = std::make_shared<MockFilesystemWrapper>();
   EXPECT_CALL(*filesystem_wrapper, get(testing::_)).WillOnce(testing::Return(bytes));

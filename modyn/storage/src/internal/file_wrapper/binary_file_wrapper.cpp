@@ -130,7 +130,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
     record_start = index * record_size_;
 
     // Adjust stream position based on the has_labels flag
-    get_stream()->seekg(static_cast<int64_t>(record_start + ((!has_labels) ? 0 : label_size_)), std::ios::beg);
+    get_stream()->seekg(static_cast<int64_t>(record_start + ((!has_labels_) ? 0 : label_size_)), std::ios::beg);
 
     std::vector<unsigned char> sample_vec(sample_size_);
     get_stream()->read(reinterpret_cast<char*>(sample_vec.data()), static_cast<int64_t>(sample_size_));

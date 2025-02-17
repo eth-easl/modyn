@@ -41,7 +41,33 @@ class CsvFileWrapperTest : public ::testing::Test {
 
   void TearDown() override { std::filesystem::remove_all(file_name_); }
 };
+class CsvFileWrapperTestUnlabeled : public ::testing::Test {
+ protected:
+  std::string file_name_;
+  YAML::Node config_;
+  std::shared_ptr<MockFilesystemWrapper> filesystem_wrapper_;
+  std::string tmp_dir_ = modyn::test::TestUtils::get_tmp_testdir("csv_file_wrapper_test");
 
+  CsvFileWrapperTestUnlabeled()
+      : config_{StorageTestUtils::get_dummy_file_wrapper_config_unlabeled()},
+        filesystem_wrapper_{std::make_shared<MockFilesystemWrapper>()} {
+    file_name_ = tmp_dir_ + "/test.csv";
+  }
+
+  void SetUp() override {
+    std::filesystem::create_directory(tmp_dir_);
+
+    std::ofstream file(file_name_);
+    file << "id,first_name,last_name,age\n";
+    file << "1,John,Doe,25\n";
+    file << "2,Jane,Smith,30\n";
+    file << "3,Michael,Johnson,35\n";
+    file.close();
+    ASSERT_TRUE(std::filesystem::exists(file_name_));
+  }
+
+  void TearDown() override { std::filesystem::remove_all(file_name_); }
+};
 TEST_F(CsvFileWrapperTest, TestGetNumberOfSamples) {
   EXPECT_CALL(*filesystem_wrapper_, exists(testing::_)).WillOnce(testing::Return(true));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
@@ -175,7 +201,8 @@ TEST_F(CsvFileWrapperTest, TestDeleteSamples) {
 
   ASSERT_EQ(buffer, expected_samples[0]);
 }
-TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
+
+TEST_F(CsvFileWrapperTestUnlabeled, TestGetSamplesFromIndicesWithoutLabels) {
   // Create a test CSV file without labels
   std::ofstream file_without_labels(file_name_);
   file_without_labels << "first_name,last_name\n";
@@ -193,8 +220,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
   // Use configuration with has_labels set to false
-  YAML::Node config_no_labels = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
-  CsvFileWrapper file_wrapper{file_name_, config_no_labels, filesystem_wrapper_};
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const std::vector<uint64_t> indices = {0, 2};
   const std::vector<std::vector<unsigned char>> expected_samples = {
@@ -207,7 +233,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   ASSERT_EQ(actual_samples, expected_samples);
 }
 
-TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
+TEST_F(CsvFileWrapperTestUnlabeled, TestGetSamplesWithoutLabels) {
   // Create a test CSV file without labels
   std::ofstream file_without_labels(file_name_);
   file_without_labels << "first_name,last_name\n";
@@ -225,10 +251,17 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
   // Use configuration with has_labels set to false
-  YAML::Node config_no_labels = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
-  CsvFileWrapper file_wrapper{file_name_, config_no_labels, filesystem_wrapper_};
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
 
   const uint64_t start = 0;
   const uint64_t end = 3;
   const std::vector<std::vector<unsigned char>> expected_samples = {
-    {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'}, {'J', 'a', 'n', 'e', ',',
+      {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'},
+      {'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h'},
+      {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
+  };
+
+  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
+
+  ASSERT_EQ(actual_samples, expected_samples);
+}
