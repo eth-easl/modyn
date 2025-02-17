@@ -336,15 +336,6 @@ class PytorchTrainer:
                         stopw.stop("Checkpoint")
                     if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
                         training_loss.append(loss.item())
-                        print(loss.item())
-                        # Log loss and batch number
-                        log_file = self._checkpoint_path / "training_log.txt"
-                        with (
-                            open(log_file, "a") as f  # pylint: disable=unspecified-encoding
-                        ):  # 'a' mode appends if the file exists, else creates it
-                            f.write(f"{trained_batches},{loss.item()}\n")
-                        # Example: Logging training losses in a loop
-
                     self._num_samples += len(sample_ids)
 
                     stopw.start("OnBatchEnd", resume=True)
