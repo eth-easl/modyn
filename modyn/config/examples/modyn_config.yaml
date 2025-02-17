@@ -100,7 +100,6 @@ storage:
             label_size: 4,
             file_extension: ".bin",
             has_labels: true,
-
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -115,7 +114,10 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label",has_labels: true, },
+          {
+          file_extension: ".png", 
+          label_file_extension: ".label",
+          has_labels: true, },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 1024,
@@ -252,8 +254,10 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".jpg", label_file_extension: ".label",
-          has_labels: true,
+          {
+            file_extension: ".jpg",
+            label_file_extension: ".label",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 999999999,

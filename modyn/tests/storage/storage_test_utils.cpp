@@ -2,7 +2,7 @@
 
 using namespace modyn::storage;
 
-YAML::Node StorageTestUtils::get_dummy_file_wrapper_config(const std::string& byteorder) {
+YAML::Node StorageTestUtils::get_dummy_file_wrapper_config(const std::string& byteorder, bool has_labels = true) {
   YAML::Node config;
   config["byteorder"] = byteorder;
   config["file_extension"] = ".txt";
@@ -11,14 +11,15 @@ YAML::Node StorageTestUtils::get_dummy_file_wrapper_config(const std::string& by
   config["record_size"] = 4;
   config["label_index"] = 0;
   config["encoding"] = "utf-8";
-  config["has_labels"] = true;
+  config["has_labels"] = has_labels;
   config["validate_file_content"] = false;
   config["ignore_first_line"] = true;
   config["separator"] = ',';
   return config;
 }
 
-std::string StorageTestUtils::get_dummy_file_wrapper_config_inline(const std::string& byteorder) {
+std::string StorageTestUtils::get_dummy_file_wrapper_config_inline(const std::string& byteorder,
+                                                                   bool has_labels = true) {
   std::string test_config = R"(
 byteorder: ")" + byteorder + R"("
 file_extension: ".txt"
@@ -26,7 +27,8 @@ label_file_extension: ".lbl"
 label_size: 1
 record_size: 2
 label_index: 0
-has_labels: true
+has_labels: )" + (has_labels) +
+                            R"(
 encoding: "utf-8"
 validate_file_content: false
 ignore_first_line: false

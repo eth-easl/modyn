@@ -498,7 +498,7 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   auto filesystem_wrapper_type = static_cast<int64_t>(FilesystemWrapperType::INVALID_FSW);
   auto file_wrapper_type = static_cast<int64_t>(FileWrapperType::INVALID_FW);
   std::string file_wrapper_config;
-  int has_labels_int = 1;
+  const int has_labels_int = 1;
 
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
              "datasets WHERE name = :name",

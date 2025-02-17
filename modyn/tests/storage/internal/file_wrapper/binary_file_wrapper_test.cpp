@@ -344,6 +344,9 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
+  // Use a configuration where has_labels is set to false
+  YAML::Node config_no_labels = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
+
   EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
   const std::shared_ptr<std::ifstream> stream_ptr = std::make_shared<std::ifstream>();
   stream_ptr->open(file_name_, std::ios::binary);
@@ -351,13 +354,12 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
 
-  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
-  file_wrapper.has_labels_= false;
+  BinaryFileWrapper file_wrapper(file_name_, config_no_labels, filesystem_wrapper_);
+
+  ASSERT_FALSE(file_wrapper.has_labels_);
+
   const std::vector<uint64_t> indices = {0, 1};
-  const std::vector<std::vector<unsigned char>> samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+  const std::vector<std::vector<unsigned char>> samples = file_wrapper.get_samples_from_indices(indices);
 
   ASSERT_EQ(samples.size(), 2);
 }
-
-}  // namespace modyn::storage

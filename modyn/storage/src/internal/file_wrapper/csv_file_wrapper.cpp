@@ -57,13 +57,12 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
   return samples;
 }
 
-std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices,
-                                                                                 const bool include_labels) {
+std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices(const std::vector<uint64_t>& indices) {
   std::vector<std::vector<unsigned char>> samples;
   for (const uint64_t index : indices) {
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
 
-    // Erase label based on the include_labels flag
+    // Erase label based on the has_labels flag
     if (has_labels_) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
     }

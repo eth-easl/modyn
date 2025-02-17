@@ -191,9 +191,11 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
-  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-  file_wrapper.has_labels_ = false;
-  // Test get_samples_from_indices without labels
+
+  // Use configuration with has_labels set to false
+  YAML::Node config_no_labels = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
+  CsvFileWrapper file_wrapper{file_name_, config_no_labels, filesystem_wrapper_};
+
   const std::vector<uint64_t> indices = {0, 2};
   const std::vector<std::vector<unsigned char>> expected_samples = {
       {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'},
@@ -221,18 +223,12 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   ASSERT_TRUE(stream_ptr->is_open());
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
-  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-  file_wrapper.has_labels_ = false;
-  // Test get_samples without labels
+
+  // Use configuration with has_labels set to false
+  YAML::Node config_no_labels = StorageTestUtils::get_dummy_file_wrapper_config("little-endian", false);
+  CsvFileWrapper file_wrapper{file_name_, config_no_labels, filesystem_wrapper_};
+
   const uint64_t start = 0;
   const uint64_t end = 3;
   const std::vector<std::vector<unsigned char>> expected_samples = {
-      {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'},
-      {'J', 'a', 'n', 'e', ',', 'S', 'm', 'i', 't', 'h'},
-      {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
-  };
-
-  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
-
-  ASSERT_EQ(actual_samples, expected_samples);
-}
+    {'J', 'o', 'h', 'n', ',', 'D', 'o', 'e'}, {'J', 'a', 'n', 'e', ',',
