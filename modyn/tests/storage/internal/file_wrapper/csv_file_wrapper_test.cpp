@@ -192,7 +192,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-
+  file_wrapper.has_labels = false;
   // Test get_samples_from_indices without labels
   const std::vector<uint64_t> indices = {0, 2};
   const std::vector<std::vector<unsigned char>> expected_samples = {
@@ -200,8 +200,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
   };
 
-  const std::vector<std::vector<unsigned char>> actual_samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples_from_indices(indices);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
@@ -223,7 +222,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
 
   EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
   CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-
+  file_wrapper.has_labels = false;
   // Test get_samples without labels
   const uint64_t start = 0;
   const uint64_t end = 3;
@@ -233,8 +232,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
       {'M', 'i', 'c', 'h', 'a', 'e', 'l', ',', 'J', 'o', 'h', 'n', 's', 'o', 'n'},
   };
 
-  const std::vector<std::vector<unsigned char>> actual_samples =
-      file_wrapper.get_samples(start, end, /*include_labels=*/false);
+  const std::vector<std::vector<unsigned char>> actual_samples = file_wrapper.get_samples(start, end);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }

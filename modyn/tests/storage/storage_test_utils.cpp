@@ -11,6 +11,7 @@ YAML::Node StorageTestUtils::get_dummy_file_wrapper_config(const std::string& by
   config["record_size"] = 4;
   config["label_index"] = 0;
   config["encoding"] = "utf-8";
+  config["has_labels"] = true;
   config["validate_file_content"] = false;
   config["ignore_first_line"] = true;
   config["separator"] = ',';
@@ -25,6 +26,7 @@ label_file_extension: ".lbl"
 label_size: 1
 record_size: 2
 label_index: 0
+has_labels: true
 encoding: "utf-8"
 validate_file_content: false
 ignore_first_line: false

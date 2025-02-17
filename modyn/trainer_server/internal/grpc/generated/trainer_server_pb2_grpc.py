@@ -7,6 +7,7 @@ import warnings
 
 import modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 as trainer__server__pb2
 
+GRPC_GENERATED_VERSION = "1.67.1"
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

@@ -22,7 +22,7 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label" },
+          { file_extension: ".png", label_file_extension: ".label",has_labels: true },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 128,
@@ -41,6 +41,7 @@ storage:
             record_size: 160,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -60,6 +61,7 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -78,6 +80,7 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -96,6 +99,8 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
+
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -110,7 +115,7 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label" },
+          { file_extension: ".png", label_file_extension: ".label",has_labels: true, },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 1024,
@@ -127,6 +132,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -144,6 +150,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -160,6 +167,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -177,6 +185,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -193,6 +202,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -210,6 +220,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -226,6 +237,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -240,11 +252,33 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".jpg", label_file_extension: ".label" },
+          { file_extension: ".jpg", label_file_extension: ".label",
+          has_labels: true,
+          },
         ignore_last_timestamp: false,
         file_watcher_interval: 999999999,
         selector_batch_size: 100000,
+
       },
+      # ------------------------------------ Wikipedia_21_08 ------------------------------------ #
+      {
+        name: "Wikipedia_21_08",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipedia_21_08",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+
     ]
   database:
     drivername: "postgresql"
