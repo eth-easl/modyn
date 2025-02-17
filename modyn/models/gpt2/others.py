@@ -13,7 +13,8 @@ from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class Roberta:
-    """Adapted from an example implementation of a RoBERTa model for masked language modeling."""
+    """Adapted from an example implementation of a RoBERTa model for masked
+    language modeling."""
 
     def __init__(self, hparams: Any, device: str, amp: bool) -> None:
         self.model = RobertaModyn(hparams)
@@ -55,7 +56,8 @@ class RobertaModyn(CoresetSupportingModule):
 
 
 class T5:
-    """Adapted from an example implementation of a T5 model for sequence-to-sequence tasks."""
+    """Adapted from an example implementation of a T5 model for sequence-to-
+    sequence tasks."""
 
     def __init__(self, hparams: Any, device: str, amp: bool) -> None:
         self.model = T5Modyn(hparams)
@@ -91,7 +93,8 @@ class T5Modyn(CoresetSupportingModule):
 
 
 class LLaMA:
-    """Adapted from an example implementation of a LLaMA model for causal language modeling."""
+    """Adapted from an example implementation of a LLaMA model for causal
+    language modeling."""
 
     def __init__(self, hparams: Any, device: str, amp: bool) -> None:
         self.model = LLaMAModyn(hparams)

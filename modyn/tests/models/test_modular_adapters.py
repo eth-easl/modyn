@@ -56,8 +56,6 @@ def test_model_with_adapters_inference():
     assert logits.shape[2] == shape, "Output dimension mismatch."
 
 
-
-
 def test_model_training_with_lora():
     hparams = HParams()
     model = Gpt2(hparams, hparams.device, hparams.amp)
@@ -104,4 +102,3 @@ def test_model_training_with_lora():
             assert param.grad is not None, f"Expected gradient for {name} but found None."
         else:
             assert param.grad is None or torch.all(param.grad == 0), f"Unexpected gradient in {name}."
-
