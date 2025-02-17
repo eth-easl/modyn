@@ -10,7 +10,7 @@
 
 # Visual Studio Code
 .vscode
-datasets/
+
 # Storage
 *.tar
 
