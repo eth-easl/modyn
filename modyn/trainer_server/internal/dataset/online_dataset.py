@@ -53,7 +53,9 @@ class OnlineDataset(IterableDataset):
         shuffle: bool,
         tokenizer: str | None,
         log_path: pathlib.Path | None,
+        include_labels=False,
     ):
+        self._include_labels = include_labels
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id

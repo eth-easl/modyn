@@ -867,6 +867,9 @@ class PytorchTrainer:
                     optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
                 else:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
+           
+            elif optimizer_config["source"] == "HuggingFace":
+                optimizer_func = getattr(transformers, optimizer_config["algorithm"])
             else:
                 raise ValueError(
                     f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"

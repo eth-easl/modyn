@@ -1,4 +1,4 @@
-ipeline:
+pipeline:
   name: Wikipedia_21_09_p2
   description: Training on wikipedia corpus
   version: 1.0.0
@@ -23,7 +23,7 @@ training:
   grad_norm: 0.1
   optimizers:
     - name: "default"
-      algorithm: "Adamw"
+      algorithm: "AdamW"
       source: "HuggingFace"
       param_groups:
         - module: "model"
@@ -37,10 +37,10 @@ training:
     source: "Custom"
     optimizers: ["default"]
     config:
-      total_num_steps: 136820  # Total training steps
+      total_num_steps: 138633  # Total training steps
       warmup_min_lr: 0.00005          # Minimum learning rate at the start of warmup
       warmup_max_lr: 0.0001         # Maximum learning rate after warmup
-      warmup_num_steps:  13682  # Number of steps for the warmup phase
+      warmup_num_steps:  136862  # Number of steps for the warmup phase
       warmup_type: "log"          # Type of warmup progression 
       last_batch_iteration: -1
   optimization_criterion:
@@ -48,7 +48,7 @@ training:
   checkpointing:
     activated: True
     interval: 10000
-    path: "/checkpoints/twiki09_2
+    path: "/checkpoints/twiki09_2"
 data:
   dataset_id: Wikipedia_21_08
   transformations: []
@@ -65,7 +65,7 @@ data:
   tokenizer: "GPT2TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 100 # 4378268
+  num_samples: 100 #4436253
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500
