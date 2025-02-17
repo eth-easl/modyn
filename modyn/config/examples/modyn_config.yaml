@@ -282,10 +282,10 @@ storage:
       },
       # ------------------------------------ Wikipedia_21_09 ------------------------------------ #
       {
-        name: "Wikipedia_21_08",
-        description: "Wikipedia text dump from August 2021",
+        name: "Wikipedia_21_09_2",
+        description: "Wikipedia text dump from September 2021",
         version: "0.0.1",
-        base_path: "/datasets/wikipedia_21_09",
+        base_path: "/datasets/wikipedia_21_09_p2",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {

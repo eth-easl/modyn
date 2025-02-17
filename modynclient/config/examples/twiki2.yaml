@@ -1,0 +1,74 @@
+ipeline:
+  name: Wikipedia_21_09_p2
+  description: Training on wikipedia corpus
+  version: 1.0.0
+model:
+  id: Gpt2
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  epochs_per_trigger: 1
+  generative: True
+  device: "cuda:0"
+  dataloader_workers: 8
+  use_previous_model: false
+  initial_model: random
+  #/tmp/models/ftp/2238241055_47_0.modyn
+  batch_size: 32
+  record_loss_every: 500
+  shuffle: true
+  amp: true
+  grad_norm: 0.1
+  optimizers:
+    - name: "default"
+      algorithm: "Adamw"
+      source: "HuggingFace"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.0001
+            scale_parameters: False
+            relative_step: False
+  lr_scheduler:
+    step_every: "batch"
+    name: "WarmupDecayLR"
+    source: "Custom"
+    optimizers: ["default"]
+    config:
+      total_num_steps: 136820  # Total training steps
+      warmup_min_lr: 0.00005          # Minimum learning rate at the start of warmup
+      warmup_max_lr: 0.0001         # Maximum learning rate after warmup
+      warmup_num_steps:  13682  # Number of steps for the warmup phase
+      warmup_type: "log"          # Type of warmup progression 
+      last_batch_iteration: -1
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: True
+    interval: 10000
+    path: "/checkpoints/twiki09_2
+data:
+  dataset_id: Wikipedia_21_08
+  transformations: []
+  bytes_parser_function: |
+    import torch
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
+      text = str(data, 'utf8')
+
+      # Remove surrounding quotes if they exist
+      if text.startswith('"') and text.endswith('"'):
+          text = text[1:-1]
+
+      return text
+  tokenizer: "GPT2TokenizerTransform"
+trigger:
+  id: DataAmountTrigger
+  num_samples: 100 # 4378268
+selection_strategy:
+  name: NewDataStrategy
+  maximum_keys_in_memory: 500
+  storage_backend: "database"
+  limit: -1
+  tail_triggers: 0

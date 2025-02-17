@@ -113,7 +113,7 @@ class PytorchTrainer:
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-        checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
+        checkpoint = torch.load("/checkpoints/twiki09/model_130000.modyn", map_location="cpu")
 
         # Adjust key names if necessary
         checkpoint["model"]
