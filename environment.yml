@@ -41,6 +41,7 @@ dependencies:
   - types-PyYAML
   - transformers
   - nltk
+  - peft
   - pytorch::pytorch=2.2.1
   - pytorch::torchvision
   - pytorch::cpuonly # comment out if commenting in lines below for CUDA

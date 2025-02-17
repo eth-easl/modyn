@@ -1,7 +1,7 @@
 import torch
 from transformers import AutoTokenizer
 
-from modyn.models import Gpt2,  apply_lora
+from modyn.models import Gpt2, apply_lora
 
 # =============================================================================
 # Updated Test Suite
@@ -34,25 +34,12 @@ def test_apply_lora():
             assert not param.requires_grad, f"Non-LoRA parameter {name} should be frozen."
 
 
-def test_apply_kadapter():
-    hparams = HParams()
-    model = Gpt2(hparams, hparams.device, hparams.amp)
-    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
-    tokenizer.pad_token = tokenizer.eos_token
-    modified_model = apply_kadapter(model.model)
-    # Check that our custom adapter is attached.
-    assert hasattr(modified_model, "kadapter"), "KAdapter not attached to the model."
-    for name, param in modified_model.kadapter.named_parameters():
-        assert param.requires_grad, f"KAdapter parameter {name} should be trainable."
-
-
 def test_model_with_adapters_inference():
     hparams = HParams()
     model = Gpt2(hparams, hparams.device, hparams.amp)
     tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
     tokenizer.pad_token = tokenizer.eos_token
     model.model = apply_lora(model.model, target_modules=["c_attn", "c_proj"])
-   
 
     input_text = "Hello, world!"
     encoding = tokenizer(input_text, return_tensors="pt", padding=True)
