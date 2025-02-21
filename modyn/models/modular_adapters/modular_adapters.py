@@ -70,7 +70,7 @@ def apply_lora(
 ) -> nn.Module:
     # Count and print trainable parameters before applying LoRA
     trainable_params_before = count_trainable_params(model)
-    print(f"\n🔵 Trainable parameters BEFORE applying LoRA: {trainable_params_before}")
+    print(f"\n Trainable parameters BEFORE applying LoRA: {trainable_params_before}")
 
     # Create a LoRA configuration
     lora_config = LoraConfig(
@@ -86,7 +86,7 @@ def apply_lora(
 
     # Count and print trainable parameters after applying LoRA
     trainable_params_after = count_trainable_params(model)
-    print(f"\n🟢 Trainable parameters AFTER applying LoRA: {trainable_params_after}")
+    print(f"\n Trainable parameters AFTER applying LoRA: {trainable_params_after}")
 
     return model
 
@@ -95,8 +95,8 @@ def apply_kadapter(
     model: nn.Module,
 ) -> nn.Module:
     # Freeze base parameters
-    if hasattr(model, "freeze_params"):
-        model.freeze_params()
+    if hasattr(model.model, "freeze_params"):
+        model.model.freeze_params()
     else:
         for param in model.parameters():
             param.requires_grad = False

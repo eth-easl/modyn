@@ -1,5 +1,5 @@
 pipeline:
-  name: Wikipedia_21_09_p2
+  name: Wikipedia_diff
   description: Training on wikipedia corpus
   version: 1.0.0
 model:
@@ -9,7 +9,7 @@ model_storage:
     name: "PyTorchFullModel"
 training:
   gpus: 1
-  epochs_per_trigger: 1
+  epochs_per_trigger: 2
   generative: True
   device: "cuda:0"
   dataloader_workers: 8
@@ -20,15 +20,15 @@ training:
   record_loss_every: 500
   shuffle: true
   amp: true
-  grad_norm: 0.1
+  grad_norm: 0.5
   optimizers:
     - name: "default"
-      algorithm: "AdamW"
+      algorithm: "Adafactor"
       source: "HuggingFace"
       param_groups:
         - module: "model"
           config:
-            lr: 0.0001
+            lr: 0.001
             scale_parameters: False
             relative_step: False
   lr_scheduler:
@@ -37,20 +37,20 @@ training:
     source: "Custom"
     optimizers: ["default"]
     config:
-      total_num_steps: 138633  # Total training steps
-      warmup_min_lr: 0.00005          # Minimum learning rate at the start of warmup
-      warmup_max_lr: 0.0001         # Maximum learning rate after warmup
-      warmup_num_steps:  136862  # Number of steps for the warmup phase
+      total_num_steps: 26000 # Total training steps
+      warmup_min_lr: 0.0005          # Minimum learning rate at the start of warmup
+      warmup_max_lr: 0.001         # Maximum learning rate after warmup
+      warmup_num_steps:  2600 # Number of steps for the warmup phase
       warmup_type: "log"          # Type of warmup progression 
       last_batch_iteration: -1
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: True
-    interval: 10000
-    path: "/checkpoints/twiki09_2"
+    interval: 5000
+    path: "/checkpoints/twikidiff3"
 data:
-  dataset_id: Wikipedia_21_08
+  dataset_id: Wikipedia_Diff
   transformations: []
   bytes_parser_function: |
     import torch
@@ -65,7 +65,7 @@ data:
   tokenizer: "GPT2TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 100 #4436253
+  num_samples: 842000
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500

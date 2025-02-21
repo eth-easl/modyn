@@ -113,12 +113,12 @@ class PytorchTrainer:
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-        checkpoint = torch.load("/checkpoints/twiki09/model_130000.modyn", map_location="cpu")
+        checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
 
         # Adjust key names if necessary
         checkpoint["model"]
 
-        self._model.model.load_state_dict(checkpoint["model"])  # TODO Quitar esto
+        self._model.model.load_state_dict(checkpoint["model"], strict=True)  # TODO Quitar esto
         if self._lora:
             self._model.model = apply_lora(self._model.model)
         if self._kadapter:
@@ -593,10 +593,13 @@ class PytorchTrainer:
         stopw.stop("PreprocSampleIDs")
 
         stopw.start("LabelTransform", resume=True)
-        if self._label_transformer_function is not None:
+        if self.generative:
+            target = batch[1]
+        elif self._label_transformer_function is not None:
             target = self._label_transformer_function(batch[2])
         else:
             target = batch[2]
+        
         stopw.stop("LabelTransform")
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
@@ -870,6 +873,9 @@ class PytorchTrainer:
            
             elif optimizer_config["source"] == "HuggingFace":
                 optimizer_func = getattr(transformers, optimizer_config["algorithm"])
+            elif optimizer_config["source"] == "Custom":
+                optimizer_module = dynamic_module_import("modyn.trainer_server.custom_optimizers")
+                optimizer_func = getattr(optimizer_module, optimizer_config["algorithm"])
             else:
                 raise ValueError(
                     f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"

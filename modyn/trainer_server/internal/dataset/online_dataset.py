@@ -53,9 +53,8 @@ class OnlineDataset(IterableDataset):
         shuffle: bool,
         tokenizer: str | None,
         log_path: pathlib.Path | None,
-        include_labels=False,
+        include_labels: bool = True,
     ):
-        self._include_labels = include_labels
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
         self._training_id = training_id
@@ -63,7 +62,7 @@ class OnlineDataset(IterableDataset):
         self._first_call = True
         self._num_prefetched_partitions = num_prefetched_partitions
         self._parallel_prefetch_requests = parallel_prefetch_requests
-
+        self._include_labels = include_labels
         self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
@@ -164,43 +163,31 @@ class OnlineDataset(IterableDataset):
         has_failed = False
 
         for attempt in Retrying(
-            stop=stop_after_attempt(5),
-            wait=wait_random_exponential(multiplier=1, min=2, max=60),
-            reraise=True,
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
         ):
             with attempt:
                 try:
-                    new_keys: list[int]
-                    new_samples: list[bytes]
-                    response_time: int
-
-                    # Select appropriate response type
-                    response: GetResponse
-
-                    # response: GetResponse # type: ignore[no-redef]
-                    rpc_call = self._storagestub.Get
-
-                    # Request setup
                     req = GetRequest(dataset_id=self._dataset_id, keys=selector_keys)
                     stopw = Stopwatch()
-                    stopw.start("ResponseTime", overwrite=True)
 
-                    for response in rpc_call(req):
+                    response: GetResponse
+                    stopw.start("ResponseTime", overwrite=True)
+                    for response in self._storagestub.Get(req):
                         response_time = stopw.stop("ResponseTime")
                         keys = list(response.keys)
-
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            if not self._include_labels:
-                                yield keys, list(response.samples), None, response_time
-                            else:
-                                yield keys, list(response.samples), list(response.labels), response_time
-                        else:  # Handle failure and deduplication
+                            yield keys, list(response.samples), list(response.labels), response_time
+                        else:  # If we have failed, we need to filter out yielded samples
+                            # Note that the returned order by storage is non-deterministic
                             assert isinstance(processed_keys, set)
-                            new_keys = [key for key in keys if key not in processed_keys]
-                            new_samples = [
+                            new_keys: list[int] = [key for key in keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
                                 sample for key, sample in zip(keys, response.samples) if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(keys, response.labels) if key not in processed_keys
                             ]
                             processed_keys.update(keys)
 
@@ -213,7 +200,8 @@ class OnlineDataset(IterableDataset):
                                 yield new_keys, new_samples, new_labels, response_time
 
                         stopw.start("ResponseTime", overwrite=True)
-                except grpc.RpcError as e:
+
+                except grpc.RpcError as e:  # We catch and reraise to reconnect to rpc and do logging
                     has_failed = True
                     # Convert processed keys to set on first failure
                     processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
@@ -222,10 +210,7 @@ class OnlineDataset(IterableDataset):
                         worker_id,
                     )
                     self._info(f"Stringified exception: {str(e)}", worker_id)
-                    self._info(
-                        f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}",
-                        worker_id,
-                    )
+                    self._info(f"Error occurred while asking {self._dataset_id} for keys:\n{selector_keys}", worker_id)
                     self._init_grpc(worker_id=worker_id)
                     raise e
 
@@ -257,47 +242,28 @@ class OnlineDataset(IterableDataset):
         all_response_times = []
 
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
-        if not self._include_labels:
-            for data_tuple_gen in self._get_data_from_storage(keys, worker_id=worker_id):
-                stor_keys, data, _, response_time = data_tuple_gen
 
-                all_response_times.append(response_time)
-                num_items = len(stor_keys)
-                with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
-                    data_container["data"].extend(data)
-                    data_container["keys"].extend(stor_keys)
-                    data_container["weights"].extend(
-                        [cast(float | None, key_weight_map[key]) for key in stor_keys]
-                        if key_weight_map is not None
-                        else [None for _ in range(len(stor_keys))]
-                    )
-                    if partition_valid_until is not None:
-                        partition_valid_until[partition_id] += num_items
+        for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
+            stor_keys, data, labels, response_time = data_tuple
 
-                if partition_signals is not None:
-                    with partition_signals[partition_id]:
-                        partition_signals[partition_id].notify_all()
-        else:
-            for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
-                stor_keys, data, labels, response_time = data_tuple
-
-                all_response_times.append(response_time)
-                num_items = len(stor_keys)
-                with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
-                    data_container["data"].extend(data)
-                    data_container["keys"].extend(stor_keys)
+            all_response_times.append(response_time)
+            num_items = len(stor_keys)
+            with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
+                data_container["data"].extend(data)
+                data_container["keys"].extend(stor_keys)
+                if self._include_labels:
                     data_container["labels"].extend(labels)
-                    data_container["weights"].extend(
-                        [cast(float | None, key_weight_map[key]) for key in stor_keys]
-                        if key_weight_map is not None
-                        else [None for _ in range(len(stor_keys))]
-                    )
-                    if partition_valid_until is not None:
-                        partition_valid_until[partition_id] += num_items
+                data_container["weights"].extend(
+                    [cast(float | None, key_weight_map[key]) for key in stor_keys]
+                    if key_weight_map is not None
+                    else [None for _ in range(len(stor_keys))]
+                )
+                if partition_valid_until is not None:
+                    partition_valid_until[partition_id] += num_items
 
-                if partition_signals is not None:
-                    with partition_signals[partition_id]:
-                        partition_signals[partition_id].notify_all()
+            if partition_signals is not None:
+                with partition_signals[partition_id]:
+                    partition_signals[partition_id].notify_all()
 
         get_data_log["get_data"] = self._sw.stop(f"GetDataPart{partition_id}")
         get_data_log["response_times"] = all_response_times
@@ -540,10 +506,10 @@ class OnlineDataset(IterableDataset):
         indices = list(range(data_length))
         random.shuffle(indices)
 
-        new_data = [container["data"][i] for i in indices]
-        new_keys = [container["keys"][i] for i in indices]
-        new_labels = [container["labels"][i] for i in indices]
-        new_weights = [container["weights"][i] for i in indices]
+        container["data"] = [container["data"][i] for i in indices]
+        container["keys"] = [container["keys"][i] for i in indices]
+
+        container["weights"] = [container["weights"][i] for i in indices]
 
         if self._include_labels:
             container["labels"] = [container["labels"][i] for i in indices]

@@ -334,6 +334,24 @@ storage:
         selector_batch_size: 25000,
 
       },
+       # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_Diff",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/readablediff",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
     ]
   database:
     drivername: "postgresql"
