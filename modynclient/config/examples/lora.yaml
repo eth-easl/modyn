@@ -1,5 +1,5 @@
 pipeline:
-  name: opensubtitles
+  name: Wikipedia_diff
   description: Training on wikipedia corpus
   version: 1.0.0
 model:
@@ -20,7 +20,7 @@ training:
   record_loss_every: 100
   shuffle: False
   amp: true
-  lora: false
+  lora: true
   grad_norm: 0.5
   optimizers:
     - name: "default"
@@ -48,8 +48,8 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: True
-    interval: 500
-    path: "/checkpoints/twikidiff10"
+    interval: 1000
+    path: "/checkpoints/lora8"
 data:
   dataset_id: Wikipedia_cleandiffset
   transformations: []

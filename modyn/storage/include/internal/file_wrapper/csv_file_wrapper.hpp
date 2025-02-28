@@ -1,61 +1,92 @@
 #pragma once
 
 #include <rapidcsv.h>
-
 #include <string>
 #include <vector>
-
 #include "internal/file_wrapper/file_wrapper.hpp"
 #include "modyn/utils/utils.hpp"
 
 namespace modyn::storage {
 
-class CsvFileWrapper : public FileWrapper {
- public:
-  CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
-                 std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
-      : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
-    if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
-      has_labels_ = true;
-      ASSERT(file_wrapper_config_["label_index"].as<int>() != -1,
-             "Please specify the index of the column that contains the label.");
-    label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
-    } else {
-      has_labels_ = false;
-      label_index_ = -1;  // No labels exist
-    }
-
-    if (file_wrapper_config_["separator"]) {
-      separator_ = file_wrapper_config_["separator"].as<char>();
-    } else {
-      separator_ = ',';
-    }
-
-    if (file_wrapper_config_["quote_char"]) {
-      quote_ = file_wrapper_config_["quote_char"].as<char>();
-    } else {
-      quote_ = '\0';  // effectively disables quoting
-    }
-
-    if (file_wrapper_config_["quoted_linebreaks"]) {
-      allow_quoted_linebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
-    } else {
-      allow_quoted_linebreaks_ = true;
-    }
-
-    bool ignore_first_line = false;
-    if (file_wrapper_config_["ignore_first_line"]) {
-      ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
-    } else {
-      ignore_first_line = false;
-    }
-
-    ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
-
-    validate_file_extension();
-    label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
-    setup_document(path);
-  }
+  class CsvFileWrapper : public FileWrapper {
+    public:
+      CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
+                     std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
+          : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
+        SPDLOG_INFO("CsvFileWrapper: Initializing for file: {}", path);
+    
+        if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
+          has_labels_ = true;
+          ASSERT(file_wrapper_config_["label_index"].as<int>() != -1,
+                 "Please specify the index of the column that contains the label.");
+          label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
+          SPDLOG_INFO("CsvFileWrapper: Labels enabled. label_index set to {}", label_index_);
+        } else {
+          has_labels_ = false;
+          label_index_ = -1;  // No labels exist
+          SPDLOG_INFO("CsvFileWrapper: Labels disabled.");
+        }
+    
+        // ADDED: Process has_targets flag and target_index
+        if (file_wrapper_config_["has_targets"] && file_wrapper_config_["has_targets"].as<bool>()) {
+          has_targets_ = true;
+          ASSERT(file_wrapper_config_["target_index"].as<int>() != -1,
+                 "Please specify the index of the column that contains the target.");
+          target_index_ = file_wrapper_config_["target_index"].as<uint64_t>();
+          SPDLOG_INFO("CsvFileWrapper: Targets enabled. target_index set to {}", target_index_);
+        } else {
+          has_targets_ = false;
+          target_index_ = -1;
+          SPDLOG_INFO("CsvFileWrapper: Targets disabled.");
+        }
+    
+        if (file_wrapper_config_["separator"]) {
+          separator_ = file_wrapper_config_["separator"].as<char>();
+          SPDLOG_INFO("CsvFileWrapper: Separator set to '{}'", separator_);
+        } else {
+          separator_ = ',';
+          SPDLOG_INFO("CsvFileWrapper: Separator not specified. Defaulting to ','");
+        }
+    
+        if (file_wrapper_config_["quote_char"]) {
+          quote_ = file_wrapper_config_["quote_char"].as<char>();
+          SPDLOG_INFO("CsvFileWrapper: Quote character set to '{}'", quote_);
+        } else {
+          quote_ = '\0';  // effectively disables quoting
+          SPDLOG_INFO("CsvFileWrapper: Quote character not specified. Quoting disabled.");
+        }
+    
+        if (file_wrapper_config_["quoted_linebreaks"]) {
+          allow_quoted_linebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
+          SPDLOG_INFO("CsvFileWrapper: Allow quoted linebreaks set to {}", allow_quoted_linebreaks_);
+        } else {
+          allow_quoted_linebreaks_ = true;
+          SPDLOG_INFO("CsvFileWrapper: quoted_linebreaks not specified. Defaulting to true.");
+        }
+    
+        bool ignore_first_line = false;
+        if (file_wrapper_config_["ignore_first_line"]) {
+          ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
+          SPDLOG_INFO("CsvFileWrapper: ignore_first_line set to {}", ignore_first_line);
+        } else {
+          ignore_first_line = false;
+          SPDLOG_INFO("CsvFileWrapper: ignore_first_line not specified. Defaulting to false.");
+        }
+    
+        ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
+        SPDLOG_INFO("CsvFileWrapper: File '{}' exists.", path);
+    
+        validate_file_extension();
+        SPDLOG_INFO("CsvFileWrapper: File extension validated.");
+    
+        label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
+        SPDLOG_INFO("CsvFileWrapper: label_params_ set with ignore_first_line = {}.", ignore_first_line);
+    
+        setup_document(path);
+        SPDLOG_INFO("CsvFileWrapper: Document setup completed for file: {}", path);
+      }
+    
+    
 
   ~CsvFileWrapper() override {
     if (stream_->is_open()) {
@@ -70,22 +101,31 @@ class CsvFileWrapper : public FileWrapper {
   void setup_document(const std::string& path);
   uint64_t get_number_of_samples() override;
   int64_t get_label(uint64_t index) override;
+  std::vector<unsigned char> get_target(uint64_t index) override; // ADDED
   std::vector<int64_t> get_all_labels() override;
   std::vector<unsigned char> get_sample(uint64_t index) override;
   std::vector<std::vector<unsigned char>> get_samples(uint64_t start, uint64_t end) override;
+  std::vector<std::vector<unsigned char>> get_targets(uint64_t start, uint64_t end) override;
   std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<uint64_t>& indices) override;
+  std::vector<std::vector<unsigned char>> get_targets_from_indices(const std::vector<uint64_t>& indices) override;
+  
   void validate_file_extension() override;
   void delete_samples(const std::vector<uint64_t>& indices) override;
   void set_file_path(const std::string& path) override;
   FileWrapperType get_type() override;
 
- private:
+  private:
   char separator_, quote_;
   bool allow_quoted_linebreaks_ = true;
   uint64_t label_index_;
+  // ADDED: New members for target support
+  bool has_targets_;      // ADDED
+  uint64_t target_index_; // ADDED
+  // END ADDED
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
   std::shared_ptr<std::ifstream> stream_;
   bool has_labels_;
 };
 }  // namespace modyn::storage
+

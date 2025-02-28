@@ -270,63 +270,83 @@ void FileWatcher::handle_file_paths(const std::vector<std::string>::iterator fil
 }
 
 void FileWatcher::handle_files_for_insertion(std::vector<std::string>& files_for_insertion,
-                                             const FileWrapperType& file_wrapper_type, const int64_t dataset_id,
-                                             const YAML::Node& file_wrapper_config,
-                                             const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
-                                             soci::session& session, DatabaseDriver& database_driver,
-                                             const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
-  const std::string file_path = files_for_insertion.front();
-  std::vector<FileFrame> file_samples;
-  auto file_wrapper = get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+  const FileWrapperType& file_wrapper_type, const int64_t dataset_id,
+  const YAML::Node& file_wrapper_config,
+  const int64_t sample_dbinsertion_batchsize, const bool force_fallback,
+  soci::session& session, DatabaseDriver& database_driver,
+  const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper) {
+SPDLOG_INFO("Starting handle_files_for_insertion with {} files.", files_for_insertion.size());
+const std::string file_path = files_for_insertion.front();
+SPDLOG_INFO("Initial file path: {}", file_path);
 
-  int64_t current_file_samples_to_be_inserted = 0;
-  for (const auto& file_path : files_for_insertion) {
-    file_wrapper->set_file_path(file_path);
-    const int64_t file_id =
-        insert_file(file_path, dataset_id, filesystem_wrapper, file_wrapper, session, database_driver);
+std::vector<FileFrame> file_samples;
+auto file_wrapper = get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+SPDLOG_INFO("Obtained file_wrapper for file: {}", file_path);
 
-    if (file_id == -1) {
-      SPDLOG_ERROR("Failed to insert file into database");
-      continue;
-    }
+int64_t current_file_samples_to_be_inserted = 0;
+for (const auto& file_path : files_for_insertion) {
+SPDLOG_INFO("Processing file: {}", file_path);
+file_wrapper->set_file_path(file_path);
+SPDLOG_INFO("Set file_wrapper path to: {}", file_path);
 
-    const std::vector<int64_t> labels = file_wrapper->get_all_labels();
+const int64_t file_id = insert_file(file_path, dataset_id, filesystem_wrapper, file_wrapper, session, database_driver);
+SPDLOG_INFO("insert_file returned file_id: {}", file_id);
 
-    int32_t index = 0;
-    for (const auto& label : labels) {
-      if (current_file_samples_to_be_inserted == sample_dbinsertion_batchsize) {
-        insert_file_samples(file_samples, dataset_id, force_fallback, session, database_driver);
-        file_samples.clear();
-        current_file_samples_to_be_inserted = 0;
-      }
-      file_samples.push_back({file_id, index, label});
-      index++;
-      current_file_samples_to_be_inserted++;
-    }
-  }
+if (file_id == -1) {
+SPDLOG_ERROR("Failed to insert file into database for file: {}", file_path);
+continue;
+}
 
-  if (!file_samples.empty()) {
-    insert_file_samples(file_samples, dataset_id, force_fallback, session, database_driver);
-  }
+const std::vector<int64_t> labels = file_wrapper->get_all_labels();
+SPDLOG_INFO("Retrieved {} labels for file_id: {}", labels.size(), file_id);
+
+int32_t index = 0;
+for (const auto& label : labels) {
+SPDLOG_INFO("Processing label: {} for file_id: {} at index: {}", label, file_id, index);
+if (current_file_samples_to_be_inserted == sample_dbinsertion_batchsize) {
+SPDLOG_INFO("Batch size {} reached. Inserting batch of {} file samples.", sample_dbinsertion_batchsize, file_samples.size());
+insert_file_samples(file_samples, dataset_id, force_fallback, session, database_driver);
+SPDLOG_INFO("Inserted batch of file samples.");
+file_samples.clear();
+current_file_samples_to_be_inserted = 0;
+}
+file_samples.push_back({file_id, index, label});
+SPDLOG_INFO("Added file sample: (file_id: {}, index: {}, label: {})", file_id, index, label);
+index++;
+current_file_samples_to_be_inserted++;
+}
+}
+
+if (!file_samples.empty()) {
+SPDLOG_INFO("Inserting remaining {} file samples.", file_samples.size());
+insert_file_samples(file_samples, dataset_id, force_fallback, session, database_driver);
+}
+SPDLOG_INFO("Completed handle_files_for_insertion.");
 }
 
 int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dataset_id,
-                                 const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
-                                 const std::unique_ptr<FileWrapper>& file_wrapper, soci::session& session,
-                                 DatabaseDriver& database_driver) {
-  uint64_t number_of_samples = 0;
-  number_of_samples = file_wrapper->get_number_of_samples();
-  const int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
-  int64_t file_id = -1;
+const std::shared_ptr<FilesystemWrapper>& filesystem_wrapper,
+const std::unique_ptr<FileWrapper>& file_wrapper, soci::session& session,
+DatabaseDriver& database_driver) {
+SPDLOG_DEBUG("Inserting file: {} for dataset: {}", file_path, dataset_id);
+uint64_t number_of_samples = file_wrapper->get_number_of_samples();
+SPDLOG_DEBUG("Number of samples for file {}: {}", file_path, number_of_samples);
 
-  // soci::session::get_last_insert_id() is not supported by postgresql, so we need to use a different query.
-  if (database_driver == DatabaseDriver::SQLITE3) {
-    file_id = insert_file(file_path, dataset_id, session, number_of_samples, modified_time);
-  } else if (database_driver == DatabaseDriver::POSTGRESQL) {
-    file_id = insert_file_using_returning_statement(file_path, dataset_id, session, number_of_samples, modified_time);
-  }
-  return file_id;
+const int64_t modified_time = filesystem_wrapper->get_modified_time(file_path);
+SPDLOG_DEBUG("Modified time for file {}: {}", file_path, modified_time);
+
+int64_t file_id = -1;
+if (database_driver == DatabaseDriver::SQLITE3) {
+SPDLOG_DEBUG("Using SQLITE3 insertion for file: {}", file_path);
+file_id = insert_file(file_path, dataset_id, session, number_of_samples, modified_time);
+} else if (database_driver == DatabaseDriver::POSTGRESQL) {
+SPDLOG_DEBUG("Using POSTGRESQL insertion for file: {}", file_path);
+file_id = insert_file_using_returning_statement(file_path, dataset_id, session, number_of_samples, modified_time);
 }
+SPDLOG_DEBUG("File insertion completed for file: {} with file_id: {}", file_path, file_id);
+return file_id;
+}
+
 
 int64_t FileWatcher::insert_file(const std::string& file_path, const int64_t dataset_id, soci::session& session,
                                  uint64_t number_of_samples, int64_t modified_time) {

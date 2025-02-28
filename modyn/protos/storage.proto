@@ -31,7 +31,9 @@ message GetResponse {
   repeated bytes samples = 1;
   repeated int64 keys = 2;
   repeated int64 labels = 3;
+  repeated bytes target = 4;
 }
+
 
 // https://github.com/grpc/grpc/issues/15937
 message GetCurrentTimestampRequest {}

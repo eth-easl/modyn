@@ -1,5 +1,5 @@
 pipeline:
-  name: opensubtitles
+  name: Wikipedia_diff
   description: Training on wikipedia corpus
   version: 1.0.0
 model:
@@ -29,7 +29,7 @@ training:
       param_groups:
         - module: "model"
           config:
-            lr: 0.001
+            lr: 0.0001
             scale_parameters: False
             relative_step: False
   lr_scheduler:
@@ -48,10 +48,10 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: True
-    interval: 500
-    path: "/checkpoints/twikidiff10"
+    interval: 1000
+    path: "/checkpoints/twikidiff12"
 data:
-  dataset_id: Wikipedia_cleandiffset
+  dataset_id: Wikipedia_Diff3
   transformations: []
   bytes_parser_function: |
     import torch
@@ -66,7 +66,7 @@ data:
   tokenizer: "GPT2TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 769970
+  num_samples: 806000
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500

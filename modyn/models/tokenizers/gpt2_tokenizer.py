@@ -24,5 +24,5 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
             }
         )
 
-        tokenizer.padding_side = "left"
+        tokenizer.padding_side = "right"
         super().__init__(tokenizer, max_token_length)

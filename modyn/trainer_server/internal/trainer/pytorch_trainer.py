@@ -114,10 +114,9 @@ class PytorchTrainer:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
         checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
-
         # Adjust key names if necessary
         checkpoint["model"]
-
+        
         self._model.model.load_state_dict(checkpoint["model"], strict=True)  # TODO Quitar esto
         if self._lora:
             self._model.model = apply_lora(self._model.model)
@@ -348,7 +347,7 @@ class PytorchTrainer:
                             # Shift logits and labels for next-token prediction
                             output = output.logits[..., :-1, :]  # Output for all tokens except the last one
                             target = data[..., 1:, 0]  # Target for all tokens except the first one
-
+                            
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)

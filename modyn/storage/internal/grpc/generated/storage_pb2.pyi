@@ -38,22 +38,24 @@ class GetResponse(google.protobuf.message.Message):
     SAMPLES_FIELD_NUMBER: builtins.int
     KEYS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
+    TARGET_FIELD_NUMBER: builtins.int
     @property
     def samples(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     @property
     def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    @property
+    def target(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     def __init__(
         self,
         *,
         samples: collections.abc.Iterable[builtins.bytes] | None = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
+        target: collections.abc.Iterable[builtins.bytes] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples", "target", b"target"]) -> None: ...
 
 global___GetResponse = GetResponse
 
@@ -83,9 +85,7 @@ class GetNewDataSinceRequest(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing.Literal["dataset_id", b"dataset_id", "timestamp", b"timestamp"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "timestamp", b"timestamp"]) -> None: ...
 
 global___GetNewDataSinceRequest = GetNewDataSinceRequest
 
@@ -109,9 +109,7 @@ class GetNewDataSinceResponse(google.protobuf.message.Message):
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]) -> None: ...
 
 global___GetNewDataSinceResponse = GetNewDataSinceResponse
 
@@ -132,12 +130,7 @@ class GetDataInIntervalRequest(google.protobuf.message.Message):
         start_timestamp: builtins.int = ...,
         end_timestamp: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing.Literal[
-            "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
 
 global___GetDataInIntervalRequest = GetDataInIntervalRequest
 
@@ -161,9 +154,7 @@ class GetDataInIntervalResponse(google.protobuf.message.Message):
         timestamps: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "timestamps", b"timestamps"]) -> None: ...
 
 global___GetDataInIntervalResponse = GetDataInIntervalResponse
 
@@ -193,46 +184,12 @@ class GetDataPerWorkerRequest(google.protobuf.message.Message):
         start_timestamp: builtins.int | None = ...,
         end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(
-        self,
-        field_name: typing.Literal[
-            "_end_timestamp",
-            b"_end_timestamp",
-            "_start_timestamp",
-            b"_start_timestamp",
-            "end_timestamp",
-            b"end_timestamp",
-            "start_timestamp",
-            b"start_timestamp",
-        ],
-    ) -> builtins.bool: ...
-    def ClearField(
-        self,
-        field_name: typing.Literal[
-            "_end_timestamp",
-            b"_end_timestamp",
-            "_start_timestamp",
-            b"_start_timestamp",
-            "dataset_id",
-            b"dataset_id",
-            "end_timestamp",
-            b"end_timestamp",
-            "start_timestamp",
-            b"start_timestamp",
-            "total_workers",
-            b"total_workers",
-            "worker_id",
-            b"worker_id",
-        ],
-    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp", "total_workers", b"total_workers", "worker_id", b"worker_id"]) -> None: ...
     @typing.overload
-    def WhichOneof(
-        self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]
-    ) -> typing.Literal["end_timestamp"] | None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
     @typing.overload
-    def WhichOneof(
-        self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]
-    ) -> typing.Literal["start_timestamp"] | None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
 
 global___GetDataPerWorkerRequest = GetDataPerWorkerRequest
 
@@ -272,42 +229,12 @@ class GetDatasetSizeRequest(google.protobuf.message.Message):
         start_timestamp: builtins.int | None = ...,
         end_timestamp: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(
-        self,
-        field_name: typing.Literal[
-            "_end_timestamp",
-            b"_end_timestamp",
-            "_start_timestamp",
-            b"_start_timestamp",
-            "end_timestamp",
-            b"end_timestamp",
-            "start_timestamp",
-            b"start_timestamp",
-        ],
-    ) -> builtins.bool: ...
-    def ClearField(
-        self,
-        field_name: typing.Literal[
-            "_end_timestamp",
-            b"_end_timestamp",
-            "_start_timestamp",
-            b"_start_timestamp",
-            "dataset_id",
-            b"dataset_id",
-            "end_timestamp",
-            b"end_timestamp",
-            "start_timestamp",
-            b"start_timestamp",
-        ],
-    ) -> None: ...
+    def HasField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["_end_timestamp", b"_end_timestamp", "_start_timestamp", b"_start_timestamp", "dataset_id", b"dataset_id", "end_timestamp", b"end_timestamp", "start_timestamp", b"start_timestamp"]) -> None: ...
     @typing.overload
-    def WhichOneof(
-        self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]
-    ) -> typing.Literal["end_timestamp"] | None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_end_timestamp", b"_end_timestamp"]) -> typing.Literal["end_timestamp"] | None: ...
     @typing.overload
-    def WhichOneof(
-        self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]
-    ) -> typing.Literal["start_timestamp"] | None: ...
+    def WhichOneof(self, oneof_group: typing.Literal["_start_timestamp", b"_start_timestamp"]) -> typing.Literal["start_timestamp"] | None: ...
 
 global___GetDatasetSizeRequest = GetDatasetSizeRequest
 
@@ -394,29 +321,7 @@ class RegisterNewDatasetRequest(google.protobuf.message.Message):
         ignore_last_timestamp: builtins.bool = ...,
         file_watcher_interval: builtins.int = ...,
     ) -> None: ...
-    def ClearField(
-        self,
-        field_name: typing.Literal[
-            "base_path",
-            b"base_path",
-            "dataset_id",
-            b"dataset_id",
-            "description",
-            b"description",
-            "file_watcher_interval",
-            b"file_watcher_interval",
-            "file_wrapper_config",
-            b"file_wrapper_config",
-            "file_wrapper_type",
-            b"file_wrapper_type",
-            "filesystem_wrapper_type",
-            b"filesystem_wrapper_type",
-            "ignore_last_timestamp",
-            b"ignore_last_timestamp",
-            "version",
-            b"version",
-        ],
-    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["base_path", b"base_path", "dataset_id", b"dataset_id", "description", b"description", "file_watcher_interval", b"file_watcher_interval", "file_wrapper_config", b"file_wrapper_config", "file_wrapper_type", b"file_wrapper_type", "filesystem_wrapper_type", b"filesystem_wrapper_type", "ignore_last_timestamp", b"ignore_last_timestamp", "version", b"version"]) -> None: ...
 
 global___RegisterNewDatasetRequest = RegisterNewDatasetRequest
 

@@ -6,7 +6,7 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
-  sample_batch_size: 2000000
+  sample_batch_size: 5000000
   sample_dbinsertion_batchsize: 1000000
   insertion_threads: 8
   retrieval_threads: 8
@@ -331,21 +331,77 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 25000,
+        selector_batch_size: 250000,
 
       },
        # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
       {
-        name: "Wikipedia_Diff",
+        name: "Wikipedia_Diff3",
         description: "Wikipedia text dump from August 2021",
         version: "0.0.1",
-        base_path: "/datasets/readablediff",
+        base_path: "/datasets/readablediffset3",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_cleandiffset",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/cleandiff2",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_clariden",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/claridenclean",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Movie_dialogue ------------------------------------ #
+      {
+        name: "opensubtitles3",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
