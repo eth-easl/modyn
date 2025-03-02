@@ -179,7 +179,12 @@ class OnlineDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            yield keys, list(response.samples), list(response.labels), response_time
+                            if not self._include_labels:
+                                targets = list(response.target)
+                                yield keys, list(response.samples), targets, response_time
+                            else:
+                                yield keys, list(response.samples), list(response.labels), response_time
+
                         else:  # If we have failed, we need to filter out yielded samples
                             # Note that the returned order by storage is non-deterministic
                             assert isinstance(processed_keys, set)
@@ -195,13 +200,11 @@ class OnlineDataset(IterableDataset):
                                     target for key, target in zip(keys, response.target) if key not in processed_keys
                                     ]
                                 processed_keys.update(keys)
-                                print(f"tenemos targets")
-                                print(new_targets)
                                 yield new_keys, new_samples, new_targets, response_time
-
-                            processed_keys.update(keys)
-
-                            yield new_keys, new_samples, new_labels, response_time
+                            else:
+                                processed_keys.update(keys)
+                                
+                                yield new_keys, new_samples, new_labels, response_time
 
                         stopw.start("ResponseTime", overwrite=True)
 
@@ -249,7 +252,6 @@ class OnlineDataset(IterableDataset):
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
             stor_keys, data, labels, response_time = data_tuple
-            print(data_tuple)
             all_response_times.append(response_time)
             num_items = len(stor_keys)
             with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
@@ -286,22 +288,21 @@ class OnlineDataset(IterableDataset):
             callback()
       
     def _get_transformed_data_tuple(
-        self, key: int, sample: memoryview, label: int | None = None , weight: float | None = None, target: bytes | None = None
-    ) -> tuple | None:
+        self, key: int, sample: memoryview, label: int | None = None , weight: float | None = None| memoryview) -> tuple | None:
         assert self._uses_weights is not None
         self._sw.start("transform", resume=True)
         # mypy complains here because _transform has unknown type, which is ok
         transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
 
-        if not self._include_labels:
+        if not self._include_labels and isinstance(label, memoryview):
             self._sw.start("transform", resume=True)
             # mypy complains here because _transform has unknown type, which is ok
-            transformed_target = self._transform(target)  # type: ignore
+            transformed_target = self._transform(label)  # type: ignore
             self._sw.stop("transform")
             if self._uses_weights:
                 return key, transformed_sample, transformed_target, weight
-            return key, transformed_sample
+            return key, transformed_sample, transformed_target
 
         # Non-include_labels case with labels
         if self._uses_weights:

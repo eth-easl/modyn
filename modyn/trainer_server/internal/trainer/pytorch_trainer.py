@@ -113,11 +113,11 @@ class PytorchTrainer:
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-        checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
+        #checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
         # Adjust key names if necessary
-        checkpoint["model"]
+        #checkpoint["model"]
         
-        self._model.model.load_state_dict(checkpoint["model"], strict=True)  # TODO Quitar esto
+        #self._model.model.load_state_dict(checkpoint["model"], strict=True)  # TODO Quitar esto
         if self._lora:
             self._model.model = apply_lora(self._model.model)
         if self._kadapter:
@@ -169,7 +169,7 @@ class PytorchTrainer:
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-
+        self.fine_tuning=True
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
@@ -323,8 +323,12 @@ class PytorchTrainer:
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
                         # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
-
-                        if self.generative:
+                        print(data.shape)
+                    
+                        print(target.shape)
+                        if self.fine_tuning:
+                            output = self._model.model(data, labels=target)
+                        elif self.generative:
                             output = self._model.model(data)
 
                         else:
@@ -591,18 +595,32 @@ class PytorchTrainer:
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
 
-        stopw.start("LabelTransform", resume=True)
-        if self.generative:
-            target = batch[1]
-        elif self._label_transformer_function is not None:
-            target = self._label_transformer_function(batch[2])
-        else:
-            target = batch[2]
         
-        stopw.stop("LabelTransform")
-
+    
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
-            target = target.to(self._device)
+            if self.fine_tuning:
+                target: torch.Tensor | dict
+                if isinstance(batch[2], torch.Tensor):
+                    target = batch[2].to(self._device)
+                elif isinstance(batch[2], dict):
+                    target: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+                    for name, tensor in batch[2].items():
+                        target[name] = tensor.to(self._device)
+                else:
+                    raise ValueError(
+                        "The format of the data provided is not supported in modyn. "
+                        "Please use either torch tensors or dict[str, torch.Tensor]"
+                    )
+            else:
+                stopw.start("LabelTransform", resume=True)
+        
+                if self._label_transformer_function is not None:
+                    target = self._label_transformer_function(batch[2])
+                else:
+                    target = batch[2]
+                
+                stopw.stop("LabelTransform")
+                target = target.to(self._device)
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: torch.Tensor | dict
@@ -1147,3 +1165,4 @@ def train(
         pretrained_path = training_info.pretrained_model_path
         if pretrained_path is not None and pretrained_path.exists():
             pretrained_path.unlink()
+  

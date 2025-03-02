@@ -281,6 +281,7 @@ SPDLOG_INFO("Initial file path: {}", file_path);
 
 std::vector<FileFrame> file_samples;
 auto file_wrapper = get_file_wrapper(file_path, file_wrapper_type, file_wrapper_config, filesystem_wrapper);
+
 SPDLOG_INFO("Obtained file_wrapper for file: {}", file_path);
 
 int64_t current_file_samples_to_be_inserted = 0;

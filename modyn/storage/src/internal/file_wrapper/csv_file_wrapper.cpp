@@ -25,7 +25,14 @@ std::vector<unsigned char> CsvFileWrapper::get_sample(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
 
   std::vector<std::string> row = doc_.GetRow<std::string>(index);
-  row.erase(row.begin() + static_cast<int64_t>(label_index_));
+  if (has_labels_) {
+    row.erase(row.begin() + static_cast<int64_t>(label_index_));
+  }
+  if (has_targets_) {
+    row.erase(row.begin() + static_cast<int64_t>(target_index_));
+  }
+
+  
   std::string row_string;
   for (const auto& cell : row) {
     row_string += cell + separator_;
@@ -43,6 +50,10 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
     if (has_labels_) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
     }
+    if (has_targets_) {
+      row.erase(row.begin() + static_cast<int64_t>(target_index_));
+    }
+    
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
@@ -59,6 +70,10 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
     if (has_labels_) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
+      
+    }
+    if (has_targets_) {
+      row.erase(row.begin() + static_cast<int64_t>(target_index_));
     }
     std::string row_string;
     for (const auto& cell : row) {

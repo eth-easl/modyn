@@ -3,7 +3,7 @@ pipeline:
   description: Training on wikipedia corpus
   version: 1.0.0
 model:
-  id: Gpt2
+  id: T5
 model_storage:
   full_model_strategy:
     name: "PyTorchFullModel"
@@ -15,9 +15,9 @@ training:
   dataloader_workers: 8
   use_previous_model: false
   initial_model: random
-  #/tmp/models/ftp/2238241055_47_0.modyn<
-  batch_size: 8
-  record_loss_every: 1
+  #/tmp/models/ftp/2238241055_47_0.modyn
+  batch_size: 64
+  record_loss_every: 100
   shuffle: False
   amp: true
   lora: false
@@ -29,14 +29,26 @@ training:
       param_groups:
         - module: "model"
           config:
-            lr: 0.001
+            lr: 0.0001
             scale_parameters: False
             relative_step: False
+  lr_scheduler:
+    step_every: "batch"
+    name: "WarmupDecayLR"
+    source: "Custom"
+    optimizers: ["default"]
+    config:
+      total_num_steps: 800000 # Total training steps
+      warmup_min_lr: 0          # Minimum learning rate at the start of warmup
+      warmup_max_lr: 0.0001         # Maximum learning rate after warmup
+      warmup_num_steps:  80000 # Number of steps for the warmup phase
+      warmup_type: "log"          # Type of warmup progression 
+      last_batch_iteration: -1
   optimization_criterion:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: True
-    interval: 500
+    interval: 5000
     path: "/checkpoints/opensubs"
 data:
   dataset_id: opensubtitles3
@@ -46,10 +58,10 @@ data:
     def bytes_parser_function(data: memoryview) -> torch.Tensor:
       text = str(data, 'utf8')
       return text
-  tokenizer: "GPT2TokenizerTransform"
+  tokenizer: "T5TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 1000
+  num_samples: 1385000
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500

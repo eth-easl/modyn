@@ -405,7 +405,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 25000,
+        selector_batch_size: 250000,
 
       },
     ]
