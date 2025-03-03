@@ -48,7 +48,7 @@ class Gpt2Modyn(CoresetSupportingModule):
         self.tokenizer.padding_side = "right"
         # Load the specified GPT-2 model
         self.model = GPT2LMHeadModel.from_pretrained(model_name)
-        self.model.resize_token_embeddings(50262)
+       # self.model.resize_token_embeddings(50262)
         self.config = GPT2Config.from_pretrained(model_name)
         # self.transformer = GPT2Model(self.config)
 

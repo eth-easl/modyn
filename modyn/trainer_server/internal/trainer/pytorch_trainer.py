@@ -116,15 +116,6 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-
-        if training_info.use_pretrained_model:
-            self._info("Loading model state from pretrained model.")
-            self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-        # checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
-        # Adjust key names if necessary
-        # checkpoint["model"]
-
-        # self._model.model.load_state_dict(checkpoint["model"], strict=True)
         if self._lora:
             self._model.model = apply_lora(self._model.model)
         if self._kadapter:
@@ -134,6 +125,15 @@ class PytorchTrainer:
         if self._prefix_tuning:
             apply_prefix_tuning(self._model.model)
         self._setup_optimizers(training_info)
+        if training_info.use_pretrained_model:
+            self._info("Loading model state from pretrained model.")
+            self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
+        # checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
+        # Adjust key names if necessary
+        # checkpoint["model"]
+
+        # self._model.model.load_state_dict(checkpoint["model"], strict=True)
+       
         self._model.model.to(device)
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
@@ -179,7 +179,7 @@ class PytorchTrainer:
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-        self.fine_tuning = True
+        self.fine_tuning = False
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)

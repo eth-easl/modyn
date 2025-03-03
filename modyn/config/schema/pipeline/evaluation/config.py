@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import Field, field_validator
 
@@ -22,7 +22,7 @@ class EvalDataConfig(DataConfig):
         min_length=1,
     )
     light_tuning: bool = Field(False, description="Whether to perform a light tuning.")
-    tuning_config: TuningConfig = Field(
+    tuning_config: Optional[ TuningConfig] = Field(
         None, description="Configuration for tuning parameters. Unnecessary if light_tuning is false"
     )
 

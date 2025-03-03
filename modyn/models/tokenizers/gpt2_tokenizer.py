@@ -15,8 +15,7 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
         # tokenizer.pad_token = tokenizer.eos_token  # Set pad token to eos token to avoid padding errors
         # tokenizer.padding_side = "right"
         tokenizer.add_special_tokens(
-            {
-                "eos_token": "</s>",
+            {   "eos_token": "</s>",
                 "bos_token": "<s>",
                 "unk_token": "<unk>",
                 "pad_token": "<pad>",

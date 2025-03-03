@@ -1,8 +1,8 @@
 from nltk.translate.meteor_score import meteor_score
-
 from modyn.config.schema.pipeline import MeteorMetricConfig
 from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
-
+import nltk
+nltk.download('wordnet')
 
 class Meteor(AbstractHolisticMetric):
     """METEOR metric implementation for text-based model evaluation."""
@@ -24,9 +24,8 @@ class Meteor(AbstractHolisticMetric):
             self.evaluation_result = 0  # Undefined METEOR score in such cases
             return
 
-        # Compute METEOR score for each pair of reference & prediction
-        meteor_scores = [meteor_score([ref], pred) for ref, pred in zip(y_true, y_pred)]
-
+        # Tokenize the texts to produce a list of tokens for each text.
+        meteor_scores = [meteor_score([ref.split()], pred.split()) for ref, pred in zip(y_true, y_pred)]
         # Average METEOR score across all samples
         self.evaluation_result = sum(meteor_scores) / len(meteor_scores)
 
