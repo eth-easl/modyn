@@ -583,7 +583,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                         "keys, which is not supported.",
                         sample_fileids.size(), num_keys));
       }
- 
+
       int64_t current_file_id = sample_fileids.at(0);
       uint64_t current_file_start_idx = 0;
       std::string current_file_path;
@@ -640,7 +640,7 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
             stringified_targets.emplace_back(target_vec.begin(), target_vec.end());
           }
           response.mutable_target()->Assign(stringified_targets.begin(), stringified_targets.end());
-                                            
+
           // 2. Send response
           {
             const std::lock_guard<std::mutex> lock(writer_mutex);
@@ -692,7 +692,6 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
         stringified_targets.emplace_back(target_vec.begin(), target_vec.end());
       }
       response.mutable_target()->Assign(stringified_targets.begin(), stringified_targets.end());
-     
 
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);

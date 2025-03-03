@@ -1,6 +1,7 @@
 #include "internal/file_wrapper/csv_file_wrapper.hpp"
 
 #include <rapidcsv.h>
+
 #include <algorithm>
 #include <numeric>
 #include <stdexcept>
@@ -32,7 +33,6 @@ std::vector<unsigned char> CsvFileWrapper::get_sample(uint64_t index) {
     row.erase(row.begin() + static_cast<int64_t>(target_index_));
   }
 
-  
   std::string row_string;
   for (const auto& cell : row) {
     row_string += cell + separator_;
@@ -53,7 +53,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples(uint64_t sta
     if (has_targets_) {
       row.erase(row.begin() + static_cast<int64_t>(target_index_));
     }
-    
+
     std::string row_string;
     for (const auto& cell : row) {
       row_string += cell + separator_;
@@ -70,7 +70,6 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_samples_from_indices
     std::vector<std::string> row = doc_.GetRow<std::string>(index);
     if (has_labels_) {
       row.erase(row.begin() + static_cast<int64_t>(label_index_));
-      
     }
     if (has_targets_) {
       row.erase(row.begin() + static_cast<int64_t>(target_index_));
@@ -106,7 +105,7 @@ std::vector<int64_t> CsvFileWrapper::get_all_labels() {
  */
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets(uint64_t start, uint64_t end) {
   ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
-  
+
   std::vector<std::vector<unsigned char>> targets;
   for (uint64_t i = start; i < end; ++i) {
     targets.push_back(get_target(i));
@@ -140,9 +139,7 @@ std::vector<unsigned char> CsvFileWrapper::get_target(uint64_t index) {
   return {target_cell.begin(), target_cell.end()};
 }
 
-uint64_t CsvFileWrapper::get_number_of_samples() { 
-  return static_cast<uint64_t>(doc_.GetRowCount()); 
-}
+uint64_t CsvFileWrapper::get_number_of_samples() { return static_cast<uint64_t>(doc_.GetRowCount()); }
 
 void CsvFileWrapper::delete_samples(const std::vector<uint64_t>& indices) {
   ASSERT(std::all_of(indices.begin(), indices.end(), [&](uint64_t index) { return index < get_number_of_samples(); }),
@@ -164,6 +161,4 @@ void CsvFileWrapper::set_file_path(const std::string& path) {
   setup_document(path);
 }
 
-FileWrapperType CsvFileWrapper::get_type() { 
-  return FileWrapperType::CSV; 
-}
+FileWrapperType CsvFileWrapper::get_type() { return FileWrapperType::CSV; }

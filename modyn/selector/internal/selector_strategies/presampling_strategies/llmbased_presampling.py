@@ -1,20 +1,48 @@
-import random
 import uuid
-from sqlalchemy import select, Table, Column, Integer, MetaData
+import time
+import requests
+from sqlalchemy import Column, Integer, MetaData, Table, select
 from sqlalchemy.engine import Engine
 
 from modyn.config.schema.pipeline import PresamplingConfig
-from modyn.selector.internal.presampling_strategies.abstract_presampling_strategy import AbstractPresamplingStrategy
-from modyn.selector.internal.database.models import SelectorStateMetadata
+from modyn.metadata_database.models import SelectorStateMetadata
+from modyn.selector.internal.selector_strategies.presampling_strategies import AbstractPresamplingStrategy
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
 
-# Example SwissAI-based filtering call
-def evaluate_batch_quality(texts: list[str]) -> list[bool]:
+
+def evaluate_batch_quality(texts: list[str], api_url: str, model_name: str) -> list[bool]:
     """
-    Replace this mock with your real SwissAI evaluation logic.
+    Uses SwissAI API to evaluate a batch of texts.
+
+    Args:
+        texts (list[str]): List of text samples to evaluate.
+        api_url (str): SwissAI API endpoint.
+        model_name (str): SwissAI model to use for evaluation.
+
+    Returns:
+        list[bool]: List of True/False values indicating if each text is useful.
     """
-    # For demo, randomly keep or discard:
-    return [random.choice([True, False]) for _ in texts]
+    eval_prompt = "Determine if the following texts are useful for training an LLM on Wikipedia fact updates.\n\n"
+
+    for i, text in enumerate(texts):
+        eval_prompt += f"{i+1}. {text}\n"
+    eval_prompt += "\nIf the text is informative and fact-based, return 'true'. If the text is meaningless, misleading, or repetitive, return 'false'. Return only 'true' or 'false' do not number the responses and give as many as there are texts.\n"
+
+    while True:
+        try:
+            # pylint: disable=missing-timeout
+            response = requests.post(
+                api_url,
+                json={"model": model_name, "messages": [{"content": eval_prompt, "role": "user"}]},
+            )
+            response.raise_for_status()
+            break  # Exit loop if no error is encountered.
+        except Exception: #pylint: disable=broad-exception-caught
+            time.sleep(5)  # Wait 5 seconds before retrying on error.
+
+    results = response.json()["choices"][0]["message"]["content"].strip().lower().split("\n")
+    return [res.strip() == "true" for res in results]
+
 
 class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
@@ -28,6 +56,8 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
         self._engine = engine
         self.batch_size = 10  # Adjust as needed
+        self.api_url = presampling_config.get("api_url", "")
+        self.model_name = presampling_config.get("model_name", "meta-llama/Llama-3.3-70B-Instruct")
 
     def get_presampling_query(
         self,
@@ -35,7 +65,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         tail_triggers: int | None,
         limit: int | None,
         trigger_dataset_size: int | None,
-    ):
+    ) -> select:
         """
         1) Query potential samples (sample_key).
         2) Retrieve text from storage backend.
@@ -58,13 +88,13 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         filtered_keys = []
         batch_texts, batch_ids = [], []
         for k in raw_keys:
-            # Example: fetch the actual text (you must implement get_sample_text in your storage backend)
+            # Fetch text for each sample
             text = self._storage_backend.get_sample_text(k)
             batch_texts.append(text)
             batch_ids.append(k)
 
             if len(batch_texts) == self.batch_size:
-                results = evaluate_batch_quality(batch_texts)
+                results = evaluate_batch_quality(batch_texts, self.api_url, self.model_name)
                 for i, keep in enumerate(results):
                     if keep:
                         filtered_keys.append(batch_ids[i])
@@ -73,7 +103,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
 
         # Handle any leftover batch
         if batch_texts:
-            results = evaluate_batch_quality(batch_texts)
+            results = evaluate_batch_quality(batch_texts, self.api_url, self.model_name)
             for i, keep in enumerate(results):
                 if keep:
                     filtered_keys.append(batch_ids[i])
@@ -91,10 +121,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         # Insert filtered keys
         with self._engine.connect() as conn:
             if filtered_keys:
-                conn.execute(
-                    temp_table.insert(),
-                    [{"sample_key": key} for key in filtered_keys]
-                )
+                conn.execute(temp_table.insert(), [{"sample_key": key} for key in filtered_keys])
 
         # Step 5: Return SELECT from the temp table
         return select(temp_table.c.sample_key)

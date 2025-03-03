@@ -7,7 +7,7 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 
-OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace","Custom"]
+OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace", "Custom"]
 
 
 class OptimizerParamGroup(ModynBaseModel):
@@ -132,6 +132,15 @@ class TrainingConfig(ModynBaseModel):
     kadapter: bool = Field(
         False,
         description=("Applies kadapter layers to the model"),
+    )
+    prompt_tuning: bool = Field(
+        False,
+        description=("Applies Prompt Tuning by introducing learnable soft prompts into the input embeddings."),
+    )
+
+    prefix_tuning: bool = Field(
+        False,
+        description=("Applies Prefix Tuning by adding trainable prefix vectors to the attention layers."),
     )
 
     seed: int | None = Field(

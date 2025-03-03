@@ -45,31 +45,26 @@ class TrainerServerStub(object):
             "/trainer.TrainerServer/trainer_available",
             request_serializer=trainer__server__pb2.TrainerAvailableRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.TrainerAvailableResponse.FromString,
-            _registered_method=True,
         )
         self.start_training = channel.unary_unary(
             "/trainer.TrainerServer/start_training",
             request_serializer=trainer__server__pb2.StartTrainingRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.StartTrainingResponse.FromString,
-            _registered_method=True,
         )
         self.get_training_status = channel.unary_unary(
             "/trainer.TrainerServer/get_training_status",
             request_serializer=trainer__server__pb2.TrainingStatusRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.TrainingStatusResponse.FromString,
-            _registered_method=True,
         )
         self.store_final_model = channel.unary_unary(
             "/trainer.TrainerServer/store_final_model",
             request_serializer=trainer__server__pb2.StoreFinalModelRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.StoreFinalModelResponse.FromString,
-            _registered_method=True,
         )
         self.get_latest_model = channel.unary_unary(
             "/trainer.TrainerServer/get_latest_model",
             request_serializer=trainer__server__pb2.GetLatestModelRequest.SerializeToString,
             response_deserializer=trainer__server__pb2.GetLatestModelResponse.FromString,
-            _registered_method=True,
         )
 
 
@@ -170,7 +165,6 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -200,7 +194,6 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -230,7 +223,6 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -260,7 +252,6 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -290,5 +281,4 @@ class TrainerServer(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )

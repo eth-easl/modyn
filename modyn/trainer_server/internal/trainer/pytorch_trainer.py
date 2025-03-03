@@ -27,7 +27,12 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
-from modyn.models.modular_adapters.modular_adapters import apply_kadapter, apply_lora
+from modyn.models.modular_adapters.modular_adapters import (
+    apply_kadapter,
+    apply_lora,
+    apply_prefix_tuning,
+    apply_prompt_tuning,
+)
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -93,6 +98,8 @@ class PytorchTrainer:
         self._grad_norm = training_info.grad_norm  # 0.5  # remember add this to training infotraining_info.grad_norm
         self._lora = training_info.lora
         self._kadapter = training_info.kadapter
+        self._prompt_tuning = training_info.prompt_tuning
+        self._prefix_tuning = training_info.prefix_tuning
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         self.gradient_accumulation_steps = 1
         if training_info.seed is not None:
@@ -113,16 +120,19 @@ class PytorchTrainer:
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-        #checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
+        # checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
         # Adjust key names if necessary
-        #checkpoint["model"]
-        
-        #self._model.model.load_state_dict(checkpoint["model"], strict=True)  # TODO Quitar esto
+        # checkpoint["model"]
+
+        # self._model.model.load_state_dict(checkpoint["model"], strict=True)
         if self._lora:
             self._model.model = apply_lora(self._model.model)
         if self._kadapter:
             self._model.model = apply_kadapter(self._model.model)
-
+        if self._prompt_tuning:
+            apply_prompt_tuning(self._model.model)
+        if self._prefix_tuning:
+            apply_prefix_tuning(self._model.model)
         self._setup_optimizers(training_info)
         self._model.model.to(device)
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
@@ -169,7 +179,7 @@ class PytorchTrainer:
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-        self.fine_tuning=True
+        self.fine_tuning = True
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
@@ -323,9 +333,6 @@ class PytorchTrainer:
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
                         # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
-                        print(data.shape)
-                    
-                        print(target.shape)
                         if self.fine_tuning:
                             output = self._model.model(data, labels=target)
                         elif self.generative:
@@ -351,7 +358,7 @@ class PytorchTrainer:
                             # Shift logits and labels for next-token prediction
                             output = output.logits[..., :-1, :]  # Output for all tokens except the last one
                             target = data[..., 1:, 0]  # Target for all tokens except the first one
-                            
+
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
@@ -595,8 +602,6 @@ class PytorchTrainer:
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
 
-        
-    
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
             if self.fine_tuning:
                 target: torch.Tensor | dict
@@ -613,12 +618,12 @@ class PytorchTrainer:
                     )
             else:
                 stopw.start("LabelTransform", resume=True)
-        
+
                 if self._label_transformer_function is not None:
                     target = self._label_transformer_function(batch[2])
                 else:
                     target = batch[2]
-                
+
                 stopw.stop("LabelTransform")
                 target = target.to(self._device)
 
@@ -887,7 +892,7 @@ class PytorchTrainer:
                     optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
                 else:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
-           
+
             elif optimizer_config["source"] == "HuggingFace":
                 optimizer_func = getattr(transformers, optimizer_config["algorithm"])
             elif optimizer_config["source"] == "Custom":
@@ -1165,4 +1170,3 @@ def train(
         pretrained_path = training_info.pretrained_model_path
         if pretrained_path is not None and pretrained_path.exists():
             pretrained_path.unlink()
-  

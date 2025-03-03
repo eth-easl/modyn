@@ -83,4 +83,6 @@ class TrainingInfo:
         self.grad_norm: float | None = request.grad_norm if request.HasField("grad_norm") else None
         self.lora = request.lora
         self.kadapter = request.kadapter
+        self.prompt_tuning = request.prompt_tuning
+        self.prefix_tuning = request.prefix_tuning
         self.offline_dataset_path = offline_dataset_path

@@ -96,6 +96,17 @@ class BleuMetricConfig(_BaseMetricConfig):
     name: Literal["Bleuscore"] = Field("Bleuscore")
 
 
+class MeteorMetricConfig(_BaseMetricConfig):
+    name: Literal["MeteorScore"] = Field("MeteorScore")
+
+
+class LLMScoreMetricConfig(_BaseMetricConfig):
+    name: Literal["LLMScore"] = Field("LLMScore")
+    use_api: bool = Field(False, description="Whether to use OpenAI API or local model.")
+    model: str = Field("meta-llama/Llama-2-13b-chat-hf", description="The model name.")
+    api_key: str | None = Field(None, description="The API key if using OpenAI API.")
+
+
 class RougeMetricConfig(_BaseMetricConfig):
     name: Literal["RougeScore"] = Field("RougeScore")
 

@@ -44,7 +44,7 @@ class PerClassOnlineDataset(OnlineDataset):
         self.filtered_label = initial_filtered_label
 
     def _get_transformed_data_tuple(
-        self, key: int, sample: memoryview, label: int | None = None, weight: float | None = None
+        self, key: int, sample: memoryview, label: int | None = None, weight: float | None | memoryview = None
     ) -> tuple | None:
         assert self.filtered_label is not None
 

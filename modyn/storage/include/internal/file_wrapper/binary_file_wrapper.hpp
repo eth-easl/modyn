@@ -67,7 +67,7 @@ class BinaryFileWrapper : public FileWrapper {
   void delete_samples(const std::vector<uint64_t>& indices) override;
   void set_file_path(const std::string& path) override;
   FileWrapperType get_type() override;
-  
+
   ~BinaryFileWrapper() override {
     if (stream_->is_open()) {
       stream_->close();

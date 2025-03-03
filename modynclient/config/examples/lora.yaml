@@ -42,7 +42,7 @@ training:
       warmup_min_lr: 0          # Minimum learning rate at the start of warmup
       warmup_max_lr: 0.0001         # Maximum learning rate after warmup
       warmup_num_steps:  80000 # Number of steps for the warmup phase
-      warmup_type: "log"          # Type of warmup progression 
+      warmup_type: "log"          # Type of warmup progression
       last_batch_iteration: -1
   optimization_criterion:
     name: "CrossEntropyLoss"

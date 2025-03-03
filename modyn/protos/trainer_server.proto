@@ -63,6 +63,8 @@ message StartTrainingRequest {
   optional float grad_norm = 29;
   bool lora = 30;
   bool kadapter = 31;
+  bool prompt_tuning = 32;
+  bool prefix_tuning = 33;
 }
 
 message StartTrainingResponse {

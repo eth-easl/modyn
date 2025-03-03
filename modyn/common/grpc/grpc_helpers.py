@@ -255,6 +255,8 @@ class TrainerServerGRPCHandlerMixin:
             grad_norm=training_config.grad_norm if training_config.grad_norm != 0.0 else None,
             lora=training_config.lora,
             kadapter=training_config.kadapter,
+            prompt_tuning=training_config.prompt_tuning,
+            prefix_tuning=training_config.prefix_tuning,
         )
 
     def start_training(

@@ -21,13 +21,6 @@ class T5:
         self.model = T5Modyn(hparams)
         self.model.to(device)
 
-
-"""
-Adapted from Hugging Face's T5 implementation:
-https://huggingface.co/docs/transformers/model_doc/t5
-"""
-
-
 class T5Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()
@@ -61,7 +54,7 @@ class T5Modyn(CoresetSupportingModule):
         # Split input into token IDs and attention masks
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
-        print(input_ids.shape, attention_mask.shape,labels.shape)
+        print(input_ids.shape, attention_mask.shape, labels.shape)
         labels = labels[:, :, 0]
         # Forward pass through T5
         output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
@@ -113,7 +106,7 @@ class T5Modyn(CoresetSupportingModule):
         input_encodings = self.tokenizer(
             input_texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length
         )
-        
+
         # Generate output sequences
         outputs = self.model.generate(
             input_ids=input_encodings["input_ids"],

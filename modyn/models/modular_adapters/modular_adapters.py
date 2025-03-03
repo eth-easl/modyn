@@ -2,7 +2,7 @@ import types
 from typing import Any
 
 import torch
-from peft import LoraConfig, TaskType, get_peft_model
+from peft import LoraConfig, PrefixTuningConfig, PromptTuningConfig, TaskType, get_peft_model
 from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2Config
@@ -58,11 +58,11 @@ class AdapterModel(nn.Module):
 # =============================================================================
 
 
-def count_trainable_params(model):
+def count_trainable_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def apply_lora(
+def apply_lora(#pylint: disable=dangerous-default-value
     model: nn.Module,
     target_modules: list[str] | None = ["c_attn", "c_proj"],
     adapter_dim: int = 16,
@@ -113,7 +113,7 @@ def apply_kadapter(
 
     # Define a new forward that integrates the adapter output.
     def forward_with_adapter(
-        self,
+        self: Any,
         input_ids: Any,
         past_key_values: Any | None = None,
         attention_mask: torch.Tensor | None = None,
@@ -175,4 +175,33 @@ def apply_kadapter(
 
     # Replace the model's forward with the new forward
     model.model.forward = types.MethodType(forward_with_adapter, model)
+    return model
+
+
+def apply_prompt_tuning(
+    model: nn.Module,
+    num_virtual_tokens: int = 20,
+    task_type: TaskType = TaskType.CAUSAL_LM,
+) -> nn.Module:
+    """Applies prompt tuning as an adapter to the model."""
+    prompt_config = PromptTuningConfig(
+        task_type=task_type,
+        num_virtual_tokens=num_virtual_tokens,
+    )
+    model.model = get_peft_model(model.model, prompt_config)
+    print(f"\n Trainable parameters AFTER applying Prompt Tuning: {count_trainable_params(model)}")
+
+
+def apply_prefix_tuning(
+    model: nn.Module,
+    prefix_length: int = 30,
+    task_type: TaskType = TaskType.CAUSAL_LM,
+) -> nn.Module:
+    """Applies prefix tuning as an adapter to the model."""
+    prefix_config = PrefixTuningConfig(
+        task_type=task_type,
+        num_virtual_tokens=prefix_length,
+    )
+    model.model = get_peft_model(model.model, prefix_config)
+    print(f"\n Trainable parameters AFTER applying Prefix Tuning: {count_trainable_params(model)}")
     return model

@@ -145,6 +145,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     GRAD_NORM_FIELD_NUMBER: builtins.int
     LORA_FIELD_NUMBER: builtins.int
     KADAPTER_FIELD_NUMBER: builtins.int
+    PROMPT_TUNING_FIELD_NUMBER: builtins.int
+    PREFIX_TUNING_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -166,6 +168,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     grad_norm: builtins.float
     lora: builtins.bool
     kadapter: builtins.bool
+    prompt_tuning: builtins.bool
+    prefix_tuning: builtins.bool
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
     @property
@@ -220,6 +224,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
         grad_norm: builtins.float | None = ...,
         lora: builtins.bool = ...,
         kadapter: builtins.bool = ...,
+        prompt_tuning: builtins.bool = ...,
+        prefix_tuning: builtins.bool = ...,
     ) -> None: ...
     def HasField(
         self,
@@ -305,8 +311,12 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"parallel_prefetch_requests",
             "pipeline_id",
             b"pipeline_id",
+            "prefix_tuning",
+            b"prefix_tuning",
             "pretrained_model_id",
             b"pretrained_model_id",
+            "prompt_tuning",
+            b"prompt_tuning",
             "record_loss_every",
             b"record_loss_every",
             "seed",

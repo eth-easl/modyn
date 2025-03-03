@@ -31,6 +31,7 @@ if _version_not_supported:
         RuntimeWarning,
     )
 
+
 class StorageStub(object):
     """Missing associated documentation comment in .proto file."""
 
@@ -41,55 +42,55 @@ class StorageStub(object):
             channel: A grpc.Channel.
         """
         self.Get = channel.unary_stream(
-                '/modyn.storage.Storage/Get',
-                request_serializer=storage__pb2.GetRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetResponse.FromString,
-                )
+            "/modyn.storage.Storage/Get",
+            request_serializer=storage__pb2.GetRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetResponse.FromString,
+        )
         self.GetNewDataSince = channel.unary_stream(
-                '/modyn.storage.Storage/GetNewDataSince',
-                request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
-                )
+            "/modyn.storage.Storage/GetNewDataSince",
+            request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
+        )
         self.GetDataInInterval = channel.unary_stream(
-                '/modyn.storage.Storage/GetDataInInterval',
-                request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
-                )
+            "/modyn.storage.Storage/GetDataInInterval",
+            request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
+        )
         self.GetDataPerWorker = channel.unary_stream(
-                '/modyn.storage.Storage/GetDataPerWorker',
-                request_serializer=storage__pb2.GetDataPerWorkerRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetDataPerWorkerResponse.FromString,
-                )
+            "/modyn.storage.Storage/GetDataPerWorker",
+            request_serializer=storage__pb2.GetDataPerWorkerRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetDataPerWorkerResponse.FromString,
+        )
         self.GetDatasetSize = channel.unary_unary(
-                '/modyn.storage.Storage/GetDatasetSize',
-                request_serializer=storage__pb2.GetDatasetSizeRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetDatasetSizeResponse.FromString,
-                )
+            "/modyn.storage.Storage/GetDatasetSize",
+            request_serializer=storage__pb2.GetDatasetSizeRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetDatasetSizeResponse.FromString,
+        )
         self.CheckAvailability = channel.unary_unary(
-                '/modyn.storage.Storage/CheckAvailability',
-                request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
-                response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
-                )
+            "/modyn.storage.Storage/CheckAvailability",
+            request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
+            response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
+        )
         self.RegisterNewDataset = channel.unary_unary(
-                '/modyn.storage.Storage/RegisterNewDataset',
-                request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
-                response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
-                )
+            "/modyn.storage.Storage/RegisterNewDataset",
+            request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
+            response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
+        )
         self.GetCurrentTimestamp = channel.unary_unary(
-                '/modyn.storage.Storage/GetCurrentTimestamp',
-                request_serializer=storage__pb2.GetCurrentTimestampRequest.SerializeToString,
-                response_deserializer=storage__pb2.GetCurrentTimestampResponse.FromString,
-                )
+            "/modyn.storage.Storage/GetCurrentTimestamp",
+            request_serializer=storage__pb2.GetCurrentTimestampRequest.SerializeToString,
+            response_deserializer=storage__pb2.GetCurrentTimestampResponse.FromString,
+        )
         self.DeleteDataset = channel.unary_unary(
-                '/modyn.storage.Storage/DeleteDataset',
-                request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
-                response_deserializer=storage__pb2.DeleteDatasetResponse.FromString,
-                )
+            "/modyn.storage.Storage/DeleteDataset",
+            request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
+            response_deserializer=storage__pb2.DeleteDatasetResponse.FromString,
+        )
         self.DeleteData = channel.unary_unary(
-                '/modyn.storage.Storage/DeleteData',
-                request_serializer=storage__pb2.DeleteDataRequest.SerializeToString,
-                response_deserializer=storage__pb2.DeleteDataResponse.FromString,
-                )
+            "/modyn.storage.Storage/DeleteData",
+            request_serializer=storage__pb2.DeleteDataRequest.SerializeToString,
+            response_deserializer=storage__pb2.DeleteDataResponse.FromString,
+        )
 
 
 class StorageServicer(object):
@@ -98,292 +99,411 @@ class StorageServicer(object):
     def Get(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetNewDataSince(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetDataInInterval(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetDataPerWorker(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetDatasetSize(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def CheckAvailability(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def RegisterNewDataset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetCurrentTimestamp(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def DeleteDataset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def DeleteData(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_StorageServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Get': grpc.unary_stream_rpc_method_handler(
-                    servicer.Get,
-                    request_deserializer=storage__pb2.GetRequest.FromString,
-                    response_serializer=storage__pb2.GetResponse.SerializeToString,
-            ),
-            'GetNewDataSince': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetNewDataSince,
-                    request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
-                    response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
-            ),
-            'GetDataInInterval': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetDataInInterval,
-                    request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
-                    response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
-            ),
-            'GetDataPerWorker': grpc.unary_stream_rpc_method_handler(
-                    servicer.GetDataPerWorker,
-                    request_deserializer=storage__pb2.GetDataPerWorkerRequest.FromString,
-                    response_serializer=storage__pb2.GetDataPerWorkerResponse.SerializeToString,
-            ),
-            'GetDatasetSize': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetDatasetSize,
-                    request_deserializer=storage__pb2.GetDatasetSizeRequest.FromString,
-                    response_serializer=storage__pb2.GetDatasetSizeResponse.SerializeToString,
-            ),
-            'CheckAvailability': grpc.unary_unary_rpc_method_handler(
-                    servicer.CheckAvailability,
-                    request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
-                    response_serializer=storage__pb2.DatasetAvailableResponse.SerializeToString,
-            ),
-            'RegisterNewDataset': grpc.unary_unary_rpc_method_handler(
-                    servicer.RegisterNewDataset,
-                    request_deserializer=storage__pb2.RegisterNewDatasetRequest.FromString,
-                    response_serializer=storage__pb2.RegisterNewDatasetResponse.SerializeToString,
-            ),
-            'GetCurrentTimestamp': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetCurrentTimestamp,
-                    request_deserializer=storage__pb2.GetCurrentTimestampRequest.FromString,
-                    response_serializer=storage__pb2.GetCurrentTimestampResponse.SerializeToString,
-            ),
-            'DeleteDataset': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteDataset,
-                    request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
-                    response_serializer=storage__pb2.DeleteDatasetResponse.SerializeToString,
-            ),
-            'DeleteData': grpc.unary_unary_rpc_method_handler(
-                    servicer.DeleteData,
-                    request_deserializer=storage__pb2.DeleteDataRequest.FromString,
-                    response_serializer=storage__pb2.DeleteDataResponse.SerializeToString,
-            ),
+        "Get": grpc.unary_stream_rpc_method_handler(
+            servicer.Get,
+            request_deserializer=storage__pb2.GetRequest.FromString,
+            response_serializer=storage__pb2.GetResponse.SerializeToString,
+        ),
+        "GetNewDataSince": grpc.unary_stream_rpc_method_handler(
+            servicer.GetNewDataSince,
+            request_deserializer=storage__pb2.GetNewDataSinceRequest.FromString,
+            response_serializer=storage__pb2.GetNewDataSinceResponse.SerializeToString,
+        ),
+        "GetDataInInterval": grpc.unary_stream_rpc_method_handler(
+            servicer.GetDataInInterval,
+            request_deserializer=storage__pb2.GetDataInIntervalRequest.FromString,
+            response_serializer=storage__pb2.GetDataInIntervalResponse.SerializeToString,
+        ),
+        "GetDataPerWorker": grpc.unary_stream_rpc_method_handler(
+            servicer.GetDataPerWorker,
+            request_deserializer=storage__pb2.GetDataPerWorkerRequest.FromString,
+            response_serializer=storage__pb2.GetDataPerWorkerResponse.SerializeToString,
+        ),
+        "GetDatasetSize": grpc.unary_unary_rpc_method_handler(
+            servicer.GetDatasetSize,
+            request_deserializer=storage__pb2.GetDatasetSizeRequest.FromString,
+            response_serializer=storage__pb2.GetDatasetSizeResponse.SerializeToString,
+        ),
+        "CheckAvailability": grpc.unary_unary_rpc_method_handler(
+            servicer.CheckAvailability,
+            request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
+            response_serializer=storage__pb2.DatasetAvailableResponse.SerializeToString,
+        ),
+        "RegisterNewDataset": grpc.unary_unary_rpc_method_handler(
+            servicer.RegisterNewDataset,
+            request_deserializer=storage__pb2.RegisterNewDatasetRequest.FromString,
+            response_serializer=storage__pb2.RegisterNewDatasetResponse.SerializeToString,
+        ),
+        "GetCurrentTimestamp": grpc.unary_unary_rpc_method_handler(
+            servicer.GetCurrentTimestamp,
+            request_deserializer=storage__pb2.GetCurrentTimestampRequest.FromString,
+            response_serializer=storage__pb2.GetCurrentTimestampResponse.SerializeToString,
+        ),
+        "DeleteDataset": grpc.unary_unary_rpc_method_handler(
+            servicer.DeleteDataset,
+            request_deserializer=storage__pb2.DatasetAvailableRequest.FromString,
+            response_serializer=storage__pb2.DeleteDatasetResponse.SerializeToString,
+        ),
+        "DeleteData": grpc.unary_unary_rpc_method_handler(
+            servicer.DeleteData,
+            request_deserializer=storage__pb2.DeleteDataRequest.FromString,
+            response_serializer=storage__pb2.DeleteDataResponse.SerializeToString,
+        ),
     }
-    generic_handler = grpc.method_handlers_generic_handler(
-            'modyn.storage.Storage', rpc_method_handlers)
+    generic_handler = grpc.method_handlers_generic_handler("modyn.storage.Storage", rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class Storage(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Get(request,
+    def Get(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_stream(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/Get',
+            "/modyn.storage.Storage/Get",
             storage__pb2.GetRequest.SerializeToString,
             storage__pb2.GetResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetNewDataSince(request,
+    def GetNewDataSince(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_stream(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetNewDataSince',
+            "/modyn.storage.Storage/GetNewDataSince",
             storage__pb2.GetNewDataSinceRequest.SerializeToString,
             storage__pb2.GetNewDataSinceResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetDataInInterval(request,
+    def GetDataInInterval(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_stream(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataInInterval',
+            "/modyn.storage.Storage/GetDataInInterval",
             storage__pb2.GetDataInIntervalRequest.SerializeToString,
             storage__pb2.GetDataInIntervalResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetDataPerWorker(request,
+    def GetDataPerWorker(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_stream(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(request, target, '/modyn.storage.Storage/GetDataPerWorker',
+            "/modyn.storage.Storage/GetDataPerWorker",
             storage__pb2.GetDataPerWorkerRequest.SerializeToString,
             storage__pb2.GetDataPerWorkerResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetDatasetSize(request,
+    def GetDatasetSize(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetDatasetSize',
+            "/modyn.storage.Storage/GetDatasetSize",
             storage__pb2.GetDatasetSizeRequest.SerializeToString,
             storage__pb2.GetDatasetSizeResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def CheckAvailability(request,
+    def CheckAvailability(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/CheckAvailability',
+            "/modyn.storage.Storage/CheckAvailability",
             storage__pb2.DatasetAvailableRequest.SerializeToString,
             storage__pb2.DatasetAvailableResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def RegisterNewDataset(request,
+    def RegisterNewDataset(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/RegisterNewDataset',
+            "/modyn.storage.Storage/RegisterNewDataset",
             storage__pb2.RegisterNewDatasetRequest.SerializeToString,
             storage__pb2.RegisterNewDatasetResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetCurrentTimestamp(request,
+    def GetCurrentTimestamp(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/GetCurrentTimestamp',
+            "/modyn.storage.Storage/GetCurrentTimestamp",
             storage__pb2.GetCurrentTimestampRequest.SerializeToString,
             storage__pb2.GetCurrentTimestampResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def DeleteDataset(request,
+    def DeleteDataset(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/DeleteDataset',
+            "/modyn.storage.Storage/DeleteDataset",
             storage__pb2.DatasetAvailableRequest.SerializeToString,
             storage__pb2.DeleteDatasetResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def DeleteData(request,
+    def DeleteData(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/modyn.storage.Storage/DeleteData',
+            "/modyn.storage.Storage/DeleteData",
             storage__pb2.DeleteDataRequest.SerializeToString,
             storage__pb2.DeleteDataResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )

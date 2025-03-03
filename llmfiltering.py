@@ -1,12 +1,14 @@
 import csv
-import openai
 import os
 import time
+
+import openai
 
 # SwissAI API Configuration
 client = openai.Client(api_key="sk-rc-75HStaTc3UOSoVgyXSEU7w", base_url="https://fmapi.swissai.cscs.ch")
 
 BATCH_SIZE = 10  # Number of lines per batch
+
 
 def evaluate_batch_quality(texts: list[str], model_name: str = "meta-llama/Llama-3.3-70B-Instruct") -> list[bool]:
     """
@@ -31,15 +33,16 @@ def evaluate_batch_quality(texts: list[str], model_name: str = "meta-llama/Llama
             model=model_name,
             messages=[{"content": eval_prompt, "role": "user"}],
             max_tokens=5 * len(texts),  # Adjust max tokens to accommodate batch
-            stream=False
+            stream=False,
         )
-        
+
         results = response.choices[0].message.content.strip().lower().split("\n")
         return [res.strip() == "true" for res in results]
 
     except Exception as e:
         print(f" Error evaluating batch data quality with SwissAI: {e}")
         return [False] * len(texts)  # Default to False if API request fails
+
 
 def filter_csv(input_csv: str, output_csv: str):
     """
@@ -55,12 +58,11 @@ def filter_csv(input_csv: str, output_csv: str):
 
     start_time = time.time()  # Start timer
 
-    with open(input_csv, "r", newline="", encoding="utf-8") as infile, \
-         open(output_csv, "w", newline="", encoding="utf-8") as outfile:
-        
+    with (
+        open(input_csv, newline="", encoding="utf-8") as infile,
+        open(output_csv, "w", newline="", encoding="utf-8") as outfile,
+    ):
         reader = csv.reader(infile)
-        writer = csv.writer(outfile)
-
         total_lines = 0
         kept_lines = 0
         removed_lines = 0
@@ -82,7 +84,7 @@ def filter_csv(input_csv: str, output_csv: str):
                     if idx >= len(batch_rows):
                         break
                     if keep:
-                        #writer.writerow(batch_rows[idx])
+                        # writer.writerow(batch_rows[idx])
                         kept_lines += 1
                     else:
                         removed_lines += 1
@@ -101,9 +103,9 @@ def filter_csv(input_csv: str, output_csv: str):
         return total_lines, kept_lines, removed_lines, total_time
 
 
-def run_benchmark(input_csv_path, output_csv_path, iterations=5,
-                  dynamic_batch_size=None,
-                  results_file="benchmark_results.txt"):
+def run_benchmark(
+    input_csv_path, output_csv_path, iterations=5, dynamic_batch_size=None, results_file="benchmark_results.txt"
+):
     """
     Runs the filter_csv function multiple times, collects stats, and writes them to a file.
 
@@ -125,13 +127,15 @@ def run_benchmark(input_csv_path, output_csv_path, iterations=5,
         # print(f"\n--- Benchmark Run {i} ---")
         total, kept, removed, duration = filter_csv(input_csv_path, output_csv_path)
 
-        results.append({
-            "Iteration": i,
-            "Total_Lines": total,
-            "Kept_Lines": kept,
-            "Removed_Lines": removed,
-            "Duration_s": round(duration, 3)
-        })
+        results.append(
+            {
+                "Iteration": i,
+                "Total_Lines": total,
+                "Kept_Lines": kept,
+                "Removed_Lines": removed,
+                "Duration_s": round(duration, 3),
+            }
+        )
 
     # Instead of printing to console, build a table string and write to file
     table_str = []
@@ -141,11 +145,13 @@ def run_benchmark(input_csv_path, output_csv_path, iterations=5,
 
     total_duration = 0.0
     for r in results:
-        row_str = (f"  {r['Iteration']:>2}  | {r['Total_Lines']:>7} "
-                   f"| {r['Kept_Lines']:>6} | {r['Removed_Lines']:>7} "
-                   f"| {r['Duration_s']:>12}")
+        row_str = (
+            f"  {r['Iteration']:>2}  | {r['Total_Lines']:>7} "
+            f"| {r['Kept_Lines']:>6} | {r['Removed_Lines']:>7} "
+            f"| {r['Duration_s']:>12}"
+        )
         table_str.append(row_str)
-        total_duration += r['Duration_s']
+        total_duration += r["Duration_s"]
 
     avg_duration = total_duration / iterations
     table_str.append(f"\nAverage Duration over {iterations} runs: {avg_duration:.2f} seconds.\n")
@@ -154,19 +160,19 @@ def run_benchmark(input_csv_path, output_csv_path, iterations=5,
     with open(results_file, "a", encoding="utf-8") as f:
         f.write("\n".join(table_str))
 
+
 if __name__ == "__main__":
     # Original example paths
     input_csv_path = "/scratch/sjohn/temporalwiki/TWiki_Diffsets/readablediffset/0808.csv"
     output_csv_path = "cleaned_training_data.csv"
-    batches=[1,5,10,20,50]
+    batches = [1, 5, 10, 20, 50]
     print("\n🔹 Running LLM-Based Data Filtering with Benchmarking...")
     for batch in batches:
         run_benchmark(
             input_csv_path,
             output_csv_path,
             iterations=5,
-            dynamic_batch_size=batch,          # Example: override default BATCH_SIZE=10 with 20
-            results_file="my_benchmark.txt" # Example: results written to this file
+            dynamic_batch_size=batch,  # Example: override default BATCH_SIZE=10 with 20
+            results_file="my_benchmark.txt",  # Example: results written to this file
         )
         print("\n✅ Data filtering benchmark completed!")
-
