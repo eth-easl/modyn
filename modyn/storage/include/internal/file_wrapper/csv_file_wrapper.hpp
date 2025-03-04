@@ -15,18 +15,15 @@ class CsvFileWrapper : public FileWrapper {
   CsvFileWrapper(const std::string& path, const YAML::Node& fw_config,
                  std::shared_ptr<FilesystemWrapper> filesystem_wrapper)
       : FileWrapper{path, fw_config, std::move(filesystem_wrapper)} {
-    SPDLOG_INFO("CsvFileWrapper: Initializing for file: {}", path);
-
     if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
       has_labels_ = true;
       ASSERT(file_wrapper_config_["label_index"].as<int>() != -1,
              "Please specify the index of the column that contains the label.");
       label_index_ = file_wrapper_config_["label_index"].as<uint64_t>();
-      SPDLOG_INFO("CsvFileWrapper: Labels enabled. label_index set to {}", label_index_);
+
     } else {
       has_labels_ = false;
       label_index_ = -1;  // No labels exist
-      SPDLOG_INFO("CsvFileWrapper: Labels disabled.");
     }
 
     // ADDED: Process has_targets flag and target_index
@@ -35,57 +32,43 @@ class CsvFileWrapper : public FileWrapper {
       ASSERT(file_wrapper_config_["target_index"].as<int>() != -1,
              "Please specify the index of the column that contains the target.");
       target_index_ = file_wrapper_config_["target_index"].as<uint64_t>();
-      SPDLOG_INFO("CsvFileWrapper: Targets enabled. target_index set to {}", target_index_);
     } else {
       has_targets_ = false;
       target_index_ = -1;
-      SPDLOG_INFO("CsvFileWrapper: Targets disabled.");
     }
 
     if (file_wrapper_config_["separator"]) {
       separator_ = file_wrapper_config_["separator"].as<char>();
-      SPDLOG_INFO("CsvFileWrapper: Separator set to '{}'", separator_);
     } else {
       separator_ = ',';
-      SPDLOG_INFO("CsvFileWrapper: Separator not specified. Defaulting to ','");
     }
 
     if (file_wrapper_config_["quote_char"]) {
       quote_ = file_wrapper_config_["quote_char"].as<char>();
-      SPDLOG_INFO("CsvFileWrapper: Quote character set to '{}'", quote_);
     } else {
       quote_ = '\0';  // effectively disables quoting
-      SPDLOG_INFO("CsvFileWrapper: Quote character not specified. Quoting disabled.");
     }
 
     if (file_wrapper_config_["quoted_linebreaks"]) {
       allow_quoted_linebreaks_ = file_wrapper_config_["quoted_linebreaks"].as<bool>();
-      SPDLOG_INFO("CsvFileWrapper: Allow quoted linebreaks set to {}", allow_quoted_linebreaks_);
     } else {
       allow_quoted_linebreaks_ = true;
-      SPDLOG_INFO("CsvFileWrapper: quoted_linebreaks not specified. Defaulting to true.");
     }
 
     bool ignore_first_line = false;
     if (file_wrapper_config_["ignore_first_line"]) {
       ignore_first_line = file_wrapper_config_["ignore_first_line"].as<bool>();
-      SPDLOG_INFO("CsvFileWrapper: ignore_first_line set to {}", ignore_first_line);
     } else {
       ignore_first_line = false;
-      SPDLOG_INFO("CsvFileWrapper: ignore_first_line not specified. Defaulting to false.");
     }
 
     ASSERT(filesystem_wrapper_->exists(path), "The file does not exist.");
-    SPDLOG_INFO("CsvFileWrapper: File '{}' exists.", path);
 
     validate_file_extension();
-    SPDLOG_INFO("CsvFileWrapper: File extension validated.");
 
     label_params_ = rapidcsv::LabelParams(ignore_first_line ? 0 : -1);
-    SPDLOG_INFO("CsvFileWrapper: label_params_ set with ignore_first_line = {}.", ignore_first_line);
 
     setup_document(path);
-    SPDLOG_INFO("CsvFileWrapper: Document setup completed for file: {}", path);
   }
 
   ~CsvFileWrapper() override {

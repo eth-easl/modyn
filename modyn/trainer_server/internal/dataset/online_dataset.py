@@ -44,7 +44,9 @@ class OnlineDataset(IterableDataset):
         trigger_id: int,
         dataset_id: str,
         bytes_parser: str,
+        bytes_parser_target: str | None,
         serialized_transforms: list[str],
+        serialized_transforms_target: list[str] | None,
         storage_address: str,
         selector_address: str,
         training_id: int,
@@ -64,14 +66,19 @@ class OnlineDataset(IterableDataset):
         self._parallel_prefetch_requests = parallel_prefetch_requests
         self._include_labels = include_labels
         self._bytes_parser = bytes_parser
+        self._bytes_parser_target = bytes_parser_target if bytes_parser_target is not None else bytes_parser
         self._serialized_transforms = serialized_transforms
+        self._serialized_transforms_target = serialized_transforms_target if serialized_transforms_target is not None else serialized_transforms
         self._storage_address = storage_address
         self._selector_address = selector_address
         self._transform_list: list[Callable] = []
+        self._transform_target_list: list[Callable] = []
         self._transform: Callable | None = None
+        self._transform_target: Callable | None = None
         self._storagestub: StorageStub = None
         self._storage_channel: Any | None = None
-        self._bytes_parser_function: Callable | None = None
+        self._bytes_parser_function: Callable | None = None  
+        self._bytes_parser_function_target: Callable | None = None   
         self._num_partitions = 0
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source: AbstractKeySource = SelectorKeySource(
@@ -114,19 +121,33 @@ class OnlineDataset(IterableDataset):
         assert self._bytes_parser_function is not None
 
         self._transform_list = [self._bytes_parser_function]
+        self._transform_target_list = [self._bytes_parser_function_target] if self._bytes_parser_function_target is not None else [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
-
+        if self._serialized_transforms_target is not None:
+            for transform in self._serialized_transforms_target:
+                function = eval(transform)  # pylint: disable=eval-used
+                self._transform_target_list.append(function)
+        else:
+            self._transform_target_list = self._transform_list
         if self._tokenizer is not None:
             self._transform_list.append(self._tokenizer)
-
+            self._transform_target_list.append(self._tokenizer)
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
+            self._transform_target = transforms.Compose(self._transform_target_list)
+        
+        
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
+        if self._bytes_parser_target is not None:
+            self._bytes_parser_function_target = deserialize_function(self._bytes_parser_target, BYTES_PARSER_FUNC_NAME)
+            self._transform_target = self._bytes_parser_function_target
+        else:
+            self._transform_target = self._transform
         self._setup_composed_transform()
 
     @retry(
@@ -298,7 +319,7 @@ class OnlineDataset(IterableDataset):
         if not self._include_labels and isinstance(label, memoryview):
             self._sw.start("transform", resume=True)
             # mypy complains here because _transform has unknown type, which is ok
-            transformed_target = self._transform(label)  # type: ignore
+            transformed_target = self._transform_target(label)  # type: ignore
             self._sw.stop("transform")
             if self._uses_weights:
                 return key, transformed_sample, transformed_target, weight

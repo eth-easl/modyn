@@ -158,7 +158,6 @@ class PytorchTrainer:
         self._log_file_path = training_info.log_file_path
         self._drop_last_batch = training_info.drop_last_batch
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
-
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
 
@@ -179,7 +178,7 @@ class PytorchTrainer:
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-        self.fine_tuning = False
+        self.fine_tuning = True
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
@@ -209,7 +208,9 @@ class PytorchTrainer:
             training_info.num_dataloaders,
             training_info.batch_size,
             training_info.bytes_parser,
+            training_info.bytes_parser_target,
             training_info.transform_list,
+            training_info.transform_list_target,
             training_info.storage_address,
             training_info.selector_address,
             training_info.training_id,
@@ -358,6 +359,10 @@ class PytorchTrainer:
                             # Shift logits and labels for next-token prediction
                             output = output.logits[..., :-1, :]  # Output for all tokens except the last one
                             target = data[..., 1:, 0]  # Target for all tokens except the first one
+                            if output.size(1) > target.size(1):
+                                diff = output.size(1) - target.size(1)
+                                pad_tensor = torch.full((target.size(0), diff), -100, dtype=target.dtype, device=target.device)
+                                target = torch.cat([pad_tensor, target], dim=1)
 
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))

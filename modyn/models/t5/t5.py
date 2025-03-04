@@ -54,7 +54,6 @@ class T5Modyn(CoresetSupportingModule):
         # Split input into token IDs and attention masks
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
-        print(input_ids.shape, attention_mask.shape, labels.shape)
         labels = labels[:, :, 0]
         # Forward pass through T5
         output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)

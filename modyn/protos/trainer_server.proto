@@ -65,6 +65,8 @@ message StartTrainingRequest {
   bool kadapter = 31;
   bool prompt_tuning = 32;
   bool prefix_tuning = 33;
+  optional PythonString bytes_parser_target = 34;
+  repeated string transform_list_target = 35;
 }
 
 message StartTrainingResponse {
