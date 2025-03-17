@@ -282,10 +282,10 @@ storage:
       },
       # ------------------------------------ Wikipedia_21_09 ------------------------------------ #
       {
-        name: "Wikipedia_21_09_2",
+        name: "Wikipedia_21_09_1",
         description: "Wikipedia text dump from September 2021",
         version: "0.0.1",
-        base_path: "/datasets/wikipedia_21_09_p2",
+        base_path: "/datasets/wikipedia_21_09_1",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {
@@ -322,6 +322,91 @@ storage:
         description: "Wikipedia text dump from August 2021",
         version: "0.0.1",
         base_path: "/datasets/readablediffset",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "mixreview30",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview30",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview10",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview10",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview20",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview20",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview40",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview40",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview50",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview50",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {
@@ -394,6 +479,63 @@ storage:
         description: "Wikipedia text dump from August 2021",
         version: "0.0.1",
         base_path: "/datasets/opensubtitles/readablesubtitles",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2016",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2016",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2018",
+        description: "Wikipedia text dump from August 202",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2018",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2024",
+        description: "Wikipedia text dump from August 2024",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2024",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {

@@ -68,7 +68,9 @@ class OnlineDataset(IterableDataset):
         self._bytes_parser = bytes_parser
         self._bytes_parser_target = bytes_parser_target if bytes_parser_target is not None else bytes_parser
         self._serialized_transforms = serialized_transforms
-        self._serialized_transforms_target = serialized_transforms_target if serialized_transforms_target is not None else serialized_transforms
+        self._serialized_transforms_target = (
+            serialized_transforms_target if serialized_transforms_target is not None else serialized_transforms
+        )
         self._storage_address = storage_address
         self._selector_address = selector_address
         self._transform_list: list[Callable] = []
@@ -77,8 +79,8 @@ class OnlineDataset(IterableDataset):
         self._transform_target: Callable | None = None
         self._storagestub: StorageStub = None
         self._storage_channel: Any | None = None
-        self._bytes_parser_function: Callable | None = None  
-        self._bytes_parser_function_target: Callable | None = None   
+        self._bytes_parser_function: Callable | None = None
+        self._bytes_parser_function_target: Callable | None = None
         self._num_partitions = 0
         # the default key source is the Selector. Then it can be changed using change_key_source
         self._key_source: AbstractKeySource = SelectorKeySource(
@@ -121,7 +123,11 @@ class OnlineDataset(IterableDataset):
         assert self._bytes_parser_function is not None
 
         self._transform_list = [self._bytes_parser_function]
-        self._transform_target_list = [self._bytes_parser_function_target] if self._bytes_parser_function_target is not None else [self._bytes_parser_function]
+        self._transform_target_list = (
+            [self._bytes_parser_function_target]
+            if self._bytes_parser_function_target is not None
+            else [self._bytes_parser_function]
+        )
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
@@ -137,8 +143,6 @@ class OnlineDataset(IterableDataset):
         if len(self._transform_list) > 0:
             self._transform = transforms.Compose(self._transform_list)
             self._transform_target = transforms.Compose(self._transform_target_list)
-        
-        
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
@@ -177,7 +181,7 @@ class OnlineDataset(IterableDataset):
     def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
         logger.debug(f"[Training {self._training_id}][PL {self._pipeline_id}][Worker {worker_id}] {msg}")
 
-    def _get_data_from_storage( #pylint: disable=too-many-locals
+    def _get_data_from_storage(  # pylint: disable=too-many-locals
         self, selector_keys: list[int], worker_id: int | None = None
     ) -> Iterator[tuple[list[int], list[bytes], list[int] | list[bytes], int]]:
         processed_keys: set[int] | list[int] = []

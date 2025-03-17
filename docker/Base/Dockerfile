@@ -1,7 +1,7 @@
 FROM modyndependencies
 
 # Copy source code into container
-#COPY modyn /src/modyn
+COPY modyn /src/modyn
 COPY cmake /src/cmake
 COPY modynclient /src/modynclient
 COPY integrationtests /src/integrationtests

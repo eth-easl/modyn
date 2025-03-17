@@ -46,19 +46,20 @@ class PytorchEvaluator:
 
     @staticmethod
     def _prepare_dataloader(
-        evaluation_info: EvaluationInfo,
-        start_timestamp: int | None,
-        end_timestamp: int | None,
+        evaluation_info: EvaluationInfo, start_timestamp: int | None, end_timestamp: int | None
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
-            evaluation_info.dataset_id,
-            evaluation_info.bytes_parser,
-            evaluation_info.transform_list,
-            evaluation_info.storage_address,
-            evaluation_info.evaluation_id,
-            evaluation_info.tokenizer,
-            start_timestamp,
-            end_timestamp,
+            dataset_id=evaluation_info.dataset_id,
+            bytes_parser=evaluation_info.bytes_parser,
+            bytes_parser_target=evaluation_info.bytes_parser_target,
+            serialized_transforms=evaluation_info.transform_list,
+            storage_address=evaluation_info.storage_address,
+            evaluation_id=evaluation_info.evaluation_id,
+            include_labels=not evaluation_info.generative,
+            serialized_target_transforms=evaluation_info.serialized_transforms_target,
+            tokenizer=evaluation_info.tokenizer,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -66,7 +67,6 @@ class PytorchEvaluator:
             num_workers=evaluation_info.num_dataloaders,
             timeout=60 if evaluation_info.num_dataloaders > 0 else 0,
         )
-
         return dataloader
 
     def _info(self, msg: str) -> None:

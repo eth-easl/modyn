@@ -53,5 +53,12 @@ class EvaluationInfo:
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
+        self.generative = request.generative
+        self.bytes_parser_target = (
+            request.bytes_parser_target.value if request.HasField("bytes_parser_target") else None
+        )
+        self.serialized_transforms_target = (
+            list(request.serialized_transforms_target) if request.HasField("serialized_transforms_target") else None
+        )
         self.light_tuning = request.light_tuning
         self.tuning_info = json.loads(request.tuning_config) if request.HasField("tuning_config") else None

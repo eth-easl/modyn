@@ -1,8 +1,11 @@
+import nltk
 from nltk.translate.meteor_score import meteor_score
+
 from modyn.config.schema.pipeline import MeteorMetricConfig
 from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
-import nltk
-nltk.download('wordnet')
+
+nltk.download("wordnet")
+
 
 class Meteor(AbstractHolisticMetric):
     """METEOR metric implementation for text-based model evaluation."""

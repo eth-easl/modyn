@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from modyn.config.schema.pipeline import PerplexityMetricConfig
 from modyn.evaluator.internal.metrics.abstract_decomposable_metric import AbstractDecomposableMetric
 

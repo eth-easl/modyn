@@ -105,17 +105,17 @@ class PytorchTuner:
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                       Core training pipeline orchestration                                       #
     # ---------------------------------------------------------------------------------------------------------------- #
-    def _prepare_dataloader(
-        self,
-        tuning_info: TuningInfo,
-    ) -> torch.utils.data.DataLoader:
+    def _prepare_dataloader(self, tuning_info: TuningInfo) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
-            tuning_info.dataset_id,
-            tuning_info.bytes_parser,
-            tuning_info.transform_list,
-            self._storage_address,
-            tuning_info.evaluation_id,
-            tuning_info.tokenizer,
+            dataset_id=tuning_info.dataset_id,
+            bytes_parser=tuning_info.bytes_parser,
+            serialized_transforms=tuning_info.transform_list,
+            storage_address=self._storage_address,
+            evaluation_id=tuning_info.evaluation_id,
+            tokenizer=tuning_info.tokenizer,
+            # Added potential target transforms from tuning_info if available
+            bytes_parser_target=tuning_info.bytes_parser_target,
+            serialized_target_transforms=tuning_info.serialized_transforms_target,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -123,7 +123,6 @@ class PytorchTuner:
             num_workers=tuning_info.num_dataloaders,
             timeout=60 if tuning_info.num_dataloaders > 0 else 0,
         )
-
         return dataloader
 
     def train(self) -> None:

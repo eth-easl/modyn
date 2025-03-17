@@ -12,7 +12,7 @@ training:
   epochs_per_trigger: 1
   generative: True
   device: "cuda:0"
-  dataloader_workers: 8
+  dataloader_workers: 4
   use_previous_model: false
   initial_model: random
   #/tmp/models/ftp/2238241055_47_0.modyn<
@@ -49,7 +49,7 @@ training:
   checkpointing:
     activated: True
     interval: 1000
-    path: "/checkpoints/twikidiff13"
+    path: "/checkpoints/twikidiffclariden"
 data:
   dataset_id: Wikipedia_clariden
   transformations: []

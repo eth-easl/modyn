@@ -1,5 +1,5 @@
 pipeline:
-  name: opensubtitles
+  name: Wikipedia_diff
   description: Training on wikipedia corpus
   version: 1.0.0
 model:
@@ -16,11 +16,13 @@ training:
   use_previous_model: false
   initial_model: random
   #/tmp/models/ftp/2238241055_47_0.modyn<
-  batch_size: 1
+  batch_size: 32[10:53:34.989] [server] [10:53:35] Marked extension as removed mechatroner.rainbow-csv-3.17.0
+
   record_loss_every: 100
   shuffle: False
   amp: true
   lora: false
+  kadapter: true
   grad_norm: 0.5
   optimizers:
     - name: "default"
@@ -48,10 +50,10 @@ training:
     name: "CrossEntropyLoss"
   checkpointing:
     activated: True
-    interval: 500
-    path: "/checkpoints/twikidiff10"
+    interval: 1000
+    path: "/checkpoints/twikikadapter"
 data:
-  dataset_id: Wikipedia_cleandiffset
+  dataset_id: Wikipedia_Diff3
   transformations: []
   bytes_parser_function: |
     import torch
@@ -66,7 +68,7 @@ data:
   tokenizer: "GPT2TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 769970
+  num_samples: 806000
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500

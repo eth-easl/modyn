@@ -16,7 +16,7 @@ training:
   use_previous_model: false
   initial_model: random
   #/tmp/models/ftp/2238241055_47_0.modyn<
-  batch_size: 32
+  batch_size: 16
   record_loss_every: 100
   shuffle: False
   amp: true
@@ -49,7 +49,7 @@ training:
   checkpointing:
     activated: True
     interval: 1000
-    path: "/checkpoints/twikidiff12"
+    path: "/checkpoints/twikidiff18"
 data:
   dataset_id: Wikipedia_Diff3
   transformations: []

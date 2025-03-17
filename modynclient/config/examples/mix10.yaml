@@ -12,11 +12,11 @@ training:
   epochs_per_trigger: 1
   generative: True
   device: "cuda:0"
-  dataloader_workers: 8
+  dataloader_workers: 4
   use_previous_model: false
   initial_model: random
   #/tmp/models/ftp/2238241055_47_0.modyn<
-  batch_size: 1
+  batch_size: 32
   record_loss_every: 100
   shuffle: False
   amp: true
@@ -38,7 +38,7 @@ training:
     source: "Custom"
     optimizers: ["default"]
     config:
-      total_num_steps: 800000 # Total training steps
+      total_num_steps: 1240000 # Total training steps
       warmup_min_lr: 0          # Minimum learning rate at the start of warmup
       warmup_max_lr: 0.0001         # Maximum learning rate after warmup
       warmup_num_steps:  80000 # Number of steps for the warmup phase
@@ -49,9 +49,9 @@ training:
   checkpointing:
     activated: True
     interval: 500
-    path: "/checkpoints/twikidiff10"
+    path: "/checkpoints/mixreview10"
 data:
-  dataset_id: Wikipedia_cleandiffset
+  dataset_id: mixreview10
   transformations: []
   bytes_parser_function: |
     import torch
@@ -66,7 +66,7 @@ data:
   tokenizer: "GPT2TokenizerTransform"
 trigger:
   id: DataAmountTrigger
-  num_samples: 769970
+  num_samples: 1240000
 selection_strategy:
   name: NewDataStrategy
   maximum_keys_in_memory: 500

@@ -1,9 +1,11 @@
+import time
+
 import requests
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 from modyn.config.schema.pipeline import LLMScoreMetricConfig
 from modyn.evaluator.internal.metrics.abstract_holistic_metric import AbstractHolisticMetric
-import time
 
 
 class LLMScore(AbstractHolisticMetric):
@@ -47,8 +49,8 @@ class LLMScore(AbstractHolisticMetric):
             raise ValueError("API URL must be provided for API-based evaluation.")
         scores = []
         for i in range(0, len(y_true), self.batch_size):
-            batch_true = y_true[i:i + self.batch_size]
-            batch_pred = y_pred[i:i + self.batch_size]
+            batch_true = y_true[i : i + self.batch_size]
+            batch_pred = y_pred[i : i + self.batch_size]
             eval_prompt = self.evaluation_prompt + "\n\n"
             for j, (gt, pred) in enumerate(zip(batch_true, batch_pred)):
                 eval_prompt += f"{j+1}. Ground Truth: {gt}\n   Predicted: {pred}\n"
@@ -61,7 +63,7 @@ class LLMScore(AbstractHolisticMetric):
                     )
                     response.raise_for_status()
                     break  # Exit loop if no error is encountered.
-                except Exception: #pylint: disable=broad-exception-caught
+                except Exception:  # pylint: disable=broad-exception-caught
                     time.sleep(5)  # Wait 5 seconds before retrying on error.
             results = response.json()["choices"][0]["message"]["content"].strip().split("\n")
             for res in results:
@@ -75,8 +77,8 @@ class LLMScore(AbstractHolisticMetric):
         """Use a local Llama 3.3 model on an H100 GPU for evaluation in batches."""
         scores = []
         for i in range(0, len(y_true), self.batch_size):
-            batch_true = y_true[i:i + self.batch_size]
-            batch_pred = y_pred[i:i + self.batch_size]
+            batch_true = y_true[i : i + self.batch_size]
+            batch_pred = y_pred[i : i + self.batch_size]
             prompts = [
                 f"Evaluate how close the predicted response is to its ground truth:\n\nGround Truth: {gt}\nPredicted: {pred}\nScore:"
                 for gt, pred in zip(batch_true, batch_pred)

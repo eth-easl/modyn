@@ -21,6 +21,7 @@ class T5:
         self.model = T5Modyn(hparams)
         self.model.to(device)
 
+
 class T5Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()

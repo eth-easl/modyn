@@ -51,5 +51,12 @@ class TuningInfo:
         self.record_loss_every = tuning_info.record_loss_every
         self.seed: int | None = tuning_info.seed if tuning_info.seed is not None else None
         self.tokenizer: str | None = tuning_info.tokenizer.value if tuning_info.tokenizer is not None else None
-
+        self.bytes_parser_target: str | None = (
+            tuning_info.bytes_parser_target.value if tuning_info.bytes_parser_target is not None else None
+        )
+        self.serialized_transforms_target: list[str] | None = (
+            list(tuning_info.serialized_transforms_target)
+            if tuning_info.serialized_transforms_target is not None
+            else None
+        )
         self.offline_dataset_path = offline_dataset_path

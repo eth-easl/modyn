@@ -4,7 +4,7 @@ from .hf_tokenizer import HFTokenizerTransform
 
 
 class GPT2TokenizerTransform(HFTokenizerTransform):
-    def __init__(self, max_token_length: int = 64):
+    def __init__(self, max_token_length: int = 512):
         """Adapted from an example implementation of a GPT-2 tokenizer.
 
         This implementation uses the GPT-2 tokenizer from Hugging Face's
@@ -15,7 +15,8 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
         # tokenizer.pad_token = tokenizer.eos_token  # Set pad token to eos token to avoid padding errors
         # tokenizer.padding_side = "right"
         tokenizer.add_special_tokens(
-            {   "eos_token": "</s>",
+            {
+                "eos_token": "</s>",
                 "bos_token": "<s>",
                 "unk_token": "<unk>",
                 "pad_token": "<pad>",

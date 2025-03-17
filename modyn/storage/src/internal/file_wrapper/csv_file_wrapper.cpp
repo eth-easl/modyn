@@ -129,7 +129,8 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets_from_indices
 std::vector<unsigned char> CsvFileWrapper::get_target(uint64_t index) {
   ASSERT(index < get_number_of_samples(), "Invalid index");
   if (!has_targets_) {
-    throw std::runtime_error("No target defined for this dataset");
+    // if you want to return empty rather than throw:
+    return {};
   }
   std::vector<std::string> row = doc_.GetRow<std::string>(index);
   if (target_index_ >= row.size()) {

@@ -42,7 +42,7 @@ var/
 
 # JetBrains IDE files
 .idea/
-
+llmfiltering.py
 # postgresql
 postgres-data/
 storage-postgres-data/

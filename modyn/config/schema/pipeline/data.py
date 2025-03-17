@@ -10,13 +10,13 @@ from modyn.utils.utils import deserialize_function
 
 class DataConfig(ModynBaseModel):
     dataset_id: str = Field(description="ID of dataset to be used.")
-    bytes_parser_function_target: str|None = Field(
+    bytes_parser_function_target: str | None = Field(
         None,
         description=(
             "Function used to convert bytes received from the Storage, to a format useful for further transformations "
             "(e.g. Tensors) This function is called before any other transformations are performed on the data. This is in case wen need a different function for the targets, if there are targets instead of labels"
             "and this is None it defaults to the same one as the samples"
-        )
+        ),
     )
     bytes_parser_function: str = Field(
         description=(
@@ -30,8 +30,8 @@ class DataConfig(ModynBaseModel):
             "Further transformations to be applied on the data after bytes_parser_function has been applied."
             "For example, this can be torchvision transformations."
         ),
-    ) 
-    transformations_target: list[str]|None = Field(
+    )
+    transformations_target: list[str] | None = Field(
         None,
         description=(
             "Further transformations to be applied on the data after bytes_parser_function has been applied."

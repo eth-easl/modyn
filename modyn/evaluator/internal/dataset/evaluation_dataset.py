@@ -6,11 +6,9 @@ from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt,
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
-from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2 import (
     GetDataPerWorkerRequest,
-    GetDataPerWorkerResponse,
     GetRequest,
-    GetResponse,
 )
 from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
 from modyn.utils.utils import (
@@ -24,7 +22,6 @@ from modyn.utils.utils import (
 logger = logging.getLogger(__name__)
 
 
-# TODO(#275): inherit common abstraction of dataset
 class EvaluationDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
@@ -32,13 +29,15 @@ class EvaluationDataset(IterableDataset):
         self,
         dataset_id: str,
         bytes_parser: str,
+        bytes_parser_target: str | None,
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
+        include_labels: bool = True,
+        serialized_target_transforms: list[str] | None = None,
         tokenizer: str | None = None,
         start_timestamp: int | None = None,
         end_timestamp: int | None = None,
-        generative: bool = False,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -53,8 +52,15 @@ class EvaluationDataset(IterableDataset):
         self._bytes_parser_function: Callable | None = None
         self._start_timestamp = start_timestamp
         self._end_timestamp = end_timestamp
-        self._generative = generative
-        # tokenizer for NLP tasks
+
+        self._include_labels = include_labels
+        self._serialized_target_transforms = serialized_target_transforms
+        self._transform_target: Callable = lambda x: x
+
+        # Use target bytes parser if provided; otherwise, use the normal one.
+        self._bytes_parser_target = bytes_parser_target if bytes_parser_target is not None else bytes_parser
+        self._bytes_parser_function_target: Callable | None = None
+
         self._tokenizer = None
         self._tokenizer_name = tokenizer
         if tokenizer is not None:
@@ -64,22 +70,35 @@ class EvaluationDataset(IterableDataset):
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
+        self._bytes_parser_function_target = deserialize_function(self._bytes_parser_target, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
+        # Ensure _transform_target is always callable.
+        self._transform_target = self._bytes_parser_function_target or (lambda x: x)
         self._setup_composed_transform()
+        self._setup_composed_target_transform()
 
     def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
-
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
-
         if self._tokenizer is not None:
             self._transform_list.append(self._tokenizer)
-
-        if len(self._transform_list) > 0:
+        if self._transform_list:
             self._transform = transforms.Compose(self._transform_list)
+
+    def _setup_composed_target_transform(self) -> None:
+        target_transform_list = []
+        if self._bytes_parser_function_target is not None:
+            target_transform_list.append(self._bytes_parser_function_target)
+        for transform in self._serialized_target_transforms or []:
+            function = eval(transform)  # pylint: disable=eval-used
+            target_transform_list.append(function)
+        if target_transform_list:
+            self._transform_target = transforms.Compose(target_transform_list)
+        else:
+            self._transform_target = lambda x: x
 
     @retry(
         stop=stop_after_attempt(10),
@@ -100,23 +119,25 @@ class EvaluationDataset(IterableDataset):
             raise ConnectionError(f"Could not establish gRPC connection to storage at address {self._storage_address}.")
         self._storagestub = StorageStub(storage_channel)
 
-    def _info(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
+    def _info(self, msg: str, worker_id: int | None) -> None:
         logger.info(f"[Evaluation {self._evaluation_id}][Worker {worker_id}] {msg}")
 
-    def _debug(self, msg: str, worker_id: int | None) -> None:  # pragma: no cover
+    def _debug(self, msg: str, worker_id: int | None) -> None:
         logger.debug(f"[Evaluation {self._evaluation_id}][Worker {worker_id}] {msg}")
 
     @staticmethod
-    def _silence_pil() -> None:  # pragma: no cover
+    def _silence_pil() -> None:
         pil_logger = logging.getLogger("PIL")
-        pil_logger.setLevel(logging.INFO)  # by default, PIL on DEBUG spams the console
+        pil_logger.setLevel(logging.INFO)
 
     def _get_keys_from_storage(self, worker_id: int, total_workers: int) -> Iterable[list[int]]:
         self._info("Getting keys from storage", worker_id)
         processed_keys: set[int] | list[int] = []
         has_failed = False
         for attempt in Retrying(
-            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
         ):
             with attempt:
                 try:
@@ -127,7 +148,6 @@ class EvaluationDataset(IterableDataset):
                         start_timestamp=self._start_timestamp,
                         end_timestamp=self._end_timestamp,
                     )
-                    resp_keys: GetDataPerWorkerResponse
                     for resp_keys in self._storagestub.GetDataPerWorker(req_keys):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
@@ -138,12 +158,9 @@ class EvaluationDataset(IterableDataset):
                             new_keys = [key for key in resp_keys.keys if key not in processed_keys]
                             processed_keys.update(resp_keys.keys)
                             yield new_keys
-
                 except grpc.RpcError as e:
                     has_failed = True
-                    # Convert processed keys to set on first failure
                     processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
-
                     self._info(
                         "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
                         worker_id,
@@ -161,43 +178,47 @@ class EvaluationDataset(IterableDataset):
         processed_keys: set[int] | list[int] = []
         has_failed = False
         for attempt in Retrying(
-            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+            stop=stop_after_attempt(5),
+            wait=wait_random_exponential(multiplier=1, min=2, max=60),
+            reraise=True,
         ):
             with attempt:
                 try:
                     request = GetRequest(dataset_id=self._dataset_id, keys=keys)
-                    response: GetResponse
                     for response in self._storagestub.Get(request):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(response.keys)
-                            if not self._generative:
-                                yield list(zip(response.keys, response.samples, response.labels))
+                            if not self._include_labels:
+                                yield list(zip(response.keys, response.samples, response.target))
                             else:
-                                yield list(zip(response.keys, response.samples, [None] * len(processed_keys)))
+                                yield list(zip(response.keys, response.samples, [None] * len(response.keys)))
                         else:
                             assert isinstance(processed_keys, set)
-                            new_keys: list[int] = [key for key in response.keys if key not in processed_keys]
-                            new_samples: list[bytes] = [
+                            new_keys = [key for key in response.keys if key not in processed_keys]
+                            new_samples = [
                                 sample
                                 for key, sample in zip(response.keys, response.samples)
                                 if key not in processed_keys
                             ]
-                            if not self.generative:
-                                new_labels: list[int] = [
+                            if self._include_labels:
+                                new_labels = [
                                     label
                                     for key, label in zip(response.keys, response.labels)
                                     if key not in processed_keys
                                 ]
-                                processed_keys.update(keys)
+                                processed_keys.update(response.keys)
                                 yield list(zip(new_keys, new_samples, new_labels))
                             else:
-                                processed_keys.update(keys)
-                                yield list(zip(new_keys, new_samples, [None] * len(new_keys)))
-
-                except grpc.RpcError as e:  # We catch and reraise to log and reconnect
+                                new_targets = [
+                                    target
+                                    for key, target in zip(response.keys, response.target)
+                                    if key not in processed_keys
+                                ]
+                                processed_keys.update(response.keys)
+                                yield list(zip(new_keys, new_samples, new_targets))
+                except grpc.RpcError as e:
                     has_failed = True
-                    # Convert processed keys to set on first failure
                     processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
                     self._info(
                         "gRPC error occurred, processed_keys = " + f"{processed_keys}\n{e.code()} - {e.details()}",
@@ -208,10 +229,16 @@ class EvaluationDataset(IterableDataset):
                     self._init_grpc()
                     raise e
 
+    def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int | bytes | None = None) -> tuple:
+        transformed_sample = self._transform(sample)  # type: ignore
+        if not self._include_labels and isinstance(label, memoryview):
+            transformed_target = self._transform_target(label)
+            return key, transformed_sample, transformed_target
+        return key, transformed_sample, label
+
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
         if worker_info is None:
-            # Non-multi-threaded data loading. We use worker_id 0.
             worker_id = 0
             total_workers = 1
         else:
@@ -221,8 +248,6 @@ class EvaluationDataset(IterableDataset):
         if self._first_call:
             self._first_call = False
             self._debug("This is the first run of iter, making gRPC connections.", worker_id)
-            # We have to initialize transformations and gRPC connections here to do it per dataloader worker,
-            # otherwise the transformations/gRPC connections cannot be pickled for the new processes.
             self._init_transforms()
             self._init_grpc()
             EvaluationDataset._silence_pil()
@@ -230,8 +255,7 @@ class EvaluationDataset(IterableDataset):
 
         assert self._transform is not None
 
-        # TODO(#175): we might want to do/accelerate prefetching here.
         for keys in self._get_keys_from_storage(worker_id, total_workers):
             for data in self._get_data_from_storage(keys, worker_id):
                 for key, sample, label in data:
-                    yield key, self._transform(sample), label
+                    yield self._get_transformed_data_tuple(key, sample, label)

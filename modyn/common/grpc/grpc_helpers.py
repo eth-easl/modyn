@@ -257,8 +257,12 @@ class TrainerServerGRPCHandlerMixin:
             kadapter=training_config.kadapter,
             prompt_tuning=training_config.prompt_tuning,
             prefix_tuning=training_config.prefix_tuning,
-            bytes_parser_target=PythonString(value=data_config.bytes_parser_function_target) if data_config.bytes_parser_function_target is not None  else None,
-            transform_list_target=data_config.transformations_target if data_config.transformations_target is not None else None,
+            bytes_parser_target=PythonString(value=data_config.bytes_parser_function_target)
+            if data_config.bytes_parser_function_target is not None
+            else None,
+            transform_list_target=data_config.transformations_target
+            if data_config.transformations_target is not None
+            else None,
         )
 
     def start_training(

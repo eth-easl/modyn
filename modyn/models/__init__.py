@@ -21,7 +21,7 @@ from .rho_loss_twin_model.rho_loss_twin_model import RHOLOSSTwinModel  # noqa: F
 from .smallyearbooknet.smallyearbooknet import SmallYearbookNet  # noqa: F401
 from .t5.t5 import T5  # noqa: F401
 from .yearbooknet.yearbooknet import YearbookNet  # noqa: F401
-
+from .llama.llama import Llama  # noqa: F401
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")
 __all__ = [f[:-3] for f in files if f.endswith(".py")]
