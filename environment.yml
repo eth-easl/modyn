@@ -39,7 +39,7 @@ dependencies:
   - pyftpdlib
   - types-psycopg2
   - types-PyYAML
-  - transformers>=4.0.0, <5.0.0 # alibi-detect constraints
+  - transformers==4.47.1 # alibi-detect constraints
   - nltk
   - pytorch::pytorch=2.2.1
   - pytorch::torchvision
