@@ -6,8 +6,8 @@ runs:
       with:
         python-version: "3.11"
 
-    - name: Install prerequisites for pystack
-      run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev
+    - name: Install prerequisites
+      run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev libsqlite3-dev
       shell: bash
 
     - name: Set cache date

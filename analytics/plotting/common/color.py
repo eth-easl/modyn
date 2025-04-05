@@ -34,7 +34,7 @@ def gen_categorical_map(categories: list) -> dict[Any, tuple[float, float, float
     return color_map
 
 
-def discrete_colors(n: int = 10):
+def discrete_colors(n: int = 10) -> Any:
     return sns.color_palette("RdBu", n)
 
 
