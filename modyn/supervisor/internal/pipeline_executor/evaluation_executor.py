@@ -531,15 +531,15 @@ if __name__ == "__main__":
         print("Path not found")
         sys.exit(1)
 
-    n_workers: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
-    if n_workers <= 0:
-        n_workers = 1
+    NUM_WORKERS: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
+    if NUM_WORKERS <= 0:
+        NUM_WORKERS = 1
 
     if single_pipeline_mode.lower() == "y":
         p_id = int(input("Enter pipeline id: "))
-        eval_executor_multi_pipeline(userpath, num_workers=n_workers, pids=[p_id])
+        eval_executor_multi_pipeline(userpath, num_workers=NUM_WORKERS, pids=[p_id])
     elif single_pipeline_mode.lower() == "n":
-        eval_executor_multi_pipeline(userpath, num_workers=n_workers)
+        eval_executor_multi_pipeline(userpath, num_workers=NUM_WORKERS)
     else:
         print("Invalid input")
         sys.exit(1)
