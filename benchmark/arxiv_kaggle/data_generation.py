@@ -38,14 +38,14 @@ class ArxivKaggleDataGenerator:
     def clean_folder(self) -> None:
         self.data_json.unlink()
 
-    def load_into_dataframe(self) -> pd.DataFrame:
+    def load_into_dataframe(self, keep_true_category: bool = False) -> pd.DataFrame:
         records = []
         for line in self.data_json.read_text().splitlines():
             record = json.loads(line)
             records.append({field: record[field] for field in ["title", "categories", "versions", "update_date"]})
 
         df = pd.DataFrame(records)
-        return ArxivKaggleDataGenerator.sanitize_dataframe(df)
+        return ArxivKaggleDataGenerator.sanitize_dataframe(df, keep_true_category=keep_true_category)
 
     def store_data(
         self, cleaned_df: pd.DataFrame, resolution: TimeResolution, test_split: bool, dummy_period: bool = False
@@ -64,7 +64,9 @@ class ArxivKaggleDataGenerator:
                     df_to_csv_with_timestamp(partition[self.fields_to_keep], name, self.data_dir / "train")
                 else:
                     df_train, df_test = train_test_split(
-                        partition[self.fields_to_keep], test_size=self.test_holdout, random_state=42
+                        partition[self.fields_to_keep],
+                        test_size=self.test_holdout,
+                        random_state=42,
                     )
                     df_to_csv_with_timestamp(df_train, name, self.data_dir / "train")
                     df_to_csv_with_timestamp(df_test, name, self.data_dir / "test")
@@ -79,7 +81,7 @@ class ArxivKaggleDataGenerator:
             )
 
     @staticmethod
-    def sanitize_dataframe(raw_df: pd.DataFrame) -> pd.DataFrame:
+    def sanitize_dataframe(raw_df: pd.DataFrame, keep_true_category: bool = False) -> pd.DataFrame:
         def extract_first_version_timestamp(row: Any) -> Any:
             versions = row["versions"]
             if len(versions) == 0:
@@ -94,8 +96,9 @@ class ArxivKaggleDataGenerator:
         # we only take the first category (like in the wilds)
         transformed["category"] = transformed["categories"].str.split(" ").str[0]
 
-        # to int-categorical
-        transformed["category"] = pd.Categorical(transformed["category"]).codes
+        if not keep_true_category:
+            # to int-categorical
+            transformed["category"] = pd.Categorical(transformed["category"]).codes
 
         # we only take the first version timestamp
         transformed["first_version_timestamp"] = transformed.apply(extract_first_version_timestamp, axis=1)
