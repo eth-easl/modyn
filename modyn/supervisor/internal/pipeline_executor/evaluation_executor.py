@@ -207,7 +207,8 @@ class EvaluationExecutor:
                 continue
 
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(
-                df_trainings=df_trainings, dataset_end_time=self.context.dataset_end_time
+                df_trainings=df_trainings,
+                dataset_end_time=self.context.dataset_end_time,
             )
             eval_requests += handler_eval_requests
 
@@ -260,7 +261,9 @@ class EvaluationExecutor:
             key_ = (eval_req.dataset_id, eval_req.id_model)
             eval_requests_by_model[key_] += [eval_req]
 
-        def worker_func(model_eval_req: tuple[tuple[str, int], list[EvalRequest]]) -> StageLog:
+        def worker_func(
+            model_eval_req: tuple[tuple[str, int], list[EvalRequest]],
+        ) -> StageLog:
             """
             Args:
                 model_eval_req: A tuple of model_id and a list of evaluation requests for that model.
@@ -424,7 +427,10 @@ class EvaluationExecutor:
                         eval_results.append(
                             (
                                 None,
-                                {"dataset_size": interval_response.dataset_size, "metrics": []},
+                                {
+                                    "dataset_size": interval_response.dataset_size,
+                                    "metrics": [],
+                                },
                             )
                         )
 
@@ -525,15 +531,15 @@ if __name__ == "__main__":
         print("Path not found")
         sys.exit(1)
 
-    num_workers: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
-    if num_workers <= 0:
-        num_workers = 1
+    n_workers: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
+    if n_workers <= 0:
+        n_workers = 1
 
     if single_pipeline_mode.lower() == "y":
         p_id = int(input("Enter pipeline id: "))
-        eval_executor_multi_pipeline(userpath, num_workers=num_workers, pids=[p_id])
+        eval_executor_multi_pipeline(userpath, num_workers=n_workers, pids=[p_id])
     elif single_pipeline_mode.lower() == "n":
-        eval_executor_multi_pipeline(userpath, num_workers=num_workers)
+        eval_executor_multi_pipeline(userpath, num_workers=n_workers)
     else:
         print("Invalid input")
         sys.exit(1)

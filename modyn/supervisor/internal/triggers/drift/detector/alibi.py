@@ -105,7 +105,7 @@ class AlibiDriftDetector(DriftDetector):
 # -------------------------------------------------------------------------------------------------------------------- #
 
 
-def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:  # type: ignore
+def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref: np.ndarray | list) -> _AlibiMetrics:  # type: ignore # pylint: disable=too-many-return-statements
     kernel = None
     if isinstance(config, AlibiDetectMmdDriftMetric):
         kernel = getattr(alibi_detect.utils.pytorch, config.kernel)

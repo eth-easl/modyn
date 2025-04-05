@@ -15,14 +15,14 @@ class CostTracker:
         """List of measurements of number of samples and the resulted training
         time for the last `window_size` triggers."""
 
-        # TODO: make this work more robustly
+        # make this work more robustly
         # self._linear_model = linear_model.Ridge()
 
     def inform_trigger(self, number_samples: int, elapsed_time: float) -> None:
         """Informs the tracker about new data batch."""
         self.measurements.append((number_samples, elapsed_time))
 
-        # TODO: make this work more robustly
+        # make this work more robustly
         # samples = np.array([x[0] for x in self.measurements]).reshape(-1, 1)
         # observations = [x[1] for x in self.measurements]
 
@@ -43,8 +43,8 @@ class CostTracker:
 
         # rolling average based: sum up all training durations in the window and divide by the number of samples;
         # then we can use this average to predict the training time for the next batch
-        total_samples = sum([x[0] for x in self.measurements])
-        total_training_sum = sum([x[1] for x in self.measurements])
+        total_samples = sum(x[0] for x in self.measurements)
+        total_training_sum = sum(x[1] for x in self.measurements)
         train_time_per_sample = total_training_sum / total_samples
 
         return train_time_per_sample * number_samples
