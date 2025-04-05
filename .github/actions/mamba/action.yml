@@ -10,6 +10,9 @@ runs:
       run: sudo apt-get install --no-install-recommends -qy libdw-dev libelf-dev libsqlite3-dev
       shell: bash
 
+    - name: Remove python3-numpy which conflicts with huggingface
+      run: sudo apt purge python3-numpy
+
     - name: Set cache date
       run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
       shell: bash
