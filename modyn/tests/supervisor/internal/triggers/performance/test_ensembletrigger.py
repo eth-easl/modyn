@@ -2,17 +2,17 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from modyn.config.schema.pipeline.trigger.ensemble import (
+from modyn.config.schema.pipeline.trigger import (
     AtLeastNEnsembleStrategy,
-    EnsembleTriggerConfig,
-)
-from modyn.config.schema.pipeline.trigger.simple.data_amount import (
     DataAmountTriggerConfig,
+    EnsembleTriggerConfig,
+    TimeTriggerConfig,
 )
-from modyn.config.schema.pipeline.trigger.simple.time import TimeTriggerConfig
-from modyn.supervisor.internal.triggers.amounttrigger import DataAmountTrigger
-from modyn.supervisor.internal.triggers.ensembletrigger import EnsembleTrigger
-from modyn.supervisor.internal.triggers.timetrigger import TimeTrigger
+from modyn.supervisor.internal.triggers import (
+    DataAmountTrigger,
+    EnsembleTrigger,
+    TimeTrigger,
+)
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
 

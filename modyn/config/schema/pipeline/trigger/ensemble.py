@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Annotated, ForwardRef, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
@@ -62,13 +62,11 @@ EnsembleStrategy = Annotated[
 #                                                    EnsembleTrigger                                                   #
 # -------------------------------------------------------------------------------------------------------------------- #
 
-__TriggerConfig = ForwardRef("TriggerConfig", is_class=True)
-
 
 class EnsembleTriggerConfig(ModynBaseModel):
     id: Literal["EnsembleTrigger"] = Field("EnsembleTrigger")
 
-    subtriggers: dict[str, __TriggerConfig] = Field(  # type: ignore[valid-type]
+    subtriggers: dict[str, Any] = Field(
         default_factory=dict,
         description="The sub-triggers keyed by distinct references that will be consulted for the ensemble trigger.",
     )

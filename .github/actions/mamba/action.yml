@@ -16,7 +16,7 @@ runs:
 
     # increase to reset cache manually
     - name: Set cache number
-      run: echo "CACHE_NUMBER=2" >> $GITHUB_ENV
+      run: echo "CACHE_NUMBER=3" >> $GITHUB_ENV
       shell: bash
 
     - name: Setup micromamba
