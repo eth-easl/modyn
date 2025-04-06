@@ -77,9 +77,6 @@ jobs:
       - name: Setup mamba
         uses: ./.github/actions/mamba
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-
       - name: Pytest
         run: |
           set -o pipefail
