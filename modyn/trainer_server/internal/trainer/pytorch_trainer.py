@@ -116,10 +116,10 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-        checkpoint = torch.load("/checkpoints/twikifull3/model_130000.modyn", map_location="cpu")
+        # checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
         # Adjust key names if necessary
 
-        self._model.model.load_state_dict(checkpoint["model"], strict=True)
+        # self._model.model.load_state_dict(checkpoint["model"], strict=True)
         if self._lora:
             self._model.model = apply_lora(self._model.model)
         if self._kadapter:
@@ -128,6 +128,8 @@ class PytorchTrainer:
             apply_prompt_tuning(self._model.model)
         if self._prefix_tuning:
             apply_prefix_tuning(self._model.model)
+        self.expert_mixture = False
+
         self._setup_optimizers(training_info)
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
@@ -177,7 +179,7 @@ class PytorchTrainer:
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-        self.fine_tuning = False
+        self.fine_tuning = True
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
@@ -207,9 +209,7 @@ class PytorchTrainer:
             training_info.num_dataloaders,
             training_info.batch_size,
             training_info.bytes_parser,
-            training_info.bytes_parser_target,
             training_info.transform_list,
-            training_info.transform_list_target,
             training_info.storage_address,
             training_info.selector_address,
             training_info.training_id,
@@ -220,6 +220,8 @@ class PytorchTrainer:
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
             include_labels=not self.generative,
+            transform_target=training_info.transform_target,
+            bytes_parser_target=training_info.bytes_parser_target,
         )
 
         # Create callbacks
@@ -247,7 +249,6 @@ class PytorchTrainer:
 
         self._info("Handled OnBegin Callbacks.")
         self._log["epochs"] = []
-
         training_loss: list[float] = []
         if self.num_samples_to_pass == 0:
             epoch_num_generator: Iterable[int] = range(self.epochs_per_trigger)
@@ -263,6 +264,7 @@ class PytorchTrainer:
             post_downsampling_size = max(
                 (self._downsampler.downsampling_ratio * self._batch_size) // self._downsampling_ratio_max, 1
             )
+
             assert post_downsampling_size < self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
@@ -317,6 +319,7 @@ class PytorchTrainer:
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
                         with GPUMeasurement(self._measure_gpu_ops, "DownsampleBTS", self._device, stopw, resume=True):
                             data, sample_ids, target, weights = self.downsample_batch(data, sample_ids, target)
+
                         self._assert_data_size(post_downsampling_size, data, sample_ids, target)
                         if not batch_accumulator.inform_batch(data, sample_ids, target, weights):
                             stopw.start("FetchBatch", resume=True)
@@ -334,6 +337,8 @@ class PytorchTrainer:
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
                         # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
                         if self.fine_tuning:
+                            assert not self.is_inference_tensor(data), "Found an inference tensor!"
+                            assert not self.is_inference_tensor(target), "Found an inference tensor!"
                             output = self._model.model(data, labels=target)
                         elif self.generative:
                             output = self._model.model(data)
@@ -352,12 +357,12 @@ class PytorchTrainer:
                         # Measure memory usage before loss computation
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before loss computation: {initial_memory / 1e9:.2f} GB")
-                        # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+                        torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
 
                         if self.generative:
                             # Shift logits and labels for next-token prediction
-                            output = output.logits[..., :-1, :]  # Output for all tokens except the last one
-                            target = data[..., 1:, 0]  # Target for all tokens except the first one
+                            # output = output.logits[..., :, :]  # Output for all tokens except the last one
+                            # Target for all tokens except the first one
                             if output.size(1) > target.size(1):
                                 diff = output.size(1) - target.size(1)
                                 pad_tensor = torch.full(
@@ -368,12 +373,28 @@ class PytorchTrainer:
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
-                            target[target == self._model.model.tokenizer.pad_token_id] = -100
+
                             # Calculate loss
                             if weighted_optimization:
-                                # Weighted gradient descent
-                                assert weights is not None
-                                loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                                # Compute per-timestep loss (currently 1D, shape: [L])
+                                loss_per_timestep = self._criterion_nored(output, target)
+
+                                # B = batch size, L = total number of loss values
+                                batch_size = weights.size(0)
+                                seq_length = loss_per_timestep.numel() // batch_size  # This is L/B
+
+                                # Reshape loss to [batch, seq_length]
+                                loss_per_timestep = loss_per_timestep.reshape(batch_size, seq_length)
+
+                                # Normalize weights (shape: [B])
+                                normalized_weights = weights / weights.sum()
+
+                                # Expand normalized_weights to shape [B, seq_length]
+                                expanded_weights = normalized_weights.unsqueeze(1).expand(batch_size, seq_length)
+
+                                # Flatten both and compute dot product
+                                loss = torch.dot(loss_per_timestep.reshape(-1), expanded_weights.reshape(-1))
+
                             else:
                                 loss = self._criterion(output, target)
                         else:
@@ -403,12 +424,13 @@ class PytorchTrainer:
                     if self._grad_norm is not None:
                         torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._grad_norm)
                 accumulation_counter += 1
-                if accumulation_counter == self.gradient_accumulation_steps:  # NEW:
+                trained_batches += 1
+                if accumulation_counter == self.gradient_accumulation_steps:
                     with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
                         for _, optimizer in self._optimizers.items():
                             self._scaler.step(optimizer)
                         self._scaler.update()
-                    trained_batches += 1  # NEW: Increment trained_batches only on optimizer update.
+
                     accumulation_counter = 0  # NEW: Reset accumulation counter.
                     self._step_lr_if_necessary(True)  # NEW: Step LR scheduler after optimizer update.
                     if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
@@ -418,7 +440,7 @@ class PytorchTrainer:
                         stopw.stop("Checkpoint")
                     if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
                         training_loss.append(loss.item())
-                        print(loss.item())
+                        print(f"Training loss: {loss.item()}")  # I think this is generally useful for debugging.
                         # Log loss and batch number
                         log_file = self._checkpoint_path / "training_log.txt"
                         with (
@@ -438,8 +460,9 @@ class PytorchTrainer:
                     if 0 < self.num_samples_to_pass <= self._num_samples:
                         self._info("Stopping training as we have reached the sample threshold.")
                         break
-                    stopw.start("FetchBatch", resume=True)
-                    stopw.start("IndivFetchBatch", overwrite=True)
+
+                stopw.start("FetchBatch", resume=True)
+                stopw.start("IndivFetchBatch", overwrite=True)
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
@@ -632,6 +655,9 @@ class PytorchTrainer:
 
                 stopw.stop("LabelTransform")
                 target = target.to(self._device)
+            if self.generative:
+                target = target[:, :, 0]
+                target[target == self._model.model.tokenizer.pad_token_id] = -100
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: torch.Tensor | dict
@@ -649,6 +675,9 @@ class PytorchTrainer:
 
         return sample_ids, target, data
 
+    def is_inference_tensor(self, t: torch.Tensor) -> bool:
+        return getattr(t, "_has_inference_meta", False)
+
     def downsample_batch(
         self, data: dict[str, torch.Tensor] | torch.Tensor, sample_ids: list, target: torch.Tensor
     ) -> tuple[dict[str, torch.Tensor] | torch.Tensor, list, torch.Tensor, torch.Tensor]:
@@ -660,7 +689,7 @@ class PytorchTrainer:
         the selected subset of these tensors and the weights for each
         sample.
         """
-
+        assert not self.is_inference_tensor(data), "Found an inference tensor!"
         assert self._downsampler is not None
         assert self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
         self._model.model.eval()
@@ -672,14 +701,25 @@ class PytorchTrainer:
         # It could be that some DLRM parameters are lazily created during the
         # first forward pass and hence they are created as inference tensors if inference mode is used here.
         # If this becomes a problem for more models, we might want to make it a field on the model class instead.
-        no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
+        no_grad_mgr = (
+            torch.no_grad() if isinstance(self._model, DLRM) or self.generative else torch.inference_mode()
+        )  # TODO find a better check
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
+
         with context_manager:
-            big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
+            if isinstance(self._model.model, transformers.PreTrainedModel):
+                big_batch_output = (
+                    self._model.model(data, labels=target) if self._downsampler.forward_required else torch.Tensor()
+                )
+                big_batch_output = big_batch_output if self._downsampler.forward_required else torch.Tensor()
+
+            else:
+                big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
             embeddings = self.get_embeddings_if_recorded()
             self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
 
         self.end_embedding_recorder_if_needed()
+        torch.set_printoptions(threshold=10_000)
 
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
@@ -687,6 +727,7 @@ class PytorchTrainer:
         sample_ids, data, target = selected_indexes, selected_data, selected_target
         # TODO(#219) Investigate if we can avoid 2 forward passes
         self._model.model.train()
+
         return data, sample_ids, target, weights.to(self._device)
 
     def start_embedding_recording_if_needed(self) -> None:

@@ -43,7 +43,7 @@ class TrainingInfo:
         self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
         self.transform_list = list(request.transform_list)
-        self.transform_list_target = list(request.transform_list_target)
+        self.transform_target = list(request.transform_list_target)
         self.bytes_parser = request.bytes_parser.value
         self.bytes_parser_target = request.bytes_parser_target.value
         self.label_transformer = request.label_transformer.value

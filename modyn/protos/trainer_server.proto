@@ -67,6 +67,7 @@ message StartTrainingRequest {
   bool prefix_tuning = 33;
   optional PythonString bytes_parser_target = 34;
   repeated string transform_list_target = 35;
+  int gradient_accumulation_steps = 36
 }
 
 message StartTrainingResponse {

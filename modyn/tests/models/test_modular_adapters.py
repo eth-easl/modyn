@@ -1,14 +1,15 @@
 import torch
 from transformers import AutoTokenizer
 
-from modyn.models import Gpt2, apply_kadapter, apply_lora
-
-# =============================================================================
-# Updated Test Suite
-# =============================================================================
-
-# Note: The tests below assume that you're using a GPT-2 model from transformers.
-# If you want to use your custom Gpt2 class from modyn.models, adjust the imports accordingly.
+from modyn.models import (
+    Gpt2,
+    apply_adapters,
+    apply_kadapter,
+    apply_lora,
+    apply_prefix_tuning,
+    apply_prompt_tuning,
+    count_trainable_params,
+)
 
 
 class HParams:
@@ -155,6 +156,40 @@ def test_model_training_with_lora():
             assert param.grad is None or torch.all(param.grad == 0), f"Unexpected gradient in {name}."
 
 
-if __name__ == "__main__":
-    test_model_training_with_kadapters()
-    print("All tests passed!")
+def test_apply_prompt_tuning():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    params_before = count_trainable_params(model.model)
+    model.model = apply_prompt_tuning(model.model, num_virtual_tokens=10)
+    params_after = count_trainable_params(model.model)
+    assert params_after != params_before, "Prompt tuning did not modify trainable parameters."
+
+
+def test_apply_prefix_tuning():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    params_before = count_trainable_params(model.model)
+    model = apply_prefix_tuning(model.model, prefix_length=15)
+    params_after = count_trainable_params(model.model)
+    assert params_after != params_before, "Prefix tuning did not modify trainable parameters."
+
+
+def test_apply_adapters():
+    # Test applying a combination of adapters via the new utility function.
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    model = apply_adapters(model.model, ["lora", "kadapter"])
+    lora_params = [name for name, param in model.model.model.named_parameters() if "lora" in name]
+    assert len(lora_params) > 0, "LoRA adapter was not applied correctly."
+    assert hasattr(model, "kadapter"), "KAdapter was not applied correctly."
+
+
+def test_apply_adapters_unknown():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    try:
+        apply_adapters(model.model, ["non_existent"])
+    except ValueError as e:
+        assert "Unknown adapter type" in str(e), "Did not raise error for unknown adapter type."
+    else:
+        assert False, "Expected ValueError for unknown adapter type."

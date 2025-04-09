@@ -58,7 +58,7 @@ class EvaluationInfo:
             request.bytes_parser_target.value if request.HasField("bytes_parser_target") else None
         )
         self.serialized_transforms_target = (
-            list(request.serialized_transforms_target) if request.HasField("serialized_transforms_target") else None
+            list(request.transform_list_target) if request.HasField("transform_list_target") else None
         )
         self.light_tuning = request.light_tuning
         self.tuning_info = json.loads(request.tuning_config) if request.HasField("tuning_config") else None

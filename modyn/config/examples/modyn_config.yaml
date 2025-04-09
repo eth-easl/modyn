@@ -9,7 +9,7 @@ storage:
   sample_batch_size: 5000000
   sample_dbinsertion_batchsize: 1000000
   insertion_threads: 8
-  retrieval_threads: 8
+  retrieval_threads: 16
   sample_table_unlogged: true
   file_watcher_watchdog_sleep_time_s: 5
   datasets: [
@@ -298,6 +298,24 @@ storage:
         selector_batch_size: 250000,
 
       },
+      # ------------------------------------ Wikipedia_21_08 ------------------------------------ #
+      {
+        name: "Wikipediaold",
+        description: "Wikipedia text dump from September 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipediaoriginal",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
       # ------------------------------------ Wikipedia_21_08_shuffled ------------------------------------ #
       {
         name: "Shuffled_Wikipedia_21_08",
@@ -548,6 +566,46 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ abstracts ------------------------------------ #
+      {
+        name: "abstracts_train_gen",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle_gen/train_with_summary",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+
+      },
+      # ------------------------------------ abstracts ------------------------------------ #
+      {
+        name: "abstracts_test_gen",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle/test_with_summary",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
 
       },
     ]

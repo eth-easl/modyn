@@ -34,6 +34,7 @@ EVALUATION_TRANSFORMER_FUNC_NAME = "evaluation_transformer_function"
 LABEL_TRANSFORMER_FUNC_NAME = "label_transformer_function"
 BYTES_PARSER_FUNC_NAME = "bytes_parser_function"
 
+
 DownsamplingMode = Enum("DownsamplingMode", ["DISABLED", "BATCH_THEN_SAMPLE", "SAMPLE_THEN_BATCH"])
 
 

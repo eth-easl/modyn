@@ -14,6 +14,10 @@ class _BaseMetricConfig(ModynBaseModel):
         None,
         description="A function used to transform the model output before evaluation.",
     )
+    generative: bool = Field(
+        False,
+        description="Whether the metric is used for generative tasks.",
+    )
 
     @field_validator("evaluation_transformer_function", mode="before")
     @classmethod
@@ -80,31 +84,25 @@ class PerplexityMetricConfig(_BaseMetricConfig):
     name: Literal["Perplexity"] = Field("Perplexity")
 
 
-class GlueScoreMetricConfig(_BaseMetricConfig):
-    name: Literal["GLUEScore"] = Field("GLUEScore")
-
-
-class TwikiF1MetricConfig(_BaseMetricConfig):
-    name: Literal["TwikiF1Score"] = Field("TwikiF1Score")
-
-
-class PerplexityWithLightTuningMetricConfig(_BaseMetricConfig):
-    name: Literal["PerplexityWithLightTuning"] = Field("PerplexityWithLightTuning")
-
-
 class BleuMetricConfig(_BaseMetricConfig):
-    name: Literal["Bleuscore"] = Field("Bleuscore")
+    name: Literal["Bleu"] = Field("Bleu")
 
 
 class MeteorMetricConfig(_BaseMetricConfig):
-    name: Literal["MeteorScore"] = Field("MeteorScore")
+    name: Literal["MeteorScore"] = Field("Meteor")
 
 
-class LLMScoreMetricConfig(_BaseMetricConfig):
-    name: Literal["LLMScore"] = Field("LLMScore")
-    use_api: bool = Field(False, description="Whether to use OpenAI API or local model.")
-    model: str = Field("meta-llama/Llama-2-13b-chat-hf", description="The model name.")
-    api_key: str | None = Field(None, description="The API key if using OpenAI API.")
+class LLMMetricConfig(_BaseMetricConfig):
+    name: Literal["LLM-Evaluation"] = Field("LLMEvaluation", description="Name of the metric evaluation strategy.")
+    use_api: bool = Field(False, description="Whether to use API-based evaluation or a local model.")
+    model: str = Field("meta-llama/Llama-3.3-70B-Instruct", description="The model name to use for evaluation.")
+    evaluation_mode: Literal["boolean", "numeric"] = Field(
+        "boolean",
+        description="Evaluation mode: 'boolean' returns true/false (averaged as 1/0), "
+        "while 'numeric' returns a score between 0 and 100.",
+    )
+    evaluation_prompt: str | None = Field(None, description="Optional custom evaluation prompt.")
+    api_url: str | None = Field(None, description="API URL for evaluation if use_api is True.")
 
 
 class RougeMetricConfig(_BaseMetricConfig):
@@ -116,9 +114,6 @@ MetricConfig = Annotated[
     | F1ScoreMetricConfig
     | RocAucMetricConfig
     | PerplexityMetricConfig
-    | GlueScoreMetricConfig
-    | TwikiF1MetricConfig
-    | PerplexityWithLightTuningMetricConfig
     | BleuMetricConfig
     | RougeMetricConfig,
     Field(discriminator="name"),

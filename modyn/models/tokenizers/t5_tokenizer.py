@@ -4,7 +4,7 @@ from .hf_tokenizer import HFTokenizerTransform
 
 
 class T5TokenizerTransform(HFTokenizerTransform):
-    def __init__(self, max_token_length: int = 64):
+    def __init__(self, max_token_length: int = 128):
         """
         Tokenizer transform class for the T5 model.
 

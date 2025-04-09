@@ -28,7 +28,6 @@ class CoresetStrategy(AbstractSelectionStrategy):
         # a downsampler scheduler to downsample the data at the trainer server. The scheduler might just be a single
         # strategy.
         self.warmup_triggers = config.warmup_triggers
-
         self.downsampling_scheduler: DownsamplingScheduler = instantiate_scheduler(config, modyn_config, pipeline_id)
         # Every coreset method has a presampling strategy to select datapoints to train on
         self.presampling_strategy: AbstractPresamplingStrategy = instantiate_presampler(

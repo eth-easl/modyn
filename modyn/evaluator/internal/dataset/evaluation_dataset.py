@@ -6,7 +6,7 @@ from tenacity import Retrying, after_log, before_log, retry, stop_after_attempt,
 from torch.utils.data import IterableDataset, get_worker_info
 from torchvision import transforms
 
-from modyn.storage.internal.grpc.generated.storage_pb2 import (
+from modyn.storage.internal.grpc.generated.storage_pb2 import (  # pylint: disable=no-name-in-module
     GetDataPerWorkerRequest,
     GetRequest,
 )
@@ -29,11 +29,11 @@ class EvaluationDataset(IterableDataset):
         self,
         dataset_id: str,
         bytes_parser: str,
-        bytes_parser_target: str | None,
         serialized_transforms: list[str],
         storage_address: str,
         evaluation_id: int,
         include_labels: bool = True,
+        bytes_parser_target: str | None = None,
         serialized_target_transforms: list[str] | None = None,
         tokenizer: str | None = None,
         start_timestamp: int | None = None,
@@ -55,7 +55,7 @@ class EvaluationDataset(IterableDataset):
 
         self._include_labels = include_labels
         self._serialized_target_transforms = serialized_target_transforms
-        self._transform_target: Callable = lambda x: x
+        self._transform_target: Callable | None = None
 
         # Use target bytes parser if provided; otherwise, use the normal one.
         self._bytes_parser_target = bytes_parser_target if bytes_parser_target is not None else bytes_parser
@@ -63,6 +63,7 @@ class EvaluationDataset(IterableDataset):
 
         self._tokenizer = None
         self._tokenizer_name = tokenizer
+
         if tokenizer is not None:
             self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
 
@@ -73,7 +74,7 @@ class EvaluationDataset(IterableDataset):
         self._bytes_parser_function_target = deserialize_function(self._bytes_parser_target, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
         # Ensure _transform_target is always callable.
-        self._transform_target = self._bytes_parser_function_target or (lambda x: x)
+        self._transform_target = self._bytes_parser_function_target
         self._setup_composed_transform()
         self._setup_composed_target_transform()
 
@@ -95,10 +96,10 @@ class EvaluationDataset(IterableDataset):
         for transform in self._serialized_target_transforms or []:
             function = eval(transform)  # pylint: disable=eval-used
             target_transform_list.append(function)
+        if self._tokenizer is not None:
+            target_transform_list.append(self._tokenizer)
         if target_transform_list:
             self._transform_target = transforms.Compose(target_transform_list)
-        else:
-            self._transform_target = lambda x: x
 
     @retry(
         stop=stop_after_attempt(10),
@@ -174,7 +175,7 @@ class EvaluationDataset(IterableDataset):
 
     def _get_data_from_storage(
         self, keys: list[int], worker_id: int | None = None
-    ) -> Iterable[list[tuple[int, bytes, int | None]]]:
+    ) -> Iterable[list[tuple[int, bytes, int, bytes | None]]]:
         processed_keys: set[int] | list[int] = []
         has_failed = False
         for attempt in Retrying(
@@ -189,10 +190,8 @@ class EvaluationDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(response.keys)
-                            if not self._include_labels:
-                                yield list(zip(response.keys, response.samples, response.target))
-                            else:
-                                yield list(zip(response.keys, response.samples, [None] * len(response.keys)))
+
+                            yield list(zip(response.keys, response.samples, response.labels, response.target))
                         else:
                             assert isinstance(processed_keys, set)
                             new_keys = [key for key in response.keys if key not in processed_keys]
@@ -201,22 +200,19 @@ class EvaluationDataset(IterableDataset):
                                 for key, sample in zip(response.keys, response.samples)
                                 if key not in processed_keys
                             ]
-                            if self._include_labels:
-                                new_labels = [
-                                    label
-                                    for key, label in zip(response.keys, response.labels)
-                                    if key not in processed_keys
-                                ]
-                                processed_keys.update(response.keys)
-                                yield list(zip(new_keys, new_samples, new_labels))
-                            else:
-                                new_targets = [
-                                    target
-                                    for key, target in zip(response.keys, response.target)
-                                    if key not in processed_keys
-                                ]
-                                processed_keys.update(response.keys)
-                                yield list(zip(new_keys, new_samples, new_targets))
+
+                            new_labels = [
+                                label for key, label in zip(response.keys, response.labels) if key not in processed_keys
+                            ]
+                            processed_keys.update(response.keys)
+
+                            new_targets = [
+                                target
+                                for key, target in zip(response.keys, response.target)
+                                if key not in processed_keys
+                            ]
+                            processed_keys.update(response.keys)
+                            yield list(zip(new_keys, new_samples, new_labels, new_targets))
                 except grpc.RpcError as e:
                     has_failed = True
                     processed_keys = set(processed_keys) if isinstance(processed_keys, list) else processed_keys
@@ -230,10 +226,12 @@ class EvaluationDataset(IterableDataset):
                     raise e
 
     def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int | bytes | None = None) -> tuple:
-        transformed_sample = self._transform(sample)  # type: ignore
-        if not self._include_labels and isinstance(label, memoryview):
-            transformed_target = self._transform_target(label)
+        transformed_sample = self._transform(sample)  # type:ignore
+
+        if not self._include_labels and label is not None:
+            transformed_target = self._transform_target(label)  # type: ignore
             return key, transformed_sample, transformed_target
+
         return key, transformed_sample, label
 
     def __iter__(self) -> Generator:
@@ -257,5 +255,7 @@ class EvaluationDataset(IterableDataset):
 
         for keys in self._get_keys_from_storage(worker_id, total_workers):
             for data in self._get_data_from_storage(keys, worker_id):
-                for key, sample, label in data:
+                for key, sample, label, target in data:
+                    if not self._include_labels:
+                        yield self._get_transformed_data_tuple(key, sample, target)
                     yield self._get_transformed_data_tuple(key, sample, label)

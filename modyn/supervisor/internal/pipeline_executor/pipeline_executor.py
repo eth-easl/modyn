@@ -535,7 +535,6 @@ class PipelineExecutor:
             The list of the actually processed triggers
         """
         s.pipeline_status_queue.put(pipeline_stage_msg(PipelineStage.HANDLE_TRIGGERS, MsgType.GENERAL))
-
         previous_trigger_index = 0
         trigger_index = -1
         trigger_indexes: list[int] = []

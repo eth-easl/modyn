@@ -354,7 +354,7 @@ TEST_F(BinaryFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
   const std::vector<uint64_t> indices = {0, 1};
   const std::vector<std::vector<unsigned char>> samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+      file_wrapper.get_samples_from_indices(indices);
 
   ASSERT_EQ(samples.size(), 2);
 }

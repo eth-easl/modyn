@@ -34,9 +34,7 @@ class OnlineTriggerDataset(OnlineDataset, IterableDataset):
             trigger_id,
             dataset_id,
             bytes_parser,
-            None,  # bytes_parser_target
             serialized_transforms,
-            None,  # serialized_transforms_target
             storage_address,
             selector_address,
             training_id,

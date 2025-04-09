@@ -19,8 +19,8 @@ def test_perplexity_metric():
 
 def test_perplexity_evaluation(perplexity_metric):
     """Test Perplexity computation with valid logits."""
-    y_true = torch.tensor([1, 2, 3])  # Target token IDs
-    y_pred = torch.tensor([[0.1, 0.7, 0.2], [0.3, 0.2, 0.5], [0.4, 0.3, 0.3]]).unsqueeze(0)  # Simulated logits
+    y_true = torch.tensor([1, 2, 0]).unsqueeze(0)  # Target token IDs
+    y_pred = torch.tensor([[0.1, 0.7, 0.2], [0.3, 0.2, 0.5], [0.4, 0.3, 0.3]]).unsqueeze(0)
 
     perplexity_metric._batch_evaluated_callback(y_true, y_pred, batch_size=1)
 
@@ -35,7 +35,7 @@ def test_perplexity_empty(perplexity_metric):
 
 def test_perplexity_invalid_shape(perplexity_metric):
     """Test invalid input shapes for logits."""
-    y_true = torch.tensor([1, 2, 3])
+    y_true = torch.tensor([1, 2, 0])
     y_pred = torch.tensor([0.1, 0.7, 0.2])  # Invalid shape (missing logits dimension)
 
     with pytest.raises(RuntimeError):

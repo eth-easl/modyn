@@ -38,15 +38,13 @@ logger = logging.getLogger(__name__)
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-locals
         self,
         pipeline_id: int,
         trigger_id: int,
         dataset_id: str,
         bytes_parser: str,
-        bytes_parser_target: str | None,
         serialized_transforms: list[str],
-        serialized_transforms_target: list[str] | None,
         storage_address: str,
         selector_address: str,
         training_id: int,
@@ -56,6 +54,8 @@ class OnlineDataset(IterableDataset):
         tokenizer: str | None,
         log_path: pathlib.Path | None,
         include_labels: bool = True,
+        bytes_parser_target: str | None = None,
+        serialized_transforms_target: list[str] | None = None,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -183,7 +183,7 @@ class OnlineDataset(IterableDataset):
 
     def _get_data_from_storage(  # pylint: disable=too-many-locals
         self, selector_keys: list[int], worker_id: int | None = None
-    ) -> Iterator[tuple[list[int], list[bytes], list[int] | list[bytes], int]]:
+    ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
         processed_keys: set[int] | list[int] = []
         has_failed = False
 
@@ -203,11 +203,15 @@ class OnlineDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            if not self._include_labels:
-                                targets = list(response.target)
-                                yield keys, list(response.samples), targets, response_time
-                            else:
-                                yield keys, list(response.samples), list(response.labels), response_time
+                            print(response.target)
+                            assert len(keys) == len(response.samples) == len(response.labels) == len(response.target)
+                            yield (
+                                keys,
+                                list(response.samples),
+                                list(response.labels),
+                                list(response.target),
+                                response_time,
+                            )
 
                         else:  # If we have failed, we need to filter out yielded samples
                             # Note that the returned order by storage is non-deterministic
@@ -219,16 +223,15 @@ class OnlineDataset(IterableDataset):
                             new_labels: list[int] = [
                                 label for key, label in zip(keys, response.labels) if key not in processed_keys
                             ]
-                            if not self._include_labels:
-                                new_targets: list[bytes] = [
-                                    target for key, target in zip(keys, response.target) if key not in processed_keys
-                                ]
-                                processed_keys.update(keys)
-                                yield new_keys, new_samples, new_targets, response_time
-                            else:
-                                processed_keys.update(keys)
 
-                                yield new_keys, new_samples, new_labels, response_time
+                            new_gen_targets: list[bytes] = [
+                                target for key, target in zip(keys, response.target) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            assert len(new_keys) == len(new_samples) == len(new_labels) == len(new_gen_targets)
+                            print(f"Yielding {len(new_keys)} new samples")
+                            print(new_gen_targets)
+                            yield new_keys, new_samples, new_labels, new_gen_targets, response_time
 
                         stopw.start("ResponseTime", overwrite=True)
 
@@ -275,16 +278,15 @@ class OnlineDataset(IterableDataset):
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
-            stor_keys, data, labels, response_time = data_tuple
+            print(data_tuple)
+            stor_keys, data, labels, gen_targets, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)
             with partition_locks[partition_id] if partition_locks is not None else contextlib.suppress():
                 data_container["data"].extend(data)
                 data_container["keys"].extend(stor_keys)
-                if self._include_labels:
-                    data_container["labels"].extend(labels)
-                else:
-                    data_container["target"].extend(labels)
+                data_container["labels"].extend(labels)
+                data_container["gen_targets"].extend(gen_targets)
                 data_container["weights"].extend(
                     [cast(float | None, key_weight_map[key]) for key in stor_keys]
                     if key_weight_map is not None
@@ -312,7 +314,11 @@ class OnlineDataset(IterableDataset):
             callback()
 
     def _get_transformed_data_tuple(
-        self, key: int, sample: memoryview, label: int | None = None, weight: float | None | memoryview = None
+        self,
+        key: int,
+        sample: memoryview,
+        target: int | memoryview | None = None,
+        weight: float | None | memoryview = None,
     ) -> tuple | None:
         assert self._uses_weights is not None
         self._sw.start("transform", resume=True)
@@ -320,10 +326,10 @@ class OnlineDataset(IterableDataset):
         transformed_sample = self._transform(sample)  # type: ignore
         self._sw.stop("transform")
 
-        if not self._include_labels and isinstance(label, memoryview):
+        if not self._include_labels and isinstance(target, memoryview):
             self._sw.start("transform", resume=True)
-            # mypy complains here because _transform has unknown type, which is ok
-            transformed_target = self._transform_target(label)  # type: ignore
+
+            transformed_target = self._transform_target(target)  # type: ignore
             self._sw.stop("transform")
             if self._uses_weights:
                 return key, transformed_sample, transformed_target, weight
@@ -331,8 +337,8 @@ class OnlineDataset(IterableDataset):
 
         # Non-include_labels case with labels
         if self._uses_weights:
-            return key, transformed_sample, label, weight
-        return key, transformed_sample, label
+            return key, transformed_sample, target, weight
+        return key, transformed_sample, target
 
     def end_of_trigger_cleaning(self) -> None:
         self._key_source.end_of_trigger_cleaning()
@@ -382,20 +388,13 @@ class OnlineDataset(IterableDataset):
             assert (
                 self._next_partition_to_fetch not in self._data_threads
             ), f"Prefetching for partition {self._next_partition_to_fetch} has already been started"
-            if self._include_labels:
-                self._thread_data_container[self._next_partition_to_fetch] = {
-                    "data": [],
-                    "keys": [],
-                    "labels": [],
-                    "weights": [],
-                }
-            else:
-                self._thread_data_container[self._next_partition_to_fetch] = {
-                    "data": [],
-                    "keys": [],
-                    "weights": [],
-                    "target": [],
-                }
+            self._thread_data_container[self._next_partition_to_fetch] = {
+                "data": [],
+                "keys": [],
+                "labels": [],
+                "gen_targets": [],
+                "weights": [],
+            }
             self._partition_valid[self._next_partition_to_fetch] = False
             self._partition_valid_until[self._next_partition_to_fetch] = -1
             self._partition_locks[self._next_partition_to_fetch] = threading.Lock()
@@ -458,12 +457,10 @@ class OnlineDataset(IterableDataset):
         container: dict[str, Any] = {
             "data": [],
             "keys": [],
+            "labels": [],
+            "gen_targets": [],
             "weights": [],
         }
-        if self._include_labels:
-            container["labels"] = []
-        else:
-            container["target"] = []
 
         shuffle_partition_id = self._shuffled_partition_indices[partition_id] if self._shuffle else None
 
@@ -479,11 +476,8 @@ class OnlineDataset(IterableDataset):
             shuffle_partition_id,
         )
 
-        assert "data" in container and "keys" in container and "weights" in container
-        if self._include_labels:
-            assert "labels" in container
-        else:
-            assert "target" in container
+        assert "data" in container and "keys" in container and "weights" and "labels" and "gen_targets" in container
+
         if self._shuffle:
             self._shuffle_partition(partition_id, worker_id, container=container)
 
@@ -492,7 +486,7 @@ class OnlineDataset(IterableDataset):
                 yield (
                     container["keys"][idx],
                     memoryview(container["data"][idx]),
-                    memoryview(container["target"][idx]),
+                    memoryview(container["gen_targets"][idx]),
                     container["weights"][idx],
                 )
             else:
@@ -525,7 +519,7 @@ class OnlineDataset(IterableDataset):
                 yield (
                     self._thread_data_container[partition_id]["keys"][idx],
                     memoryview(self._thread_data_container[partition_id]["data"][idx]),
-                    memoryview(self._thread_data_container[partition_id]["target"][idx]),
+                    memoryview(self._thread_data_container[partition_id]["gen_targets"][idx]),
                     self._thread_data_container[partition_id]["weights"][idx],
                 )
         else:
@@ -555,13 +549,9 @@ class OnlineDataset(IterableDataset):
 
         container["data"] = [container["data"][i] for i in indices]
         container["keys"] = [container["keys"][i] for i in indices]
-
         container["weights"] = [container["weights"][i] for i in indices]
-
-        if self._include_labels:
-            container["labels"] = [container["labels"][i] for i in indices]
-        else:
-            container["target"] = [container["target"][i] for i in indices]
+        container["labels"] = [container["labels"][i] for i in indices]
+        container["gen_targets"] = [container["gen_targets"][i] for i in indices]
 
         self._info(f"Shuffled partition {partition_id}", worker_id)
 

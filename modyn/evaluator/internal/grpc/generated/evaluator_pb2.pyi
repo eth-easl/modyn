@@ -174,12 +174,17 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
+    GENERATIVE_FIELD_NUMBER: builtins.int
     LIGHT_TUNING_FIELD_NUMBER: builtins.int
     TUNING_CONFIG_FIELD_NUMBER: builtins.int
+    BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
+    TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
+    generative: builtins.bool
     light_tuning: builtins.bool
+    transform_list_target: builtins.str
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
@@ -194,6 +199,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def tokenizer(self) -> global___PythonString: ...
     @property
     def tuning_config(self) -> global___JsonString: ...
+    @property
+    def bytes_parser_target(self) -> global___PythonString: ...
     def __init__(
         self,
         *,
@@ -206,24 +213,35 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
         tokenizer: global___PythonString | None = ...,
+        generative: builtins.bool = ...,
         light_tuning: builtins.bool = ...,
         tuning_config: global___JsonString | None = ...,
+        bytes_parser_target: global___PythonString | None = ...,
+        transform_list_target: builtins.str | None = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
             "_tuning_config",
             b"_tuning_config",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "label_transformer",
             b"label_transformer",
             "tokenizer",
             b"tokenizer",
+            "transform_list_target",
+            b"transform_list_target",
             "tuning_config",
             b"tuning_config",
         ],
@@ -231,18 +249,26 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
             "_tuning_config",
             b"_tuning_config",
             "batch_size",
             b"batch_size",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "device",
             b"device",
+            "generative",
+            b"generative",
             "label_transformer",
             b"label_transformer",
             "light_tuning",
@@ -255,14 +281,24 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"tokenizer",
             "transform_list",
             b"transform_list",
+            "transform_list_target",
+            b"transform_list_target",
             "tuning_config",
             b"tuning_config",
         ],
     ) -> None: ...
     @typing.overload
     def WhichOneof(
+        self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]
+    ) -> typing.Literal["bytes_parser_target"] | None: ...
+    @typing.overload
+    def WhichOneof(
         self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
     ) -> typing.Literal["tokenizer"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_transform_list_target", b"_transform_list_target"]
+    ) -> typing.Literal["transform_list_target"] | None: ...
     @typing.overload
     def WhichOneof(
         self, oneof_group: typing.Literal["_tuning_config", b"_tuning_config"]

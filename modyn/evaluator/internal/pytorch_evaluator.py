@@ -100,6 +100,7 @@ class PytorchEvaluator:
             metrics,
             self._label_transformer_function,
             self._amp,
+            self._eval_info.generative,
         )
 
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")

@@ -36,9 +36,7 @@ class PerClassOnlineDataset(OnlineDataset):
             trigger_id,
             dataset_id,
             bytes_parser,
-            bytes_parser_target,
             serialized_transforms,
-            serialized_transforms_target,
             storage_address,
             selector_address,
             training_id,
@@ -48,6 +46,8 @@ class PerClassOnlineDataset(OnlineDataset):
             tokenizer,
             log_path,
             include_labels,
+            bytes_parser_target,
+            serialized_transforms_target,
         )
         self.filtered_label = initial_filtered_label
 
@@ -55,7 +55,7 @@ class PerClassOnlineDataset(OnlineDataset):
         self,
         key: int,
         sample: memoryview,
-        label: int | None = None,
+        label: int | None = None,  # type: ignore
         weight: float | None | memoryview = None,
     ) -> tuple | None:
         if self.filtered_label != label:

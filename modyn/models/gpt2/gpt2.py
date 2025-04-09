@@ -25,32 +25,32 @@ class Gpt2Modyn(CoresetSupportingModule):
     def __init__(self, hparams: Any) -> None:
         super().__init__()
 
-        # Use hparams to decide the GPT-2 version
+        # Decide the GPT-2 version using hparams; default to "gpt2-large"
         model_name = hparams.model_name_or_path if hasattr(hparams, "model_name_or_path") else "gpt2-large"
-
-        # Assert that the model name is valid
         valid_model_names = {"gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"}
         assert model_name in valid_model_names, f"Invalid model name: {model_name}. Must be one of {valid_model_names}."
-        self.tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
-        # self.tokenizer.pad_token = self.tokenizer.eos_token
-        # Load the specified GPT-2 model
 
-        self.tokenizer.add_special_tokens(
-            {
-                "eos_token": "</s>",
-                "bos_token": "<s>",
-                "unk_token": "<unk>",
-                "pad_token": "<pad>",
-                "mask_token": "<mask>",
-            }
+        # Load tokenizer from gpt2-large (or adjust as needed)
+        self.tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        # Use right padding
+
+        # Load the GPT-2 model with FlashAttention 2 enabled by default.
+        self.model = GPT2LMHeadModel.from_pretrained(
+            model_name
+            # ,torch_dtype=torch.bfloat16,
+            # attn_implementation="flash_attention_2"
         )
 
-        self.tokenizer.padding_side = "right"
-        # Load the specified GPT-2 model
-        self.model = GPT2LMHeadModel.from_pretrained(model_name)
-        self.model.resize_token_embeddings(50262)
+        # If the hparams flag for gradient checkpointing is set to True, enable it.
+        # if hasattr(hparams, "enable_gradient_checkpointing") and hparams.enable_gradient_checkpointing:
+        # self.model.gradient_checkpointing_enable()
+
+        # Resize embeddings to account for the added special tokens.
+        # self.model.resize_token_embeddings(50262)
+
+        # Also load the model configuration.
         self.config = GPT2Config.from_pretrained(model_name)
-        # self.transformer = GPT2Model(self.config)
 
     def forward(self, data: torch.Tensor, labels: torch.Tensor = None) -> torch.Tensor:
         """Forward method for text generation or language modeling tasks.

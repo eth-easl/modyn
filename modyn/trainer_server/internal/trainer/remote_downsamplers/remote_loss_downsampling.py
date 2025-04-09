@@ -27,16 +27,34 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         modyn_config: dict,
         per_sample_loss: Any,
         device: str,
+        generative: bool = False,
     ) -> None:
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
-
         self.per_sample_loss_fct = per_sample_loss
         self.probabilities: list[torch.Tensor] = []
         self.number_of_points_seen = 0
+        self.generative = generative
 
     def get_scores(self, forward_output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        scores = self.per_sample_loss_fct(forward_output, target).detach()
-        return scores
+        # Old behavior: for non-generative tasks use the provided per_sample_loss function
+        if not self.generative:
+            scores = self.per_sample_loss_fct(forward_output, target).detach()
+            return scores
+
+        # New behavior: for generative tasks, compute per-sample loss by averaging token losses while ignoring -100 tokens
+        if hasattr(forward_output, "logits"):
+            logits = forward_output.logits
+        else:
+            logits = forward_output
+
+        batch_size, seq_length, vocab_size = logits.shape
+        logits_flat = logits.reshape(-1, vocab_size)
+        target_flat = target.reshape(-1)
+        token_losses = torch.nn.functional.cross_entropy(logits_flat, target_flat, reduction="none", ignore_index=-100)
+        token_losses = token_losses.view(batch_size, seq_length)
+        mask = (target != -100).float()
+        per_sample_loss = torch.sum(token_losses, dim=1) / torch.clamp(mask.sum(dim=1), min=1.0)
+        return per_sample_loss.detach()
 
     def init_downsampler(self) -> None:
         self.probabilities = []
@@ -52,6 +70,7 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         embedding: torch.Tensor | None = None,
     ) -> None:
         scores = self.get_scores(forward_output, target)
+
         self.probabilities.append(scores)
         self.number_of_points_seen += forward_output.shape[0]
         self.index_sampleid_map += sample_ids
@@ -65,6 +84,7 @@ class RemoteLossDownsampling(AbstractRemoteDownsamplingStrategy):
         target_size = max(int(self.downsampling_ratio * self.number_of_points_seen / self.ratio_max), 1)
 
         probabilities = torch.cat(self.probabilities, dim=0)
+
         probabilities = probabilities / probabilities.sum()
 
         downsampled_idxs = torch.multinomial(probabilities, target_size, replacement=False)

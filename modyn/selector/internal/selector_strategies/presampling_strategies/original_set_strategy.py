@@ -18,7 +18,6 @@ class OriginalSetPresamplingStrategy(AbstractPresamplingStrategy):
     ):
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
         self.requires_trigger_dataset_size = True
-        self.first_trigger_ratio = presampling_config.get("first_trigger_ratio", 0.5)
 
     def get_presampling_query(
         self,
@@ -27,12 +26,6 @@ class OriginalSetPresamplingStrategy(AbstractPresamplingStrategy):
         limit: int | None,
         trigger_dataset_size: int | None,
     ) -> Select:
-        """
-        - In `trigger_id = 0`: Select **ALL** available data.
-        - In later triggers (`next_trigger_id > 0`): Select:
-          1. A random fraction (`first_trigger_ratio`) of samples from `trigger_id = 0`.
-          2. All samples from the current trigger (`next_trigger_id`).
-        """
         assert trigger_dataset_size is not None
         assert trigger_dataset_size >= 0
 
@@ -44,26 +37,28 @@ class OriginalSetPresamplingStrategy(AbstractPresamplingStrategy):
             )
             return stmt
 
+        target_size = self.get_target_size(trigger_dataset_size, limit)
+
         first_trigger_subq = (
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id == 0,
             )
-            .order_by(func.random())  # pylint: disable=E1102
-            .limit(int(trigger_dataset_size * self.first_trigger_ratio))
+            .order_by(func.random())
+            .limit(target_size)
         )
 
         current_trigger_subq = select(SelectorStateMetadata.sample_key).filter(
             SelectorStateMetadata.pipeline_id == self.pipeline_id,
-            SelectorStateMetadata.seen_in_trigger_id == next_trigger_id,  # 🔹 Select ALL from the current trigger
+            SelectorStateMetadata.seen_in_trigger_id == next_trigger_id,
         )
-
+        union_subq = first_trigger_subq.union(current_trigger_subq).subquery()
         stmt = (
             select(SelectorStateMetadata.sample_key)
             .filter(
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
-                SelectorStateMetadata.sample_key.in_(first_trigger_subq.union(current_trigger_subq)),
+                SelectorStateMetadata.sample_key.in_(select(union_subq.c.sample_key)),
             )
             .order_by(asc(SelectorStateMetadata.timestamp))
         )

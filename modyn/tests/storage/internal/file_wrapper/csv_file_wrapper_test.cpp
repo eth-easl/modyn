@@ -201,7 +201,7 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   };
 
   const std::vector<std::vector<unsigned char>> actual_samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+      file_wrapper.get_samples_from_indices(indices);
 
   ASSERT_EQ(actual_samples, expected_samples);
 }
@@ -234,7 +234,119 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   };
 
   const std::vector<std::vector<unsigned char>> actual_samples =
-      file_wrapper.get_samples(start, end, /*include_labels=*/false);
+      file_wrapper.get_samples(start, end);
 
   ASSERT_EQ(actual_samples, expected_samples);
+}
+
+TEST_F(CsvFileWrapperTest, TestGetTargetNoTargetConfigured) {
+  // Create a CSV with no designated target column
+  std::ofstream file_no_target(file_name_);
+  file_no_target << "col1,col2\n";
+  file_no_target << "A,B\n";
+  file_no_target.close();
+
+  // Adjust config to indicate no target
+  config_["has_targets"] = false;
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
+  auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(::testing::_)).WillOnce(::testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Expect empty vector because has_targets_ = false
+  auto target = file_wrapper.get_target(0);
+  ASSERT_TRUE(target.empty());
+
+  auto targets = file_wrapper.get_targets(0, 1);
+  ASSERT_TRUE(targets.empty());
+}
+
+TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
+  // Create a CSV with a categorical target in the third column
+  std::ofstream file_with_cat_target(file_name_);
+  file_with_cat_target << "id,feature,target\n";
+  file_with_cat_target << "0,3.14,dog\n";
+  file_with_cat_target << "1,1.23,cat\n";
+  file_with_cat_target.close();
+
+  // Indicate we have a target and which column it is in
+  config_["has_targets"] = true;
+  config_["target_index"] = 2;  // third column (0-based index)
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
+  auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(::testing::_)).WillOnce(::testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Check single target retrieval
+  auto single_target = file_wrapper.get_target(0);
+  ASSERT_EQ(std::vector<unsigned char>({'d', 'o', 'g'}), single_target);
+
+  // Check multiple target retrieval
+  auto multiple_targets = file_wrapper.get_targets(0, 2);
+  ASSERT_EQ(2UL, multiple_targets.size());
+  ASSERT_EQ(std::vector<unsigned char>({'d', 'o', 'g'}), multiple_targets[0]);
+  ASSERT_EQ(std::vector<unsigned char>({'c', 'a', 't'}), multiple_targets[1]);
+}
+
+TEST_F(CsvFileWrapperTest, TestGetTargetNumeric) {
+  // Create a CSV with a numeric target in the last column
+  std::ofstream file_with_numeric_target(file_name_);
+  file_with_numeric_target << "id,feature,target\n";
+  file_with_numeric_target << "0,3.14,42\n";
+  file_with_numeric_target << "1,1.23,100\n";
+  file_with_numeric_target.close();
+
+  config_["has_targets"] = true;
+  config_["target_index"] = 2;  // third column
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
+  auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(::testing::_)).WillOnce(::testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Check a single numeric target
+  auto t0 = file_wrapper.get_target(0);
+  ASSERT_EQ(std::vector<unsigned char>({'4', '2'}), t0);
+
+  // Check multiple numeric targets
+  auto targets = file_wrapper.get_targets(0, 2);
+  ASSERT_EQ(2UL, targets.size());
+  ASSERT_EQ(std::vector<unsigned char>({'4', '2'}), targets[0]);
+  ASSERT_EQ(std::vector<unsigned char>({'1', '0', '0'}), targets[1]);
+}
+
+TEST_F(CsvFileWrapperTest, TestGetTargetsFromIndices) {
+  // Create a CSV with a target column
+  std::ofstream file_targets_indices(file_name_);
+  file_targets_indices << "id,desc,target\n";
+  file_targets_indices << "0,alpha,A\n";
+  file_targets_indices << "1,beta,B\n";
+  file_targets_indices << "2,gamma,C\n";
+  file_targets_indices.close();
+
+  config_["has_targets"] = true;
+  config_["target_index"] = 2;  // third column
+
+  EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
+  auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(::testing::_)).WillOnce(::testing::Return(stream_ptr));
+  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
+
+  // Retrieve targets for specific rows
+  std::vector<uint64_t> indices = {2, 0};
+  auto results = file_wrapper.get_targets_from_indices(indices);
+  ASSERT_EQ(2UL, results.size());
+  // Confirm order is [2 -> 'C'], [0 -> 'A']
+  ASSERT_EQ(std::vector<unsigned char>({'C'}), results[0]);
+  ASSERT_EQ(std::vector<unsigned char>({'A'}), results[1]);
 }

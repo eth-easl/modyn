@@ -25,6 +25,7 @@ class EvalDataConfig(DataConfig):
     tuning_config: TuningConfig | None = Field(
         None, description="Configuration for tuning parameters. Unnecessary if light_tuning is false"
     )
+    generative: bool = Field(False, description="Whether the task is generative.")
 
 
 class ResultWriter(ModynBaseModel):

@@ -182,6 +182,10 @@ class TrainingConfig(ModynBaseModel):
         default=0,
         description="Clips the gradients normed over this value, if its 0 it will not be used.",
     )
+    gradient_accumulation_steps: int = Field(
+        default=1,
+        description="Number of steps to accumulate gradients before performing an optimizer step.",
+    )
 
     # [Additional validation]
 

@@ -7,7 +7,7 @@ from torch import nn
 from torch.nn import CrossEntropyLoss
 from transformers import GPT2Config
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
-
+from transformers.models.gpt2.modeling_gpt2 import GPT2Block
 
 
 class AdapterModel(nn.Module):
@@ -47,7 +47,6 @@ class AdapterModel(nn.Module):
         return outputs
 
 
-
 def count_trainable_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
@@ -80,6 +79,7 @@ def apply_lora(  # pylint: disable=dangerous-default-value
 
     return model
 
+
 # Recommended LoRA configuration based on the provided BERT-LoRA code:
 # lora_config = LoraConfig(
 #     task_type=TaskType.CAUSAL_LM,  # or "SEQ_CLS", "TOKEN_CLS" based on use case
@@ -88,6 +88,7 @@ def apply_lora(  # pylint: disable=dangerous-default-value
 #     lora_dropout=0.0,              # Default in the paper
 #     target_modules=["query", "value"]  # Explicitly matches BERT paper code
 # )
+
 
 def apply_kadapter(
     model: nn.Module,
@@ -204,46 +205,19 @@ def apply_prefix_tuning(
     print(f"\n Trainable parameters AFTER applying Prefix Tuning: {count_trainable_params(model)}")
     return model
 
-class DynamicAdapterManager(nn.Module):
-    def __init__(self, backbone: nn.Module, adapter_config: dict, selector_input_dim: int, num_initial_experts: int = 1):
-        super().__init__()
-        self.backbone = backbone  # frozen backbone
-        self.adapter_pool = nn.ModuleDict()  # dictionary to hold expert adapters
-        # Initialize with at least one expert
-        for i in range(num_initial_experts):
-            self.adapter_pool[f"expert_{i}"] = self._create_adapter(adapter_config)
-        self.selector = nn.Linear(selector_input_dim, len(self.adapter_pool))  # expert selector
 
-    def _create_adapter(self, adapter_config: dict) -> nn.Module:
-        # This could wrap a LoRA adapter or other adapter method.
-        # For example, using a simple linear adapter:
-        return nn.Linear(adapter_config["input_dim"], adapter_config["output_dim"])
-
-    def add_expert(self, adapter_config: dict, expert_id: str):
-        # Add a new expert adapter to the pool
-        self.adapter_pool[expert_id] = self._create_adapter(adapter_config)
-        # Expand the selector output dimension to account for the new expert:
-        old_selector = self.selector
-        new_out_dim = len(self.adapter_pool)
-        self.selector = nn.Linear(old_selector.in_features, new_out_dim)
-        # (Optionally, initialize new selector weights based on the old ones.)
-        
-    def forward(self, input_data: torch.Tensor, teacher_expert: str | None = None, topk: int = 1):
-        # Get the backbone representation
-        representation = self.backbone(input_data)
-        # Compute selector logits
-        logits = self.selector(representation)
-        # Apply softmax (or log-softmax) and select top-k experts
-        scores = torch.softmax(logits, dim=1)
-        topk_indices = torch.topk(scores, k=topk, dim=1).indices  # shape: (batch_size, topk)
-        # For simplicity, assume topk == 1
-        selected_expert_keys = [list(self.adapter_pool.keys())[i] for i in topk_indices.squeeze(1).tolist()]
-        # (Optional: if teacher_expert is provided, ensure it's selected)
-        # Now, for each sample, apply the selected expert adapter:
-        outputs = []
-        for i, expert_key in enumerate(selected_expert_keys):
-            adapter = self.adapter_pool[expert_key]
-            outputs.append(adapter(representation[i]))
-        # Combine the outputs (e.g., stack them) and return
-        return torch.stack(outputs)
-
+def apply_adapters(model: nn.Module, adapters: list[str]) -> nn.Module:
+    """Reads adapter names from a list and applies them to the model sequentially."""
+    for adapter in adapters:
+        adapter_lower = adapter.lower()
+        if adapter_lower == "lora":
+            model = apply_lora(model)
+        elif adapter_lower == "kadapter":
+            model = apply_kadapter(model)
+        elif adapter_lower == "prompt_tuning":
+            model = apply_prompt_tuning(model)
+        elif adapter_lower == "prefix_tuning":
+            model = apply_prefix_tuning(model)
+        else:
+            raise ValueError(f"Unknown adapter type: {adapter}")
+    return model

@@ -262,11 +262,10 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             tokenizer_arg = EvaluatorPythonString(value=tokenizer)
         else:
             tokenizer_arg = None
-        light_tuning = False
-        tuning_config = None
-        if dataset_config["light_tuning"]:
-            light_tuning = dataset_config["light_tuning"]
-            tuning_config = dataset_config["tuning_config"]
+        generative = dataset_config["generative"]
+
+        light_tuning = dataset_config["light_tuning"]
+        tuning_config = dataset_config["tuning_config"] if dataset_config["tuning_config"] else None
 
         return EvaluateModelRequest(
             model_id=model_id,
@@ -275,6 +274,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 num_dataloaders=dataloader_workers,
                 evaluation_intervals=eval_intervals,
             ),
+            generative=generative,
             device=device,
             batch_size=batch_size,
             metrics=metrics,

@@ -121,7 +121,7 @@ TEST(SingleSampleFileWrapperTest, TestGetSamplesFromIndicesWithoutLabels) {
   ::SingleSampleFileWrapper file_wrapper = ::SingleSampleFileWrapper(file_name, config, filesystem_wrapper);
   const std::vector<uint64_t> indices = {0};
   const std::vector<std::vector<unsigned char>> samples =
-      file_wrapper.get_samples_from_indices(indices, /*include_labels=*/false);
+      file_wrapper.get_samples_from_indices(indices);
 
   ASSERT_EQ(samples.size(), 1);
   ASSERT_EQ(samples[0].size(), 8);

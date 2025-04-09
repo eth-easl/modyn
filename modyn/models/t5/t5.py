@@ -40,26 +40,16 @@ class T5Modyn(CoresetSupportingModule):
         self.model = T5ForConditionalGeneration.from_pretrained(model_name)
         self.config = T5Config.from_pretrained(model_name)
 
-    def forward(self, data: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """
-        Forward pass for T5.
-
-        Args:
-            data (torch.Tensor): Tensor of shape (batch_size, seq_len, 2), where
-                the last dimension contains token IDs and attention masks.
-            labels (torch.Tensor, optional): Tensor of labels for sequence-to-sequence tasks.
-
-        Returns:
-            output: The output logits or loss from the T5 model.
-        """
-        # Split input into token IDs and attention masks
+    def forward(self, data: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:  # T5 does need labeöls in some form
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
-        labels = labels[:, :, 0]
-        # Forward pass through T5
+        if labels.dim() == 3:
+            labels = labels[:, :, 0]
+
         output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
 
-        return output
+        # Since we always want the logits
+        return output.logits if hasattr(output, "logits") else output
 
     def get_last_layer(self) -> nn.Module:
         """
@@ -82,18 +72,18 @@ class T5Modyn(CoresetSupportingModule):
 
     def generate(
         self,
-        input_texts: list,
-        max_length: int = 50,
+        data: torch.Tensor,
+        max_length: int = 128,
         temperature: float = 1.0,
         top_k: int = 50,
         top_p: float = 0.95,
         num_return_sequences: int = 1,
-    ) -> list:
+    ) -> torch.Tensor:
         """
-        Generates text sequences from input texts.
+        Generates text sequences from input texts and pads them to max_length.
 
         Args:
-            input_texts (list): List of input strings.
+            data (torch.Tensor): Input tensor with input_ids and attention_mask.
             max_length (int): Maximum length of generated sequence.
             temperature (float): Sampling temperature.
             top_k (int): Top-k filtering.
@@ -101,22 +91,30 @@ class T5Modyn(CoresetSupportingModule):
             num_return_sequences (int): Number of sequences to generate.
 
         Returns:
-            list: List of generated text sequences.
+            torch.Tensor: Generated token IDs padded to max_length.
         """
-        input_encodings = self.tokenizer(
-            input_texts, return_tensors="pt", padding=True, truncation=True, max_length=max_length
-        )
+        input_ids = data[:, :, 0]
+        attention_mask = data[:, :, 1]
 
         # Generate output sequences
         outputs = self.model.generate(
-            input_ids=input_encodings["input_ids"],
-            attention_mask=input_encodings["attention_mask"],
+            input_ids=input_ids,
+            attention_mask=attention_mask,
             max_length=max_length,
             temperature=temperature,
             top_k=top_k,
             top_p=top_p,
             num_return_sequences=num_return_sequences,
             pad_token_id=self.tokenizer.pad_token_id,
+            early_stopping=False,
         )
 
-        return [self.tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+        # Pad outputs to max_length if necessary
+        if outputs.size(1) < max_length:
+            pad_length = max_length - outputs.size(1)
+            padding = torch.full(
+                (outputs.size(0), pad_length), self.tokenizer.pad_token_id, dtype=outputs.dtype, device=outputs.device
+            )
+            outputs = torch.cat([outputs, padding], dim=1)
+
+        return outputs

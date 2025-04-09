@@ -18,9 +18,7 @@ def prepare_dataloaders(
     num_dataloaders: int,
     batch_size: int,
     bytes_parser: str,
-    bytes_parser_target: str | None,
     transform: list[str],
-    transform_target: list[str] | None,
     storage_address: str,
     selector_address: str,
     training_id: int,
@@ -31,6 +29,8 @@ def prepare_dataloaders(
     log_path: pathlib.Path | None,
     drop_last: bool = True,
     include_labels: bool = True,
+    bytes_parser_target: str | None = None,
+    transform_target: list[str] | None = None,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
     """Gets the proper dataset according to the dataset id, and creates the
     proper dataloaders.
@@ -57,9 +57,7 @@ def prepare_dataloaders(
         trigger_id,
         dataset_id,
         bytes_parser,
-        bytes_parser_target,
         transform,
-        transform_target,
         storage_address,
         selector_address,
         training_id,
@@ -69,6 +67,8 @@ def prepare_dataloaders(
         tokenizer,
         log_path,
         include_labels,
+        bytes_parser_target,
+        transform_target,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
