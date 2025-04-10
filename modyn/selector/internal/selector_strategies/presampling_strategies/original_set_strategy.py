@@ -45,7 +45,7 @@ class OriginalSetPresamplingStrategy(AbstractPresamplingStrategy):
                 SelectorStateMetadata.pipeline_id == self.pipeline_id,
                 SelectorStateMetadata.seen_in_trigger_id == 0,
             )
-            .order_by(func.random())
+            .order_by(func.random())  # Randomly select samples from the first trigger pylint:disable=not-callable
             .limit(target_size)
         )
 

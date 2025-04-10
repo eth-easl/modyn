@@ -17,7 +17,7 @@ from modyn.config.schema.pipeline.data import DataConfig
 
 # pylint: disable=no-name-in-module
 from modyn.supervisor.internal.utils import TrainingStatusReporter
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
+from modyn.trainer_server.internal.grpc.generated2.trainer_server_pb2 import (
     CheckpointInfo,
     Data,
     PythonString,
@@ -30,8 +30,8 @@ from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import (
     TrainingStatusRequest,
     TrainingStatusResponse,
 )
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import JsonString as TrainerServerJsonString
-from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2_grpc import TrainerServerStub
+from modyn.trainer_server.internal.grpc.generated2.trainer_server_pb2 import JsonString as TrainerServerJsonString
+from modyn.trainer_server.internal.grpc.generated2.trainer_server_pb2_grpc import TrainerServerStub
 from modyn.utils import MAX_MESSAGE_SIZE, grpc_common_config, grpc_connection_established
 
 logger = logging.getLogger(__name__)
@@ -251,19 +251,18 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
-            generative=training_config.generative,
+            training_type=training_config.training_type,
             grad_norm=training_config.grad_norm if training_config.grad_norm != 0.0 else None,
-            lora=training_config.lora,
-            kadapter=training_config.kadapter,
-            prompt_tuning=training_config.prompt_tuning,
-            prefix_tuning=training_config.prefix_tuning,
             bytes_parser_target=PythonString(value=data_config.bytes_parser_function_target)
-            if data_config.bytes_parser_function_target is not None
-            else None,
+            if data_config.bytes_parser_function_target is not None else None,
             transform_list_target=data_config.transformations_target
-            if data_config.transformations_target is not None
-            else None,
+            if data_config.transformations_target is not None else None,
+            gradient_accumulation_steps=training_config.gradient_accumulation_steps,
+            model_wrappers=training_config.model_wrappers,
+            model_wrapper_args=TrainerServerJsonString(value=json.dumps(training_config.model_wrapper_args)),
+            tokenizer_seq_length=data_config.tokenizer_seq_length,
         )
+
 
     def start_training(
         self,

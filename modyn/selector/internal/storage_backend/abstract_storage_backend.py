@@ -14,6 +14,7 @@ class AbstractStorageBackend(ABC):
         self._maximum_keys_in_memory = maximum_keys_in_memory
         self._pipeline_id = pipeline_id
         self._storagestub = None
+        self._storage_channel = None
         storage = modyn_config.get(
             "storage", {}
         )  # Storage is always part of config but this prevents having to rwritte all the tests.
@@ -64,7 +65,7 @@ class AbstractStorageBackend(ABC):
     def _get_data_from_storage(
         self,
         selector_keys: list[int],
-        dataset_it: str,
+        dataset_id: str,
     ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
         """
         Retrieve full sample data from storage given a list of keys.

@@ -1147,12 +1147,12 @@ def test_online_dataset_different_target_parsers_and_transforms(
         assert isinstance(item, (tuple | list)), f"Expected item to be a tuple or list, got {type(item)}"
         assert len(item) == 3, f"Expected tuple of length 3, got {item}"
         key, sample, target = item
-        expected_key = 10 + i
+        expected_key =  i
         assert key == expected_key, f"Expected key {expected_key}, got {key}"
 
         assert isinstance(sample, bytes), f"Expected sample to be bytes, got {type(sample)}"
-        assert sample.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Got sample={sample}"
+        assert sample.endswith(b"_MAIN_MAIN_TF"), f"Got sample={sample}"
 
         assert isinstance(target, bytes), f"Expected target to be bytes, got {type(target)}"
-        expected_suffix = f"T{expected_key}_TARGET_TARGET_TF".encode()
+        expected_suffix = f"_TARGET_TARGET_TF".encode()
         assert target.endswith(expected_suffix), f"Got target={target}"

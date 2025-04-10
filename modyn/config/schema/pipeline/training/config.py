@@ -8,6 +8,9 @@ from pydantic import Field, field_validator, model_validator
 from modyn.config.schema.base_model import ModynBaseModel
 
 OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace", "Custom"]
+LrSchedulerSource = Literal["PyTorch", "Custom"]
+TrainingType = Literal["labeled", "pretraining", "generative"]
+SUPPORTED_WRAPPERS = {"lora", "kadapter", "prompt_tuning", "prefix_tuning"}
 
 
 class OptimizerParamGroup(ModynBaseModel):
@@ -37,9 +40,6 @@ class OptimizationCriterion(ModynBaseModel):
 
     name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
     config: dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
-
-
-LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class LrSchedulerConfig(ModynBaseModel):
@@ -119,30 +119,23 @@ class TrainingConfig(ModynBaseModel):
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
     )
-    generative: bool = Field(
-        False,
+    training_type: TrainingType = Field(
+        "labeled",
         description=(
-            "If True then, then the training pipeline goes into the generative branch, data is sampled without expecting labels."
+            "Specifies the kind of training to perform: labeled (supervised), pretraining (unsupervised with labels), "
+            "or generative (unsupervised text generation)."
         ),
     )
-    lora: bool = Field(
-        False,
-        description=("Applies Lora layers to the model"),
+    model_wrappers: list[str] = Field(
+        default_factory=list,
+        description=(
+            "List of model wrappers to apply (e.g., lora, prefix_tuning, kadapter, prompt_tuning)."
+        ),
     )
-    kadapter: bool = Field(
-        False,
-        description=("Applies kadapter layers to the model"),
+    model_wrapper_args: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Arguments passed to each model wrapper.",
     )
-    prompt_tuning: bool = Field(
-        False,
-        description=("Applies Prompt Tuning by introducing learnable soft prompts into the input embeddings."),
-    )
-
-    prefix_tuning: bool = Field(
-        False,
-        description=("Applies Prefix Tuning by adding trainable prefix vectors to the attention layers."),
-    )
-
     seed: int | None = Field(
         None,
         description=(
@@ -196,6 +189,14 @@ class TrainingConfig(ModynBaseModel):
             raise ValueError("Currently, only single GPU training is supported.")
         return value
 
+    @field_validator("model_wrappers")
+    @classmethod
+    def validate_model_wrappers(cls, wrappers: list[str]) -> list[str]:
+        invalid = [w for w in wrappers if w not in SUPPORTED_WRAPPERS]
+        if invalid:
+            raise ValueError(f"Unsupported model wrappers specified: {invalid}")
+        return wrappers
+
     @model_validator(mode="after")
     def validate_pretrained(self) -> Self:
         if self.initial_model == "pretrained":
@@ -206,6 +207,9 @@ class TrainingConfig(ModynBaseModel):
                 )
             if not self.initial_model_id:
                 raise ValueError("Initial model set to pretrained, but no initial_model_id given")
+        for wrapper in self.model_wrappers:
+            if wrapper not in self.model_wrapper_args:
+                raise ValueError(f"Wrapper '{wrapper}' specified but no arguments provided in model_wrapper_args.")
         return self
 
 
@@ -218,7 +222,7 @@ class CheckpointingConfig(ModynBaseModel):
         None,
         description="The path on the training node where the checkpoints are stored.",
     )
-
+    
     @model_validator(mode="after")
     def validate_activation(self) -> Self:
         if self.activated:

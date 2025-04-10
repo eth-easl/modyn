@@ -56,6 +56,7 @@ class OnlineDataset(IterableDataset):
         include_labels: bool = True,
         bytes_parser_target: str | None = None,
         serialized_transforms_target: list[str] | None = None,
+        sequence_length: int = 128,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -111,8 +112,9 @@ class OnlineDataset(IterableDataset):
         # tokenizer for NLP tasks
         self._tokenizer = None
         self._tokenizer_name = tokenizer
+        
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, sequence_length=sequence_length)
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -203,7 +205,7 @@ class OnlineDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            print(response.target)
+                            
                             assert len(keys) == len(response.samples) == len(response.labels) == len(response.target)
                             yield (
                                 keys,
@@ -229,8 +231,7 @@ class OnlineDataset(IterableDataset):
                             ]
                             processed_keys.update(keys)
                             assert len(new_keys) == len(new_samples) == len(new_labels) == len(new_gen_targets)
-                            print(f"Yielding {len(new_keys)} new samples")
-                            print(new_gen_targets)
+                         
                             yield new_keys, new_samples, new_labels, new_gen_targets, response_time
 
                         stopw.start("ResponseTime", overwrite=True)
@@ -278,7 +279,6 @@ class OnlineDataset(IterableDataset):
         key_weight_map = {key: weights[idx] for idx, key in enumerate(keys)} if weights is not None else None
 
         for data_tuple in self._get_data_from_storage(keys, worker_id=worker_id):
-            print(data_tuple)
             stor_keys, data, labels, gen_targets, response_time = data_tuple
             all_response_times.append(response_time)
             num_items = len(stor_keys)
@@ -476,7 +476,7 @@ class OnlineDataset(IterableDataset):
             shuffle_partition_id,
         )
 
-        assert "data" in container and "keys" in container and "weights" and "labels" and "gen_targets" in container
+        assert "data" in container and "keys" in container and "gen_targets" in container
 
         if self._shuffle:
             self._shuffle_partition(partition_id, worker_id, container=container)

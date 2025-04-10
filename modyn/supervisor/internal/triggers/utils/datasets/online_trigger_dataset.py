@@ -9,7 +9,7 @@ from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 logger = logging.getLogger(__name__)
 
 
-class OnlineTriggerDataset(OnlineDataset, IterableDataset):
+class OnlineTriggerDataset(OnlineDataset, IterableDataset):  # pylint: disable=abstract-method
     def __init__(
         self,
         pipeline_id: int,

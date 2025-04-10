@@ -27,12 +27,7 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
-from modyn.models.modular_adapters.modular_adapters import (
-    apply_kadapter,
-    apply_lora,
-    apply_prefix_tuning,
-    apply_prompt_tuning,
-)
+from modyn.models.modular_adapters.modular_adapters import apply_adapters 
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -94,43 +89,33 @@ class PytorchTrainer:
         self.training_id = training_info.training_id
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
-        self.generative = training_info.generative
-        self._grad_norm = training_info.grad_norm  # 0.5  # remember add this to training infotraining_info.grad_norm
-        self._lora = training_info.lora
-        self._kadapter = training_info.kadapter
-        self._prompt_tuning = training_info.prompt_tuning
-        self._prefix_tuning = training_info.prefix_tuning
+
+        self.training_type = training_info.training_type  
+        self._grad_norm = training_info.grad_norm
+        self.gradient_accumulation_steps = training_info.gradient_accumulation_steps  
+
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
-        self.gradient_accumulation_steps = 1
         if training_info.seed is not None:
             self._seed_trainer_server(training_info.seed)
             self._info("Everything seeded")
 
-        self._info("Initializing Pytorch Trainer")
-
-        # setup model and optimizer
-
+        self._info("Initializing model...")
         self._model = training_info.model_handler(training_info.model_configuration_dict, device, training_info.amp)
-
         self._info("Model and optimizer created.")
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-        # checkpoint = torch.load("/checkpoints/twiki10/model_410000.modyn", map_location="cpu")
-        # Adjust key names if necessary
 
-        # self._model.model.load_state_dict(checkpoint["model"], strict=True)
-        if self._lora:
-            self._model.model = apply_lora(self._model.model)
-        if self._kadapter:
-            self._model.model = apply_kadapter(self._model.model)
-        if self._prompt_tuning:
-            apply_prompt_tuning(self._model.model)
-        if self._prefix_tuning:
-            apply_prefix_tuning(self._model.model)
+       
+        self._model.model = apply_adapters(
+            self._model.model,
+            training_info.model_wrappers,              
+            training_info.model_wrapper_args            
+        )
+
         self.expert_mixture = False
-
         self._setup_optimizers(training_info)
+
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
@@ -141,15 +126,15 @@ class PytorchTrainer:
 
         self._batch_size = training_info.batch_size
         self._num_dataloaders = training_info.num_dataloaders
+        self._device = device
+        self._device_type = "cuda" if "cuda" in self._device else "cpu"
+        self._amp = training_info.amp
+        self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
 
         self._label_transformer_function = deserialize_function(
             training_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
 
-        self._device = device
-        self._device_type = "cuda" if "cuda" in self._device else "cpu"
-        self._amp = training_info.amp
-        self._measure_gpu_ops = training_info.enable_accurate_gpu_measurements
         self._checkpoint_path = training_info.checkpoint_path
         self._checkpoint_interval = training_info.checkpoint_interval
         self._record_loss_every = training_info.record_loss_every
@@ -158,11 +143,11 @@ class PytorchTrainer:
         self.num_samples_to_pass = training_info.num_samples_to_pass
         self._log_file_path = training_info.log_file_path
         self._drop_last_batch = training_info.drop_last_batch
+
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
-
-        self._final_checkpoint_path.mkdir()  # exist_ok == False, this directory should not exist before
+        self._final_checkpoint_path.mkdir()
 
         if self._log_file_path is not None:
             assert isinstance(self._log_file_path, pathlib.Path)
@@ -174,12 +159,10 @@ class PytorchTrainer:
 
         self._status_query_queue_training = status_query_queue_training
         self._status_response_queue_training = status_response_queue_training
-
         self._status_query_queue_downsampling = status_query_queue_downsampling
         self._status_response_queue_downsampling = status_response_queue_downsampling
 
         self._num_samples = 0
-        self.fine_tuning = True
         self._metadata_collector = MetadataCollector(self.pipeline_id, self.trigger_id)
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
@@ -197,10 +180,8 @@ class PytorchTrainer:
 
         self._step_lr_every: str | None = None
         self._setup_lr_scheduler(training_info)
-
         self._info("LR scheduler created.")
 
-        # setup dataloaders
         self._info("Setting up data loaders.")
         self._train_dataloader, self._val_dataloader = prepare_dataloaders(
             training_info.pipeline_id,
@@ -219,16 +200,16 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
-            include_labels=not self.generative,
+            include_labels=training_info.training_type != "generative",  
             transform_target=training_info.transform_target,
             bytes_parser_target=training_info.bytes_parser_target,
+            tokenizer_seq_length=training_info.tokenizer_seq_length,     
         )
 
-        # Create callbacks
-        # TODO(#140): should be defined by the pipeline and passed with training request
         self._callbacks: dict[MetricType, Any] = {
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
+
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                       Core training pipeline orchestration                                       #
@@ -336,11 +317,9 @@ class PytorchTrainer:
                         # initial_memory = torch.cuda.memory_allocated()
                         # print(f"Before forward pass: {initial_memory / 1e9:.2f} GB")
                         # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
-                        if self.fine_tuning:
-                            assert not self.is_inference_tensor(data), "Found an inference tensor!"
-                            assert not self.is_inference_tensor(target), "Found an inference tensor!"
+                        if self.training_type == "generative":
                             output = self._model.model(data, labels=target)
-                        elif self.generative:
+                        elif self.training_type == "pretraining":
                             output = self._model.model(data)
 
                         else:
@@ -359,7 +338,7 @@ class PytorchTrainer:
                         # print(f"Before loss computation: {initial_memory / 1e9:.2f} GB")
                         torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
 
-                        if self.generative:
+                        if self.training_type != "labeled":
                             # Shift logits and labels for next-token prediction
                             # output = output.logits[..., :, :]  # Output for all tokens except the last one
                             # Target for all tokens except the first one
@@ -632,7 +611,7 @@ class PytorchTrainer:
         stopw.stop("PreprocSampleIDs")
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
-            if self.fine_tuning:
+            if self.training_type == "generative":
                 target: torch.Tensor | dict
                 if isinstance(batch[2], torch.Tensor):
                     target = batch[2].to(self._device)
@@ -655,7 +634,7 @@ class PytorchTrainer:
 
                 stopw.stop("LabelTransform")
                 target = target.to(self._device)
-            if self.generative:
+            if self.training_type != "labeling":
                 target = target[:, :, 0]
                 target[target == self._model.model.tokenizer.pad_token_id] = -100
 
@@ -701,9 +680,12 @@ class PytorchTrainer:
         # It could be that some DLRM parameters are lazily created during the
         # first forward pass and hence they are created as inference tensors if inference mode is used here.
         # If this becomes a problem for more models, we might want to make it a field on the model class instead.
+        # Some Huggingface models also show strange behavior inference_mode() because of the way they are initialized
         no_grad_mgr = (
-            torch.no_grad() if isinstance(self._model, DLRM) or self.generative else torch.inference_mode()
-        )  # TODO find a better check
+            torch.no_grad()
+            if isinstance(self._model, DLRM) or isinstance(self._model.model, transformers.PretrainedModel)
+            else torch.inference_mode()
+        )
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
 
         with context_manager:
@@ -1091,7 +1073,7 @@ class PytorchTrainer:
             batch_number += 1
             sample_ids, target, data = self.preprocess_batch(batch)
             # Handle cases where target is None for generative tasks
-            if self.generative and target is None:
+            if self.training_type == "pretraining" and target is None:
                 target = torch.Tensor()
             number_of_samples += len(sample_ids)
 

@@ -41,6 +41,7 @@ class TrainingInfo:
         self.model_configuration_dict = json.loads(model_config)
         self.criterion_dict = json.loads(request.criterion_parameters.value)
         self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
+        self.lr_scheduler = json.loads(request.lr_scheduler.value)
 
         self.transform_list = list(request.transform_list)
         self.transform_target = list(request.transform_list_target)
@@ -56,10 +57,9 @@ class TrainingInfo:
         self.load_optimizer_state = request.load_optimizer_state
         self.pretrained_model_path = pretrained_model_path
         self.log_file_path = log_file_path
-
         self.shuffle = request.shuffle
         self.enable_accurate_gpu_measurements = request.enable_accurate_gpu_measurements
-        self.generative = request.generative
+
         assert (
             self.pretrained_model_path or not self.use_pretrained_model
         ), "Inconsistent pretrained model configuration"
@@ -69,22 +69,21 @@ class TrainingInfo:
         self.torch_criterion = request.torch_criterion
         self.amp = amp
 
-        self.lr_scheduler = json.loads(request.lr_scheduler.value)
-
         self.checkpoint_path = pathlib.Path(request.checkpoint_info.checkpoint_path)
         self.checkpoint_interval = request.checkpoint_info.checkpoint_interval
         self.record_loss_every = request.record_loss_every
 
         self.storage_address = storage_address
         self.selector_address = selector_address
-
         self.final_checkpoint_path = final_checkpoint_path
+        self.offline_dataset_path = offline_dataset_path
 
         self.seed: int | None = request.seed if request.HasField("seed") else None
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
         self.grad_norm: float | None = request.grad_norm if request.HasField("grad_norm") else None
-        self.lora = request.lora
-        self.kadapter = request.kadapter
-        self.prompt_tuning = request.prompt_tuning
-        self.prefix_tuning = request.prefix_tuning
-        self.offline_dataset_path = offline_dataset_path
+
+        self.gradient_accumulation_steps: int = request.gradient_accumulation_steps
+        self.training_type: str = request.training_type
+        self.model_wrappers: list[str] = list(request.model_wrappers)
+        self.model_wrapper_args: dict[str, dict[str, Any]] = json.loads(request.model_wrapper_args.value)
+        self.tokenizer_seq_length: int = request.tokenizer_seq_length

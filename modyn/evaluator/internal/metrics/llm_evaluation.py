@@ -63,7 +63,7 @@ class LLMEvaluation(AbstractHolisticMetric):
             for s in scores:
                 try:
                     numeric_scores.append(float(s))
-                except Exception:
+                except Exception:  # pylint:disable=broad-exception-caught
                     numeric_scores.append(0.0)
         self.evaluation_result = sum(numeric_scores) / num_samples
 
@@ -87,10 +87,11 @@ class LLMEvaluation(AbstractHolisticMetric):
                     response = requests.post(
                         self.api_url,  # type: ignore
                         json={"model": self.model_name, "messages": [{"content": prompt, "role": "user"}]},
+                        timeout=60,
                     )
                     response.raise_for_status()
                     break
-                except Exception:
+                except Exception:  # pylint:disable=broad-exception-caught
                     time.sleep(5)
             results = response.json()["choices"][0]["message"]["content"].strip().split("\n")
             for res in results:

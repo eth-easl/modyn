@@ -21,11 +21,10 @@ class FakeChannel:
         return lambda req: []
 
 
-# --- Fake Storage Backend ---
 class FakeStorageBackend:
     """
     Mimics a storage backend that returns a 5-tuple:
-      (keys, samples, targets, labels, response_time)
+    (keys, samples, targets, labels, response_time)
     and captures inserted keys when the presampling temporary table is populated.
     """
 
@@ -33,51 +32,108 @@ class FakeStorageBackend:
         self.raw_keys = raw_keys
         self.inserted_keys = []  # Filled when _execute_on_session runs an INSERT
 
-    def _get_data_from_storage(self, keys: list[int], dataset_id: str):
-        # Yield a single batch for simplicity.
-        response_time = 1  # Dummy response time
-        # For each key, return:
-        #   - a sample (bytes),
-        #   - a target (bytes),
-        #   - a label (int)
+    def _get_data_from_storage(self, selector_keys: list[int], dataset_id: str):
+        response_time = 1
         yield (
-            keys,
-            [f"sample text {k}".encode() for k in keys],
-            [f"target text {k}".encode() for k in keys],
-            [k * 10 for k in keys],
+            selector_keys,
+            [f"sample text {k}".encode() for k in selector_keys],
+            [f"target text {k}".encode() for k in selector_keys],
+            [k * 10 for k in selector_keys],
             response_time,
         )
 
     def _execute_on_session(self, fn):
-        backend = self
+        import re
 
-        class DummySession:
-            def execute(self, query, *args, **kwargs):
-                qstr = str(query).upper()
-                # When a SELECT query on SelectorStateMetadata is issued, return our raw keys.
-                if "SELECT" in qstr and "SELECTORSTATEMETADATA" in qstr:
+        class FakeBind:
+            """Minimal engine/connection mock so create_all() doesn't crash."""
+            def _run_ddl_visitor(self, visitor, element, **kwargs):
+                pass
 
-                    class DummyScalars:
-                        def all(self):
-                            return backend.raw_keys
+        class FakeScalars:
+            def __init__(self, keys):
+                self.keys = keys
 
-                    class DummyResult:
-                        def scalars(self):
-                            return DummyScalars()
+            def all(self):
+                return self.keys
 
-                    return DummyResult()
-                # Otherwise, if query.parameters exist, simulate an INSERT by capturing keys.
-                if hasattr(query, "parameters") and query.parameters:
-                    backend.inserted_keys = [d["sample_key"] for d in query.parameters]
+        class FakeResult:
+            def __init__(self, keys):
+                self.keys = keys
+
+            def scalars(self):
+                return FakeScalars(self.keys)
+
+        class FakeSession:
+            """
+            Manages a dict of table_name -> list of inserted sample_keys,
+            so we can simulate CREATE TABLE, INSERT, and SELECT realistically.
+            """
+
+            def __init__(self, raw_keys, inserted_keys_ref):
+                # For the real 'SelectorStateMetadata' selects, we return raw_keys.
+                self.raw_keys = raw_keys
+
+                # For the new “temp” tables, we track inserted rows in self.tables.
+                self.tables = {}
+                self.inserted_keys_ref = inserted_keys_ref
+
+            def execute(self, statement, *multiparams, **params):
+                # Convert statement to string for easy checking.
+                statement_str = str(statement)
+                statement_up = statement_str.upper()
+
+                # Extract table names from the statement using quick regex searches.
+                create_match = re.search(r"CREATE\s+TABLE\s+(\S+)", statement_str, re.IGNORECASE)
+                insert_match = re.search(r"INSERT\s+INTO\s+(\S+)", statement_str, re.IGNORECASE)
+                select_match = re.search(r"FROM\s+(\S+)", statement_str, re.IGNORECASE)
+
+               
+                if create_match:
+                    table_name = create_match.group(1)
+                    print(f"[FAKE] Creating table: {table_name}")
+                    # Initialize an empty list of rows for that table.
+                    self.tables[table_name] = []
+                    return None
+
+               
+                if insert_match and "INSERT" in statement_up:
+                    table_name = insert_match.group(1)
+                    if multiparams and isinstance(multiparams[0], list):
+                        # multiparams[0] = e.g. [{"sample_key": 2}, {"sample_key": 4}]
+                        inserted = [d["sample_key"] for d in multiparams[0]]
+                        # Append these keys to the table’s row list.
+                        self.tables.setdefault(table_name, []).extend(inserted)
+                        # Also store them in self.inserted_keys_ref for your test to check later.
+                        self.inserted_keys_ref[:] = inserted
+                        print(f"[FAKE] Inserting keys {inserted} into {table_name}")
+                    return None
+
+                
+                if select_match and "SELECT" in statement_up:
+                    table_name = select_match.group(1)
+                    # Check if it’s a “temp” table or the real 'SelectorStateMetadata' table.
+                    if table_name in self.tables:
+                        # Return the keys inserted into that table.
+                        result = self.tables[table_name]
+                        print(f"[FAKE] Selecting from {table_name}, returning {result}")
+                        return FakeResult(result)
+                    # Possibly 'SelectorStateMetadata' or something else:
+                    print(f"[FAKE] Selecting from {table_name}, returning raw_keys = {self.raw_keys}")
+                    return FakeResult(self.raw_keys)
+
                 return None
 
             def get_bind(self):
-                return None
+                return FakeBind()
 
             def commit(self):
                 pass
 
-        return fn(DummySession())
+        session_instance = FakeSession(self.raw_keys, self.inserted_keys)
+        return fn(session_instance)
+
+
 
 
 # --- Helper Functions ---
@@ -145,5 +201,4 @@ def test_get_presampling_query(mock_eval, mock_insecure_channel, mock_utils_grpc
     compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
     assert "temp_llm_filter_" in compiled
     assert "sample_key" in compiled
-    # With the side_effect provided, evaluation for batch1 returns [False, True] (keeping key 2) and for batch2 returns [False, True] (keeping key 4).
     assert storage_backend.inserted_keys == [2, 4]

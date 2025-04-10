@@ -79,7 +79,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
                     model=model_name, messages=[{"role": "user", "content": eval_prompt}], max_tokens=512, stream=False
                 )
                 break
-            except Exception:
+            except Exception:  # pylint:disable=broad-exception-caught
                 # Debug: print(f"[DEBUG] Error evaluating batch quality: {e}")
                 time.sleep(5)
 
@@ -99,15 +99,15 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
             SelectorStateMetadata.pipeline_id == self.pipeline_id,
             SelectorStateMetadata.seen_in_trigger_id == next_trigger_id,
         )
-        # Debug: print(f"[DEBUG] Base query: {base_query}")
+        print(f"[DEBUG] Base query: {base_query}")
 
         def fetch_raw_keys(session: Session) -> list[int]:
             keys = session.execute(base_query).scalars().all()
-            # Debug: print(f"[DEBUG] Raw keys fetched from DB: {len(keys)}")
+            print(f"[DEBUG] Raw keys fetched from DB: {len(keys)}")
             return keys
-
+ 
         raw_keys = self._storage_backend._execute_on_session(fetch_raw_keys)  # type: ignore
-        # Debug: print(f"[DEBUG] Raw keys obtained: {len(raw_keys)}")
+        print(f"[DEBUG] Raw keys obtained: {len(raw_keys)}")
         filtered_keys = []
 
         for i in range(0, len(raw_keys), self.batch_size):
@@ -118,10 +118,8 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
                 if keep:
                     filtered_keys.append(batch_keys[idx])
                     # Debug: print(f"[DEBUG] Keeping key {batch_keys[idx]}")
-                else:
-                    # Debug: print(f"[DEBUG] Discarding key {batch_keys[idx]}")
-                    pass
-        # Debug: print(f"[DEBUG] Final filtered keys: {filtered_keys}")
+                
+        print(f"[DEBUG] Final filtered keys: {filtered_keys}")
 
         temp_table_name = f"temp_llm_filter_{uuid.uuid4().hex}"
         metadata = MetaData()
@@ -130,15 +128,16 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
             metadata,
             Column("sample_key", Integer, primary_key=True),
         )
-        # Debug: print(f"[DEBUG] Creating temporary table: {temp_table_name}")
+        print(f"[DEBUG] Creating temporary table: {temp_table_name}")
 
         def create_temp_table_and_insert(session: Session) -> None:
             metadata.create_all(session.get_bind())
             if filtered_keys:
-                # Debug: print(f"[DEBUG] Inserting filtered keys into temporary table: {filtered_keys}")
+                print(f"[DEBUG] Inserting filtered keys into temporary table: {filtered_keys}")
                 session.execute(temp_table.insert(), [{"sample_key": key} for key in filtered_keys])
                 session.commit()
 
         self._storage_backend._execute_on_session(create_temp_table_and_insert)  # type: ignore
-        # Debug: print(f"[DEBUG] Returning presampling query based on temporary table: {temp_table_name}")
+      
+        
         return select(temp_table.c.sample_key)

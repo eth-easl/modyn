@@ -85,26 +85,23 @@ def test_rouge_normal_sentences_single_batch():
     assert isinstance(rouge_metric, AbstractTextMetric)
     assert rouge_metric.get_name() == "ROUGE Score"
     init_res = rouge_metric.get_evaluation_result()
-    assert init_res == {"rouge-1": 0.0, "rouge-2": 0.0, "rouge-l": 0.0}
+    assert init_res == 0
 
     # Use token IDs for a full sentence
     y_true = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])  # "the cat plays happily on the big red mat"
     y_pred = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
     rouge_metric._dataset_evaluated_callback(y_true, y_pred, 1)
     res_perfect = rouge_metric.get_evaluation_result()
-    for val in res_perfect.values():
-        assert 0.9 < val <= 1.0, f"Expected near-perfect ROUGE, got {val}"
+    assert 0.9 < res_perfect <= 1.0, f"Expected near-perfect ROUGE, got {res_perfect}"
 
-    # Reset
-    rouge_metric.scores = {"rouge-1": [], "rouge-2": [], "rouge-l": []}
+    
 
     # Partial match — one token changed
     y_true2 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
     y_pred2 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 997, 7543]])  # red → green
     rouge_metric._dataset_evaluated_callback(y_true2, y_pred2, 1)
     res_partial = rouge_metric.get_evaluation_result()
-    for val in res_partial.values():
-        assert 0.0 < val < 1.0, f"Expected partial ROUGE in (0,1), got {val}"
+    assert 0.0 < res_partial < 1.0, f"Expected partial ROUGE in (0,1), got {res_partial}"
 
 
 def test_rouge_normal_sentences_multiple_batches():
@@ -120,8 +117,8 @@ def test_rouge_normal_sentences_multiple_batches():
     y_pred_1 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
     rouge_metric._dataset_evaluated_callback(y_true_1, y_pred_1, 1)
     batch1 = rouge_metric.get_evaluation_result()
-    for v in batch1.values():
-        assert 0.9 < v <= 1.0
+    
+    assert 0.9 < batch1 <= 1.0
 
     # Batch 2: partial match (quietly vs happily)
     y_true_2 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
@@ -129,5 +126,5 @@ def test_rouge_normal_sentences_multiple_batches():
     rouge_metric._dataset_evaluated_callback(y_true_2, y_pred_2, 1)
 
     final_res = rouge_metric.get_evaluation_result()
-    for v in final_res.values():
-        assert 0.0 < v < 1.0, f"Expected final average ROUGE in (0,1), got {v}"
+    
+    assert 0.0 < final_res < 1.0, f"Expected final average ROUGE in (0,1), got {final_res}"

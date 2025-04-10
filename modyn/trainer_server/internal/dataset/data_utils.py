@@ -31,6 +31,7 @@ def prepare_dataloaders(
     include_labels: bool = True,
     bytes_parser_target: str | None = None,
     transform_target: list[str] | None = None,
+    sequence_length: int  = 128,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
     """Gets the proper dataset according to the dataset id, and creates the
     proper dataloaders.
@@ -69,6 +70,7 @@ def prepare_dataloaders(
         include_labels,
         bytes_parser_target,
         transform_target,
+        sequence_length
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
@@ -107,5 +109,6 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._shuffle,
         online_dataset._tokenizer_name,
         online_dataset._include_labels,
+        online_dataset._sequence_length,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last)

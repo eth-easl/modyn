@@ -19,12 +19,12 @@ class Perplexity(AbstractDecomposableMetric):
             raise RuntimeError("Invalid shape: y_pred must have at least 2 dimensions (batch, num_classes)")
 
         # Determine the expected number of tokens based on y_pred shape.
-
+        assert y_pred.dim() in (2, 3), "y_pred must have 2 or 3 dimensions"
         if y_pred.dim() == 2:
             expected_tokens = y_pred.numel()
         elif y_pred.dim() == 3:
             expected_tokens = y_pred.size(0) * y_pred.size(1)
-        if y_true.numel() != expected_tokens:
+        if y_true.numel() != expected_tokens:  # pylint: disable=possibly-used-before-assignment
             print(f"y_true: {y_true.shape}, expected: {expected_tokens}, y_pred: {y_pred.shape}")
             raise RuntimeError("Mismatch in number of tokens between y_true and y_pred")
 

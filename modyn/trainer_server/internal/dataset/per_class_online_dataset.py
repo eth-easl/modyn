@@ -51,7 +51,7 @@ class PerClassOnlineDataset(OnlineDataset):
         )
         self.filtered_label = initial_filtered_label
 
-    def _get_transformed_data_tuple(
+    def _get_transformed_data_tuple(  # pylint: disable=arguments-renamed
         self,
         key: int,
         sample: memoryview,
