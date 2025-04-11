@@ -300,7 +300,7 @@ def test_get_data_from_storage(db_storage_backend):
 
     # We expect exactly one response from our fake stub.
     assert len(results) == 1
-    keys, samples, labels,targets, resp_time = results[0]
+    keys, samples, labels, targets, resp_time = results[0]
     assert keys == [10, 20]
     assert samples == [b"sample10", b"sample20"]
     assert targets == [b"target10", b"target20"]

@@ -27,7 +27,7 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
-from modyn.models.modular_adapters.modular_adapters import apply_adapters 
+from modyn.models.modular_adapters.modular_adapters import apply_adapters
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -90,9 +90,9 @@ class PytorchTrainer:
         self.trigger_id = training_info.trigger_id
         self._info("Initializing Pytorch Trainer")
 
-        self.training_type = training_info.training_type  
+        self.training_type = training_info.training_type
         self._grad_norm = training_info.grad_norm
-        self.gradient_accumulation_steps = training_info.gradient_accumulation_steps  
+        self.gradient_accumulation_steps = training_info.gradient_accumulation_steps
 
         self.selector_stub = self.connect_to_selector(training_info.selector_address)
         if training_info.seed is not None:
@@ -106,11 +106,8 @@ class PytorchTrainer:
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
 
-       
         self._model.model = apply_adapters(
-            self._model.model,
-            training_info.model_wrappers,              
-            training_info.model_wrapper_args            
+            self._model.model, training_info.model_wrappers, training_info.model_wrapper_args
         )
 
         self.expert_mixture = False
@@ -200,16 +197,15 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
-            include_labels=training_info.training_type != "generative",  
+            include_labels=training_info.training_type != "generative",
             transform_target=training_info.transform_target,
             bytes_parser_target=training_info.bytes_parser_target,
-            tokenizer_seq_length=training_info.tokenizer_seq_length,     
+            seq_length=training_info.tokenizer_seq_length,
         )
 
         self._callbacks: dict[MetricType, Any] = {
             # MetricType.LOSS: LossCallback(self._metadata_collector, criterion_func, training_info.criterion_dict)
         }
-
 
     # ---------------------------------------------------------------------------------------------------------------- #
     #                                       Core training pipeline orchestration                                       #
@@ -634,7 +630,7 @@ class PytorchTrainer:
 
                 stopw.stop("LabelTransform")
                 target = target.to(self._device)
-            if self.training_type != "labeling":
+            if self.training_type != "labeled":
                 target = target[:, :, 0]
                 target[target == self._model.model.tokenizer.pad_token_id] = -100
 

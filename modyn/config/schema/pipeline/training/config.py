@@ -128,9 +128,7 @@ class TrainingConfig(ModynBaseModel):
     )
     model_wrappers: list[str] = Field(
         default_factory=list,
-        description=(
-            "List of model wrappers to apply (e.g., lora, prefix_tuning, kadapter, prompt_tuning)."
-        ),
+        description=("List of model wrappers to apply (e.g., lora, prefix_tuning, kadapter, prompt_tuning)."),
     )
     model_wrapper_args: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
@@ -207,9 +205,6 @@ class TrainingConfig(ModynBaseModel):
                 )
             if not self.initial_model_id:
                 raise ValueError("Initial model set to pretrained, but no initial_model_id given")
-        for wrapper in self.model_wrappers:
-            if wrapper not in self.model_wrapper_args:
-                raise ValueError(f"Wrapper '{wrapper}' specified but no arguments provided in model_wrapper_args.")
         return self
 
 
@@ -222,7 +217,7 @@ class CheckpointingConfig(ModynBaseModel):
         None,
         description="The path on the training node where the checkpoints are stored.",
     )
-    
+
     @model_validator(mode="after")
     def validate_activation(self) -> Self:
         if self.activated:

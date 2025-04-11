@@ -174,22 +174,43 @@ def test_apply_prefix_tuning():
     assert params_after != params_before, "Prefix tuning did not modify trainable parameters."
 
 
-def test_apply_adapters():
-    # Test applying a combination of adapters via the new utility function.
+def test_apply_adapters_default_args():
+    """Adapters applied with default arguments."""
     hparams = HParams()
     model = Gpt2(hparams, hparams.device, hparams.amp)
-    model = apply_adapters(model.model, ["lora", "kadapter"])
+
+    # No args supplied → defaults used
+    model = apply_adapters(model.model, ["lora", "kadapter"], {})
+
     lora_params = [name for name, param in model.model.model.named_parameters() if "lora" in name]
-    assert len(lora_params) > 0, "LoRA adapter was not applied correctly."
-    assert hasattr(model, "kadapter"), "KAdapter was not applied correctly."
+    assert len(lora_params) > 0, "LoRA adapter was not applied with default args."
+    assert hasattr(model, "kadapter"), "KAdapter adapter was not applied with default args."
 
 
-def test_apply_adapters_unknown():
+def test_apply_adapters_with_args():
+    """Adapters applied with explicit arguments."""
     hparams = HParams()
     model = Gpt2(hparams, hparams.device, hparams.amp)
-    try:
-        apply_adapters(model.model, ["non_existent"])
-    except ValueError as e:
-        assert "Unknown adapter type" in str(e), "Did not raise error for unknown adapter type."
-    else:
-        assert False, "Expected ValueError for unknown adapter type."
+
+    adapter_args = {
+        "lora": {"adapter_dim": 4, "adapter_alpha": 8},
+        "kadapter": {"adapter_layers": [2], "scale_factor": 0.05},
+    }
+
+    model = apply_adapters(model.model, ["lora", "kadapter"], adapter_args)
+
+    lora_params = [name for name, param in model.model.model.named_parameters() if "lora" in name]
+    assert len(lora_params) > 0, "LoRA adapter was not applied with args."
+    assert hasattr(model, "kadapter"), "KAdapter was not applied with args."
+
+
+def test_apply_adapters_empty_list():
+    """Applying no adapters should return the model unchanged."""
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    original_state = dict(model.model.named_parameters())  # freeze before
+
+    model = apply_adapters(model, [], {})  # No adapters
+
+    final_state = dict(model.model.named_parameters())
+    assert original_state.keys() == final_state.keys(), "Model structure changed despite no adapters."

@@ -46,8 +46,7 @@ class DataConfig(ModynBaseModel):
         description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )
     tokenizer_seq_length: int = Field(
-        128,
-        description="Maximum number of tokens per input sample during tokenization. Default is 128."
+        128, description="Maximum number of tokens per input sample during tokenization. Default is 128."
     )
 
     @field_validator("bytes_parser_function", mode="before")

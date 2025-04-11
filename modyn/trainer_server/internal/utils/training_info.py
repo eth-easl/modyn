@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -85,5 +86,7 @@ class TrainingInfo:
         self.gradient_accumulation_steps: int = request.gradient_accumulation_steps
         self.training_type: str = request.training_type
         self.model_wrappers: list[str] = list(request.model_wrappers)
-        self.model_wrapper_args: dict[str, dict[str, Any]] = json.loads(request.model_wrapper_args.value)
+        self.model_wrapper_args: dict[str, dict[str, Any]] = (
+            json.loads(request.model_wrapper_args.value) if request.model_wrapper_args.value else {}
+        )
         self.tokenizer_seq_length: int = request.tokenizer_seq_length

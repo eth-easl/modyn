@@ -105,7 +105,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
             keys = session.execute(base_query).scalars().all()
             print(f"[DEBUG] Raw keys fetched from DB: {len(keys)}")
             return keys
- 
+
         raw_keys = self._storage_backend._execute_on_session(fetch_raw_keys)  # type: ignore
         print(f"[DEBUG] Raw keys obtained: {len(raw_keys)}")
         filtered_keys = []
@@ -118,7 +118,7 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
                 if keep:
                     filtered_keys.append(batch_keys[idx])
                     # Debug: print(f"[DEBUG] Keeping key {batch_keys[idx]}")
-                
+
         print(f"[DEBUG] Final filtered keys: {filtered_keys}")
 
         temp_table_name = f"temp_llm_filter_{uuid.uuid4().hex}"
@@ -138,6 +138,5 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
                 session.commit()
 
         self._storage_backend._execute_on_session(create_temp_table_and_insert)  # type: ignore
-      
-        
+
         return select(temp_table.c.sample_key)

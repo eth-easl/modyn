@@ -590,10 +590,10 @@ storage:
       },
       # ------------------------------------ abstracts ------------------------------------ #
       {
-        name: "abstracts_test_gen",
+        name: "abstracts_test_gen2",
         description: "abstracts for cs",
         version: "0.0.1",
-        base_path: "/datasets/arxiv_kaggle/test_with_summary",
+        base_path: "/datasets/arxiv_kaggle_gen/test_with_summary2",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
         file_wrapper_config: {

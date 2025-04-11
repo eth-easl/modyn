@@ -56,7 +56,9 @@ class Data(google.protobuf.message.Message):
         dataset_id: builtins.str = ...,
         num_dataloaders: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["dataset_id", b"dataset_id", "num_dataloaders", b"num_dataloaders"]
+    ) -> None: ...
 
 global___Data = Data
 
@@ -99,7 +101,12 @@ class CheckpointInfo(google.protobuf.message.Message):
         checkpoint_interval: builtins.int = ...,
         checkpoint_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["checkpoint_interval", b"checkpoint_interval", "checkpoint_path", b"checkpoint_path"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "checkpoint_interval", b"checkpoint_interval", "checkpoint_path", b"checkpoint_path"
+        ],
+    ) -> None: ...
 
 global___CheckpointInfo = CheckpointInfo
 
@@ -187,7 +194,9 @@ class StartTrainingRequest(google.protobuf.message.Message):
     @property
     def bytes_parser_target(self) -> global___PythonString: ...
     @property
-    def transform_list_target(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    def transform_list_target(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     @property
     def model_wrappers(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
     @property
@@ -231,16 +240,142 @@ class StartTrainingRequest(google.protobuf.message.Message):
         model_wrapper_args: global___JsonString | None = ...,
         tokenizer_seq_length: builtins.int = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_bytes_parser_target", b"_bytes_parser_target", "_grad_norm", b"_grad_norm", "_seed", b"_seed", "_tokenizer", b"_tokenizer", "bytes_parser", b"bytes_parser", "bytes_parser_target", b"bytes_parser_target", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "grad_norm", b"grad_norm", "grad_scaler_configuration", b"grad_scaler_configuration", "label_transformer", b"label_transformer", "lr_scheduler", b"lr_scheduler", "model_wrapper_args", b"model_wrapper_args", "seed", b"seed", "tokenizer", b"tokenizer", "torch_optimizers_configuration", b"torch_optimizers_configuration"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_bytes_parser_target", b"_bytes_parser_target", "_grad_norm", b"_grad_norm", "_seed", b"_seed", "_tokenizer", b"_tokenizer", "batch_size", b"batch_size", "bytes_parser", b"bytes_parser", "bytes_parser_target", b"bytes_parser_target", "checkpoint_info", b"checkpoint_info", "criterion_parameters", b"criterion_parameters", "data_info", b"data_info", "device", b"device", "drop_last_batch", b"drop_last_batch", "enable_accurate_gpu_measurements", b"enable_accurate_gpu_measurements", "epochs_per_trigger", b"epochs_per_trigger", "grad_norm", b"grad_norm", "grad_scaler_configuration", b"grad_scaler_configuration", "gradient_accumulation_steps", b"gradient_accumulation_steps", "label_transformer", b"label_transformer", "load_optimizer_state", b"load_optimizer_state", "lr_scheduler", b"lr_scheduler", "model_wrapper_args", b"model_wrapper_args", "model_wrappers", b"model_wrappers", "num_prefetched_partitions", b"num_prefetched_partitions", "num_samples_to_pass", b"num_samples_to_pass", "parallel_prefetch_requests", b"parallel_prefetch_requests", "pipeline_id", b"pipeline_id", "pretrained_model_id", b"pretrained_model_id", "record_loss_every", b"record_loss_every", "seed", b"seed", "shuffle", b"shuffle", "tokenizer", b"tokenizer", "tokenizer_seq_length", b"tokenizer_seq_length", "torch_criterion", b"torch_criterion", "torch_optimizers_configuration", b"torch_optimizers_configuration", "training_type", b"training_type", "transform_list", b"transform_list", "transform_list_target", b"transform_list_target", "trigger_id", b"trigger_id", "use_pretrained_model", b"use_pretrained_model"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_grad_norm",
+            b"_grad_norm",
+            "_seed",
+            b"_seed",
+            "_tokenizer",
+            b"_tokenizer",
+            "bytes_parser",
+            b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
+            "checkpoint_info",
+            b"checkpoint_info",
+            "criterion_parameters",
+            b"criterion_parameters",
+            "data_info",
+            b"data_info",
+            "grad_norm",
+            b"grad_norm",
+            "grad_scaler_configuration",
+            b"grad_scaler_configuration",
+            "label_transformer",
+            b"label_transformer",
+            "lr_scheduler",
+            b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "seed",
+            b"seed",
+            "tokenizer",
+            b"tokenizer",
+            "torch_optimizers_configuration",
+            b"torch_optimizers_configuration",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_grad_norm",
+            b"_grad_norm",
+            "_seed",
+            b"_seed",
+            "_tokenizer",
+            b"_tokenizer",
+            "batch_size",
+            b"batch_size",
+            "bytes_parser",
+            b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
+            "checkpoint_info",
+            b"checkpoint_info",
+            "criterion_parameters",
+            b"criterion_parameters",
+            "data_info",
+            b"data_info",
+            "device",
+            b"device",
+            "drop_last_batch",
+            b"drop_last_batch",
+            "enable_accurate_gpu_measurements",
+            b"enable_accurate_gpu_measurements",
+            "epochs_per_trigger",
+            b"epochs_per_trigger",
+            "grad_norm",
+            b"grad_norm",
+            "grad_scaler_configuration",
+            b"grad_scaler_configuration",
+            "gradient_accumulation_steps",
+            b"gradient_accumulation_steps",
+            "label_transformer",
+            b"label_transformer",
+            "load_optimizer_state",
+            b"load_optimizer_state",
+            "lr_scheduler",
+            b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "model_wrappers",
+            b"model_wrappers",
+            "num_prefetched_partitions",
+            b"num_prefetched_partitions",
+            "num_samples_to_pass",
+            b"num_samples_to_pass",
+            "parallel_prefetch_requests",
+            b"parallel_prefetch_requests",
+            "pipeline_id",
+            b"pipeline_id",
+            "pretrained_model_id",
+            b"pretrained_model_id",
+            "record_loss_every",
+            b"record_loss_every",
+            "seed",
+            b"seed",
+            "shuffle",
+            b"shuffle",
+            "tokenizer",
+            b"tokenizer",
+            "tokenizer_seq_length",
+            b"tokenizer_seq_length",
+            "torch_criterion",
+            b"torch_criterion",
+            "torch_optimizers_configuration",
+            b"torch_optimizers_configuration",
+            "training_type",
+            b"training_type",
+            "transform_list",
+            b"transform_list",
+            "transform_list_target",
+            b"transform_list_target",
+            "trigger_id",
+            b"trigger_id",
+            "use_pretrained_model",
+            b"use_pretrained_model",
+        ],
+    ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]) -> typing.Literal["bytes_parser_target"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]
+    ) -> typing.Literal["bytes_parser_target"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_grad_norm", b"_grad_norm"]) -> typing.Literal["grad_norm"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_grad_norm", b"_grad_norm"]
+    ) -> typing.Literal["grad_norm"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_seed", b"_seed"]) -> typing.Literal["seed"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]) -> typing.Literal["tokenizer"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
+    ) -> typing.Literal["tokenizer"] | None: ...
 
 global___StartTrainingRequest = StartTrainingRequest
 
@@ -258,7 +393,9 @@ class StartTrainingResponse(google.protobuf.message.Message):
         training_started: builtins.bool = ...,
         training_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["training_id", b"training_id", "training_started", b"training_started"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["training_id", b"training_id", "training_started", b"training_started"]
+    ) -> None: ...
 
 global___StartTrainingResponse = StartTrainingResponse
 
@@ -319,18 +456,90 @@ class TrainingStatusResponse(google.protobuf.message.Message):
         downsampling_batches_seen: builtins.int | None = ...,
         downsampling_samples_seen: builtins.int | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing.Literal["_batches_seen", b"_batches_seen", "_downsampling_batches_seen", b"_downsampling_batches_seen", "_downsampling_samples_seen", b"_downsampling_samples_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "downsampling_batches_seen", b"downsampling_batches_seen", "downsampling_samples_seen", b"downsampling_samples_seen", "exception", b"exception", "log", b"log", "samples_seen", b"samples_seen"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing.Literal["_batches_seen", b"_batches_seen", "_downsampling_batches_seen", b"_downsampling_batches_seen", "_downsampling_samples_seen", b"_downsampling_samples_seen", "_exception", b"_exception", "_samples_seen", b"_samples_seen", "batches_seen", b"batches_seen", "blocked", b"blocked", "downsampling_batches_seen", b"downsampling_batches_seen", "downsampling_samples_seen", b"downsampling_samples_seen", "exception", b"exception", "is_running", b"is_running", "is_training", b"is_training", "log", b"log", "samples_seen", b"samples_seen", "state_available", b"state_available", "valid", b"valid"]) -> None: ...
+    def HasField(
+        self,
+        field_name: typing.Literal[
+            "_batches_seen",
+            b"_batches_seen",
+            "_downsampling_batches_seen",
+            b"_downsampling_batches_seen",
+            "_downsampling_samples_seen",
+            b"_downsampling_samples_seen",
+            "_exception",
+            b"_exception",
+            "_samples_seen",
+            b"_samples_seen",
+            "batches_seen",
+            b"batches_seen",
+            "downsampling_batches_seen",
+            b"downsampling_batches_seen",
+            "downsampling_samples_seen",
+            b"downsampling_samples_seen",
+            "exception",
+            b"exception",
+            "log",
+            b"log",
+            "samples_seen",
+            b"samples_seen",
+        ],
+    ) -> builtins.bool: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal[
+            "_batches_seen",
+            b"_batches_seen",
+            "_downsampling_batches_seen",
+            b"_downsampling_batches_seen",
+            "_downsampling_samples_seen",
+            b"_downsampling_samples_seen",
+            "_exception",
+            b"_exception",
+            "_samples_seen",
+            b"_samples_seen",
+            "batches_seen",
+            b"batches_seen",
+            "blocked",
+            b"blocked",
+            "downsampling_batches_seen",
+            b"downsampling_batches_seen",
+            "downsampling_samples_seen",
+            b"downsampling_samples_seen",
+            "exception",
+            b"exception",
+            "is_running",
+            b"is_running",
+            "is_training",
+            b"is_training",
+            "log",
+            b"log",
+            "samples_seen",
+            b"samples_seen",
+            "state_available",
+            b"state_available",
+            "valid",
+            b"valid",
+        ],
+    ) -> None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_batches_seen", b"_batches_seen"]) -> typing.Literal["batches_seen"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_batches_seen", b"_batches_seen"]
+    ) -> typing.Literal["batches_seen"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_downsampling_batches_seen", b"_downsampling_batches_seen"]) -> typing.Literal["downsampling_batches_seen"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_downsampling_batches_seen", b"_downsampling_batches_seen"]
+    ) -> typing.Literal["downsampling_batches_seen"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_downsampling_samples_seen", b"_downsampling_samples_seen"]) -> typing.Literal["downsampling_samples_seen"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_downsampling_samples_seen", b"_downsampling_samples_seen"]
+    ) -> typing.Literal["downsampling_samples_seen"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_exception", b"_exception"]) -> typing.Literal["exception"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_exception", b"_exception"]
+    ) -> typing.Literal["exception"] | None: ...
     @typing.overload
-    def WhichOneof(self, oneof_group: typing.Literal["_samples_seen", b"_samples_seen"]) -> typing.Literal["samples_seen"] | None: ...
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_samples_seen", b"_samples_seen"]
+    ) -> typing.Literal["samples_seen"] | None: ...
 
 global___TrainingStatusResponse = TrainingStatusResponse
 
@@ -363,7 +572,9 @@ class StoreFinalModelResponse(google.protobuf.message.Message):
         valid_state: builtins.bool = ...,
         model_id: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["model_id", b"model_id", "valid_state", b"valid_state"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["model_id", b"model_id", "valid_state", b"valid_state"]
+    ) -> None: ...
 
 global___StoreFinalModelResponse = StoreFinalModelResponse
 
@@ -396,6 +607,8 @@ class GetLatestModelResponse(google.protobuf.message.Message):
         valid_state: builtins.bool = ...,
         model_path: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["model_path", b"model_path", "valid_state", b"valid_state"]) -> None: ...
+    def ClearField(
+        self, field_name: typing.Literal["model_path", b"model_path", "valid_state", b"valid_state"]
+    ) -> None: ...
 
 global___GetLatestModelResponse = GetLatestModelResponse

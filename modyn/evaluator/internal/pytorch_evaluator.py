@@ -4,6 +4,7 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
+from typing import Any
 
 import torch
 
@@ -11,6 +12,7 @@ from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_m
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
 from modyn.evaluator.internal.pytorch_lighttuner import PytorchTuner
 from modyn.evaluator.internal.utils import EvaluationInfo, TuningInfo
+from modyn.models.modular_adapters.modular_adapters import apply_adapters
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
@@ -31,7 +33,7 @@ class PytorchEvaluator:
             evaluation_info.device,
             evaluation_info.amp,
         )
-        self._load_state(evaluation_info.model_path)
+        self._load_state(evaluation_info.model_path, evaluation_info.model_wrappers, evaluation_info.model_wrapper_args)
 
         self._eval_info = evaluation_info
 
@@ -60,6 +62,7 @@ class PytorchEvaluator:
             tokenizer=evaluation_info.tokenizer,
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
+            sequence_length=evaluation_info.seq_length,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -75,7 +78,7 @@ class PytorchEvaluator:
     def _debug(self, msg: str) -> None:
         self.logger.debug(f"[Evaluation {self._evaluation_id}] {msg}")
 
-    def _load_state(self, path: pathlib.Path) -> None:
+    def _load_state(self, path: pathlib.Path, model_wrappers: Any, model_wrapper_args: Any) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
 
         self._info(f"Loading model state from {path}")
@@ -83,6 +86,7 @@ class PytorchEvaluator:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
+        self._model.model = apply_adapters(self._model.model, model_wrappers, model_wrapper_args)
         self._model.model.load_state_dict(checkpoint["model"])
 
         # delete trained model from disk

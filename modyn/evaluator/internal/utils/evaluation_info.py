@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import EvaluateModelRequest
@@ -38,6 +39,11 @@ class EvaluationInfo:
         self.device = request.device
         self.amp = amp
         self.batch_size = request.batch_size
+        for metric in request.metrics:
+            metric_dict = json.loads(metric.value)
+            metric_dict["tokenizer"] = request.tokenizer.value if request.HasField("tokenizer") else None
+            metric_dict["seq_length"] = getattr(request, "tokenizer_seq_length", None)
+            metric.value = json.dumps(metric_dict)
         self.raw_metrics = [metric.value for metric in request.metrics]
 
         self.model_class_name = model_class_name
@@ -49,7 +55,7 @@ class EvaluationInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
         self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
-
+        self.seq_length = request.sequence_length
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
@@ -62,3 +68,7 @@ class EvaluationInfo:
         )
         self.light_tuning = request.light_tuning
         self.tuning_info = json.loads(request.tuning_config) if request.HasField("tuning_config") else None
+        self.model_wrappers: list[str] = list(request.model_wrappers)
+        self.model_wrapper_args: dict[str, dict[str, Any]] = (
+            json.loads(request.model_wrapper_args.value) if request.model_wrapper_args.value else {}
+        )

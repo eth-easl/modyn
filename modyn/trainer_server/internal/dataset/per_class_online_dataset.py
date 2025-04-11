@@ -29,6 +29,7 @@ class PerClassOnlineDataset(OnlineDataset):
         bytes_parser_target: str | None = None,
         serialized_transforms_target: list[str] | None = None,
         log_path: pathlib.Path | None = None,
+        sequence_length: int = 128,
     ):
         # Pass all required arguments to the parent __init__
         super().__init__(
@@ -48,6 +49,7 @@ class PerClassOnlineDataset(OnlineDataset):
             include_labels,
             bytes_parser_target,
             serialized_transforms_target,
+            sequence_length,
         )
         self.filtered_label = initial_filtered_label
 

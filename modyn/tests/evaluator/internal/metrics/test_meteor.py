@@ -8,7 +8,10 @@ from modyn.evaluator.internal.metrics.abstract_text_metric import AbstractTextMe
 
 @pytest.fixture
 def meteor_metric():
-    return Meteor(MeteorMetricConfig(), tokenizer="T5TokenizerTransform")
+    config = MeteorMetricConfig
+    config.tokenizer = "T5TokenizerTransform"
+    config.sequence_length = 512
+    return Meteor(config)
 
 
 def test_meteor_type_and_name(meteor_metric):

@@ -31,7 +31,7 @@ def prepare_dataloaders(
     include_labels: bool = True,
     bytes_parser_target: str | None = None,
     transform_target: list[str] | None = None,
-    sequence_length: int  = 128,
+    seq_length: int = 128,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
     """Gets the proper dataset according to the dataset id, and creates the
     proper dataloaders.
@@ -70,7 +70,7 @@ def prepare_dataloaders(
         include_labels,
         bytes_parser_target,
         transform_target,
-        sequence_length
+        seq_length,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
@@ -94,7 +94,7 @@ def prepare_per_class_dataloader_from_online_dataset(
     drop_last: bool = True,
 ) -> torch.utils.data.DataLoader:
     # TODO(#289): Replace inefficient per class dataloader
-    dataset = PerClassOnlineDataset(
+    dataset = PerClassOnlineDataset(  # type: ignore  # pylint: disable=too-many-function-args
         online_dataset._pipeline_id,
         online_dataset._trigger_id,
         online_dataset._dataset_id,

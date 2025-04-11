@@ -261,6 +261,8 @@ def get_training_info(
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
                 epochs_per_trigger=1,
+                training_type="labeled",
+                gradient_accumulation_steps=1,
             )
             training_info = TrainingInfo(
                 request,

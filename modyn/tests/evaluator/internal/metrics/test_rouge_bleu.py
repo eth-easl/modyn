@@ -20,8 +20,10 @@ def test_bleu_normal_sentences_single_batch():
     Use normal, longer sentences to avoid near-zero BLEU from short sequences.
     Test a single batch with perfect and partial matches.
     """
-    config = BleuMetricConfig()
-    bleu = Bleu(config, tokenizer="T5TokenizerTransform")
+    config = BleuMetricConfig
+    config.tokenizer = "T5TokenizerTransform"
+    config.sequence_length = 512
+    bleu = Bleu(config)
 
     # Basic type/name checks
     assert isinstance(bleu, AbstractTextMetric)
@@ -53,8 +55,10 @@ def test_bleu_normal_sentences_multiple_batches():
     - Batch1: near perfect
     - Batch2: partial
     """
-    config = BleuMetricConfig()
-    bleu = Bleu(config, tokenizer="T5TokenizerTransform")
+    config = BleuMetricConfig
+    config.tokenizer = "T5TokenizerTransform"
+    config.sequence_length = 512
+    bleu = Bleu(config)
 
     # Batch 1: near perfect
     y_true_1 = torch.tensor([the_cat_plays_happily_on_the_big_red_mat], dtype=torch.int64)
@@ -79,8 +83,10 @@ def test_rouge_normal_sentences_single_batch():
     - Perfect match => near 1.0
     - Partial match => score in (0,1)
     """
-    config = RougeMetricConfig()
-    rouge_metric = ROUGEScore(config, tokenizer="T5TokenizerTransform")
+    config = RougeMetricConfig
+    config.tokenizer = "T5TokenizerTransform"
+    config.sequence_length = 512
+    rouge_metric = ROUGEScore(config)
 
     assert isinstance(rouge_metric, AbstractTextMetric)
     assert rouge_metric.get_name() == "ROUGE Score"
@@ -93,8 +99,6 @@ def test_rouge_normal_sentences_single_batch():
     rouge_metric._dataset_evaluated_callback(y_true, y_pred, 1)
     res_perfect = rouge_metric.get_evaluation_result()
     assert 0.9 < res_perfect <= 1.0, f"Expected near-perfect ROUGE, got {res_perfect}"
-
-    
 
     # Partial match — one token changed
     y_true2 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
@@ -109,15 +113,17 @@ def test_rouge_normal_sentences_multiple_batches():
     Test ROUGE handles multiple batches using token ID input.
     Final score must be average across both.
     """
-    config = RougeMetricConfig()
-    rouge_metric = ROUGEScore(config, tokenizer="T5TokenizerTransform")
+    config = RougeMetricConfig
+    config.tokenizer = "T5TokenizerTransform"
+    config.sequence_length = 512
+    rouge_metric = ROUGEScore(config)
 
     # Batch 1: perfect match
     y_true_1 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
     y_pred_1 = torch.tensor([[71, 598, 18345, 2210, 15, 45, 83, 92, 7543]])
     rouge_metric._dataset_evaluated_callback(y_true_1, y_pred_1, 1)
     batch1 = rouge_metric.get_evaluation_result()
-    
+
     assert 0.9 < batch1 <= 1.0
 
     # Batch 2: partial match (quietly vs happily)
@@ -126,5 +132,5 @@ def test_rouge_normal_sentences_multiple_batches():
     rouge_metric._dataset_evaluated_callback(y_true_2, y_pred_2, 1)
 
     final_res = rouge_metric.get_evaluation_result()
-    
+
     assert 0.0 < final_res < 1.0, f"Expected final average ROUGE in (0,1), got {final_res}"

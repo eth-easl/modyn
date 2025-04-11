@@ -176,14 +176,18 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     TOKENIZER_FIELD_NUMBER: builtins.int
     GENERATIVE_FIELD_NUMBER: builtins.int
     LIGHT_TUNING_FIELD_NUMBER: builtins.int
+    SEQUENCE_LENGTH_FIELD_NUMBER: builtins.int
     TUNING_CONFIG_FIELD_NUMBER: builtins.int
     BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
     TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPERS_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPER_ARGS_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
     generative: builtins.bool
     light_tuning: builtins.bool
+    sequence_length: builtins.int
     transform_list_target: builtins.str
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
@@ -201,6 +205,10 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def tuning_config(self) -> global___JsonString: ...
     @property
     def bytes_parser_target(self) -> global___PythonString: ...
+    @property
+    def model_wrappers(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    @property
+    def model_wrapper_args(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -215,9 +223,12 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         tokenizer: global___PythonString | None = ...,
         generative: builtins.bool = ...,
         light_tuning: builtins.bool = ...,
+        sequence_length: builtins.int = ...,
         tuning_config: global___JsonString | None = ...,
         bytes_parser_target: global___PythonString | None = ...,
         transform_list_target: builtins.str | None = ...,
+        model_wrappers: collections.abc.Iterable[builtins.str] | None = ...,
+        model_wrapper_args: global___JsonString | None = ...,
     ) -> None: ...
     def HasField(
         self,
@@ -238,6 +249,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"dataset_info",
             "label_transformer",
             b"label_transformer",
+            "model_wrapper_args",
+            b"model_wrapper_args",
             "tokenizer",
             b"tokenizer",
             "transform_list_target",
@@ -277,6 +290,12 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"metrics",
             "model_id",
             b"model_id",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "model_wrappers",
+            b"model_wrappers",
+            "sequence_length",
+            b"sequence_length",
             "tokenizer",
             b"tokenizer",
             "transform_list",

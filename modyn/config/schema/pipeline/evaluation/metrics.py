@@ -18,6 +18,8 @@ class _BaseMetricConfig(ModynBaseModel):
         False,
         description="Whether the metric is used for generative tasks.",
     )
+    tokenizer: str | None = None  # They are meant to be the same as the dataset,
+    seq_length: int | None = None
 
     @field_validator("evaluation_transformer_function", mode="before")
     @classmethod

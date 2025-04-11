@@ -11,7 +11,7 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2Block
 
 
 class AdapterModel(nn.Module):
-    def __init__(self, pretrained_config: GPT2Config | None = None, adapter_layers: list[int] = [1, 11]) -> None:
+    def __init__(self, pretrained_config: GPT2Config | None = None, adapter_layers: list[int] = [1, 11]) -> None:  # pylint: disable= dangerous-default-value
         self.config = pretrained_config or GPT2Config.from_pretrained("gpt2-large")
         super().__init__()
 
@@ -41,10 +41,7 @@ def count_trainable_params(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def apply_lora(
-    model: nn.Module,
-    **kwargs: Any
-) -> nn.Module:
+def apply_lora(model: nn.Module, **kwargs: Any) -> nn.Module:
     """
     Applies LoRA to the model using the PEFT library.
 
@@ -74,10 +71,7 @@ def apply_lora(
     return model
 
 
-def apply_prompt_tuning(
-    model: nn.Module,
-    **kwargs: Any
-) -> nn.Module:
+def apply_prompt_tuning(model: nn.Module, **kwargs: Any) -> nn.Module:
     """
     Applies Prompt Tuning as soft prompt tokens prepended to input.
 
@@ -98,10 +92,7 @@ def apply_prompt_tuning(
     return model
 
 
-def apply_prefix_tuning(
-    model: nn.Module,
-    **kwargs: Any
-) -> nn.Module:
+def apply_prefix_tuning(model: nn.Module, **kwargs: Any) -> nn.Module:
     """
     Applies Prefix Tuning with trainable prefix tokens.
 
@@ -122,10 +113,7 @@ def apply_prefix_tuning(
     return model
 
 
-def apply_kadapter(
-    model: nn.Module,
-    **kwargs: Any
-) -> nn.Module:
+def apply_kadapter(model: nn.Module, **kwargs: Any) -> nn.Module:
     """
     Applies KaAdapter by injecting transformer blocks at specific layers.
 
@@ -235,6 +223,5 @@ def apply_adapters(model: nn.Module, adapters: list[str], adapter_args: dict[str
             model = apply_prompt_tuning(model, **args)
         elif adapter_lower == "prefix_tuning":
             model = apply_prefix_tuning(model, **args)
-        else:
-            raise ValueError(f"Unknown adapter type: {adapter}")
+
     return model

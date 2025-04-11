@@ -112,9 +112,9 @@ class OnlineDataset(IterableDataset):
         # tokenizer for NLP tasks
         self._tokenizer = None
         self._tokenizer_name = tokenizer
-        
+
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, sequence_length=sequence_length)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, max_token_length=sequence_length)
 
         logger.debug("Initialized OnlineDataset.")
 
@@ -205,7 +205,7 @@ class OnlineDataset(IterableDataset):
                         if not has_failed:
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
-                            
+
                             assert len(keys) == len(response.samples) == len(response.labels) == len(response.target)
                             yield (
                                 keys,
@@ -231,7 +231,7 @@ class OnlineDataset(IterableDataset):
                             ]
                             processed_keys.update(keys)
                             assert len(new_keys) == len(new_samples) == len(new_labels) == len(new_gen_targets)
-                         
+
                             yield new_keys, new_samples, new_labels, new_gen_targets, response_time
 
                         stopw.start("ResponseTime", overwrite=True)

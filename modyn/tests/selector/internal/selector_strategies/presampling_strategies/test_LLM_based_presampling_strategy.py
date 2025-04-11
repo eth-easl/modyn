@@ -47,6 +47,7 @@ class FakeStorageBackend:
 
         class FakeBind:
             """Minimal engine/connection mock so create_all() doesn't crash."""
+
             def _run_ddl_visitor(self, visitor, element, **kwargs):
                 pass
 
@@ -88,7 +89,6 @@ class FakeStorageBackend:
                 insert_match = re.search(r"INSERT\s+INTO\s+(\S+)", statement_str, re.IGNORECASE)
                 select_match = re.search(r"FROM\s+(\S+)", statement_str, re.IGNORECASE)
 
-               
                 if create_match:
                     table_name = create_match.group(1)
                     print(f"[FAKE] Creating table: {table_name}")
@@ -96,7 +96,6 @@ class FakeStorageBackend:
                     self.tables[table_name] = []
                     return None
 
-               
                 if insert_match and "INSERT" in statement_up:
                     table_name = insert_match.group(1)
                     if multiparams and isinstance(multiparams[0], list):
@@ -109,7 +108,6 @@ class FakeStorageBackend:
                         print(f"[FAKE] Inserting keys {inserted} into {table_name}")
                     return None
 
-                
                 if select_match and "SELECT" in statement_up:
                     table_name = select_match.group(1)
                     # Check if it’s a “temp” table or the real 'SelectorStateMetadata' table.
@@ -132,8 +130,6 @@ class FakeStorageBackend:
 
         session_instance = FakeSession(self.raw_keys, self.inserted_keys)
         return fn(session_instance)
-
-
 
 
 # --- Helper Functions ---

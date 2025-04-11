@@ -11,8 +11,8 @@ from .abstract_text_metric import AbstractTextMetric
 class Bleu(AbstractTextMetric):
     """BLEU Score metric for text generation evaluation."""
 
-    def __init__(self, config: BleuMetricConfig, tokenizer: str) -> None:
-        super().__init__(config, tokenizer)
+    def __init__(self, config: BleuMetricConfig) -> None:
+        super().__init__(config)
         self.bleu_scores: list[float] = []
 
     def _dataset_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_samples: int) -> None:  # pylint: disable=unused-argument
@@ -44,8 +44,8 @@ class Bleu(AbstractTextMetric):
 class ROUGEScore(AbstractTextMetric):
     """ROUGE Score metric for text evaluation."""
 
-    def __init__(self, config: RougeMetricConfig, tokenizer: str) -> None:
-        super().__init__(config, tokenizer)
+    def __init__(self, config: RougeMetricConfig) -> None:
+        super().__init__(config)
         self.scores: dict[str, list[float]] = {"rouge-1": [], "rouge-2": [], "rouge-l": []}
 
     def _dataset_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_samples: int) -> None:  # pylint: disable=unused-argument

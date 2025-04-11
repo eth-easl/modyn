@@ -14,9 +14,13 @@ logger = logging.getLogger(__name__)
 class AbstractTextMetric(AbstractEvaluationMetric):
     """Abstract text metric that directly uses a tokenizer to decode token IDs."""
 
-    def __init__(self, config: MetricConfig, tokenizer: str) -> None:
+    def __init__(self, config: MetricConfig) -> None:
         super().__init__(config)
-        self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+        self._tokenizer = (
+            instantiate_class("modyn.models.tokenizers", config.tokenizer, max_token_length=config.sequence_length)
+            if config.tokenizer
+            else None
+        )
 
     def decode_ids(self, token_ids_tensor: torch.Tensor) -> str:
         """Decode a single torch.Tensor of token IDs into a text string via the tokenizer or fallback."""
