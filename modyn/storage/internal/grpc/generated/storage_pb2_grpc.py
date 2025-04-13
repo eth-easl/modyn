@@ -45,61 +45,51 @@ class StorageStub(object):
             "/modyn.storage.Storage/Get",
             request_serializer=storage__pb2.GetRequest.SerializeToString,
             response_deserializer=storage__pb2.GetResponse.FromString,
-            _registered_method=True,
         )
         self.GetNewDataSince = channel.unary_stream(
             "/modyn.storage.Storage/GetNewDataSince",
             request_serializer=storage__pb2.GetNewDataSinceRequest.SerializeToString,
             response_deserializer=storage__pb2.GetNewDataSinceResponse.FromString,
-            _registered_method=True,
         )
         self.GetDataInInterval = channel.unary_stream(
             "/modyn.storage.Storage/GetDataInInterval",
             request_serializer=storage__pb2.GetDataInIntervalRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDataInIntervalResponse.FromString,
-            _registered_method=True,
         )
         self.GetDataPerWorker = channel.unary_stream(
             "/modyn.storage.Storage/GetDataPerWorker",
             request_serializer=storage__pb2.GetDataPerWorkerRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDataPerWorkerResponse.FromString,
-            _registered_method=True,
         )
         self.GetDatasetSize = channel.unary_unary(
             "/modyn.storage.Storage/GetDatasetSize",
             request_serializer=storage__pb2.GetDatasetSizeRequest.SerializeToString,
             response_deserializer=storage__pb2.GetDatasetSizeResponse.FromString,
-            _registered_method=True,
         )
         self.CheckAvailability = channel.unary_unary(
             "/modyn.storage.Storage/CheckAvailability",
             request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
             response_deserializer=storage__pb2.DatasetAvailableResponse.FromString,
-            _registered_method=True,
         )
         self.RegisterNewDataset = channel.unary_unary(
             "/modyn.storage.Storage/RegisterNewDataset",
             request_serializer=storage__pb2.RegisterNewDatasetRequest.SerializeToString,
             response_deserializer=storage__pb2.RegisterNewDatasetResponse.FromString,
-            _registered_method=True,
         )
         self.GetCurrentTimestamp = channel.unary_unary(
             "/modyn.storage.Storage/GetCurrentTimestamp",
             request_serializer=storage__pb2.GetCurrentTimestampRequest.SerializeToString,
             response_deserializer=storage__pb2.GetCurrentTimestampResponse.FromString,
-            _registered_method=True,
         )
         self.DeleteDataset = channel.unary_unary(
             "/modyn.storage.Storage/DeleteDataset",
             request_serializer=storage__pb2.DatasetAvailableRequest.SerializeToString,
             response_deserializer=storage__pb2.DeleteDatasetResponse.FromString,
-            _registered_method=True,
         )
         self.DeleteData = channel.unary_unary(
             "/modyn.storage.Storage/DeleteData",
             request_serializer=storage__pb2.DeleteDataRequest.SerializeToString,
             response_deserializer=storage__pb2.DeleteDataResponse.FromString,
-            _registered_method=True,
         )
 
 
@@ -255,7 +245,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -285,7 +274,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -315,7 +303,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -345,7 +332,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -375,7 +361,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -405,7 +390,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -435,7 +419,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -465,7 +448,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -495,7 +477,6 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )
 
     @staticmethod
@@ -525,5 +506,4 @@ class Storage(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True,
         )

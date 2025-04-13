@@ -1,4 +1,3 @@
-
 ##### Common Files for Modyn Library #####
 add_subdirectory("common")
 

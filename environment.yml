@@ -26,6 +26,10 @@ dependencies:
       - evidently==0.4.27
       - alibi-detect==0.12.*
       - tenacity
+      - peft
+      - openai
+      - sentencepiece
+      - rouge-score
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
@@ -43,11 +47,10 @@ dependencies:
   - nltk
   - pytorch::pytorch=2.2.1
   - pytorch::torchvision
-  - pytorch::cpuonly # comment out if commenting in lines below for CUDA
-#  - pytorch::pytorch-cuda=12.1
-#  - nvidia::cuda-libraries-dev=12.1.*
-#  - nvidia::cuda-nvcc=12.1.*
-#  - nvidia::cuda-nvtx=12.1.*
-#  - nvidia::cuda-cupti=12.1.*
-#  - nvidia::cuda-cudart-dev=12.1.*
-#  - nvidia::cuda-profiler-api=12.1.*
+  - pytorch::pytorch-cuda=12.1
+  - nvidia::cuda-libraries-dev=12.1.*
+  - nvidia::cuda-nvcc=12.1.*
+  - nvidia::cuda-nvtx=12.1.*
+  - nvidia::cuda-cupti=12.1.*
+  - nvidia::cuda-cudart-dev=12.1.*
+  - nvidia::cuda-profiler-api==12.1.*

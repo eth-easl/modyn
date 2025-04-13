@@ -1,0 +1,216 @@
+import torch
+from transformers import AutoTokenizer
+
+from modyn.models import (
+    Gpt2,
+    apply_adapters,
+    apply_kadapter,
+    apply_lora,
+    apply_prefix_tuning,
+    apply_prompt_tuning,
+    count_trainable_params,
+)
+
+
+class HParams:
+    def __init__(self, model_name_or_path="gpt2-large", device="cpu", amp=False):
+        self.model_name_or_path = model_name_or_path
+        self.device = device
+        self.amp = amp
+
+
+def test_apply_lora():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+    tokenizer.pad_token = tokenizer.eos_token
+    target_modules = ["c_attn", "c_proj"]
+    model.model = apply_lora(model.model, target_modules=target_modules, adapter_dim=16, adapter_alpha=32)
+    # Verify that LoRA parameters are trainable and others are frozen.
+
+    for name, param in model.model.model.named_parameters():
+        if "lora" in name:
+            assert param.requires_grad, f"LoRA parameter {name} should be trainable."
+        else:
+            assert not param.requires_grad, f"Non-LoRA parameter {name} should be frozen."
+
+
+def test_apply_kadapter():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+    tokenizer.pad_token = tokenizer.eos_token
+    modified_model = apply_kadapter(model.model)
+    # Check that our custom adapter is attached.
+    assert hasattr(modified_model, "kadapter"), "KAdapter not attached to the model."
+    for name, param in modified_model.kadapter.named_parameters():
+        assert param.requires_grad, f"KAdapter parameter {name} should be trainable."
+
+
+def test_model_with_adapters_inference():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+    tokenizer.pad_token = tokenizer.eos_token
+    model.model = apply_lora(model.model, target_modules=["c_attn", "c_proj"])
+    model.model = apply_kadapter(model.model)
+
+    input_text = "Hello, world!"
+    encoding = tokenizer(input_text, return_tensors="pt", padding=True)
+    input_ids = encoding["input_ids"]  # shape: (1, seq_len)
+    attention_mask = encoding["attention_mask"]  # shape: (1, seq_len)
+    data = torch.stack([input_ids, attention_mask], dim=-1)
+    model.model.eval()
+    with torch.no_grad():
+        outputs = model.model(data)
+        logits = outputs.logits
+    print(logits.shape[2])
+    shape = model.model.model.get_input_embeddings().weight.shape[0]
+
+    assert logits.shape[2] == shape, "Output dimension mismatch."
+
+
+def test_model_training_with_kadapters():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+    tokenizer.pad_token = tokenizer.eos_token
+
+    model.model = apply_kadapter(model.model)
+
+    input_text = "Once upon a time, a king had a dream."
+
+    encoding = tokenizer(input_text, return_tensors="pt", padding=True)
+    input_ids = encoding["input_ids"]  # shape: (1, seq_len)
+    attention_mask = encoding["attention_mask"]  # shape: (1, seq_len)
+    data = torch.stack([input_ids, attention_mask], dim=-1)
+    labels = input_ids.clone()
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.model.parameters()), lr=5e-5)
+    model.model.train()
+    with torch.no_grad():
+        initial_outputs = model.model(data)
+    initial_logits = initial_outputs.logits.clone().detach()
+    for _ in range(2):
+        optimizer.zero_grad()
+        outputs = model.model(data, labels=labels)
+        loss = outputs.loss
+        loss.backward()
+        optimizer.step()
+    with torch.no_grad():
+        final_outputs = model.model(data)
+    final_logits = final_outputs.logits.clone().detach()
+    assert loss.item() > 0, "Loss should be > 0 after training."
+    assert not torch.equal(initial_logits, final_logits), "Logits should change after training."
+    for name, param in model.model.named_parameters():
+        if "kadapter" in name:
+            assert param.grad is not None, f"Expected gradient for {name} but found None."
+        else:
+            assert param.grad is None or torch.all(param.grad == 0), f"Unexpected gradient in {name}."
+
+
+def test_model_training_with_lora():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2-large")
+    tokenizer.pad_token = tokenizer.eos_token
+    target_modules = ["c_attn", "c_proj"]
+    model = apply_lora(model.model, target_modules=target_modules, adapter_dim=16, adapter_alpha=32)
+
+    input_text = "Once upon a time, a king had a dream."
+    encoding = tokenizer(input_text, return_tensors="pt", padding=True)
+    input_ids = encoding["input_ids"]  # shape: (1, seq_len)
+    attention_mask = encoding["attention_mask"]  # shape: (1, seq_len)
+    data = torch.stack([input_ids, attention_mask], dim=-1)
+    labels = input_ids.clone()
+
+    optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=5e-5)
+    model.train()
+
+    # Capture initial output
+    with torch.no_grad():
+        initial_outputs = model(data)
+    initial_logits = initial_outputs.logits.clone().detach()
+
+    # Small training loop
+    for _ in range(2):
+        optimizer.zero_grad()
+        outputs = model(data, labels=labels)
+        loss = outputs.loss
+        loss.backward()
+        optimizer.step()
+
+    # Capture final output
+    with torch.no_grad():
+        final_outputs = model(data)
+    final_logits = final_outputs.logits.clone().detach()
+
+    # Check that loss is > 0 and that the model's output changes
+    assert loss.item() > 0, "Loss should be > 0 after training."
+    assert not torch.equal(initial_logits, final_logits), "Logits should change after training."
+
+    # Verify that gradients exist only for LoRA parameters
+    for name, param in model.named_parameters():
+        if "lora" in name:
+            assert param.grad is not None, f"Expected gradient for {name} but found None."
+        else:
+            assert param.grad is None or torch.all(param.grad == 0), f"Unexpected gradient in {name}."
+
+
+def test_apply_prompt_tuning():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    params_before = count_trainable_params(model.model)
+    model.model = apply_prompt_tuning(model.model, num_virtual_tokens=10)
+    params_after = count_trainable_params(model.model)
+    assert params_after != params_before, "Prompt tuning did not modify trainable parameters."
+
+
+def test_apply_prefix_tuning():
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    params_before = count_trainable_params(model.model)
+    model = apply_prefix_tuning(model.model, prefix_length=15)
+    params_after = count_trainable_params(model.model)
+    assert params_after != params_before, "Prefix tuning did not modify trainable parameters."
+
+
+def test_apply_adapters_default_args():
+    """Adapters applied with default arguments."""
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+
+    # No args supplied → defaults used
+    model = apply_adapters(model.model, ["lora", "kadapter"], {})
+
+    lora_params = [name for name, param in model.model.model.named_parameters() if "lora" in name]
+    assert len(lora_params) > 0, "LoRA adapter was not applied with default args."
+    assert hasattr(model, "kadapter"), "KAdapter adapter was not applied with default args."
+
+
+def test_apply_adapters_with_args():
+    """Adapters applied with explicit arguments."""
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+
+    adapter_args = {
+        "lora": {"adapter_dim": 4, "adapter_alpha": 8},
+        "kadapter": {"adapter_layers": [2], "scale_factor": 0.05},
+    }
+
+    model = apply_adapters(model.model, ["lora", "kadapter"], adapter_args)
+
+    lora_params = [name for name, param in model.model.model.named_parameters() if "lora" in name]
+    assert len(lora_params) > 0, "LoRA adapter was not applied with args."
+    assert hasattr(model, "kadapter"), "KAdapter was not applied with args."
+
+
+def test_apply_adapters_empty_list():
+    """Applying no adapters should return the model unchanged."""
+    hparams = HParams()
+    model = Gpt2(hparams, hparams.device, hparams.amp)
+    original_state = dict(model.model.named_parameters())  # freeze before
+
+    model = apply_adapters(model, [], {})  # No adapters
+
+    final_state = dict(model.model.named_parameters())
+    assert original_state.keys() == final_state.keys(), "Model structure changed despite no adapters."

@@ -7,7 +7,10 @@ from pydantic import Field, field_validator, model_validator
 
 from modyn.config.schema.base_model import ModynBaseModel
 
-OptimizerSource = Literal["PyTorch", "APEX"]
+OptimizerSource = Literal["PyTorch", "APEX", "HuggingFace", "Custom"]
+LrSchedulerSource = Literal["PyTorch", "Custom"]
+TrainingType = Literal["labeled", "pretraining", "generative"]
+SUPPORTED_WRAPPERS = {"lora", "kadapter", "prompt_tuning", "prefix_tuning"}
 
 
 class OptimizerParamGroup(ModynBaseModel):
@@ -37,9 +40,6 @@ class OptimizationCriterion(ModynBaseModel):
 
     name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
     config: dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
-
-
-LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class LrSchedulerConfig(ModynBaseModel):
@@ -119,6 +119,21 @@ class TrainingConfig(ModynBaseModel):
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
     )
+    training_type: TrainingType = Field(
+        "labeled",
+        description=(
+            "Specifies the kind of training to perform: labeled (supervised), pretraining (unsupervised with labels), "
+            "or generative (unsupervised text generation)."
+        ),
+    )
+    model_wrappers: list[str] = Field(
+        default_factory=list,
+        description=("List of model wrappers to apply (e.g., lora, prefix_tuning, kadapter, prompt_tuning)."),
+    )
+    model_wrapper_args: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Arguments passed to each model wrapper.",
+    )
     seed: int | None = Field(
         None,
         description=(
@@ -154,6 +169,14 @@ class TrainingConfig(ModynBaseModel):
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
     )
+    grad_norm: float = Field(
+        default=0,
+        description="Clips the gradients normed over this value, if its 0 it will not be used.",
+    )
+    gradient_accumulation_steps: int = Field(
+        default=1,
+        description="Number of steps to accumulate gradients before performing an optimizer step.",
+    )
 
     # [Additional validation]
 
@@ -163,6 +186,14 @@ class TrainingConfig(ModynBaseModel):
         if value > 1:
             raise ValueError("Currently, only single GPU training is supported.")
         return value
+
+    @field_validator("model_wrappers")
+    @classmethod
+    def validate_model_wrappers(cls, wrappers: list[str]) -> list[str]:
+        invalid = [w for w in wrappers if w not in SUPPORTED_WRAPPERS]
+        if invalid:
+            raise ValueError(f"Unsupported model wrappers specified: {invalid}")
+        return wrappers
 
     @model_validator(mode="after")
     def validate_pretrained(self) -> Self:

@@ -343,4 +343,134 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
   ASSERT_NO_THROW(file_wrapper.delete_samples(label_indices));
 }
 
+TEST_F(BinaryFileWrapperTest, TestNoLabels) {
+  // Record layout: [TARGET (2 bytes) + SAMPLE (2 bytes)] => 4 bytes/record => 16 total => 4 samples
+  config_["has_labels"] = false;
+  config_["label_size"] = 0;
+  config_["has_targets"] = true;
+  config_["target_size"] = 2;
+  config_["sample_size"] = 2;
+
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  auto stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  ASSERT_EQ(file_wrapper.get_label(0), -1); // no labels
+  auto t = file_wrapper.get_target(0);
+  ASSERT_EQ(t.size(), 2);                  // we do have targets
+  stream_ptr->close();
+}
+
+TEST_F(BinaryFileWrapperTest, TestNoTargets) {
+  // Record layout: [LABEL (2 bytes) + SAMPLE (2 bytes)] => 4 bytes/record => 16 total => 4 samples
+  config_["has_labels"] = true;
+  config_["label_size"] = 2;
+  config_["has_targets"] = false;
+  config_["target_size"] = 0;
+  config_["sample_size"] = 2;
+
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  auto stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  auto single_target = file_wrapper.get_target(0);
+  ASSERT_TRUE(single_target.empty()); // no targets
+  auto multi_targets = file_wrapper.get_targets(0, 1);
+  ASSERT_EQ(multi_targets.size(), 2u);
+  ASSERT_TRUE(multi_targets[0].empty());
+  ASSERT_TRUE(multi_targets[1].empty());
+  ASSERT_NE(file_wrapper.get_label(0), -1); // we do have labels
+  stream_ptr->close();
+}
+
+TEST_F(BinaryFileWrapperTest, TestNoLabelsNoTargets) {
+  // Record layout: [SAMPLE (4 bytes)] => 4 bytes/record => 16 total => 4 samples
+  config_["has_labels"] = false;
+  config_["label_size"] = 0;
+  config_["has_targets"] = false;
+  config_["target_size"] = 0;
+  config_["sample_size"] = 4;
+
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_)).WillOnce(testing::Return(16));
+  auto stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_)).WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+  ASSERT_EQ(file_wrapper.get_label(0), -1); // no labels
+  auto single_target = file_wrapper.get_target(0);
+  ASSERT_TRUE(single_target.empty());       // no targets
+  auto multi_targets = file_wrapper.get_targets(0, 1);
+  ASSERT_EQ(multi_targets.size(), 2u);
+  ASSERT_TRUE(multi_targets[0].empty());
+  ASSERT_TRUE(multi_targets[1].empty());
+  stream_ptr->close();
+}
+TEST_F(BinaryFileWrapperTest, TestGetTargets) {
+  // Layout: label = 2 bytes, target = 1 byte, sample = 1 byte (total = 4 bytes per record)
+  config_["has_labels"]   = true;
+  config_["label_size"]   = 2;
+  config_["has_targets"]  = true;
+  config_["target_size"]  = 1;
+  config_["sample_size"]  = 1;  // sample_size must be non-zero
+
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_))
+      .WillOnce(testing::Return(16));
+  auto stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_))
+      .WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+
+  auto first_target = file_wrapper.get_target(0);
+  ASSERT_EQ(first_target.size(), 1u);
+  ASSERT_EQ(first_target[0], 12);
+
+  auto all_targets = file_wrapper.get_targets(0, 3);
+  ASSERT_EQ(all_targets.size(), 4u);
+  ASSERT_EQ(all_targets[0][0], 12);
+  ASSERT_EQ(all_targets[1][0], 13);
+  ASSERT_EQ(all_targets[2][0], 14);
+  ASSERT_EQ(all_targets[3][0], 15);
+
+  stream_ptr->close();
+}
+
+TEST_F(BinaryFileWrapperTest, TestGetTargetsFromIndices) {
+  // Use the same layout: 2 bytes label, 1 byte target, 1 byte sample
+  config_["has_labels"]   = true;
+  config_["label_size"]   = 2;
+  config_["has_targets"]  = true;
+  config_["target_size"]  = 1;
+  config_["sample_size"]  = 1;
+
+  EXPECT_CALL(*filesystem_wrapper_, get_file_size(testing::_))
+      .WillOnce(testing::Return(16));
+  auto stream_ptr = std::make_shared<std::ifstream>();
+  stream_ptr->open(file_name_, std::ios::binary);
+  ASSERT_TRUE(stream_ptr->is_open());
+  EXPECT_CALL(*filesystem_wrapper_, get_stream(testing::_))
+      .WillOnce(testing::Return(stream_ptr));
+
+  BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
+
+  std::vector<uint64_t> indices = {1, 3};
+  auto targets = file_wrapper.get_targets_from_indices(indices);
+  ASSERT_EQ(targets.size(), 2u);
+  ASSERT_EQ(targets[0].size(), 1u);
+  ASSERT_EQ(targets[1].size(), 1u);
+  ASSERT_EQ(targets[0][0], 13);
+  ASSERT_EQ(targets[1][0], 15);
+
+  stream_ptr->close();
+}
+
+
+
 }  // namespace modyn::storage

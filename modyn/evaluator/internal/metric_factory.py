@@ -8,11 +8,15 @@ from modyn.evaluator.internal.metrics import (
     AbstractEvaluationMetric,
     AbstractHolisticMetric,
     Accuracy,
+    Bleu,
     F1Score,
+    LLMEvaluation,
+    Meteor,
+    Perplexity,
     RocAuc,
 )
 
-all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc}
+all_metrics: set[type[AbstractEvaluationMetric]] = {Accuracy, F1Score, RocAuc, Perplexity, LLMEvaluation, Meteor, Bleu}
 
 
 class MetricFactory:

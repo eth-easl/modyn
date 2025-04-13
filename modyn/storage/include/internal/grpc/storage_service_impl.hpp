@@ -633,6 +633,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                           sample_keys.begin() + static_cast<int64_t>(sample_idx));
           response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
                                             sample_labels.begin() + static_cast<int64_t>(sample_idx));
+          std::vector<std::vector<unsigned char>> target_data = file_wrapper->get_targets_from_indices(file_indexes);
+          std::vector<std::string> stringified_targets;
+          stringified_targets.reserve(target_data.size());
+          for (const auto& target_vec : target_data) {
+            stringified_targets.emplace_back(target_vec.begin(), target_vec.end());
+          }
+          response.mutable_target()->Assign(stringified_targets.begin(), stringified_targets.end());
 
           // 2. Send response
           {
@@ -678,6 +685,13 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
                                       sample_keys.end());
       response.mutable_labels()->Assign(sample_labels.begin() + static_cast<int64_t>(current_file_start_idx),
                                         sample_labels.end());
+      std::vector<std::vector<unsigned char>> target_data = file_wrapper->get_targets_from_indices(file_indexes);
+      std::vector<std::string> stringified_targets;
+      stringified_targets.reserve(target_data.size());
+      for (const auto& target_vec : target_data) {
+        stringified_targets.emplace_back(target_vec.begin(), target_vec.end());
+      }
+      response.mutable_target()->Assign(stringified_targets.begin(), stringified_targets.end());
 
       {
         const std::lock_guard<std::mutex> lock(writer_mutex);

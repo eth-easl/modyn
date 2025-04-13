@@ -174,9 +174,21 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
+    GENERATIVE_FIELD_NUMBER: builtins.int
+    LIGHT_TUNING_FIELD_NUMBER: builtins.int
+    SEQUENCE_LENGTH_FIELD_NUMBER: builtins.int
+    TUNING_CONFIG_FIELD_NUMBER: builtins.int
+    BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
+    TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPERS_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPER_ARGS_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
+    generative: builtins.bool
+    light_tuning: builtins.bool
+    sequence_length: builtins.int
+    transform_list_target: builtins.str
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
@@ -189,6 +201,14 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def label_transformer(self) -> global___PythonString: ...
     @property
     def tokenizer(self) -> global___PythonString: ...
+    @property
+    def tuning_config(self) -> global___JsonString: ...
+    @property
+    def bytes_parser_target(self) -> global___PythonString: ...
+    @property
+    def model_wrappers(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    @property
+    def model_wrapper_args(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -201,50 +221,107 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
         tokenizer: global___PythonString | None = ...,
+        generative: builtins.bool = ...,
+        light_tuning: builtins.bool = ...,
+        sequence_length: builtins.int = ...,
+        tuning_config: global___JsonString | None = ...,
+        bytes_parser_target: global___PythonString | None = ...,
+        transform_list_target: builtins.str | None = ...,
+        model_wrappers: collections.abc.Iterable[builtins.str] | None = ...,
+        model_wrapper_args: global___JsonString | None = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
+            "_tuning_config",
+            b"_tuning_config",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "label_transformer",
             b"label_transformer",
+            "model_wrapper_args",
+            b"model_wrapper_args",
             "tokenizer",
             b"tokenizer",
+            "transform_list_target",
+            b"transform_list_target",
+            "tuning_config",
+            b"tuning_config",
         ],
     ) -> builtins.bool: ...
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
+            "_tuning_config",
+            b"_tuning_config",
             "batch_size",
             b"batch_size",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "device",
             b"device",
+            "generative",
+            b"generative",
             "label_transformer",
             b"label_transformer",
+            "light_tuning",
+            b"light_tuning",
             "metrics",
             b"metrics",
             "model_id",
             b"model_id",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "model_wrappers",
+            b"model_wrappers",
+            "sequence_length",
+            b"sequence_length",
             "tokenizer",
             b"tokenizer",
             "transform_list",
             b"transform_list",
+            "transform_list_target",
+            b"transform_list_target",
+            "tuning_config",
+            b"tuning_config",
         ],
     ) -> None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]
+    ) -> typing.Literal["bytes_parser_target"] | None: ...
+    @typing.overload
     def WhichOneof(
         self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
     ) -> typing.Literal["tokenizer"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_transform_list_target", b"_transform_list_target"]
+    ) -> typing.Literal["transform_list_target"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_tuning_config", b"_tuning_config"]
+    ) -> typing.Literal["tuning_config"] | None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 
@@ -277,7 +354,10 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     INTERVAL_RESPONSES_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
-    """only when all interval evaluations failed, this field will be set to false"""
+    """only when all interval evaluations failed, this field will be set to false
+    it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+    the client can always check the interval_responses
+    """
     evaluation_id: builtins.int
     @property
     def interval_responses(
@@ -378,7 +458,14 @@ class EvaluationIntervalData(google.protobuf.message.Message):
     INTERVAL_INDEX_FIELD_NUMBER: builtins.int
     EVALUATION_DATA_FIELD_NUMBER: builtins.int
     interval_index: builtins.int
-    """multiple metrics are required on on evaluation on one interval"""
+    """Since not every interval evaluation from EvaluateModelRequest may be successful,
+    the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+    evaluation data corresponds to. The interval_index is the index of the interval in the list
+    Datainfo.evaluation_intervals in the EvaluateModelRequest.
+    For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+    and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+    0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
+    """
     @property
     def evaluation_data(
         self,

@@ -44,6 +44,7 @@ def perform_evaluation(
     metrics: dict[str, AbstractEvaluationMetric],
     label_transformer_function: Callable | None = None,
     amp: bool = False,
+    generative: bool = False,
 ) -> EvaluationResult:
     device_type = "cuda" if "cuda" in device else "cpu"
     contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
@@ -72,7 +73,14 @@ def perform_evaluation(
             batch_size = target.shape[0]
 
             with torch.autocast(device_type, enabled=amp):
-                output = model(data)
+                if generative:
+                    target = target[:, :, 0]
+                    target[target == model.tokenizer.pad_token_id] = -100
+                    output = model.generate(data)
+                    output = model(data, target)
+
+                else:
+                    output = model(data)
 
                 for metric in metrics.values():
                     if isinstance(metric, AbstractDecomposableMetric):

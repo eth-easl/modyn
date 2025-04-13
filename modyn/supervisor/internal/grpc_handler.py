@@ -243,6 +243,8 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         model_id: int,
         device: str,
         intervals: list[tuple[int | None, int | None]],
+        model_wrappers: list[str],
+        model_wrapper_args: dict[str, dict[str, Any]],
     ) -> EvaluateModelRequest:
         dataset_id = dataset_config["dataset_id"]
         transform_list = dataset_config.get("transformations") or []
@@ -262,6 +264,10 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             tokenizer_arg = EvaluatorPythonString(value=tokenizer)
         else:
             tokenizer_arg = None
+        generative = dataset_config["generative"]
+        sequence_length = dataset_config["tokenizer_seq_length"]
+        light_tuning = dataset_config["light_tuning"]
+        tuning_config = dataset_config["tuning_config"] if dataset_config["tuning_config"] else None
 
         return EvaluateModelRequest(
             model_id=model_id,
@@ -270,6 +276,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 num_dataloaders=dataloader_workers,
                 evaluation_intervals=eval_intervals,
             ),
+            generative=generative,
             device=device,
             batch_size=batch_size,
             metrics=metrics,
@@ -277,6 +284,11 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
             label_transformer=EvaluatorPythonString(value=label_transformer),
             tokenizer=tokenizer_arg,
+            light_tuning=light_tuning,
+            tuning_config=tuning_config,
+            sequence_length=sequence_length,
+            model_wrappers=model_wrappers,
+            model_wrapper_args=EvaluatorJsonString(value=json.dumps(model_wrapper_args)),
         )
 
     # pylint: disable=too-many-branches

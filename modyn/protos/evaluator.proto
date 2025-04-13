@@ -44,6 +44,15 @@ message EvaluateModelRequest {
   PythonString bytes_parser = 7;
   PythonString label_transformer = 8;
   optional PythonString tokenizer = 9;
+  bool generative = 10;
+  bool light_tuning = 11;
+  int32 sequence_length =12;
+  optional JsonString tuning_config = 13;
+  optional PythonString bytes_parser_target =14;
+  optional string transform_list_target = 15;
+  repeated string model_wrappers = 16;
+  JsonString model_wrapper_args = 17;
+
 }
 
 message EvaluateModelIntervalResponse {

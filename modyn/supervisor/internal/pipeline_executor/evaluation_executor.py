@@ -338,6 +338,8 @@ class EvaluationExecutor:
             model_id_to_eval,
             self.pipeline.evaluation.device,
             intervals=cast(list[tuple[int | None, int | None]], intervals),
+            model_wrappers=self.pipeline.training.model_wrappers,
+            model_wrapper_args=self.pipeline.training.model_wrapper_args,
         )
 
         def get_failure_reason(eval_aborted_reason: EvaluationAbortedReason) -> str:

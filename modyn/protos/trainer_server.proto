@@ -59,6 +59,14 @@ message StartTrainingRequest {
   bool enable_accurate_gpu_measurements = 25;
   int64 record_loss_every = 26;
   bool drop_last_batch = 27;
+  string training_type = 28; // "labeled", "pretraining", or "generative"
+  optional float grad_norm = 29;
+  optional PythonString bytes_parser_target = 30;
+  repeated string transform_list_target = 31;
+  int32 gradient_accumulation_steps = 32;
+  repeated string model_wrappers = 33;
+  JsonString model_wrapper_args = 34;
+  int32 tokenizer_seq_length = 35;
 }
 
 message StartTrainingResponse {

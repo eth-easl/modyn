@@ -17,7 +17,9 @@ class PresamplingConfig(ModynBaseModel):
     If missing, no presampling is applied.
     """
 
-    strategy: Literal["Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No"] = Field(
+    strategy: Literal[
+        "Random", "RandomNoReplacement", "LabelBalanced", "TriggerBalanced", "No", "LLMEvaluation", "OriginalSet"
+    ] = Field(
         description="Strategy used to presample the data."
         "Only the prefix, i.e. without `PresamplingStrategy`, is needed."
     )
@@ -37,6 +39,14 @@ class PresamplingConfig(ModynBaseModel):
         default=100,
         min=1,
     )
+    custom_prompt: str | None = Field(
+        None, description="Optional custom prompt to override the default evaluation prompt for the LLM."
+    )
+    api_key: str | None = Field(
+        None, description="Optional API key for the LLM service. If not provided, a default will be used."
+    )
+    base_url: str | None = Field(None, description="Optional base URL for the LLM service.")
+    model: str | None = Field(None, description="Optional model name for the LLM service.")
     force_column_balancing: bool = Field(False)
     force_required_target_size: bool = Field(False)
 

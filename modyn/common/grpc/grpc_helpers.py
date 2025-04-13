@@ -251,6 +251,18 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
+            training_type=training_config.training_type,
+            grad_norm=training_config.grad_norm if training_config.grad_norm != 0.0 else None,
+            bytes_parser_target=PythonString(value=data_config.bytes_parser_function_target)
+            if data_config.bytes_parser_function_target is not None
+            else None,
+            transform_list_target=data_config.transformations_target
+            if data_config.transformations_target is not None
+            else None,
+            gradient_accumulation_steps=training_config.gradient_accumulation_steps,
+            model_wrappers=training_config.model_wrappers,
+            model_wrapper_args=TrainerServerJsonString(value=json.dumps(training_config.model_wrapper_args)),
+            tokenizer_seq_length=data_config.tokenizer_seq_length,
         )
 
     def start_training(

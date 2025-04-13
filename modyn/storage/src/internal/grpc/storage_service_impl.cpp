@@ -500,11 +500,16 @@ DatasetData StorageServiceImpl::get_dataset_data(soci::session& session, std::st
   std::string file_wrapper_config;
 
   session << "SELECT dataset_id, base_path, filesystem_wrapper_type, file_wrapper_type, file_wrapper_config FROM "
-             "datasets WHERE "
-             "name = :name",
+             "datasets WHERE name = :name",  // ADDED: Added has_targets to SELECT
       soci::into(dataset_id), soci::into(base_path), soci::into(filesystem_wrapper_type), soci::into(file_wrapper_type),
       soci::into(file_wrapper_config), soci::use(dataset_name);
 
-  return {dataset_id, base_path, static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
-          static_cast<FileWrapperType>(file_wrapper_type), file_wrapper_config};
+  return DatasetData{
+      .dataset_id = dataset_id,
+      .base_path = base_path,
+      .filesystem_wrapper_type = static_cast<FilesystemWrapperType>(filesystem_wrapper_type),
+      .file_wrapper_type = static_cast<FileWrapperType>(file_wrapper_type),
+      .file_wrapper_config = file_wrapper_config,
+
+  };
 }

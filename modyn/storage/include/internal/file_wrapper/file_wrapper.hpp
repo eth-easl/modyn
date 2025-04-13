@@ -21,10 +21,13 @@ class FileWrapper {
   virtual std::vector<int64_t> get_all_labels() = 0;
   virtual std::vector<unsigned char> get_sample(uint64_t index) = 0;
   virtual std::vector<std::vector<unsigned char>> get_samples(uint64_t start, uint64_t end) = 0;
+  virtual std::vector<std::vector<unsigned char>> get_targets(uint64_t start, uint64_t end) = 0;
   virtual std::vector<std::vector<unsigned char>> get_samples_from_indices(const std::vector<uint64_t>& indices) = 0;
+  virtual std::vector<std::vector<unsigned char>> get_targets_from_indices(const std::vector<uint64_t>& indices) = 0;
   virtual void validate_file_extension() = 0;
   virtual void delete_samples(const std::vector<uint64_t>& indices) = 0;
   virtual void set_file_path(const std::string& path) = 0;
+  virtual std::vector<unsigned char> get_target(uint64_t index) = 0;
   virtual FileWrapperType get_type() = 0;
   static FileWrapperType get_file_wrapper_type(const std::string& type) {
     static const std::unordered_map<std::string, FileWrapperType> FILE_WRAPPER_TYPE_MAP = {

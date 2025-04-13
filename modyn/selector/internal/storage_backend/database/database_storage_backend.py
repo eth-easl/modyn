@@ -1,14 +1,24 @@
 import logging
 import multiprocessing as mp
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from typing import Any
 
+import grpc
 from sqlalchemy import select
+
+# For full sample retrieval via gRPC:
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.metadata_database.metadata_database_connection import MetadataDatabaseConnection
 from modyn.metadata_database.models import SelectorStateMetadata
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
+from modyn.storage.internal.grpc.generated.storage_pb2 import GetRequest  # pylint: disable=no-name-in-module
+from modyn.storage.internal.grpc.generated.storage_pb2_grpc import StorageStub
+from modyn.utils import (
+    grpc_common_config,
+    grpc_connection_established,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -206,3 +216,64 @@ class DatabaseStorageBackend(AbstractStorageBackend):
     def _execute_on_session(self, session_callback: Callable) -> Any:
         with MetadataDatabaseConnection(self._modyn_config) as database:
             return session_callback(database.session)
+
+    def _init_grpc(self, worker_id: int | None = None) -> None:  # pragma: no cover
+        self._storage_channel = grpc.insecure_channel(self._storage_address, options=grpc_common_config())
+        if grpc_connection_established(self._storage_channel):
+            self._storagestub = StorageStub(self._storage_channel)
+            return
+
+        raise ConnectionError(
+            f"[Worker {worker_id}]: Could not establish gRPC connection to storage at address {self._storage_address}."
+        )
+
+    def _get_data_from_storage(
+        self, selector_keys: list[int], dataset_id: str
+    ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
+        """
+        Retrieve full sample data (samples plus labels/targets) via a gRPC call.
+        """
+        if self._storagestub is None:
+            self._init_grpc()
+        processed_keys: set[int] | list[int] = []
+        has_failed = False
+
+        for attempt in Retrying(
+            stop=stop_after_attempt(5), wait=wait_random_exponential(multiplier=1, min=2, max=60), reraise=True
+        ):
+            with attempt:
+                try:
+                    # Use a dataset identifier from the config if available.
+                    req = GetRequest(dataset_id=dataset_id, keys=selector_keys)
+                    stopw = Stopwatch()
+                    stopw.start("ResponseTime", overwrite=True)
+
+                    for response in self._storagestub.Get(req):  # type: ignore
+                        response_time = stopw.stop("ResponseTime")
+                        keys = list(response.keys)
+                        if not has_failed:
+                            assert isinstance(processed_keys, list)
+                            processed_keys.extend(keys)
+                            targets = list(response.target)
+                            labels = list(response.labels)
+                            yield keys, list(response.samples), labels, targets, response_time
+
+                        else:
+                            assert isinstance(processed_keys, set)
+                            new_keys: list[int] = [key for key in keys if key not in processed_keys]
+                            new_samples: list[bytes] = [
+                                sample for key, sample in zip(keys, response.samples) if key not in processed_keys
+                            ]
+                            new_labels: list[int] = [
+                                label for key, label in zip(keys, response.labels) if key not in processed_keys
+                            ]
+                            new_targets: list[bytes] = [
+                                target for key, target in zip(keys, response.target) if key not in processed_keys
+                            ]
+                            processed_keys.update(keys)
+                            yield new_keys, new_samples, new_labels, new_targets, response_time
+
+                        stopw.start("ResponseTime", overwrite=True)
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.error(f"Error retrieving data from storage: {e}")
+                    has_failed = True

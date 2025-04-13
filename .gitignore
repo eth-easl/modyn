@@ -4,7 +4,7 @@
 
 # Logging files
 *.log
-
+datasets/
 # Database files
 *.db
 
@@ -13,6 +13,7 @@
 
 # Storage
 *.tar
+metadata-postgres-data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -41,7 +42,7 @@ var/
 
 # JetBrains IDE files
 .idea/
-
+llmfiltering.py
 # postgresql
 postgres-data/
 storage-postgres-data/

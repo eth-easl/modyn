@@ -1,7 +1,8 @@
-from typing import Any
+# remote_grad_match_downsampling_strategy.py
 
 import numpy as np
 import torch
+from typing import Any
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
@@ -15,19 +16,11 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.or
     orthogonal_matching_pursuit_np,
 )
 
-
 class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
     """
-    Strategy introduced in:
-    GRAD-MATCH:Gradient Matching based Data Subset Selection for Efficient Deep Model Training (Killamsetty et. al.)
-    Implementation adapted from:
-    DEEPCORE https://raw.githubusercontent.com/PatrickZH/DeepCore/main/deepcore/methods/gradmatch.py
-    This strategy collects the Gradients (leveraging the abstract class AbstractMatrixDownsamplingStrategy) and then
-    selects the samples using Orthogonal Matching Pursuit (OMP). The goal is to find a sparse vector x such that
-    Ax = b, where A is the matrix containing the last layer gradients, and b is the mean across every dimension.
-    Note that DEEPCORE proposes two versions, one requiring a validation dataset. Such a dataset is not available
-    in modyn; thus, that version is unavailable. The vector b is the mean of the gradients of the validation dataset
-    in this alternative version.
+    Now with an optional 'generative=True' for sequence-level usage.
+    We'll treat each entire sequence as one sample. The matrix has shape (#samples, gradient_dim).
+    Very expensive for big generative datasets, but here's the approach.
     """
 
     def __init__(
@@ -39,7 +32,9 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         modyn_config: dict,
         per_sample_loss: Any,
         device: str,
+        generative: bool = False,
     ):
+        self.generative = generative
         self.full_grad_approximation = params_from_selector["full_grad_approximation"]
         assert self.full_grad_approximation in FULL_GRAD_APPROXIMATION
         super().__init__(
@@ -58,15 +53,18 @@ class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
         )
 
     def _select_indexes_from_matrix(self, matrix: np.ndarray, target_size: int) -> tuple[list[int], torch.Tensor]:
-        cur_val_gradients = np.mean(matrix, axis=0)
+        # matrix shape => (#samples, gradient_dim)
+        # we compute the mean across #samples to approximate full gradient
+        cur_val_gradients = np.mean(matrix, axis=0)  # shape(gradient_dim,)
 
+        # Use OMP to find subset
         if self.device == "cpu":
             cur_weights = orthogonal_matching_pursuit_np(matrix.T, cur_val_gradients, budget=target_size)
         else:
             cur_weights = orthogonal_matching_pursuit(
                 torch.Tensor(matrix).T, torch.Tensor(cur_val_gradients), budget=target_size
             )
-        selection_result = np.nonzero(cur_weights)[0]
+        selection_result = np.nonzero(cur_weights)[0]  # indices of chosen
         weights = torch.tensor(cur_weights[selection_result])
 
         return selection_result.tolist(), weights

@@ -6,10 +6,10 @@ project:
 storage:
   port: "50051"
   hostname: "storage"
-  sample_batch_size: 2000000
+  sample_batch_size: 5000000
   sample_dbinsertion_batchsize: 1000000
   insertion_threads: 8
-  retrieval_threads: 8
+  retrieval_threads: 16
   sample_table_unlogged: true
   file_watcher_watchdog_sleep_time_s: 5
   datasets: [
@@ -22,10 +22,11 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label" },
+          { file_extension: ".png", label_file_extension: ".label",has_labels: true },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 128,
+
       },
       # ----------------------------------- CRITEO ----------------------------------- #
       {
@@ -41,10 +42,12 @@ storage:
             record_size: 160,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 2000000,
+
       },
       # ---------------------------------- YEARBOOK ---------------------------------- #
       {
@@ -60,6 +63,7 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -78,6 +82,7 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -96,6 +101,8 @@ storage:
             record_size: 12292,
             label_size: 4,
             file_extension: ".bin",
+            has_labels: true,
+
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -110,7 +117,7 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".png", label_file_extension: ".label" },
+          { file_extension: ".png", label_file_extension: ".label",has_labels: true, },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 1024,
@@ -127,6 +134,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -144,6 +152,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -160,6 +169,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since headlines contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -177,6 +187,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -193,6 +204,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -210,6 +222,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -226,6 +239,7 @@ storage:
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             label_index: 1,
+            has_labels: true,
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
@@ -240,10 +254,359 @@ storage:
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "SingleSampleFileWrapper",
         file_wrapper_config:
-          { file_extension: ".jpg", label_file_extension: ".label" },
+          { file_extension: ".jpg", label_file_extension: ".label",
+          has_labels: true,
+          },
         ignore_last_timestamp: false,
         file_watcher_interval: 999999999,
         selector_batch_size: 100000,
+
+      },
+      # ------------------------------------ Wikipedia_21_08 ------------------------------------ #
+      {
+        name: "Wikipedia_21_08",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipedia_21_08",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ Wikipedia_21_09 ------------------------------------ #
+      {
+        name: "Wikipedia_21_09_1",
+        description: "Wikipedia text dump from September 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipedia_21_09_1",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ Wikipedia_21_08 ------------------------------------ #
+      {
+        name: "Wikipediaold",
+        description: "Wikipedia text dump from September 2021",
+        version: "0.0.1",
+        base_path: "/datasets/wikipediaoriginal",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ Wikipedia_21_08_shuffled ------------------------------------ #
+      {
+        name: "Shuffled_Wikipedia_21_08",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/shuffled_readablewiki",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_Diffset",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/readablediffset",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "mixreview30",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview30",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview10",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview10",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview20",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview20",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview40",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview40",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       {
+        name: "mixreview50",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/dmixreview50",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+       # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_Diff3",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/readablediffset3",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_cleandiffset",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/cleandiff2",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Wikipedia_Diffset ------------------------------------ #
+      {
+        name: "Wikipedia_clariden",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/claridenclean",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 25000,
+
+      },
+      # ------------------------------------ Movie_dialogue ------------------------------------ #
+      {
+        name: "opensubtitles3",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2016",
+        description: "Wikipedia text dump from August 2021",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2016",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2018",
+        description: "Wikipedia text dump from August 202",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2018",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      {
+        name: "opensubtitles2024",
+        description: "Wikipedia text dump from August 2024",
+        version: "0.0.1",
+        base_path: "/datasets/opensubtitles/readablesubtitles2024",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 250000,
+
+      },
+      # ------------------------------------ abstracts ------------------------------------ #
+      {
+        name: "abstracts_train_gen",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle_gen/train_with_summary",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+
+      },
+      # ------------------------------------ abstracts ------------------------------------ #
+      {
+        name: "abstracts_test_gen2",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/datasets/arxiv_kaggle_gen/test_with_summary2",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+
       },
     ]
   database:
@@ -278,7 +641,7 @@ selector:
   local_storage_directory: "/tmp/local_storage"
   local_storage_max_samples_in_file: 1000000
   cleanup_storage_directories_after_shutdown: true
-  ignore_existing_trigger_samples: false
+  ignore_existing_trigger_samples: true
 
 trainer_server:
   hostname: "trainer_server"

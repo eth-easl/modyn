@@ -1,0 +1,97 @@
+pipeline:
+  name: abstaracts
+  description: Training on wikipedia corpus
+  version: 1.0.0
+model:
+  id: T5
+model_storage:
+  full_model_strategy:
+    name: "PyTorchFullModel"
+training:
+  gpus: 1
+  epochs_per_trigger: 2
+  generative: True
+  device: "cuda:1"
+  dataloader_workers: 1
+  use_previous_model: false
+  initial_model: random
+  #/tmp/models/ftp/2238241055_47_0.modyn
+  batch_size: 8
+  record_loss_every: 100
+  shuffle: False
+  amp: true
+  lora: false
+  grad_norm: 0.5
+  optimizers:
+    - name: "default"
+      algorithm: "Adafactor"
+      source: "HuggingFace"
+      param_groups:
+        - module: "model"
+          config:
+            lr: 0.001
+            scale_parameters: False
+            relative_step: True
+  optimization_criterion:
+    name: "CrossEntropyLoss"
+  checkpointing:
+    activated: True
+    interval: 1000
+    path: "/checkpoints/abstracts_gen_down"
+data:
+  dataset_id: abstracts_train_gen
+  transformations: []
+  bytes_parser_function: |
+    import torch
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
+      text ="Summarize this abstract: "+str(data, 'utf8')
+      return text
+  bytes_parser_function_target: |
+    import torch
+    def bytes_parser_function(data: memoryview) -> torch.Tensor:
+      text = str(data, 'utf8')
+      return text
+  tokenizer: "T5TokenizerTransform"
+trigger:
+  id: TimeTrigger
+  every: "6y"
+evaluation:
+  handlers:
+    - execution_time: after_training
+      strategy:
+        type: SlicingEvalStrategy
+        eval_every: 1y
+        eval_start_from: 315532800
+        eval_end_at: 1577836800
+      models: matrix
+      datasets: ["abstracts_test_gen"]
+  device: "cuda:1"
+  datasets:
+    - dataset_id: abstracts_test_gen
+      generative: true
+      transformations: []
+      bytes_parser_function: |
+        import torch
+        def bytes_parser_function(data: memoryview) -> torch.Tensor:
+          text ="Summarize this abstract: "+str(data, 'utf8')
+          return text
+      bytes_parser_function_target: |
+        import torch
+        def bytes_parser_function(data: memoryview) -> torch.Tensor:
+          text = str(data, 'utf8')
+          return text
+      tokenizer: "T5TokenizerTransform"
+      batch_size: 64
+      dataloader_workers: 2
+      metrics:
+        - name: "Perplexity"
+          generative: true
+        - name: "Bleu"
+          generative: true
+          evaluation_transformer_function: |
+            import torch
+            def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
+              return torch.argmax(model_output, dim=-1)
+  
+
+        

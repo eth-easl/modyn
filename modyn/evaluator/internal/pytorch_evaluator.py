@@ -4,12 +4,15 @@ import multiprocessing as mp
 import os
 import pathlib
 import traceback
+from typing import Any
 
 import torch
 
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
-from modyn.evaluator.internal.utils import EvaluationInfo
+from modyn.evaluator.internal.pytorch_lighttuner import PytorchTuner
+from modyn.evaluator.internal.utils import EvaluationInfo, TuningInfo
+from modyn.models.modular_adapters.modular_adapters import apply_adapters
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
 
 
@@ -30,7 +33,7 @@ class PytorchEvaluator:
             evaluation_info.device,
             evaluation_info.amp,
         )
-        self._load_state(evaluation_info.model_path)
+        self._load_state(evaluation_info.model_path, evaluation_info.model_wrappers, evaluation_info.model_wrapper_args)
 
         self._eval_info = evaluation_info
 
@@ -45,19 +48,21 @@ class PytorchEvaluator:
 
     @staticmethod
     def _prepare_dataloader(
-        evaluation_info: EvaluationInfo,
-        start_timestamp: int | None,
-        end_timestamp: int | None,
+        evaluation_info: EvaluationInfo, start_timestamp: int | None, end_timestamp: int | None
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
-            evaluation_info.dataset_id,
-            evaluation_info.bytes_parser,
-            evaluation_info.transform_list,
-            evaluation_info.storage_address,
-            evaluation_info.evaluation_id,
-            evaluation_info.tokenizer,
-            start_timestamp,
-            end_timestamp,
+            dataset_id=evaluation_info.dataset_id,
+            bytes_parser=evaluation_info.bytes_parser,
+            bytes_parser_target=evaluation_info.bytes_parser_target,
+            serialized_transforms=evaluation_info.transform_list,
+            storage_address=evaluation_info.storage_address,
+            evaluation_id=evaluation_info.evaluation_id,
+            include_labels=not evaluation_info.generative,
+            serialized_target_transforms=evaluation_info.serialized_transforms_target,
+            tokenizer=evaluation_info.tokenizer,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp,
+            sequence_length=evaluation_info.seq_length,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -65,7 +70,6 @@ class PytorchEvaluator:
             num_workers=evaluation_info.num_dataloaders,
             timeout=60 if evaluation_info.num_dataloaders > 0 else 0,
         )
-
         return dataloader
 
     def _info(self, msg: str) -> None:
@@ -74,7 +78,7 @@ class PytorchEvaluator:
     def _debug(self, msg: str) -> None:
         self.logger.debug(f"[Evaluation {self._evaluation_id}] {msg}")
 
-    def _load_state(self, path: pathlib.Path) -> None:
+    def _load_state(self, path: pathlib.Path, model_wrappers: Any, model_wrapper_args: Any) -> None:
         assert path.exists(), "Cannot load state from non-existing file"
 
         self._info(f"Loading model state from {path}")
@@ -82,6 +86,7 @@ class PytorchEvaluator:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
+        self._model.model = apply_adapters(self._model.model, model_wrappers, model_wrapper_args)
         self._model.model.load_state_dict(checkpoint["model"])
 
         # delete trained model from disk
@@ -99,6 +104,7 @@ class PytorchEvaluator:
             metrics,
             self._label_transformer_function,
             self._amp,
+            self._eval_info.generative,
         )
 
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
@@ -107,6 +113,15 @@ class PytorchEvaluator:
             f"Finished evaluation of {interval_idx}: {eval_result.num_samples} samples. "
             f"Queue size = {self._metric_result_queue.qsize()}"
         )
+
+    def _light_tune(self, tuning_info: TuningInfo) -> None:
+        tuner = PytorchTuner(
+            tuning_info=tuning_info,
+            logger=self.logger,
+            model=self._model.model,
+            storage_address=self._eval_info.storage_address,
+        )
+        tuner.train()
 
     def evaluate(self) -> None:
         for idx, interval_idx in enumerate(self._eval_info.not_failed_interval_ids):
@@ -124,6 +139,7 @@ def evaluate(
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
     metric_result_queue: mp.Queue,
+    light_tuning_info: TuningInfo | None = None,  # Dictionary to pass tuning parameters
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -136,7 +152,20 @@ def evaluate(
 
     try:
         evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue)
-        evaluator.evaluate()
+
+        # Perform light tuning before evaluation if enabled
+        if evaluation_info.light_tuning:
+            logger.info("Performing light tuning before evaluation.")
+            light_tuning_info = evaluation_info.tuning_info
+            # Ensure light_tuning_info is valid
+            if not isinstance(light_tuning_info, TuningInfo):
+                raise ValueError("light_tuning_info must be a dictionary with tuning parameters.")
+
+            evaluator._light_tune(light_tuning_info)  # Pass tuning info
+
+            logger.info("Light tuning completed.")
+
+        evaluator.evaluate()  # Run evaluation after tuning
         logger.info("Evaluator returned.")
     except Exception:  # pylint: disable=broad-except
         exception_msg = traceback.format_exc()
