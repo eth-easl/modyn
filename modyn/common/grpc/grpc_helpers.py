@@ -251,6 +251,8 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
+            max_grad_norm=training_config.max_grad_norm 
+            gradient_accumulation_steps=training_config.gradient_accumulation_steps,
         )
 
     def start_training(

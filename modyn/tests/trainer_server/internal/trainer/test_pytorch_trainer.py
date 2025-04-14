@@ -258,6 +258,7 @@ def get_training_info(
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
                 epochs_per_trigger=1,
+                gradient_accumulation_steps=1,
             )
             training_info = TrainingInfo(
                 request,
@@ -430,6 +431,38 @@ def test_trainer_init_with_label_transformer(dummy_system_config: ModynConfig):
     test_tensor = torch.ones(10, dtype=torch.int32)
     assert torch.equal(trainer._label_transformer_function(test_tensor), torch.ones(10, dtype=torch.float32))
     assert trainer._label_transformer_function(test_tensor).dtype == torch.float32
+
+
+def test_gradient_accumulation_equivalence(dummy_system_config):
+    batch_size = 32
+
+    trainer_accum = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+
+    trainer_accum.gradient_accumulation_steps = 2
+    trainer_accum.num_samples_to_pass = batch_size * 2
+    trainer_accum._train_dataloader = MockDataloader(batch_size=batch_size, num_batches=2)
+
+    trainer_single = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+    trainer_single.gradient_accumulation_steps = 1
+    trainer_single.num_samples_to_pass = batch_size * 2
+    trainer_single._train_dataloader = MockDataloader(batch_size=batch_size * 2, num_batches=1)
+
+    def clone_params(model):
+        return {name: param.detach().clone() for name, param in model.named_parameters()}
+
+    # Ensure both trainers start with the same initial parameters.
+    init_params = clone_params(trainer_accum._model.model)
+
+    trainer_accum.train()
+    trainer_single.train()
+
+    # Instead of checking the logged "num_batches_trained" (which counts mini-batches),
+    # we compare the final model parameters to ensure they are equivalent.
+    final_params_accum = clone_params(trainer_accum._model.model)
+    final_params_single = clone_params(trainer_single._model.model)
+
+    for name in init_params.keys():
+        assert torch.allclose(final_params_accum[name], final_params_single[name], atol=1e-5), f"Mismatch in {name}"
 
 
 def test_save_state_to_file(dummy_system_config: ModynConfig):

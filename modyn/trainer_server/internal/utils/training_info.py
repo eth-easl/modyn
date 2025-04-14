@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -77,8 +78,9 @@ class TrainingInfo:
         self.selector_address = selector_address
 
         self.final_checkpoint_path = final_checkpoint_path
+        self.offline_dataset_path = offline_dataset_path
 
         self.seed: int | None = request.seed if request.HasField("seed") else None
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
-
-        self.offline_dataset_path = offline_dataset_path
+        self.max_grad_norm: float | None = request.grad_norm 
+        self.gradient_accumulation_steps: int = request.gradient_accumulation_steps
