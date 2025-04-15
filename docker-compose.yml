@@ -57,7 +57,7 @@ services:
       dockerfile: docker/Storage/Dockerfile
     volumes:
       - storage-data:/app/storage
-      - /scratch/sjohn/modyn/datasets:/datasets
+      - /scratch/sjohn/datasets:/datasets
      # - /scratch/sjohn/modyn/modyn:/src/modyn
 
   #      - .:/modyn_host

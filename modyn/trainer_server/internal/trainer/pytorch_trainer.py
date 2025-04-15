@@ -669,7 +669,7 @@ class PytorchTrainer:
         # Some Huggingface models also show strange behavior inference_mode() because of the way they are initialized
         no_grad_mgr = (
             torch.no_grad()
-            if isinstance(self._model, DLRM) or isinstance(self._model.model, transformers.PretrainedModel)
+            if isinstance(self._model, DLRM) or isinstance(self._model.model.model, transformers.PretrainedModel)
             else torch.inference_mode()
         )
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
