@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from modyn.config.schema.pipeline.trigger import TriggerConfig  # noqa: F401
 from modyn.config.schema.pipeline.trigger.ensemble import (
     AtLeastNEnsembleStrategy,
     EnsembleTriggerConfig,
@@ -15,6 +16,7 @@ from modyn.supervisor.internal.triggers.ensembletrigger import EnsembleTrigger
 from modyn.supervisor.internal.triggers.timetrigger import TimeTrigger
 from modyn.supervisor.internal.triggers.trigger import TriggerContext
 from modyn.supervisor.internal.triggers.utils.models import TriggerPolicyEvaluationLog
+EnsembleTriggerConfig.model_rebuild()
 
 
 @pytest.fixture
