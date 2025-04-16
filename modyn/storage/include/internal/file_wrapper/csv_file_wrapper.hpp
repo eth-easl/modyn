@@ -84,7 +84,7 @@ class CsvFileWrapper : public FileWrapper {
   void setup_document(const std::string& path);
   uint64_t get_number_of_samples() override;
   int64_t get_label(uint64_t index) override;
-  std::vector<unsigned char> get_target(uint64_t index) override;  // ADDED
+  std::vector<unsigned char> get_target(uint64_t index) override;  
   std::vector<int64_t> get_all_labels() override;
   std::vector<unsigned char> get_sample(uint64_t index) override;
   std::vector<std::vector<unsigned char>> get_samples(uint64_t start, uint64_t end) override;
@@ -101,10 +101,10 @@ class CsvFileWrapper : public FileWrapper {
   char separator_, quote_;
   bool allow_quoted_linebreaks_ = true;
   uint64_t label_index_;
-  // ADDED: New members for target support
-  bool has_targets_;       // ADDED
-  uint64_t target_index_;  // ADDED
-  // END ADDED
+
+  bool has_targets_;       
+  uint64_t target_index_;  
+ 
   rapidcsv::Document doc_;
   rapidcsv::LabelParams label_params_;
   std::shared_ptr<std::ifstream> stream_;

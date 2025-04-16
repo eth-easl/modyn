@@ -19,7 +19,7 @@ class BinaryFileWrapper : public FileWrapper {
     ASSERT(fw_config["record_size"], "record_size must be specified in the file wrapper config.");
     record_size_ = fw_config["record_size"].as<uint64_t>();
 
-    // Label configuration as before
+    
     if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
       has_labels_ = true;
       ASSERT(fw_config["label_size"], "label_size must be specified in the file wrapper config.");
@@ -29,7 +29,7 @@ class BinaryFileWrapper : public FileWrapper {
       label_size_ = 0;  // No labels exist
     }
 
-    // ADDED: Target configuration.
+    
     if (fw_config["has_targets"] && fw_config["has_targets"].as<bool>()) {
       has_targets_ = true;
       ASSERT(fw_config["target_size"], "target_size must be specified in the file wrapper config.");
@@ -85,15 +85,13 @@ class BinaryFileWrapper : public FileWrapper {
   std::ifstream* get_stream();
   uint64_t record_size_;
   uint64_t label_size_;
-  // ADDED: New member to store the target size.
   uint64_t target_size_;
   uint64_t file_size_;
-  // ADDED: Adjusted sample_size_ calculation.
+
   uint64_t sample_size_;
   bool little_endian_;
   std::shared_ptr<std::ifstream> stream_;
   bool has_labels_;
-  // ADDED: Flag to indicate whether targets are available.
   bool has_targets_;
   friend class BinaryFileWrapperTest;  // let gtest access private members
 };
