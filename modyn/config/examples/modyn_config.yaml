@@ -608,6 +608,84 @@ storage:
         selector_batch_size: 2500,
 
       },
+      # ------------------------------------ abstracts ------------------------------------ #
+      {
+        name: "pubmed_train_context",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/train_with_context",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+
+      },
+      {
+        name: "pubmed_train",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/train_without_context",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {s
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+
+      },
+      {
+        name: "pubmed_test",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/test_without_context",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {s
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+       
+      },
+      {
+        name: "pubmed_test_context",
+        description: "abstracts for cs",
+        version: "0.0.1",
+        base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/test_with_context",
+        filesystem_wrapper_type: "LocalFilesystemWrapper",
+        file_wrapper_type: "CsvFileWrapper",
+        file_wrapper_config: {s
+            file_extension: ".csv",
+            separator: "\t", #tsv best option here since sentences contain commas and semicolons
+            has_labels: false,
+            has_targets: true,
+            target_index: 1,
+          },
+        ignore_last_timestamp: false,
+        file_watcher_interval: 5,
+        selector_batch_size: 2500,
+       
+      },
+
     ]
   database:
     drivername: "postgresql"
