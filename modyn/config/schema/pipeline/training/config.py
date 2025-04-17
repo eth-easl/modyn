@@ -154,8 +154,30 @@ class TrainingConfig(ModynBaseModel):
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
     )
+    max_grad_norm: float | None = Field(
+        default=None,
+        description="Clips the gradients normed over this value, if its 0 it will not be used.",
+    )
+    gradient_accumulation_steps: int = Field(
+        default=1,
+        description="Number of steps to accumulate gradients before performing an optimizer step.",
+    )
 
     # [Additional validation]
+
+    @field_validator("gradient_accumulation_steps")
+    @classmethod
+    def validate_accumulation_steps(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("Invalid value for gradient_accumulation_steps, must be greater than 0.")
+        return value
+
+    @field_validator("max_grad_norm")
+    @classmethod
+    def validate_max_grad_norm(cls, value: float) -> float:
+        if value is not None and value <= 0:
+            raise ValueError("Invalid value for max_grad_norm, must be greater than 0.")
+        return value
 
     @field_validator("gpus")
     @classmethod
