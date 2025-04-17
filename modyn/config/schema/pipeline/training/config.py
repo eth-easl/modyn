@@ -154,7 +154,7 @@ class TrainingConfig(ModynBaseModel):
         None,
         description="Configuration for the torch.cuda.amp.GradScaler. Effective only when amp is enabled.",
     )
-    max_grad_norm: float = Field(
+    max_grad_norm: float | None = Field(
         default=None,
         description="Clips the gradients normed over this value, if its 0 it will not be used.",
     )
