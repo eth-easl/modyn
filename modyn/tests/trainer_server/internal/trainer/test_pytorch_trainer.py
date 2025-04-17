@@ -159,6 +159,7 @@ def mock_get_dataloaders(
     log_path,
     drop_last,
     num_batches: int = 100,
+    seq_length: int = 100,
 ):
     mock_train_dataloader = MockDataloader(batch_size, num_batches)
     return mock_train_dataloader, None
