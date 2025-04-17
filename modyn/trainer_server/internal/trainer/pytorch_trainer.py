@@ -190,6 +190,7 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
+            seq_length=training_info.tokenizer_seq_length,
         )
 
         # Create callbacks
