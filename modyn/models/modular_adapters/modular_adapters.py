@@ -66,6 +66,7 @@ class AdapterModel(nn.Module):
 
     def forward(self, model_outputs: Any) -> torch.Tensor:
         """Applies the adapters to the provided model outputs.
+        
         Expects model_outputs to be a CausalLMOutputWithCrossAttentions
         like object, where hidden_states is provided.
         """
