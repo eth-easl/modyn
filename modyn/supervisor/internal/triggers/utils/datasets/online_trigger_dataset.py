@@ -53,11 +53,10 @@ class OnlineTriggerDataset(OnlineDataset, IterableDataset):
             parallel_prefetch_requests,
             shuffle,
             tokenizer,
-            None,
+            None,  # log_path
+            True,  # include_labels
         )
         self._sample_prob = sample_prob
-
-    # pylint: disable=too-many-locals, too-many-branches, too-many-statements
 
     def __iter__(self) -> Generator:
         for transformed_tuple in OnlineDataset.__iter__(self):

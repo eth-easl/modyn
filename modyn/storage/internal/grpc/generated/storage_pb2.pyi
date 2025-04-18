@@ -38,21 +38,26 @@ class GetResponse(google.protobuf.message.Message):
     SAMPLES_FIELD_NUMBER: builtins.int
     KEYS_FIELD_NUMBER: builtins.int
     LABELS_FIELD_NUMBER: builtins.int
+    TARGET_FIELD_NUMBER: builtins.int
     @property
     def samples(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     @property
     def keys(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
     @property
     def labels(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.int]: ...
+    @property
+    def target(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.bytes]: ...
     def __init__(
         self,
         *,
         samples: collections.abc.Iterable[builtins.bytes] | None = ...,
         keys: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
+        target: collections.abc.Iterable[builtins.bytes] | None = ...,
     ) -> None: ...
     def ClearField(
-        self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples"]
+        self,
+        field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples", "target", b"target"],
     ) -> None: ...
 
 global___GetResponse = GetResponse

@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
@@ -23,6 +24,10 @@ class PerClassOnlineDataset(OnlineDataset):
         parallel_prefetch_requests: int,
         shuffle: bool,
         tokenizer: str | None,
+        include_labels: bool = True,
+        bytes_parser_target: str | None = None,
+        serialized_transforms_target: list[str] | None = None,
+        log_path: pathlib.Path | None = None,
     ):
         super().__init__(
             pipeline_id,
@@ -38,13 +43,19 @@ class PerClassOnlineDataset(OnlineDataset):
             shuffle,
             tokenizer,
             None,
+            include_labels,
+            bytes_parser_target,
+            serialized_transforms_target,
         )
-        assert initial_filtered_label is not None
         self.filtered_label = initial_filtered_label
 
-    def _get_transformed_data_tuple(self, key: int, sample: bytes, label: int, weight: float | None) -> tuple | None:
-        assert self.filtered_label is not None
-
+    def _get_transformed_data_tuple(  # pylint: disable=arguments-renamed
+        self,
+        key: int,
+        sample: memoryview,
+        label: int | None = None,  # type: ignore
+        weight: float | None | memoryview = None,
+    ) -> tuple | None:
         if self.filtered_label != label:
             return None
-        return super()._get_transformed_data_tuple(key, sample, label, weight)  # type: ignore
+        return super()._get_transformed_data_tuple(key, sample, label, weight)
