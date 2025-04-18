@@ -27,6 +27,7 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
+from modyn.models.t5.t5 import T5
 from modyn.models.modular_adapters.modular_adapters import apply_adapters
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
@@ -669,7 +670,7 @@ class PytorchTrainer:
         # Some Huggingface models also show strange behavior inference_mode() because of the way they are initialized
         no_grad_mgr = (
             torch.no_grad()
-            if isinstance(self._model, DLRM) or isinstance(self._model.model.model, transformers.PretrainedModel)
+            if isinstance(self._model, DLRM,T5) 
             else torch.inference_mode()
         )
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr

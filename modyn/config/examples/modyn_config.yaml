@@ -635,7 +635,7 @@ storage:
         base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/train_without_context",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
-        file_wrapper_config: {s
+        file_wrapper_config: {
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             has_labels: false,
@@ -654,7 +654,7 @@ storage:
         base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/test_without_context",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
-        file_wrapper_config: {s
+        file_wrapper_config: {
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             has_labels: false,
@@ -673,7 +673,7 @@ storage:
         base_path: "/scratch/sjohn/datasets/pubmedqa_unlabeled_split/test_with_context",
         filesystem_wrapper_type: "LocalFilesystemWrapper",
         file_wrapper_type: "CsvFileWrapper",
-        file_wrapper_config: {s
+        file_wrapper_config: {
             file_extension: ".csv",
             separator: "\t", #tsv best option here since sentences contain commas and semicolons
             has_labels: false,

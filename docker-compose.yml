@@ -78,7 +78,7 @@ services:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
     volumes:
-      - /scratch/sjohn/checkpoints:/tmp/models
+      - /pub/nfs-data/sjohn/checkpoints_modyn:/tmp/models
      # - /scratch/sjohn/modyn/modyn:/src/modyn
    # CUDASTART (ignore/delete if enabling cuda manually)
     runtime: nvidia
