@@ -28,10 +28,16 @@ class Perplexity(AbstractDecomposableMetric):
             print(f"y_true: {y_true.shape}, expected: {expected_tokens}, y_pred: {y_pred.shape}")
             raise RuntimeError("Mismatch in number of tokens between y_true and y_pred")
 
-        loss_fn = torch.nn.CrossEntropyLoss(reduction="sum")
-        loss = loss_fn(y_pred.view(-1, y_pred.size(-1)), y_true.view(-1))
+        loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="sum")
+        loss = loss_fn(
+            y_pred.view(-1, y_pred.size(-1)),
+            y_true.view(-1),
+        )
+        # count only the tokens that weren't ignored
+        valid_tokens = (y_true.view(-1) != loss_fn.ignore_index).sum().item()
+
         self.total_loss += loss.item()
-        self.total_tokens += y_true.numel()
+        self.total_tokens += valid_tokens
 
     def get_evaluation_result(self) -> float:
         if self.total_tokens == 0:
