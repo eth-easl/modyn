@@ -23,6 +23,7 @@ import numpy as np
 import torch
 
 from modyn.common.benchmark.stopwatch import Stopwatch
+from modyn.models import apply_adapters
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
@@ -101,6 +102,12 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
+
+        self._model.model = apply_adapters(
+            self._model.model, training_info.model_wrappers, training_info.model_wrapper_args
+        )
+
+        self._setup_optimizers(training_info)
 
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
