@@ -203,7 +203,7 @@ def get_training_info(
                 "param_groups": [{"module": "model.moda", "config": {"lr": 0.1}}],
             },
             "opt2": {
-                "algorithm": "AdamW",
+                "algorithm": "Adafactor",
                 "source": "HuggingFace",
                 "param_groups": [
                     {"module": "model.modb", "config": {"lr": 0.5}},
@@ -367,7 +367,7 @@ def test_trainer_init_multi_optimizers(dummy_system_config: ModynConfig):
     assert isinstance(trainer._model, MockSuperModelWrapper)
     assert len(trainer._optimizers) == 2
     assert isinstance(trainer._optimizers["opt1"], torch.optim.SGD)
-    assert isinstance(trainer._optimizers["opt2"], transformers.optimization.AdamW)
+    assert isinstance(trainer._optimizers["opt2"], transformers.optimization.Adafactor)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
@@ -477,7 +477,6 @@ def test_save_state_to_file(dummy_system_config: ModynConfig):
         trainer.save_state(pathlib.Path(temp.name), 10)
         assert os.path.exists(temp.name)
         saved_dict = torch.load(temp.name)
-
     assert saved_dict == {
         "model": OrderedDict(
             [
@@ -507,18 +506,26 @@ def test_save_state_to_file(dummy_system_config: ModynConfig):
             "param_groups": [
                 {
                     "lr": 0.5,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-06,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
                     "weight_decay": 0.0,
-                    "correct_bias": True,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
                     "params": [0],
                 },
                 {
                     "lr": 0.8,
-                    "betas": (0.9, 0.999),
-                    "eps": 1e-06,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
                     "weight_decay": 0.0,
-                    "correct_bias": True,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
                     "params": [1],
                 },
             ],
@@ -771,6 +778,7 @@ def test_train(
     # we didn't enable recording the training loss
     assert len(trainer._log["training_loss"]) == 0
     status_state = torch.load(io.BytesIO(status_queue.get()))
+    print(status_state)
     checkpointed_state = {
         "model": OrderedDict(
             [
@@ -799,20 +807,28 @@ def test_train(
             "state": {},
             "param_groups": [
                 {
-                    "betas": (0.9, 0.999),
-                    "correct_bias": True,
-                    "eps": 1e-06,
-                    "lr": pytest.approx(0.5),
-                    "params": [0],
+                    "lr": 0.5,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
                     "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [0],
                 },
                 {
-                    "betas": (0.9, 0.999),
-                    "correct_bias": True,
-                    "eps": 1e-06,
                     "lr": 0.8,
-                    "params": [1],
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
                     "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [1],
                 },
             ],
         },

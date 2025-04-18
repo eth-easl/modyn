@@ -94,7 +94,9 @@ class DatasetBinaryFileWrapperConfig(_DatasetBaseFileWrapperConfig):
     )
     record_size: int = Field(description="The size of each full record in bytes (label + features).")
     label_size: int = Field(description="The size of the label field in bytes for a binary file wrapper.")
-    target_size: int = Field(0,description="The size of the generative targets field in bytes for a binary file wrapper.")
+    target_size: int = Field(
+        0, description="The size of the generative targets field in bytes for a binary file wrapper."
+    )
     has_labels: bool = Field(True, description="Describes whether the dataset contains a label field or not")
     has_targets: bool = Field(
         False, description="Describes whether the dataset contains a generative_target field or not"
