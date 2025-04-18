@@ -15,6 +15,7 @@ from unittest.mock import MagicMock, call, patch
 import grpc
 import pytest
 import torch
+import transformers
 
 from modyn.config import ModynConfig
 from modyn.selector.internal.grpc.generated.selector_pb2_grpc import SelectorStub
@@ -158,7 +159,9 @@ def mock_get_dataloaders(
     tokenizer,
     log_path,
     drop_last,
+    include_labels=True,
     num_batches: int = 100,
+    **kwargs,
 ):
     mock_train_dataloader = MockDataloader(batch_size, num_batches)
     return mock_train_dataloader, None
@@ -200,8 +203,8 @@ def get_training_info(
                 "param_groups": [{"module": "model.moda", "config": {"lr": 0.1}}],
             },
             "opt2": {
-                "algorithm": "Adam",
-                "source": "PyTorch",
+                "algorithm": "AdamW",
+                "source": "HuggingFace",
                 "param_groups": [
                     {"module": "model.modb", "config": {"lr": 0.5}},
                     {"module": "model.modc", "config": {"lr": 0.8}},
@@ -258,6 +261,7 @@ def get_training_info(
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
                 epochs_per_trigger=1,
+                training_type="labeled",
             )
             training_info = TrainingInfo(
                 request,
@@ -363,7 +367,7 @@ def test_trainer_init_multi_optimizers(dummy_system_config: ModynConfig):
     assert isinstance(trainer._model, MockSuperModelWrapper)
     assert len(trainer._optimizers) == 2
     assert isinstance(trainer._optimizers["opt1"], torch.optim.SGD)
-    assert isinstance(trainer._optimizers["opt2"], torch.optim.Adam)
+    assert isinstance(trainer._optimizers["opt2"], transformers.optimization.AdamW)
     assert isinstance(trainer._criterion, torch.nn.CrossEntropyLoss)
     assert not trainer._lr_scheduler
     assert trainer._device == "cpu"
@@ -432,6 +436,41 @@ def test_trainer_init_with_label_transformer(dummy_system_config: ModynConfig):
     assert trainer._label_transformer_function(test_tensor).dtype == torch.float32
 
 
+def test_gradient_accumulation_equivalence(dummy_system_config):
+    batch_size = 32
+
+    # Trainer A: gradient accumulation (process 2 mini-batches of size `batch_size`)
+    trainer_accum = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+
+    trainer_accum.gradient_accumulation_steps = 2
+    # Process exactly 2 mini-batches (2*batch_size samples) before stopping training.
+    trainer_accum.num_samples_to_pass = batch_size * 2
+    trainer_accum._train_dataloader = MockDataloader(batch_size=batch_size, num_batches=2)
+
+    # Trainer B: no gradient accumulation, processing one batch of size 2*batch_size
+    trainer_single = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+    trainer_single.gradient_accumulation_steps = 1
+    trainer_single.num_samples_to_pass = batch_size * 2
+    trainer_single._train_dataloader = MockDataloader(batch_size=batch_size * 2, num_batches=1)
+
+    def clone_params(model):
+        return {name: param.detach().clone() for name, param in model.named_parameters()}
+
+    # Ensure both trainers start with the same initial parameters.
+    init_params = clone_params(trainer_accum._model.model)
+
+    trainer_accum.train()
+    trainer_single.train()
+
+    # Instead of checking the logged "num_batches_trained" (which counts mini-batches),
+    # we compare the final model parameters to ensure they are equivalent.
+    final_params_accum = clone_params(trainer_accum._model.model)
+    final_params_single = clone_params(trainer_single._model.model)
+
+    for name in init_params.keys():
+        assert torch.allclose(final_params_accum[name], final_params_single[name], atol=1e-5), f"Mismatch in {name}"
+
+
 def test_save_state_to_file(dummy_system_config: ModynConfig):
     trainer = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
     with tempfile.NamedTemporaryFile() as temp:
@@ -467,29 +506,19 @@ def test_save_state_to_file(dummy_system_config: ModynConfig):
             "state": {},
             "param_groups": [
                 {
-                    "lr": pytest.approx(0.5),
-                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
-                    "eps": pytest.approx(1e-08),
-                    "weight_decay": 0,
-                    "amsgrad": False,
-                    "maximize": False,
-                    "foreach": None,
-                    "capturable": False,
-                    "differentiable": False,
-                    "fused": NoneOrFalse(),
+                    "lr": 0.5,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-06,
+                    "weight_decay": 0.0,
+                    "correct_bias": True,
                     "params": [0],
                 },
                 {
-                    "lr": pytest.approx(0.8),
-                    "betas": (pytest.approx(0.9), pytest.approx(0.999)),
-                    "eps": pytest.approx(1e-08),
-                    "weight_decay": 0,
-                    "amsgrad": False,
-                    "maximize": False,
-                    "foreach": None,
-                    "capturable": False,
-                    "differentiable": False,
-                    "fused": NoneOrFalse(),
+                    "lr": 0.8,
+                    "betas": (0.9, 0.999),
+                    "eps": 1e-06,
+                    "weight_decay": 0.0,
+                    "correct_bias": True,
                     "params": [1],
                 },
             ],
@@ -770,30 +799,20 @@ def test_train(
             "state": {},
             "param_groups": [
                 {
-                    "lr": 0.5,
                     "betas": (0.9, 0.999),
-                    "eps": 1e-08,
-                    "weight_decay": 0,
-                    "amsgrad": False,
-                    "maximize": False,
-                    "foreach": None,
-                    "capturable": False,
-                    "differentiable": False,
-                    "fused": NoneOrFalse(),
+                    "correct_bias": True,
+                    "eps": 1e-06,
+                    "lr": pytest.approx(0.5),
                     "params": [0],
+                    "weight_decay": 0.0,
                 },
                 {
-                    "lr": 0.8,
                     "betas": (0.9, 0.999),
-                    "eps": 1e-08,
-                    "weight_decay": 0,
-                    "amsgrad": False,
-                    "maximize": False,
-                    "foreach": None,
-                    "capturable": False,
-                    "differentiable": False,
-                    "fused": NoneOrFalse(),
+                    "correct_bias": True,
+                    "eps": 1e-06,
+                    "lr": 0.8,
                     "params": [1],
+                    "weight_decay": 0.0,
                 },
             ],
         },

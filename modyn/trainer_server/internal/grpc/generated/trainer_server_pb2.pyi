@@ -141,6 +141,14 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ENABLE_ACCURATE_GPU_MEASUREMENTS_FIELD_NUMBER: builtins.int
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
+    TRAINING_TYPE_FIELD_NUMBER: builtins.int
+    GRAD_NORM_FIELD_NUMBER: builtins.int
+    BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
+    TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
+    GRADIENT_ACCUMULATION_STEPS_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPERS_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPER_ARGS_FIELD_NUMBER: builtins.int
+    TOKENIZER_SEQ_LENGTH_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -158,6 +166,11 @@ class StartTrainingRequest(google.protobuf.message.Message):
     enable_accurate_gpu_measurements: builtins.bool
     record_loss_every: builtins.int
     drop_last_batch: builtins.bool
+    training_type: builtins.str
+    """"labeled", "pretraining", or "generative" """
+    grad_norm: builtins.float
+    gradient_accumulation_steps: builtins.int
+    tokenizer_seq_length: builtins.int
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
     @property
@@ -178,6 +191,16 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def grad_scaler_configuration(self) -> global___JsonString: ...
     @property
     def tokenizer(self) -> global___PythonString: ...
+    @property
+    def bytes_parser_target(self) -> global___PythonString: ...
+    @property
+    def transform_list_target(
+        self,
+    ) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    @property
+    def model_wrappers(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    @property
+    def model_wrapper_args(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -208,28 +231,46 @@ class StartTrainingRequest(google.protobuf.message.Message):
         enable_accurate_gpu_measurements: builtins.bool = ...,
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
+        training_type: builtins.str = ...,
+        grad_norm: builtins.float | None = ...,
+        bytes_parser_target: global___PythonString | None = ...,
+        transform_list_target: collections.abc.Iterable[builtins.str] | None = ...,
+        gradient_accumulation_steps: builtins.int = ...,
+        model_wrappers: collections.abc.Iterable[builtins.str] | None = ...,
+        model_wrapper_args: global___JsonString | None = ...,
+        tokenizer_seq_length: builtins.int = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_grad_norm",
+            b"_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
             b"_tokenizer",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "checkpoint_info",
             b"checkpoint_info",
             "criterion_parameters",
             b"criterion_parameters",
             "data_info",
             b"data_info",
+            "grad_norm",
+            b"grad_norm",
             "grad_scaler_configuration",
             b"grad_scaler_configuration",
             "label_transformer",
             b"label_transformer",
             "lr_scheduler",
             b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
             "seed",
             b"seed",
             "tokenizer",
@@ -241,6 +282,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_grad_norm",
+            b"_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -249,6 +294,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"batch_size",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "checkpoint_info",
             b"checkpoint_info",
             "criterion_parameters",
@@ -263,14 +310,22 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"enable_accurate_gpu_measurements",
             "epochs_per_trigger",
             b"epochs_per_trigger",
+            "grad_norm",
+            b"grad_norm",
             "grad_scaler_configuration",
             b"grad_scaler_configuration",
+            "gradient_accumulation_steps",
+            b"gradient_accumulation_steps",
             "label_transformer",
             b"label_transformer",
             "load_optimizer_state",
             b"load_optimizer_state",
             "lr_scheduler",
             b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "model_wrappers",
+            b"model_wrappers",
             "num_prefetched_partitions",
             b"num_prefetched_partitions",
             "num_samples_to_pass",
@@ -289,18 +344,32 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"shuffle",
             "tokenizer",
             b"tokenizer",
+            "tokenizer_seq_length",
+            b"tokenizer_seq_length",
             "torch_criterion",
             b"torch_criterion",
             "torch_optimizers_configuration",
             b"torch_optimizers_configuration",
+            "training_type",
+            b"training_type",
             "transform_list",
             b"transform_list",
+            "transform_list_target",
+            b"transform_list_target",
             "trigger_id",
             b"trigger_id",
             "use_pretrained_model",
             b"use_pretrained_model",
         ],
     ) -> None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]
+    ) -> typing.Literal["bytes_parser_target"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_grad_norm", b"_grad_norm"]
+    ) -> typing.Literal["grad_norm"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_seed", b"_seed"]) -> typing.Literal["seed"] | None: ...
     @typing.overload

@@ -21,6 +21,7 @@ from typing import Any, Literal
 import grpc
 import numpy as np
 import torch
+import transformers
 
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
@@ -101,7 +102,7 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-
+        self.training_type = training_info.training_type
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
@@ -111,7 +112,6 @@ class PytorchTrainer:
 
         self._batch_size = training_info.batch_size
         self._num_dataloaders = training_info.num_dataloaders
-
         self._label_transformer_function = deserialize_function(
             training_info.label_transformer, LABEL_TRANSFORMER_FUNC_NAME
         )
@@ -190,6 +190,9 @@ class PytorchTrainer:
             training_info.tokenizer,
             self._dataset_log_path,
             drop_last=self._drop_last_batch,
+            include_labels=training_info.training_type != "generative",
+            transform_target=training_info.transform_target,
+            bytes_parser_target=training_info.bytes_parser_target,
         )
 
         # Create callbacks
@@ -297,15 +300,51 @@ class PytorchTrainer:
                         self._assert_data_size(self._batch_size, data, sample_ids, target)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
-                        output = self._model.model(data, sample_ids)
+                        if self.training_type == "generative":
+                            output = self._model.model(data, labels=target)
+                        elif self.training_type == "pretraining":
+                            output = self._model.model(data)
+
+                        else:
+                            output = self._model.model(data, sample_ids=sample_ids)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
-                        if weighted_optimization:
-                            # weighted gradient descent
-                            assert weights is not None
-                            loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                        torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+
+                        if self.training_type != "labeled":
+                            # Shift logits and labels for next-token prediction
+                            # output = output.logits[..., :, :]  # Output for all tokens except the last one
+                            # Target for all tokens except the first one
+                            if output.size(1) > target.size(1):
+                                diff = output.size(1) - target.size(1)
+                                pad_tensor = torch.full(
+                                    (target.size(0), diff), -100, dtype=target.dtype, device=target.device
+                                )
+                                target = torch.cat([pad_tensor, target], dim=1)
+
+                            # We use reshape instead of view to handle non-contiguous tensors safely
+                            output = output.reshape(-1, output.size(-1))
+                            target = target.reshape(-1)
+
+                            if weighted_optimization:
+                                # Compute per-timestep loss (currently 1D, shape: [L])
+                                loss_per_timestep = self._criterion_nored(output, target)
+                                batch_size = weights.size(0)
+                                seq_length = loss_per_timestep.numel() // batch_size
+                                loss_per_timestep = loss_per_timestep.reshape(batch_size, seq_length)
+                                normalized_weights = weights / weights.sum()
+                                expanded_weights = normalized_weights.unsqueeze(1).expand(batch_size, seq_length)
+                                loss = torch.dot(loss_per_timestep.reshape(-1), expanded_weights.reshape(-1))
+
+                            else:
+                                loss = self._criterion(output, target)
                         else:
-                            loss = self._criterion(output, target)
+                            if weighted_optimization:
+                                # Weighted gradient descent
+                                assert weights is not None
+                                loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
+                            else:
+                                loss = self._criterion(output, target)
 
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
@@ -518,15 +557,29 @@ class PytorchTrainer:
         assert isinstance(sample_ids, list), "Cannot parse result from DataLoader"
         stopw.stop("PreprocSampleIDs")
 
-        stopw.start("LabelTransform", resume=True)
-        if self._label_transformer_function is not None:
-            target = self._label_transformer_function(batch[2])
-        else:
-            target = batch[2]
-        stopw.stop("LabelTransform")
-
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
-            target = target.to(self._device)
+            if self.training_type == "generative":
+                target: torch.Tensor | dict
+                if isinstance(batch[2], torch.Tensor):
+                    target = batch[2].to(self._device)
+                else:
+                    raise ValueError(
+                        "The format of the data provided is not supported in modyn. "
+                        "Please use either torch tensors or dict[str, torch.Tensor]"
+                    )
+            else:
+                stopw.start("LabelTransform", resume=True)
+
+                if self._label_transformer_function is not None:
+                    target = self._label_transformer_function(batch[2])
+                else:
+                    target = batch[2]
+
+                stopw.stop("LabelTransform")
+                target = target.to(self._device)
+            if self.training_type != "labeled":
+                target = target[:, :, 0]
+                target[target == self._model.model.tokenizer.pad_token_id] = -100
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: torch.Tensor | dict
@@ -793,6 +846,10 @@ class PytorchTrainer:
                     optimizer_func = getattr(apex.optimizers, optimizer_config["algorithm"])
                 else:
                     raise ValueError("Apex Optimizer defined, but apex is not available in the system")
+
+            elif optimizer_config["source"] == "HuggingFace":
+                optimizer_func = getattr(transformers.optimization, optimizer_config["algorithm"])
+
             else:
                 raise ValueError(
                     f"Unsupported optimizer from {optimizer_config['source']}. PyTorch and APEX are supported"
@@ -911,6 +968,9 @@ class PytorchTrainer:
             self.update_queue("DOWNSAMPLING", batch_number, number_of_samples, training_active=False)
             batch_number += 1
             sample_ids, target, data = self.preprocess_batch(batch)
+            # Handle cases where target is None for generative tasks
+            if self.training_type == "pretraining" and target is None:
+                target = torch.Tensor()
             number_of_samples += len(sample_ids)
 
             no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
