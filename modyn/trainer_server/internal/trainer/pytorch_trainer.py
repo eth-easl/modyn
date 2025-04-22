@@ -676,7 +676,7 @@ class PytorchTrainer:
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
 
         with context_manager:
-            if isinstance(self._model.model, transformers.PreTrainedModel):
+            if isinstance(self._model,T5):
                 big_batch_output = (
                     self._model.model(data, labels=target) if self._downsampler.forward_required else torch.Tensor()
                 )
@@ -894,6 +894,7 @@ class PytorchTrainer:
             modyn_config,
             per_sample_loss,
             self._device,
+            generative=True if self.training_type != "labeled" else False,
         )
 
     def _setup_optimizers(self, training_info: TrainingInfo) -> None:
