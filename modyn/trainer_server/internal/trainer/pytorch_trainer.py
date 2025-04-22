@@ -301,6 +301,8 @@ class PytorchTrainer:
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         if self.training_type == "generative":
+                            print(target.shape)
+                            print(data.shape)
                             output = self._model.model(data, labels=target)
                         elif self.training_type == "pretraining":
                             output = self._model.model(data)
@@ -310,13 +312,6 @@ class PytorchTrainer:
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
                         if self.training_type != "labeled":
-                            if output.size(1) > target.size(1):
-                                diff = output.size(1) - target.size(1)
-                                pad_tensor = torch.full(
-                                    (target.size(0), diff), -100, dtype=target.dtype, device=target.device
-                                )
-                                target = torch.cat([pad_tensor, target], dim=1)
-
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
 
@@ -571,7 +566,7 @@ class PytorchTrainer:
 
                 stopw.stop("LabelTransform")
                 target = target.to(self._device)
-            if self.training_type != "labeled":
+            if self.training_type == "generative":
                 target = target[:, :, 0]
                 target[target == self._model.model.tokenizer.pad_token_id] = -100
 

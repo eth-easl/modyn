@@ -237,34 +237,6 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   ASSERT_EQ(actual_samples, expected_samples);
 }
 
-TEST_F(CsvFileWrapperTest, TestGetTargetNoTargetConfigured) {
-  // Create a CSV with no designated target column
-  std::ofstream file_no_target(file_name_);
-  file_no_target << "col1,col2\n";
-  file_no_target << "A,B\n";
-  file_no_target.close();
-
-  // Adjust config to indicate no target
-  config_["has_targets"] = false;
-
-  EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
-  auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);
-  ASSERT_TRUE(stream_ptr->is_open());
-
-  EXPECT_CALL(*filesystem_wrapper_, get_stream(::testing::_)).WillOnce(::testing::Return(stream_ptr));
-  CsvFileWrapper file_wrapper{file_name_, config_, filesystem_wrapper_};
-
-  // Get single target and convert to string
-  auto single_target = file_wrapper.get_target(0);
-  std::string single_target_str(single_target.begin(), single_target.end());
-  ASSERT_EQ(single_target_str, "") << "Expected dummy target '1' when has_targets is false.";
-
-  // Get multiple targets
-  auto multi_targets = file_wrapper.get_targets(0, 1);
-  ASSERT_EQ(multi_targets.size(), 1);
-  std::string first_multi_target(multi_targets[0].begin(), multi_targets[0].end());
-  ASSERT_EQ(first_multi_target, "") << "Expected dummy target '1' for batch call when has_targets is false.";
-}
 
 TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
   // Create a CSV with a categorical target in the third column

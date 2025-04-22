@@ -56,9 +56,15 @@ class MockModule:
         pass
 
 
+class MockTokenizer:
+    def __init__(self) -> None:
+        self.pad_token_id = 0
+
+
 class MockModelWrapper:
     def __init__(self, model_configuration=None, device="cpu", amp=False) -> None:
         self.model = MockModel()
+        self.tokenizer = MockTokenizer
 
 
 class MockSuperModelWrapper:
@@ -81,8 +87,9 @@ class MockSuperModel(torch.nn.Module):
         self.moda = MockModel()
         self.modb = MockModel()
         self.modc = MockModel()
+        self.tokenizer = MockTokenizer()
 
-    def forward(self, data, sample_ids=None):
+    def forward(self, data, sample_ids=None, labels=None):
         return self.moda(self.modb(data))
 
 
@@ -142,6 +149,29 @@ class MockDataloader:
         return self.num_batches
 
 
+class MockDataloader2D:
+    def __init__(self, batch_size, num_batches):
+        self.batch_size = batch_size
+        self.num_batches = num_batches
+
+        self.dataset = MagicMock()
+
+    def __iter__(self):
+        return iter(
+            [
+                (
+                    torch.full((self.batch_size,), 0.1),
+                    torch.ones(self.batch_size, 10, requires_grad=True),
+                    torch.ones(self.batch_size, 1, 2, dtype=torch.uint8),
+                )
+                for _ in range(self.num_batches)
+            ]
+        )
+
+    def __len__(self):
+        return self.num_batches
+
+
 def mock_get_dataloaders(
     pipeline_id,
     trigger_id,
@@ -164,6 +194,8 @@ def mock_get_dataloaders(
     **kwargs,
 ):
     mock_train_dataloader = MockDataloader(batch_size, num_batches)
+    if not include_labels:
+        mock_train_dataloader = MockDataloader2D(batch_size, num_batches)
     return mock_train_dataloader, None
 
 
@@ -186,6 +218,7 @@ def get_training_info(
     transform_label: bool,
     offline_dataset_path: str,
     model_dynamic_module_patch: MagicMock,
+    training_type: str = "labeled",
 ):
     if num_optimizers == 1:
         torch_optimizers_configuration = {
@@ -261,7 +294,7 @@ def get_training_info(
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
                 epochs_per_trigger=1,
-                training_type="labeled",
+                training_type=training_type,
             )
             training_info = TrainingInfo(
                 request,
@@ -315,6 +348,7 @@ def get_mock_trainer(
     test_grpc_connection_established: MagicMock,
     batch_size: int = 32,
     selection_strategy: tuple[bool, str, dict] = (False, "", {}),
+    training_type: str = "labeled",
 ):
     model_dynamic_module_patch.return_value = MockModule(num_optimizers)
     lr_scheduler_dynamic_module_patch.return_value = MockLRSchedulerModule()
@@ -334,6 +368,7 @@ def get_mock_trainer(
         lr_scheduler,
         transform_label,
         "/tmp/offline_dataset",
+        training_type=training_type,
     )
     trainer = PytorchTrainer(
         modyn_config.model_dump(by_alias=True),
@@ -691,6 +726,158 @@ def test_train(
     status_queue = mp.Queue()
     trainer = get_mock_trainer(
         dummy_system_config, query_status_queue, status_queue, False, False, None, 2, "custom", False, batch_size=8
+    )
+    query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
+    timeout = 2
+    elapsed = 0
+
+    while query_status_queue.empty():
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+    trainer.train()
+    assert trainer._num_samples == 800
+    elapsed = 0
+    while not query_status_queue.empty():
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+    assert test_on_train_begin.call_count == len(trainer._callbacks)
+    assert test_on_train_end.call_count == len(trainer._callbacks)
+    assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
+    assert test_send_metadata.call_count == len(trainer._callbacks)
+    test_cleanup.assert_called_once()
+
+    elapsed = 0
+    while True:
+        if not platform.system() == "Darwin":
+            if status_queue.qsize() == 2:
+                break
+        else:
+            if not status_queue.empty():
+                break
+
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise AssertionError("Did not reach desired queue state after 5 seconds.")
+
+    status = status_queue.get()
+    assert status["num_batches"] == 0
+    assert status["num_samples"] == 0
+    # we didn't enable recording the training loss
+    assert len(trainer._log["training_loss"]) == 0
+    status_state = torch.load(io.BytesIO(status_queue.get()))
+    checkpointed_state = {
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
+        "optimizer-opt1": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.1,
+                    "momentum": 0,
+                    "dampening": 0,
+                    "weight_decay": 0,
+                    "nesterov": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "differentiable": False,
+                    "params": [0],
+                }
+            ],
+        },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.5,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
+                    "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [0],
+                },
+                {
+                    "lr": 0.8,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
+                    "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [1],
+                },
+            ],
+        },
+    }
+    assert status_state == checkpointed_state
+    assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+    final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
+    assert final_state == checkpointed_state
+
+
+# # pylint: disable=too-many-locals
+
+
+@patch.object(BaseCallback, "on_train_begin", return_value=None)
+@patch.object(BaseCallback, "on_train_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_begin", return_value=None)
+@patch.object(BaseCallback, "on_batch_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
+@patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+def test_train_pretrain(
+    test_weights_handling,
+    test_cleaning,
+    test_step,
+    test_cleanup,
+    test_send_metadata,
+    test_on_batch_before_update,
+    test_on_batch_end,
+    test_on_batch_begin,
+    test_on_train_end,
+    test_on_train_begin,
+    dummy_system_config: ModynConfig,
+):
+    query_status_queue = mp.Queue()
+    status_queue = mp.Queue()
+    trainer = get_mock_trainer(
+        dummy_system_config,
+        query_status_queue,
+        status_queue,
+        False,
+        False,
+        None,
+        2,
+        "custom",
+        False,
+        batch_size=8,
+        training_type="pretraining",
     )
     query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
     query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
