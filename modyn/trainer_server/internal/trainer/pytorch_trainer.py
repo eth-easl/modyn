@@ -309,12 +309,10 @@ class PytorchTrainer:
                             output = self._model.model(data, sample_ids=sample_ids)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
-                        torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
+                        
 
                         if self.training_type != "labeled":
-                            # Shift logits and labels for next-token prediction
-                            # output = output.logits[..., :, :]  # Output for all tokens except the last one
-                            # Target for all tokens except the first one
+                           
                             if output.size(1) > target.size(1):
                                 diff = output.size(1) - target.size(1)
                                 pad_tensor = torch.full(
@@ -322,7 +320,7 @@ class PytorchTrainer:
                                 )
                                 target = torch.cat([pad_tensor, target], dim=1)
 
-                            # We use reshape instead of view to handle non-contiguous tensors safely
+                           
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
 
