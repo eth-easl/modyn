@@ -309,10 +309,7 @@ class PytorchTrainer:
                             output = self._model.model(data, sample_ids=sample_ids)
 
                     with GPUMeasurement(self._measure_gpu_ops, "Loss", self._device, stopw, resume=True):
-                        
-
                         if self.training_type != "labeled":
-                           
                             if output.size(1) > target.size(1):
                                 diff = output.size(1) - target.size(1)
                                 pad_tensor = torch.full(
@@ -320,7 +317,6 @@ class PytorchTrainer:
                                 )
                                 target = torch.cat([pad_tensor, target], dim=1)
 
-                           
                             output = output.reshape(-1, output.size(-1))
                             target = target.reshape(-1)
 
