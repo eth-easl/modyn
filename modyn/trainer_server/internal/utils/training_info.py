@@ -82,3 +82,4 @@ class TrainingInfo:
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
 
         self.offline_dataset_path = offline_dataset_path
+        self.max_token_length: int = request.max_token_length

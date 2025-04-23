@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 class OnlineDataset(IterableDataset):
     # pylint: disable=too-many-instance-attributes, abstract-method
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-locals
         self,
         pipeline_id: int,
         trigger_id: int,
@@ -53,6 +53,7 @@ class OnlineDataset(IterableDataset):
         shuffle: bool,
         tokenizer: str | None,
         log_path: pathlib.Path | None,
+        max_token_length: int = 128,
     ):
         self._pipeline_id = pipeline_id
         self._trigger_id = trigger_id
@@ -102,7 +103,7 @@ class OnlineDataset(IterableDataset):
         self._tokenizer = None
         self._tokenizer_name = tokenizer
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, max_token_length=max_token_length)
 
         logger.debug("Initialized OnlineDataset.")
 
