@@ -301,8 +301,6 @@ class PytorchTrainer:
 
                     with GPUMeasurement(self._measure_gpu_ops, "Forward", self._device, stopw, resume=True):
                         if self.training_type == "generative":
-                            print(target.shape)
-                            print(data.shape)
                             output = self._model.model(data, labels=target)
                         elif self.training_type == "pretraining":
                             output = self._model.model(data)

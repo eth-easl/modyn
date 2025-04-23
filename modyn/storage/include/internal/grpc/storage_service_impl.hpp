@@ -638,7 +638,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
           }
 
           if (file_wrapper->has_targets()) {
-            std::vector<std::vector<unsigned char>> target_data = file_wrapper->get_targets_from_indices(file_indexes);
+            const std::vector<std::vector<unsigned char>> target_data =
+                file_wrapper->get_targets_from_indices(file_indexes);
             std::vector<std::string> stringified_targets;
             stringified_targets.reserve(target_data.size());
             for (const auto& target_vec : target_data) {
@@ -696,7 +697,8 @@ class StorageServiceImpl final : public modyn::storage::Storage::Service {
       }
 
       if (file_wrapper->has_targets()) {
-        std::vector<std::vector<unsigned char>> target_data = file_wrapper->get_targets_from_indices(file_indexes);
+        const std::vector<std::vector<unsigned char>> target_data =
+            file_wrapper->get_targets_from_indices(file_indexes);
         std::vector<std::string> stringified_targets;
         stringified_targets.reserve(target_data.size());
         for (const auto& target_vec : target_data) {

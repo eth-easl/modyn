@@ -237,7 +237,6 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   ASSERT_EQ(actual_samples, expected_samples);
 }
 
-
 TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
   // Create a CSV with a categorical target in the third column
   std::ofstream file_with_cat_target(file_name_);

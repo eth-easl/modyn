@@ -106,6 +106,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets(uint64_t sta
   ASSERT(end >= start && end <= get_number_of_samples(), "Invalid indices");
 
   std::vector<std::vector<unsigned char>> targets;
+
   for (uint64_t i = start; i < end; ++i) {
     targets.push_back(get_target(i));
   }
@@ -114,9 +115,7 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets(uint64_t sta
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets_from_indices(const std::vector<uint64_t>& indices) {
   std::vector<std::vector<unsigned char>> targets;
-  for (const uint64_t index : indices) {
-    targets.push_back(get_target(index));
-  }
+  targets.reserve(indices.size()) for (const uint64_t index : indices) { targets.push_back(get_target(index)); }
   return targets;
 }
 
