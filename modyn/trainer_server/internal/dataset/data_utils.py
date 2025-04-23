@@ -28,7 +28,7 @@ def prepare_dataloaders(
     tokenizer: str | None,
     log_path: pathlib.Path | None,
     drop_last: bool = True,
-    seq_length: int = 128,
+    max_token_length: int = 128,
 ) -> tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader | None]:
     """Gets the proper dataset according to the dataset id, and creates the
     proper dataloaders.
@@ -64,7 +64,7 @@ def prepare_dataloaders(
         shuffle,
         tokenizer,
         log_path,
-        seq_length,
+        max_token_length,
     )
     logger.debug("Creating DataLoader.")
     train_dataloader = torch.utils.data.DataLoader(
@@ -88,7 +88,7 @@ def prepare_per_class_dataloader_from_online_dataset(
     drop_last: bool = True,
 ) -> torch.utils.data.DataLoader:
     # TODO(#289): Replace inefficient per class dataloader
-    dataset = PerClassOnlineDataset(  # type: ignore  # pylint: disable=too-many-function-args
+    dataset = PerClassOnlineDataset(  # pylint: disable=too-many-function-args
         online_dataset._pipeline_id,
         online_dataset._trigger_id,
         online_dataset._dataset_id,
@@ -102,6 +102,6 @@ def prepare_per_class_dataloader_from_online_dataset(
         online_dataset._parallel_prefetch_requests,
         online_dataset._shuffle,
         online_dataset._tokenizer_name,
-        online_dataset._sequence_length,
+        online_dataset._max_token_length,
     )
     return torch.utils.data.DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, drop_last=drop_last)

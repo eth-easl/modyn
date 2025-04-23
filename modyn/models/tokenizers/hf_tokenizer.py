@@ -4,7 +4,10 @@ from transformers import PreTrainedTokenizer
 
 class HFTokenizerTransform:
     def __init__(self, tokenizer: PreTrainedTokenizer, max_token_length: int) -> None:
-        """Parent class for tokenizers based on HuggingFace's Transformers.
+        """
+            Adapted from WildTime's initialize_distilbert_transform
+            Here you can find the original implementation:
+            https://github.com/huaxiuyao/Wild-Time/blob/main/wildtime/data/utils.py
 
         Args:
             tokenizer: Preloaded tokenizer object.
