@@ -28,7 +28,8 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
             - dim 0 is the token sequence length.
             - dim 1 contains input_ids and attention_mask.
         """
-        if not sample:  # This is needed here since this tokenizer cannot handle an empty list
+        if not sample:
+            # This is needed here since this tokenizer cannot handle an empty list
             sample = self.tokenizer.eos_token
             eos_id = self.tokenizer.eos_token_id
             pad_id = self.tokenizer.pad_token_id
@@ -36,6 +37,7 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
             attention_mask = torch.zeros((self.max_token_length,), dtype=torch.long)
             input_ids[0] = eos_id
             attention_mask[0] = 1
-            return torch.stack((input_ids, attention_mask), dim=1)
+            tokenized_sample = torch.stack((input_ids, attention_mask), dim=1)
         else:
-            return super().__call__(sample)
+            tokenized_sample = super().__call__(sample)
+        return tokenized_sample
