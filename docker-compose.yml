@@ -187,6 +187,16 @@ services:
       - /scratch/sjohn/evaluation_results:/tmp/evaluation_results
      # - /scratch/sjohn/modyn/modyn:/src/modyn
     #      - .:/modyn_host
+    # CUDASTART (ignore/delete if enabling cuda manually)
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 4
+              capabilities: [gpu, utility, compute]
+  #CUDAEND (ignore/delete if enabling cuda manually)
     container_name: supervisor
     ports:
       - "3000:50063"
