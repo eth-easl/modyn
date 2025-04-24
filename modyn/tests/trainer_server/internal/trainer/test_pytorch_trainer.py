@@ -258,6 +258,7 @@ def get_training_info(
                 label_transformer=PythonString(value=get_mock_label_transformer() if transform_label else ""),
                 grad_scaler_configuration=JsonString(value=json.dumps({})),
                 epochs_per_trigger=1,
+                gradient_accumulation_steps=1,
             )
             training_info = TrainingInfo(
                 request,
@@ -430,6 +431,105 @@ def test_trainer_init_with_label_transformer(dummy_system_config: ModynConfig):
     test_tensor = torch.ones(10, dtype=torch.int32)
     assert torch.equal(trainer._label_transformer_function(test_tensor), torch.ones(10, dtype=torch.float32))
     assert trainer._label_transformer_function(test_tensor).dtype == torch.float32
+
+
+def test_gradient_accumulation_equivalence(dummy_system_config):
+    batch_size = 32
+
+    trainer_accum = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+
+    trainer_accum.gradient_accumulation_steps = 2
+    trainer_accum.num_samples_to_pass = batch_size * 2
+    trainer_accum._train_dataloader = MockDataloader(batch_size=batch_size, num_batches=2)
+
+    trainer_single = get_mock_trainer(dummy_system_config, mp.Queue(), mp.Queue(), False, False, None, 2, "", False)
+    trainer_single.gradient_accumulation_steps = 1
+    trainer_single.num_samples_to_pass = batch_size * 2
+    trainer_single._train_dataloader = MockDataloader(batch_size=batch_size * 2, num_batches=1)
+
+    def clone_params(model):
+        return {name: param.detach().clone() for name, param in model.named_parameters()}
+
+    # Ensure both trainers start with the same initial parameters.
+    init_params = clone_params(trainer_accum._model.model)
+
+    trainer_accum.train()
+    trainer_single.train()
+
+    # Instead of checking the logged "num_batches_trained" (which counts mini-batches),
+    # we compare the final model parameters to ensure they are equivalent.
+    final_params_accum = clone_params(trainer_accum._model.model)
+    final_params_single = clone_params(trainer_single._model.model)
+
+    for name in init_params.keys():
+        assert torch.allclose(final_params_accum[name], final_params_single[name], atol=1e-5), f"Mismatch in {name}"
+
+
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, False))
+def test_gradient_accumulation_drives_forward_and_optimizer_correctly(test_weights_handling, dummy_system_config):
+    batch_size = 1
+    num_batches = 4
+    accum_steps = 2
+    total_samples = batch_size * num_batches
+
+    # 1) a tiny dataloader that yields (sample_ids, data, target)
+    class MockSeqDataloader:
+        def __init__(self):
+            self.dataset = MagicMock()
+
+        def __iter__(self):
+            for i in range(num_batches):
+                data = torch.tensor([i], dtype=torch.float32, requires_grad=True)
+                yield ((i,), data, data)
+
+        def __len__(self):
+            return num_batches
+
+    # 2) Mockoptimizer that counts step()/zero_grad()
+    class MockCountingOptimizer(torch.optim.SGD):
+        def __init__(self, params):
+            super().__init__(params, lr=1.0)
+            self.step_count = 0
+            self.zero_grad_count = 0
+
+        def step(self, *args, **kwargs):
+            self.step_count += 1
+            return super().step(*args, **kwargs)
+
+        def zero_grad(self, *args, **kwargs):
+            self.zero_grad_count += 1
+            return super().zero_grad(*args, **kwargs)
+
+    # build trainer
+    q_status, q_response = mp.Queue(), mp.Queue()
+    trainer = get_mock_trainer(
+        dummy_system_config, q_status, q_response, False, False, None, 1, "", False, batch_size=batch_size
+    )
+    trainer._gradient_accumulation_steps = accum_steps
+    trainer.num_samples_to_pass = total_samples
+    trainer._train_dataloader = MockSeqDataloader()
+
+    # spy on forward
+    forward = MagicMock(return_value=torch.tensor(1.0, requires_grad=True))
+    trainer._model.model.forward = forward
+
+    # simple loss
+    trainer._criterion = lambda out, tgt: out
+
+    opt = MockCountingOptimizer(trainer._model.model.parameters())
+    trainer._optimizers = {"default": opt}
+
+    q_status.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    q_status.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
+    trainer.train()
+
+    assert forward.call_count == num_batches
+    for idx, call_args in enumerate(forward.call_args_list):
+        inp = call_args[0][0]
+        assert torch.equal(inp, torch.tensor([idx], dtype=torch.float32))
+
+    assert opt.step_count == num_batches // accum_steps  # 4//2 == 2
+    assert opt.zero_grad_count == opt.step_count
 
 
 def test_save_state_to_file(dummy_system_config: ModynConfig):

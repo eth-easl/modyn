@@ -141,6 +141,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ENABLE_ACCURATE_GPU_MEASUREMENTS_FIELD_NUMBER: builtins.int
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
+    MAX_GRAD_NORM_FIELD_NUMBER: builtins.int
+    GRADIENT_ACCUMULATION_STEPS_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -158,6 +160,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     enable_accurate_gpu_measurements: builtins.bool
     record_loss_every: builtins.int
     drop_last_batch: builtins.bool
+    max_grad_norm: builtins.float
+    gradient_accumulation_steps: builtins.int
     @property
     def torch_optimizers_configuration(self) -> global___JsonString: ...
     @property
@@ -208,10 +212,14 @@ class StartTrainingRequest(google.protobuf.message.Message):
         enable_accurate_gpu_measurements: builtins.bool = ...,
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
+        max_grad_norm: builtins.float | None = ...,
+        gradient_accumulation_steps: builtins.int = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_max_grad_norm",
+            b"_max_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -230,6 +238,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"label_transformer",
             "lr_scheduler",
             b"lr_scheduler",
+            "max_grad_norm",
+            b"max_grad_norm",
             "seed",
             b"seed",
             "tokenizer",
@@ -241,6 +251,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_max_grad_norm",
+            b"_max_grad_norm",
             "_seed",
             b"_seed",
             "_tokenizer",
@@ -265,12 +277,16 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"epochs_per_trigger",
             "grad_scaler_configuration",
             b"grad_scaler_configuration",
+            "gradient_accumulation_steps",
+            b"gradient_accumulation_steps",
             "label_transformer",
             b"label_transformer",
             "load_optimizer_state",
             b"load_optimizer_state",
             "lr_scheduler",
             b"lr_scheduler",
+            "max_grad_norm",
+            b"max_grad_norm",
             "num_prefetched_partitions",
             b"num_prefetched_partitions",
             "num_samples_to_pass",
@@ -301,6 +317,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"use_pretrained_model",
         ],
     ) -> None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_max_grad_norm", b"_max_grad_norm"]
+    ) -> typing.Literal["max_grad_norm"] | None: ...
     @typing.overload
     def WhichOneof(self, oneof_group: typing.Literal["_seed", b"_seed"]) -> typing.Literal["seed"] | None: ...
     @typing.overload
