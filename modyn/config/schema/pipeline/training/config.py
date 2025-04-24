@@ -8,6 +8,8 @@ from pydantic import Field, field_validator, model_validator
 from modyn.config.schema.base_model import ModynBaseModel
 
 OptimizerSource = Literal["PyTorch", "APEX"]
+ModelWrapper = Literal["lora", "kadapter", "prompt_tuning", "prefix_tuning"]
+LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class OptimizerParamGroup(ModynBaseModel):
@@ -37,9 +39,6 @@ class OptimizationCriterion(ModynBaseModel):
 
     name: str = Field(description="The name of the criterion that the pipeline uses (e.g., CrossEntropyLoss).")
     config: dict[str, Any] = Field(default_factory=dict, description="Optional configuration of the criterion.")
-
-
-LrSchedulerSource = Literal["PyTorch", "Custom"]
 
 
 class LrSchedulerConfig(ModynBaseModel):
@@ -118,6 +117,15 @@ class TrainingConfig(ModynBaseModel):
             "If True, on trigger, we continue training on the model outputted by the previous trigger. If False, "
             "we start with random weights. If initial_model is 'pretrained', cannot be False."
         )
+    )
+
+    model_wrappers: list[ModelWrapper] | None = Field(
+        default_factory=list,
+        description="List of model wrappers to apply.",
+    )
+    model_wrapper_args: dict[ModelWrapper, dict[str, Any]] | None = Field(
+        default_factory=dict,
+        description="Arguments passed to each model wrapper.",
     )
     seed: int | None = Field(
         None,

@@ -59,6 +59,8 @@ message StartTrainingRequest {
   bool enable_accurate_gpu_measurements = 25;
   int64 record_loss_every = 26;
   bool drop_last_batch = 27;
+  optional repeated string model_wrappers = 28;
+  optional JsonString model_wrapper_args = 29;
 }
 
 message StartTrainingResponse {

@@ -1,6 +1,7 @@
 import json
 import logging
 import pathlib
+from typing import Any
 
 # pylint: disable=no-name-in-module
 from modyn.trainer_server.internal.grpc.generated.trainer_server_pb2 import StartTrainingRequest
@@ -82,3 +83,10 @@ class TrainingInfo:
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
 
         self.offline_dataset_path = offline_dataset_path
+        self.model_wrappers: list[str] = list(request.model_wrappers) if request.model_wrappers else []
+
+        self.model_wrapper_args: dict[str, dict[str, Any]] = (
+            json.loads(request.model_wrapper_args.value)
+            if request.HasField("model_wrapper_args") and request.model_wrapper_args.value
+            else {}
+        )

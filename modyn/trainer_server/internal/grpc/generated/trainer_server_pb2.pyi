@@ -141,6 +141,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
     ENABLE_ACCURATE_GPU_MEASUREMENTS_FIELD_NUMBER: builtins.int
     RECORD_LOSS_EVERY_FIELD_NUMBER: builtins.int
     DROP_LAST_BATCH_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPERS_FIELD_NUMBER: builtins.int
+    MODEL_WRAPPER_ARGS_FIELD_NUMBER: builtins.int
     pipeline_id: builtins.int
     trigger_id: builtins.int
     device: builtins.str
@@ -178,6 +180,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
     def grad_scaler_configuration(self) -> global___JsonString: ...
     @property
     def tokenizer(self) -> global___PythonString: ...
+    @property
+    def model_wrappers(self) -> google.protobuf.internal.containers.RepeatedScalarFieldContainer[builtins.str]: ...
+    @property
+    def model_wrapper_args(self) -> global___JsonString: ...
     def __init__(
         self,
         *,
@@ -208,6 +214,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
         enable_accurate_gpu_measurements: builtins.bool = ...,
         record_loss_every: builtins.int = ...,
         drop_last_batch: builtins.bool = ...,
+        model_wrappers: collections.abc.Iterable[builtins.str] | None = ...,
+        model_wrapper_args: global___JsonString | None = ...,
     ) -> None: ...
     def HasField(
         self,
@@ -230,6 +238,8 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"label_transformer",
             "lr_scheduler",
             b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
             "seed",
             b"seed",
             "tokenizer",
@@ -271,6 +281,10 @@ class StartTrainingRequest(google.protobuf.message.Message):
             b"load_optimizer_state",
             "lr_scheduler",
             b"lr_scheduler",
+            "model_wrapper_args",
+            b"model_wrapper_args",
+            "model_wrappers",
+            b"model_wrappers",
             "num_prefetched_partitions",
             b"num_prefetched_partitions",
             "num_samples_to_pass",
