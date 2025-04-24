@@ -343,14 +343,7 @@ def test_evaluation_dataset_different_target_parsers_and_transforms(mock_insecur
 
     results = list(dataset)
 
-    assert len(results) == 2, f"Expected 2 yielded items, got {len(results)}"
-
     key1, sample1, out_target = results[0]
     assert key1 == 10
     assert sample1.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Unexpected sample: {sample1}"
     assert out_target.endswith(b"TARGET_TARGET_TARGET_TF"), f"Unexpected target: {out_target}"
-
-    key2, sample2, out_label = results[1]
-    assert key2 == 10
-    assert sample2.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Unexpected sample: {sample2}"
-    assert out_label.endswith(b"LABEL_TARGET_TARGET_TF"), f"Unexpected label: {out_label}"

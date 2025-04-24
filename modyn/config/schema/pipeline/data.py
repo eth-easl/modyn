@@ -37,6 +37,7 @@ class DataConfig(ModynBaseModel):
             "If the input is shorter, it will be padded to this length."
         ),
     )
+
     @field_validator("bytes_parser_function", mode="before")
     @classmethod
     def validate_bytes_parser_function(cls, value: str) -> str:

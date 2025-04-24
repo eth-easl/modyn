@@ -54,7 +54,10 @@ class GetResponse(google.protobuf.message.Message):
         keys: collections.abc.Iterable[builtins.int] | None = ...,
         labels: collections.abc.Iterable[builtins.int] | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples", "target", b"target"]) -> None: ...
+    def ClearField(
+        self,
+        field_name: typing.Literal["keys", b"keys", "labels", b"labels", "samples", b"samples", "target", b"target"],
+    ) -> None: ...
 
 global___GetResponse = GetResponse
 

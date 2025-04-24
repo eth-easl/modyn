@@ -49,7 +49,7 @@ class EvaluationInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
         self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
-        self.max_token_length = request.sequence_length
+        self.max_token_length = request.max_token_length
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
