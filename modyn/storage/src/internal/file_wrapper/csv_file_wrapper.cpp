@@ -115,8 +115,10 @@ std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets(uint64_t sta
 
 std::vector<std::vector<unsigned char>> CsvFileWrapper::get_targets_from_indices(const std::vector<uint64_t>& indices) {
   std::vector<std::vector<unsigned char>> targets;
-  targets.reserve(indices.size()); 
-  for (const uint64_t index : indices) { targets.push_back(get_target(index)); }
+  targets.reserve(indices.size());
+  for (const uint64_t index : indices) {
+    targets.push_back(get_target(index));
+  }
   return targets;
 }
 

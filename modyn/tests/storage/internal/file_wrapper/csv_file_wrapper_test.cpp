@@ -237,7 +237,6 @@ TEST_F(CsvFileWrapperTest, TestGetSamplesWithoutLabels) {
   ASSERT_EQ(actual_samples, expected_samples);
 }
 
-
 TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
   // Create a CSV with a categorical target in the third column
   std::ofstream file_with_cat_target(file_name_);
@@ -269,7 +268,6 @@ TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
 }
 
 TEST_F(CsvFileWrapperTest, TestGetTargetNumeric) {
-
   std::ofstream file_with_target(file_name_);
   file_with_target << "id,feature,target\n";
   file_with_target << "0,3.14,42\n";
@@ -307,7 +305,7 @@ TEST_F(CsvFileWrapperTest, TestGetTargetsFromIndices) {
   file_targets_indices.close();
 
   config_["has_targets"] = true;
-  config_["target_index"] = 2;  
+  config_["target_index"] = 2;
 
   EXPECT_CALL(*filesystem_wrapper_, exists(::testing::_)).WillOnce(::testing::Return(true));
   auto stream_ptr = std::make_shared<std::ifstream>(file_name_, std::ios::binary);

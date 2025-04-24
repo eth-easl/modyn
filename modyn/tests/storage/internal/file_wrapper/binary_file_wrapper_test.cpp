@@ -344,7 +344,6 @@ TEST_F(BinaryFileWrapperTest, TestDeleteSamples) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestNoLabels) {
-  // Record layout: [TARGET (2 bytes) + SAMPLE (2 bytes)] => 4 bytes/record => 16 total => 4 samples
   config_["has_labels"] = false;
   config_["label_size"] = 0;
   config_["has_targets"] = true;
@@ -363,7 +362,6 @@ TEST_F(BinaryFileWrapperTest, TestNoLabels) {
 }
 
 TEST_F(BinaryFileWrapperTest, TestNoTargets) {
-  // Record layout: [LABEL (2 bytes) + SAMPLE (2 bytes)] => 4 bytes/record => 16 total => 4 samples
   config_["has_labels"] = true;
   config_["label_size"] = 2;
   config_["has_targets"] = false;
