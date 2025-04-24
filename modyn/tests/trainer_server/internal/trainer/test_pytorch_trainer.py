@@ -991,6 +991,160 @@ def test_train_pretrain(
     assert final_state == checkpointed_state
 
 
+@patch.object(BaseCallback, "on_train_begin", return_value=None)
+@patch.object(BaseCallback, "on_train_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_begin", return_value=None)
+@patch.object(BaseCallback, "on_batch_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
+@patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(
+    PytorchTrainer,
+    "weights_handling",
+    return_value=(False, False),
+)
+def test_train_generative(
+    test_weights_handling,
+    test_cleaning,
+    test_step,
+    test_cleanup,
+    test_send_metadata,
+    test_on_batch_before_update,
+    test_on_batch_end,
+    test_on_batch_begin,
+    test_on_train_end,
+    test_on_train_begin,
+    dummy_system_config: ModynConfig,
+):
+    query_status_queue = mp.Queue()
+    status_queue = mp.Queue()
+    trainer = get_mock_trainer(
+        dummy_system_config,
+        query_status_queue,
+        status_queue,
+        False,
+        False,
+        None,
+        2,
+        "custom",
+        False,
+        batch_size=8,
+        training_type="generative",
+    )
+    query_status_queue.put(TrainerMessages.STATUS_QUERY_MESSAGE)
+    query_status_queue.put(TrainerMessages.MODEL_STATE_QUERY_MESSAGE)
+    timeout = 2
+    elapsed = 0
+
+    while query_status_queue.empty():
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+    trainer.train()
+    assert trainer._num_samples == 800
+    elapsed = 0
+    while not query_status_queue.empty():
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise TimeoutError("Did not reach desired queue state within timelimit.")
+
+    assert test_on_train_begin.call_count == len(trainer._callbacks)
+    assert test_on_train_end.call_count == len(trainer._callbacks)
+    assert test_on_batch_begin.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_end.call_count == len(trainer._callbacks) * 100
+    assert test_on_batch_before_update.call_count == len(trainer._callbacks) * 100
+    assert test_send_metadata.call_count == len(trainer._callbacks)
+    test_cleanup.assert_called_once()
+
+    elapsed = 0
+    while True:
+        if not platform.system() == "Darwin":
+            if status_queue.qsize() == 2:
+                break
+        else:
+            if not status_queue.empty():
+                break
+
+        sleep(0.1)
+        elapsed += 0.1
+
+        if elapsed >= timeout:
+            raise AssertionError("Did not reach desired queue state after 5 seconds.")
+
+    status = status_queue.get()
+    assert status["num_batches"] == 0
+    assert status["num_samples"] == 0
+    # we didn't enable recording the training loss
+    assert len(trainer._log["training_loss"]) == 0
+    status_state = torch.load(io.BytesIO(status_queue.get()))
+    print(status_state)
+    checkpointed_state = {
+        "model": OrderedDict(
+            [
+                ("moda._weight", torch.tensor([1.0])),
+                ("modb._weight", torch.tensor([1.0])),
+                ("modc._weight", torch.tensor([1.0])),
+            ]
+        ),
+        "optimizer-opt1": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.1,
+                    "momentum": 0,
+                    "dampening": 0,
+                    "weight_decay": 0,
+                    "nesterov": False,
+                    "maximize": False,
+                    "foreach": None,
+                    "differentiable": False,
+                    "params": [0],
+                }
+            ],
+        },
+        "optimizer-opt2": {
+            "state": {},
+            "param_groups": [
+                {
+                    "lr": 0.5,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
+                    "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [0],
+                },
+                {
+                    "lr": 0.8,
+                    "eps": (1e-30, 0.001),
+                    "clip_threshold": 1.0,
+                    "decay_rate": -0.8,
+                    "beta1": None,
+                    "weight_decay": 0.0,
+                    "scale_parameter": True,
+                    "relative_step": True,
+                    "warmup_init": False,
+                    "params": [1],
+                },
+            ],
+        },
+    }
+    assert status_state == checkpointed_state
+    assert os.path.exists(trainer._final_checkpoint_path / "model_final.modyn")
+    final_state = torch.load(trainer._final_checkpoint_path / "model_final.modyn")
+    assert final_state == checkpointed_state
+
+
 @patch.object(StorageStub, "__init__", noop_constructor_mock)
 @patch.object(SelectorStub, "__init__", noop_constructor_mock)
 @patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
@@ -1140,6 +1294,110 @@ def test_train_batch_then_sample_accumulation(
     forward_calls = []
 
     def mock_forward(data, sample_ids=None):
+        forward_calls.append(data)
+        return torch.randn(data.shape[0], 10, requires_grad=True)  # Dummy output
+
+    trainer._model.model.forward = mock_forward
+
+    trainer.train()
+
+    assert trainer._num_samples == batch_size * num_batches
+    assert trainer._log["num_samples"] == batch_size * num_batches
+    assert trainer._log["num_batches"] == num_batches
+    # We only train on whole batches, hence we have to scale by batch size
+    assert trainer._log["num_samples_trained"] == ((expected_bts_size * num_batches) // batch_size) * batch_size
+    assert test_on_batch_begin.call_count == len(trainer._callbacks) * num_batches
+    assert test_on_batch_end.call_count == len(trainer._callbacks) * num_batches
+    assert test_downsample_batch.call_count == num_batches
+
+    # Check if the model's forward method is called with the correctly accumulated data
+    assert len(forward_calls) == num_batches // bts_accumulate_period
+    for num_call, data in enumerate(forward_calls):
+        assert data.shape[0] == batch_size
+
+        range_end = (num_call + 1) * bts_accumulate_period + 1  # + 1 since end is exclusive
+        range_start = range_end - bts_accumulate_period
+        # We stack up zeros and add as much and 1 more as we add to the ones in the mocked downsampler
+        expected_data = torch.cat([torch.zeros(expected_bts_size) + i for i in range(range_start, range_end, 1)])
+        expected_data = expected_data * batch_size
+
+        assert expected_data.shape[0] == data.shape[0]
+        assert torch.allclose(data, expected_data)
+
+
+@pytest.mark.parametrize("downsampling_ratio, ratio_max", [(25, 100), (50, 100), (250, 1000), (125, 1000)])
+@patch.object(BaseCallback, "on_train_begin", return_value=None)
+@patch.object(BaseCallback, "on_train_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_begin", return_value=None)
+@patch.object(BaseCallback, "on_batch_end", return_value=None)
+@patch.object(BaseCallback, "on_batch_before_update", return_value=None)
+@patch.object(MetadataCollector, "send_metadata", return_value=None)
+@patch.object(MetadataCollector, "cleanup", return_value=None)
+@patch.object(CustomLRScheduler, "step", return_value=None)
+@patch.object(PytorchTrainer, "end_of_trigger_cleaning", return_value=None)
+@patch.object(PytorchTrainer, "weights_handling", return_value=(False, True))
+@patch.object(PytorchTrainer, "downsample_batch")
+def test_train_batch_then_sample_accumulation_generative(
+    test_downsample_batch,
+    test_weights_handling,
+    test_cleaning,
+    test_step,
+    test_cleanup,
+    test_send_metadata,
+    test_on_batch_before_update,
+    test_on_batch_end,
+    test_on_batch_begin,
+    test_on_train_end,
+    test_on_train_begin,
+    dummy_system_config: ModynConfig,
+    downsampling_ratio,
+    ratio_max,
+):
+    num_batches = 100  # hardcoded into mock dataloader
+    batch_size = 32
+
+    query_status_queue = mp.Queue()
+    status_queue = mp.Queue()
+    trainer = get_mock_trainer(
+        dummy_system_config,
+        query_status_queue,
+        status_queue,
+        False,
+        True,
+        None,
+        2,
+        "custom",
+        False,
+        batch_size=batch_size,
+        training_type="generative",
+        selection_strategy=(
+            True,
+            "RemoteGradNormDownsampling",
+            {"downsampling_ratio": downsampling_ratio, "sample_then_batch": False, "ratio_max": ratio_max},
+        ),
+    )
+    assert trainer._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE
+
+    # Mock the downsample_batch method to return batches of the expected size
+    expected_bts_size = int(batch_size * (downsampling_ratio / ratio_max))
+    bts_accumulate_period = batch_size // expected_bts_size
+
+    def mock_downsample_batch(data, sample_ids, target):
+        mock_downsample_batch.num_downsamples += 1
+        return (
+            ((torch.ones(expected_bts_size, requires_grad=True) + mock_downsample_batch.num_downsamples) * len(data)),
+            sample_ids[:expected_bts_size],
+            target[:expected_bts_size],
+            torch.ones(expected_bts_size),
+        )
+
+    mock_downsample_batch.num_downsamples = -1
+    test_downsample_batch.side_effect = mock_downsample_batch
+
+    # Mock the model's forward method to check the input data
+    forward_calls = []
+
+    def mock_forward(data, sample_ids=None, labels=None):
         forward_calls.append(data)
         return torch.randn(data.shape[0], 10, requires_grad=True)  # Dummy output
 
