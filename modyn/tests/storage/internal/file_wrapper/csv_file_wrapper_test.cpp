@@ -270,7 +270,7 @@ TEST_F(CsvFileWrapperTest, TestGetTargetCategorical) {
 
 TEST_F(CsvFileWrapperTest, TestGetTargetNumeric) {
 
-  std::ofstream file_with_numeric_target(file_name_);
+  std::ofstream file_with_target(file_name_);
   file_with_target << "id,feature,target\n";
   file_with_target << "0,3.14,42\n";
   file_with_target << "1,1.23,100\n";
