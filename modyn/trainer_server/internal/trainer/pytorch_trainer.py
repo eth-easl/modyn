@@ -129,6 +129,8 @@ class PytorchTrainer:
         self._log_file_path = training_info.log_file_path
         self._drop_last_batch = training_info.drop_last_batch
         self._dataset_log_path = pathlib.Path(tempfile.mkdtemp(prefix=f"pl{self.pipeline_id}"))
+        self._max_grad_norm = training_info.max_grad_norm
+        self._gradient_accumulation_steps = training_info.gradient_accumulation_steps
 
         if not self._checkpoint_path.is_dir():
             self._checkpoint_path.mkdir()
@@ -258,6 +260,7 @@ class PytorchTrainer:
 
             stopw.start("IndivFetchBatch", overwrite=True)
             stopw.start("FetchBatch", resume=True)
+            accumulation_counter = 0
             for batch in self._train_dataloader:
                 stopw.stop("FetchBatch")
                 batch_timings.append(stopw.stop("IndivFetchBatch"))
@@ -277,9 +280,9 @@ class PytorchTrainer:
                     # model output is a torch.FloatTensor but weights is a torch.DoubleTensor.
                     # We need to cast to do the dot product
                     weights = batch[3].float().to(self._device)
-
-                for _, optimizer in self._optimizers.items():
-                    optimizer.zero_grad()
+                if accumulation_counter == 0:
+                    for _, optimizer in self._optimizers.items():
+                        optimizer.zero_grad()
 
                 with torch.autocast(self._device_type, enabled=self._amp):
                     if self._downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
@@ -306,7 +309,7 @@ class PytorchTrainer:
                             loss = torch.dot(self._criterion_nored(output, target), weights / weights.sum())
                         else:
                             loss = self._criterion(output, target)
-
+                        loss = loss / self._gradient_accumulation_steps
                 stopw.start("OnBatchBeforeUpdate", resume=True)
                 for _, callback in self._callbacks.items():
                     callback.on_batch_before_update(
@@ -316,24 +319,25 @@ class PytorchTrainer:
 
                 with GPUMeasurement(self._measure_gpu_ops, "Backward", self._device, stopw, resume=True):
                     self._scaler.scale(loss).backward()
-
-                with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
-                    for _, optimizer in self._optimizers.items():
-                        self._scaler.step(optimizer)
-
-                    self._scaler.update()
+                    if self._max_grad_norm is not None:
+                        torch.nn.utils.clip_grad_norm_(self._model.model.parameters(), max_norm=self._max_grad_norm)
+                accumulation_counter += 1
                 trained_batches += 1
+                if accumulation_counter == self._gradient_accumulation_steps:
+                    with GPUMeasurement(self._measure_gpu_ops, "OptimizerStep", self._device, stopw, resume=True):
+                        for _, optimizer in self._optimizers.items():
+                            self._scaler.step(optimizer)
+                        self._scaler.update()
 
-                self._step_lr_if_necessary(True)
-
-                if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
-                    stopw.start("Checkpoint", resume=True)
-                    checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
-                    self.save_state(checkpoint_file_name, trained_batches)
-                    stopw.stop("Checkpoint")
-
-                if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
-                    training_loss.append(loss.item())
+                    accumulation_counter = 0  # Reset accumulation counter.
+                    self._step_lr_if_necessary(True)  # Step LR scheduler after optimizer update.
+                    if self._checkpoint_interval > 0 and trained_batches % self._checkpoint_interval == 0:
+                        stopw.start("Checkpoint", resume=True)
+                        checkpoint_file_name = self._checkpoint_path / f"model_{trained_batches}.modyn"
+                        self.save_state(checkpoint_file_name, trained_batches)
+                        stopw.stop("Checkpoint")
+                    if self._record_loss_every > 0 and trained_batches % self._record_loss_every == 0:
+                        training_loss.append(loss.item())
 
                 self._num_samples += len(sample_ids)
 
@@ -346,9 +350,9 @@ class PytorchTrainer:
                 if 0 < self.num_samples_to_pass <= self._num_samples:
                     self._info("Stopping training as we have reached the sample threshold.")
                     break
+
                 stopw.start("FetchBatch", resume=True)
                 stopw.start("IndivFetchBatch", overwrite=True)
-
             self._step_lr_if_necessary(False)
 
             if len(batch_timings) <= 100000:
