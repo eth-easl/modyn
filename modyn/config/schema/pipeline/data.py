@@ -30,7 +30,13 @@ class DataConfig(ModynBaseModel):
         None,
         description="Function to tokenize the input. Must be a class in modyn.models.tokenizers.",
     )
-
+    max_token_length: int = Field(
+        128,
+        description=(
+            "Maximum token length. If the input is longer, it will be truncated. "
+            "If the input is shorter, it will be padded to this length."
+        ),
+    )
     @field_validator("bytes_parser_function", mode="before")
     @classmethod
     def validate_bytes_parser_function(cls, value: str) -> str:

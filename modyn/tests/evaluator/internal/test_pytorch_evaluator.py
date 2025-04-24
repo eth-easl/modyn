@@ -171,7 +171,7 @@ def test_evaluator_init(load_state_mock: MagicMock) -> None:
     )
     assert evaluator._device == "cpu"
     assert not evaluator._amp
-    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"), [], {})
+    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 
 
 @patch.object(PytorchEvaluator, "_load_state")
@@ -183,7 +183,7 @@ def test_no_transform_evaluator_init(load_state_mock: MagicMock):
     assert not evaluator._label_transformer_function
     assert evaluator._device == "cpu"
     assert not evaluator._amp
-    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"), [], {})
+    load_state_mock.assert_called_once_with(pathlib.Path("trained_model.modyn"))
 
 
 def test_load_model():
