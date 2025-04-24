@@ -251,6 +251,10 @@ class TrainerServerGRPCHandlerMixin:
             enable_accurate_gpu_measurements=training_config.enable_accurate_gpu_measurements,
             record_loss_every=training_config.record_loss_every,
             drop_last_batch=training_config.drop_last_batch,
+            model_wrappers=training_config.model_wrappers if training_config.model_wrappers else [],
+            model_wrapper_args=TrainerServerJsonString(value=json.dumps(training_config.model_wrapper_args))
+            if training_config.model_wrapper_args
+            else None,
         )
 
     def start_training(

@@ -370,3 +370,8 @@ def get_tensor_byte_size(tensor: torch.Tensor) -> int:
     num_bytes = int(math.prod(shape) * type_size)
 
     return num_bytes
+
+
+def count_trainable_params(model: torch.nn.Module) -> int:
+    # Count all parameters where `requires_grad=True`.
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
