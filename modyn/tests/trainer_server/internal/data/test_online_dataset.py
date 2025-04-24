@@ -1207,11 +1207,11 @@ def test_online_dataset_different_target_parsers_and_transforms(
         expected_key = i
         assert key == expected_key, f"Expected key {expected_key}, got {key}"
 
-        assert isinstance(sample, bytes), f"Expected sample to be bytes, got {type(sample)}"
-        assert sample.endswith(b"_MAIN_MAIN_TF"), f"Got sample={sample}"
+        assert isinstance(sample, str), f"Expected sample to be bytes, got {type(sample)}"
+        assert sample.endswith("_MAIN_MAIN_TF"), f"Got sample={sample}"
 
-        assert isinstance(target, bytes), f"Expected target to be bytes, got {type(target)}"
-        expected_suffix = b"_TARGET_TARGET_TF"
+        assert isinstance(target, str), f"Expected target to be bytes, got {type(target)}"
+        expected_suffix = "_TARGET_TARGET_TF"
         assert target.endswith(expected_suffix), f"Got target={target}"
 
 

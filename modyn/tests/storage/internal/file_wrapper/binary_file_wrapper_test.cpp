@@ -451,7 +451,7 @@ TEST_F(BinaryFileWrapperTest, TestGetTargetsFromIndices) {
 
   BinaryFileWrapper file_wrapper(file_name_, config_, filesystem_wrapper_);
 
-  std::vector<uint64_t> indices = {1, 3};
+  const std::vector<uint64_t> indices = {1, 3};
   auto targets = file_wrapper.get_targets_from_indices(indices);
   ASSERT_EQ(targets.size(), 2u);
   ASSERT_EQ(targets[0].size(), 1u);
