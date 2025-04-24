@@ -20,6 +20,7 @@ class EvalDataConfig(DataConfig):
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
+    generative: bool = Field(False, description="Whether the task is generative.")
 
 
 class ResultWriter(ModynBaseModel):

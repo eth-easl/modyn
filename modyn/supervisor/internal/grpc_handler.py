@@ -260,8 +260,11 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
         if dataset_config.get("tokenizer"):
             tokenizer = dataset_config["tokenizer"]
             tokenizer_arg = EvaluatorPythonString(value=tokenizer)
+            max_token_length = dataset_config["max_token_length"]
         else:
             tokenizer_arg = None
+            max_token_length = None
+        generative = dataset_config["generative"]
 
         return EvaluateModelRequest(
             model_id=model_id,
@@ -270,6 +273,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
                 num_dataloaders=dataloader_workers,
                 evaluation_intervals=eval_intervals,
             ),
+            generative=generative,
             device=device,
             batch_size=batch_size,
             metrics=metrics,
@@ -277,6 +281,7 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
             label_transformer=EvaluatorPythonString(value=label_transformer),
             tokenizer=tokenizer_arg,
+            max_token_length=max_token_length,
         )
 
     # pylint: disable=too-many-branches

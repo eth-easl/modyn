@@ -50,14 +50,18 @@ class PytorchEvaluator:
         end_timestamp: int | None,
     ) -> torch.utils.data.DataLoader:
         dataset = EvaluationDataset(
-            evaluation_info.dataset_id,
-            evaluation_info.bytes_parser,
-            evaluation_info.transform_list,
-            evaluation_info.storage_address,
-            evaluation_info.evaluation_id,
-            evaluation_info.tokenizer,
-            start_timestamp,
-            end_timestamp,
+            dataset_id=evaluation_info.dataset_id,
+            bytes_parser=evaluation_info.bytes_parser,
+            bytes_parser_target=evaluation_info.bytes_parser_target,
+            serialized_transforms=evaluation_info.transform_list,
+            storage_address=evaluation_info.storage_address,
+            evaluation_id=evaluation_info.evaluation_id,
+            include_labels=not evaluation_info.generative,
+            serialized_target_transforms=evaluation_info.serialized_transforms_target,
+            tokenizer=evaluation_info.tokenizer,
+            start_timestamp=start_timestamp,
+            end_timestamp=end_timestamp,
+            max_token_length=evaluation_info.max_token_length,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -99,6 +103,7 @@ class PytorchEvaluator:
             metrics,
             self._label_transformer_function,
             self._amp,
+            self._eval_info.generative,
         )
 
         self._info(f"Finished evaluation of {interval_idx}. Putting items into queue...")
