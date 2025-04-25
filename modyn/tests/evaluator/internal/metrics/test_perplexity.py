@@ -40,3 +40,21 @@ def test_perplexity_invalid_shape(perplexity_metric):
 
     with pytest.raises(RuntimeError):
         perplexity_metric._batch_evaluated_callback(y_true, y_pred, batch_size=1)
+
+
+def test_transform_prediction_with_transformer(perplexity_metric):
+    """Should apply the transformer function before checking shape."""
+    perplexity_metric.evaluation_transformer_function = lambda x: x + 1
+    y_true = torch.tensor([0, 1])
+    y_pred = torch.tensor([[1.0], [2.0]])
+    result = perplexity_metric.transform_prediction(y_true, y_pred, num_elements=2)
+    expected = torch.tensor([[2.0], [3.0]])
+    assert torch.equal(result, expected)
+
+
+def test_transform_prediction_shape_mismatch(perplexity_metric):
+    """Should raise if batch size != num_elements."""
+    y_true = torch.tensor([0, 1, 2])
+    y_pred = torch.tensor([[1.0], [2.0]])  # only 2 rows
+    with pytest.raises(AssertionError):
+        perplexity_metric.transform_prediction(y_true, y_pred, num_elements=3)

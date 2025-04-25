@@ -15,18 +15,14 @@ class Perplexity(AbstractDecomposableMetric):
 
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
         # Validate y_pred dimensions.
-        if y_pred.dim() < 2:
-            raise RuntimeError("Invalid shape: y_pred must have at least 2 dimensions (batch, num_classes)")
+        if y_pred.dim() < 3:
+            raise RuntimeError("Invalid shape: y_pred must have at least 3 dimensions (batch,num_elements num_classes)")
 
-        # Determine the expected number of tokens based on y_pred shape.
-        assert y_pred.dim() in (2, 3), "y_pred must have 2 or 3 dimensions"
-        if y_pred.dim() == 2:
-            expected_tokens = y_pred.numel()
-        elif y_pred.dim() == 3:
-            expected_tokens = y_pred.size(0) * y_pred.size(1)
+        expected_tokens = y_pred.size(0) * y_pred.size(1)
         if y_true.numel() != expected_tokens:  # pylint: disable=possibly-used-before-assignment
-            print(f"y_true: {y_true.shape}, expected: {expected_tokens}, y_pred: {y_pred.shape}")
-            raise RuntimeError("Mismatch in number of tokens between y_true and y_pred")
+            raise RuntimeError(
+                "Mismatch in number of tokens between y_true and y_pred, y_true: {y_true.shape}, expected: {expected_tokens}, y_pred: {y_pred.shape}"
+            )
 
         loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="sum")
         loss = loss_fn(
