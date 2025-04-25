@@ -254,11 +254,6 @@ def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMoc
 @patch.object(PytorchEvaluator, "_load_state")
 @patch.object(PytorchEvaluator, "_prepare_dataloader")
 def test_evaluate_generative_pad_mask(load_state_mock: MagicMock, prepare_dataloader_mock):
-    """
-    In generative mode, a pad_token_id in the target is masked to -100
-    and ignored by CrossEntropyLoss.ignore_index, so with uniform logits
-    we still get perplexity == vocab_size.
-    """
 
     # prepare a single‐interval evaluator with only Perplexity
     metric_queue = mp.Queue()
