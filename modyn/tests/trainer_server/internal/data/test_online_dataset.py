@@ -6,11 +6,12 @@ from unittest.mock import MagicMock, patch
 import grpc
 import pytest
 import torch
+from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from modyn.selector.internal.grpc.generated.selector_pb2 import SamplesResponse, UsesWeightsResponse
 from modyn.storage.internal.grpc.generated.storage_pb2 import GetResponse
-from modyn.trainer_server.internal.dataset.key_sources import SelectorKeySource
+from modyn.trainer_server.internal.dataset.key_sources import AbstractKeySource, SelectorKeySource
 from modyn.trainer_server.internal.dataset.online_dataset import OnlineDataset
 
 
@@ -48,6 +49,7 @@ class MockStorageStub:
                 samples=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],
                 keys=[i, i + 1],
                 labels=[i, i + 1],
+                target=[bytes(f"sample{i}", "utf-8"), bytes(f"sample{i+1}", "utf-8")],
             )
 
 
@@ -192,31 +194,35 @@ def test_get_data_from_storage(
     keys = []
     data = []
     labels = []
-
-    for key_list, data_list, label_list, _ in online_dataset._get_data_from_storage(list(range(10))):
+    targets = []
+    for key_list, data_list, label_list, gen_targets_list, _ in online_dataset._get_data_from_storage(list(range(10))):
         keys.extend(key_list)
         data.extend(data_list)
         labels.extend(label_list)
-
-    assert (keys, data, labels) == (
+        targets.extend(gen_targets_list)
+    assert (keys, data, labels, targets) == (
         list(range(10)),
         [bytes(f"sample{x}", "utf-8") for x in range(10)],
         list(range(10)),
+        [bytes(f"sample{x}", "utf-8") for x in range(10)],
     )
 
     result_keys = []
     result_samples = []
     result_labels = []
-
+    result_targets = []
     permuted_list = [0, 9, 6, 5, 4, 3]
-    for rkey, rsam, rlbl, _ in online_dataset._get_data_from_storage(permuted_list):
+    for rkey, rsam, rlbl, rtrgt, _ in online_dataset._get_data_from_storage(permuted_list):
         result_keys.extend(rkey)
         result_samples.extend(rsam)
+
         result_labels.extend(rlbl)
+        result_targets.extend(rtrgt)
 
     assert set(result_keys) == set(keys)
     assert set(result_samples) == set(data)
     assert set(result_labels) == set(labels)
+    assert set(result_targets) == set(targets)
 
 
 class MockRpcError(grpc.RpcError):
@@ -340,7 +346,15 @@ def test_deserialize_torchvision_transforms(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(10)), [bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10, 0)],
+    return_value=[
+        (
+            list(range(10)),
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            [1] * 10,
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            0,
+        )
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(10)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -389,7 +403,73 @@ def test_dataset_iter(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(10)), [bytes(f"sample{x}", "utf-8") for x in range(10)], [1] * 10, 0)],
+    return_value=[
+        (
+            list(range(10)),
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            [1] * 10,
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            0,
+        )
+    ],
+)
+@patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(10)), None))
+@patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
+def test_dataset_iter_gen(
+    test_get_num_data_partitions,
+    test_get_keys,
+    test_get_data,
+    test_insecure_channel,
+    test_grpc_connection_established,
+    test_grpc_connection_established_selector,
+    prefetched_partitions,
+    parallel_prefetch_requests,
+):
+    online_dataset = OnlineDataset(
+        pipeline_id=1,
+        trigger_id=1,
+        dataset_id="MNIST",
+        bytes_parser=get_mock_bytes_parser(),
+        serialized_transforms=[],
+        storage_address="localhost:1234",
+        selector_address="localhost:1234",
+        training_id=42,
+        num_prefetched_partitions=prefetched_partitions,
+        parallel_prefetch_requests=parallel_prefetch_requests,
+        log_path=None,
+        shuffle=False,
+        tokenizer=None,
+        include_labels=False,
+    )
+    dataset_iter = iter(online_dataset)
+    all_data = list(dataset_iter)
+    assert [x[0] for x in all_data] == list(range(10))
+    assert [x[1] for x in all_data] == [bytes(f"sample{x}", "utf-8") for x in range(10)]
+    assert [x[2] for x in all_data] == [bytes(f"sample{x}", "utf-8") for x in range(10)]
+
+
+@pytest.mark.parametrize("parallel_prefetch_requests", [1, 5, 999999])
+@pytest.mark.parametrize("prefetched_partitions", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 999999])
+@patch("modyn.trainer_server.internal.dataset.key_sources.selector_key_source.SelectorStub", MockSelectorStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", MockStorageStub)
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+@patch.object(
+    OnlineDataset,
+    "_get_data_from_storage",
+    return_value=[
+        (
+            list(range(10)),
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            [1] * 10,
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            0,
+        )
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(10)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -438,7 +518,15 @@ def test_dataset_iter_with_parsing(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(16)), [x.to_bytes(2, "big") for x in range(16)], [1] * 16, 0)],
+    return_value=[
+        (
+            list(range(16)),
+            [x.to_bytes(2, "big") for x in range(16)],
+            [1] * 16,
+            [bytes(f"sample{x}", "utf-8") for x in range(10)],
+            0,
+        )
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(16)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -488,7 +576,15 @@ def test_dataloader_dataset(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(16)), [x.to_bytes(2, "big") for x in range(16)], [1] * 16, 0)],
+    return_value=[
+        (
+            list(range(16)),
+            [x.to_bytes(2, "big") for x in range(16)],
+            [1] * 16,
+            [x.to_bytes(2, "big") for x in range(2)],
+            0,
+        )
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(16)), [2.0] * 16))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -540,7 +636,9 @@ def test_dataloader_dataset_weighted(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(4)), [x.to_bytes(2, "big") for x in range(4)], [1] * 4, 0)],
+    return_value=[
+        (list(range(4)), [x.to_bytes(2, "big") for x in range(4)], [1] * 4, [x.to_bytes(2, "big") for x in range(2)], 0)
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(4)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -660,7 +758,7 @@ def test_init_transforms(
 
 
 def iter_multi_partition_data_side_effect(keys, worker_id=None):
-    yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), 0)
+    yield (list(keys), [x.to_bytes(2, "big") for x in keys], [1] * len(keys), [x.to_bytes(2, "big") for x in keys], 0)
 
 
 @pytest.mark.parametrize("shuffle", [False, True])
@@ -951,7 +1049,17 @@ def test_iter_multi_partition_multi_workers(
 @patch.object(
     OnlineDataset,
     "_get_data_from_storage",
-    return_value=iter([(list(range(100)), [x.to_bytes(2, "big") for x in range(100)], [1] * 100, 0)]),
+    return_value=iter(
+        [
+            (
+                list(range(100)),
+                [x.to_bytes(2, "big") for x in range(100)],
+                [1] * 100,
+                [x.to_bytes(2, "big") for x in range(100)],
+                0,
+            )
+        ]
+    ),
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(100)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)
@@ -1002,3 +1110,160 @@ def test_multi_epoch_dataloader_dataset(
             for id in total_ids:
                 for x in torch.cat(total_data):
                     assert id == int(x.item())
+
+
+# Helper functions with proper formatting.
+def get_main_bytes_parser() -> str:
+    return """\
+def bytes_parser_function(data: bytes):
+    return str(data, 'utf8') + "_MAIN"
+"""
+
+
+def get_target_bytes_parser() -> str:
+    return """\
+def bytes_parser_function(data: bytes):
+    return str(data, 'utf8') + "_TARGET"
+"""
+
+
+def get_main_serialized_transforms() -> list[str]:
+    return ["transforms.Lambda(lambda x: x + '_MAIN_TF')"]
+
+
+def get_target_serialized_transforms() -> list[str]:
+    return ["transforms.Lambda(lambda x: x + '_TARGET_TF')"]
+
+
+class MockPartitionKeySource(AbstractKeySource):
+    def __init__(self, pipeline_id=999, trigger_id=999):
+        super().__init__(pipeline_id, trigger_id)
+
+    def init_worker(self) -> None:
+        pass
+
+    def uses_weights(self) -> bool:
+        return False
+
+    def get_num_data_partitions(self) -> int:
+        return 1
+
+    def get_keys_and_weights(self, worker_id: int, partition_id: int):
+        return [10, 11, 12], None
+
+    def end_of_trigger_cleaning(self) -> None:
+        pass
+
+
+# Using decorator-style patching to simulate a fake gRPC connection.
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", new=MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
+@patch.object(grpc, "insecure_channel", return_value=None)
+def test_online_dataset_different_target_parsers_and_transforms(
+    mock_insecure_channel, mock_selector_grpc_conn, mock_online_grpc_conn
+):
+    """
+    Tests the scenario where:
+      - The main bytes parser and transforms differ from those used for the target.
+      - include_labels is False so that the dataset uses the target branch.
+
+    We patch StorageStub, grpc_connection_established (in both modules), and grpc.insecure_channel.
+
+    Note: We set collate_fn=lambda x: x[0] so that each batch (batch_size=1) directly returns the tuple.
+    """
+    dataset = OnlineDataset(
+        pipeline_id=999,
+        trigger_id=999,
+        dataset_id="dummy_dataset",
+        bytes_parser=get_main_bytes_parser(),
+        bytes_parser_target=get_target_bytes_parser(),
+        serialized_transforms=get_main_serialized_transforms(),
+        serialized_transforms_target=get_target_serialized_transforms(),
+        storage_address="mocked-storage:9999",
+        selector_address="mocked-selector:9999",
+        training_id=42,
+        tokenizer=None,
+        log_path=None,
+        shuffle=False,
+        num_prefetched_partitions=0,
+        parallel_prefetch_requests=1,
+        include_labels=False,  # Use target branch.
+    )
+    dataset.change_key_source(MockPartitionKeySource())
+
+    loader = DataLoader(dataset, batch_size=1, collate_fn=lambda x: x[0])
+    data_items = list(loader)
+
+    assert len(data_items) == 10
+
+    for i, item in enumerate(data_items):
+        assert isinstance(item, (tuple | list)), f"Expected item to be a tuple or list, got {type(item)}"
+        assert len(item) == 3, f"Expected tuple of length 3, got {item}"
+        key, sample, target = item
+        expected_key = i
+        assert key == expected_key, f"Expected key {expected_key}, got {key}"
+
+        assert isinstance(sample, str), f"Expected sample to be bytes, got {type(sample)}"
+        assert sample.endswith("_MAIN_MAIN_TF"), f"Got sample={sample}"
+
+        assert isinstance(target, str), f"Expected target to be bytes, got {type(target)}"
+        expected_suffix = "_TARGET_TARGET_TF"
+        assert target.endswith(expected_suffix), f"Got target={target}"
+
+
+# Using decorator-style patching to simulate a fake gRPC connection.
+@patch("modyn.trainer_server.internal.dataset.online_dataset.StorageStub", new=MockStorageStub)
+@patch("modyn.trainer_server.internal.dataset.online_dataset.grpc_connection_established", return_value=True)
+@patch(
+    "modyn.trainer_server.internal.dataset.key_sources.selector_key_source.grpc_connection_established",
+    return_value=True,
+)
+@patch.object(grpc, "insecure_channel", return_value=None)
+def test_same_target_parsers_and_transforms(mock_insecure_channel, mock_selector_grpc_conn, mock_online_grpc_conn):
+    """
+    Tests the scenario where:
+      - The main bytes parser and transforms differ from those used for the target.
+      - include_labels is False so that the dataset uses the target branch.
+
+    We patch StorageStub, grpc_connection_established (in both modules), and grpc.insecure_channel.
+
+    Note: We set collate_fn=lambda x: x[0] so that each batch (batch_size=1) directly returns the tuple.
+    """
+    dataset = OnlineDataset(
+        pipeline_id=999,
+        trigger_id=999,
+        dataset_id="dummy_dataset",
+        bytes_parser=get_main_bytes_parser(),
+        bytes_parser_target=None,
+        serialized_transforms=get_main_serialized_transforms(),
+        serialized_transforms_target=None,
+        storage_address="mocked-storage:9999",
+        selector_address="mocked-selector:9999",
+        training_id=42,
+        tokenizer="DistilBertTokenizerTransform",
+        log_path=None,
+        shuffle=False,
+        num_prefetched_partitions=0,
+        parallel_prefetch_requests=1,
+        include_labels=False,  # Use target branch.
+    )
+    dataset.change_key_source(MockPartitionKeySource())
+
+    loader = DataLoader(dataset, batch_size=1, collate_fn=lambda x: x[0])
+    data_items = list(loader)
+
+    assert len(data_items) == 10
+
+    for i, item in enumerate(data_items):
+        assert isinstance(item, (tuple | list)), f"Expected item to be a tuple or list, got {type(item)}"
+        assert len(item) == 3, f"Expected tuple of length 3, got {item}"
+        key, sample, target = item
+
+        assert isinstance(sample, torch.Tensor), f"Expected sample to be a tensor, got {type(sample)}"
+
+        assert isinstance(target, torch.Tensor), f"Expected target to be a tensor, got {type(target)}"
+        assert torch.equal(target, sample)
