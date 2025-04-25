@@ -38,7 +38,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         modyn_config: dict,
         per_sample_loss: Any,
         device: str,
-        generative: bool = False,
+        generative: bool = True,
     ):
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
 
@@ -70,7 +70,8 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
         embedding: torch.Tensor | None = None,
     ) -> None:
         assert embedding is None
-
+        if hasattr(forward_output, "logits"):
+                forward_output = forward_output.logits
         forward_output, _ = unsqueeze_dimensions_if_necessary(forward_output, target)
         these_scores = self._compute_score(forward_output.detach())
         self.scores = np.append(self.scores, these_scores)
@@ -85,11 +86,13 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
 
         if self.generative:
             # For demonstration, we only implement 'Entropy' in the generative case
+            
             if self.score_metric != "Entropy":
                 raise ValueError(
                     f"In generative mode, only 'Entropy' is supported. Got {self.score_metric}."
                 )
-
+            
+            
             # forward_output shape: (B, T, V)
             batch_size, seq_length, vocab_size = forward_output.shape
             if not disable_softmax:

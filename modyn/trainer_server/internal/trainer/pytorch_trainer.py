@@ -1065,7 +1065,7 @@ class PytorchTrainer:
                 target = torch.Tensor()
             number_of_samples += len(sample_ids)
 
-            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
+            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) or  isinstance(self._model, T5) else torch.inference_mode()
             context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):

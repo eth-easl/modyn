@@ -1,156 +1,167 @@
-import numpy as np
 import pytest
 import torch
 
-from modyn.config import ModynConfig
-from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_uncertainty_downsampling_strategy import (
-    RemoteUncertaintyDownsamplingStrategy,
+from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_token_uncertainty_downsampling import (
+    RemoteTokenUncertaintyDownsampling,
 )
 
 
-@pytest.fixture(params=["LeastConfidence", "Entropy", "Margin"])
-def sampler_config(dummy_system_config: ModynConfig, request):
-    downsampling_ratio = 50
-    per_sample_loss_fct = torch.nn.CrossEntropyLoss(reduction="none")
+@pytest.fixture
 
-    params_from_selector = {
-        "downsampling_ratio": downsampling_ratio,
-        "sample_then_batch": False,
-        "args": {},
-        "balance": False,
-        "score_metric": request.param,
+def base_params():
+    return {
+        "downsampling_ratio": 50,
         "ratio_max": 100,
+        "score_metric": "Entropy",
+        "generative": True,
     }
-    return 0, 0, 0, params_from_selector, dummy_system_config.model_dump(by_alias=True), per_sample_loss_fct, "cpu"
 
 
-@pytest.fixture(params=[True, False])
-def balance_config(request, sampler_config):
-    _, _, _, params_from_selector, dummy_system_config, per_sample_loss_fct, device = sampler_config
-    params_from_selector["balance"] = request.param
-    return 0, 0, 0, params_from_selector, dummy_system_config, per_sample_loss_fct, device
+@pytest.fixture
+
+def dummy_uniform_forward_output():
+    # B=2, T=4, V=2: uniform logits -> identical entropy
+    return torch.zeros((2, 4, 2), dtype=torch.float32)
 
 
-def test_init(sampler_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    assert not amds.requires_coreset_supporting_module
-    assert len(amds.scores) == 0
-    assert not amds.index_sampleid_map
-    assert amds.requires_data_label_by_label == amds.balance
+@pytest.fixture
+
+def dummy_varied_forward_output():
+    # B=2, T=4, V=2: varied logits so entropy differs per token
+    # Sample 0: tokens [uniform, peaked, uniform, peaked]
+    # Sample 1: tokens [peaked, uniform, peaked, uniform]
+    forward = torch.zeros((2, 4, 2), dtype=torch.float32)
+    forward[0, 1] = torch.tensor([10.0, 0.0])
+    forward[0, 3] = torch.tensor([0.0, 10.0])
+    forward[1, 0] = torch.tensor([5.0, 0.0])
+    forward[1, 2] = torch.tensor([0.0, 5.0])
+    return forward
 
 
-def test_inform_samples(sampler_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    with torch.inference_mode():
-        outputs = torch.randn((10, 5))
-        sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, None, outputs, None)
-        assert len(amds.scores) == 10
-        assert amds.index_sampleid_map == sample_ids
+@pytest.fixture
+
+def dummy_target_all_valid():
+    return torch.zeros((2, 4), dtype=torch.long)
 
 
-test_data = {
-    "LeastConfidence": {
-        "outputs": torch.tensor([[0.1, 0.1, 0.8], [0.3, 0.4, 0.3], [0.33, 0.34, 0.33]]),
-        "expected_scores": np.array([0.8, 0.4, 0.34]),  # confidence just picks the highest probability
-    },
-    "Entropy": {
-        "outputs": torch.tensor([[0.1, 0.9], [0.4, 0.6]]),
-        "expected_scores": np.array([-0.325, -0.673]),
-    },
-    "Margin": {
-        "outputs": torch.tensor([[0.6, 0.3, 0.1], [0.33, 0.33, 0.34], [0.8, 0.1, 0.1]]),
-        "expected_scores": np.array([0.3, 0.01, 0.7]),  # margin between top two classes
-    },
-}
+@pytest.fixture
+
+def dummy_target_with_padding():
+    return torch.tensor([
+        [0, -100, 1, -100],
+        [2, 3, -100, 4],
+    ], dtype=torch.long)
 
 
-def test_compute_score(sampler_config):
-    metric = sampler_config[3]["score_metric"]
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    outputs = test_data[metric]["outputs"]
-    expected_scores = test_data[metric]["expected_scores"]
-    scores = amds._compute_score(outputs, disable_softmax=True)
-    assert np.allclose(scores, expected_scores, atol=1e-4)
+@ pytest.mark.parametrize(
+    "forward_fixture, per_sample_top_k, per_sample_ratio, expected_mask", [
+        # Uniform logits -> arbitrary token order; pick first K per sample
+        ("dummy_uniform_forward_output", 1, None, [1, 0, 0, 0, 1, 0, 0, 0]),
+        ("dummy_uniform_forward_output", None, 50, [1, 1, 0, 0, 1, 1, 0, 0]),
+        # Varied logits -> uniform tokens have highest entropy => positions where forward==0
+        ("dummy_varied_forward_output", 2, None, [1, 0, 1, 0, 0, 1, 0, 1]),
+        ("dummy_varied_forward_output", None, 50, [1, 0, 1, 0, 0, 1, 0, 1]),
+    ],
+)
+
+def test_per_sample_selection(
+    base_params,
+    request,
+    dummy_target_all_valid,
+    forward_fixture,
+    per_sample_top_k,
+    per_sample_ratio,
+    expected_mask,
+):
+    params = base_params.copy()
+    if per_sample_top_k is not None:
+        params["per_sample_top_k"] = per_sample_top_k
+    if per_sample_ratio is not None:
+        params["per_sample_ratio"] = per_sample_ratio
+
+    sampler = RemoteTokenUncertaintyDownsampling(
+        pipeline_id=0,
+        trigger_id=0,
+        batch_size=2,
+        params_from_selector=params,
+        modyn_config={},
+        per_sample_loss=None,
+        device="cpu",
+    )
+    sampler.init_downsampler()
+    forward = request.getfixturevalue(forward_fixture)
+    sampler.inform_samples(
+        sample_ids=[0, 1],
+        forward_input=None,
+        forward_output=forward,
+        target=dummy_target_all_valid,
+    )
+    token_ids, weights = sampler.select_points()
+    assert weights.tolist() == expected_mask
+    assert int(weights.sum().item()) == sum(expected_mask)
 
 
-binary_test_data = {
-    "LeastConfidence": {
-        "outputs": torch.tensor([[-0.8], [0.5], [0.3]]),
-        "expected_scores": np.array([0.8, 0.5, 0.3]),  # confidence just picks the highest probability
-    },
-    "Entropy": {
-        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
-        "expected_scores": np.array([-0.5004, -0.6931, -0.6109]),
-    },
-    "Margin": {
-        "outputs": torch.tensor([[0.8], [0.5], [0.3]]),
-        "expected_scores": np.array([0.6, 0.0, 0.4]),  # margin between top two classes
-    },
-}
+def test_global_fallback(base_params, dummy_uniform_forward_output, dummy_target_all_valid):
+    # No per-sample config -> use global downsampling_ratio
+    sampler = RemoteTokenUncertaintyDownsampling(
+        pipeline_id=0,
+        trigger_id=0,
+        batch_size=2,
+        params_from_selector=base_params.copy(),
+        modyn_config={},
+        per_sample_loss=None,
+        device="cpu",
+    )
+    sampler.init_downsampler()
+    sampler.inform_samples(
+        sample_ids=[0, 1],
+        forward_input=None,
+        forward_output=dummy_uniform_forward_output,
+        target=dummy_target_all_valid,
+    )
+    _, weights = sampler.select_points()
+    # global 50% of 8 tokens = 4
+    assert int(weights.sum().item()) == 4
 
 
-def test_compute_score_binary(sampler_config):
-    metric = sampler_config[3]["score_metric"]
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    outputs = binary_test_data[metric]["outputs"]
-    expected_scores = binary_test_data[metric]["expected_scores"]
-    scores = amds._compute_score(outputs, disable_softmax=True)
-    assert np.allclose(scores, expected_scores, atol=1e-4)
+def test_invalid_per_sample_combination(base_params):
+    params = base_params.copy()
+    params["per_sample_top_k"] = 1
+    params["per_sample_ratio"] = 50
+    with pytest.raises(ValueError):
+        RemoteTokenUncertaintyDownsampling(
+            pipeline_id=0,
+            trigger_id=0,
+            batch_size=2,
+            params_from_selector=params,
+            modyn_config={},
+            per_sample_loss=None,
+            device="cpu",
+        )
 
 
-def test_select_points(balance_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*balance_config)
-    with torch.inference_mode():
-        outputs = torch.randn((10, 5))
-        sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, None, outputs, None)
-        if amds.balance:
-            amds.inform_end_of_current_label()
-        selected_ids, weights = amds.select_points()
-        assert len(selected_ids) == 5
-        assert weights.size(0) == 5
-        assert set(selected_ids).issubset(set(sample_ids))
-
-
-def test_select_indexes_from_scores(sampler_config):
-    metric = sampler_config[3]["score_metric"]
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-
-    # Use the hardcoded outputs from the test_data for the specific metric
-    outputs = test_data[metric]["outputs"]
-    amds.scores = amds._compute_score(outputs).tolist()
-    amds.index_sampleid_map = list(range(len(outputs)))
-    target_size = len(outputs) // 2
-
-    selected_indices, _ = amds._select_indexes_from_scores(target_size)
-
-    # Get the expected selected indices by sorting the expected scores
-    expected_scores = test_data[metric]["expected_scores"]
-    expected_selected_indices = np.argsort(expected_scores)[:target_size].tolist()
-
-    assert selected_indices == expected_selected_indices, f"Failed for metric {metric}"
-
-
-def test_select_from_scores_shapes(sampler_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    with torch.inference_mode():
-        outputs = torch.randn((10, 5))
-        sample_ids = list(range(10))
-        amds.inform_samples(sample_ids, None, outputs, None)
-        selected_ids, weights = amds._select_from_scores()
-        assert len(selected_ids) == 5
-        assert weights.size(0) == 5
-        assert set(selected_ids).issubset(set(sample_ids))
-
-
-def test_init_downsampler(sampler_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    amds.init_downsampler()
-    assert len(amds.scores) == 0
-    assert not amds.index_sampleid_map
-
-
-def test_requires_grad(sampler_config):
-    amds = RemoteUncertaintyDownsamplingStrategy(*sampler_config)
-    assert not amds.requires_grad
+def test_padding_ignored(base_params, dummy_uniform_forward_output, dummy_target_with_padding):
+    sampler = RemoteTokenUncertaintyDownsampling(
+        pipeline_id=0,
+        trigger_id=0,
+        batch_size=2,
+        params_from_selector=base_params.copy(),
+        modyn_config={},
+        per_sample_loss=None,
+        device="cpu",
+    )
+    sampler.init_downsampler()
+    sampler.inform_samples(
+        sample_ids=[0, 1],
+        forward_input=None,
+        forward_output=dummy_uniform_forward_output,
+        target=dummy_target_with_padding,
+    )
+    token_ids, weights = sampler.select_points()
+    # Ensure padding tokens have weight=0
+    for (s, idx), w in zip(token_ids, weights.tolist()):
+        if dummy_target_with_padding[s, idx] == -100:
+            assert w == 0
+    # Ensure non-padding tokens count matches weights sum
+    non_pad = (dummy_target_with_padding != -100).sum().item()
+    assert sum(weights.tolist()) == min(non_pad, int(0.5 * non_pad))

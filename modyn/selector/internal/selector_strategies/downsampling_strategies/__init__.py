@@ -12,6 +12,7 @@ from .rho_loss_downsampling_strategy import RHOLossDownsamplingStrategy  # noqa:
 from .rs2_downsampling_strategy import RS2DownsamplingStrategy  # noqa: F401
 from .submodular_downsampling_strategy import SubmodularDownsamplingStrategy  # noqa: F401
 from .uncertainty_downsampling_strategy import UncertaintyDownsamplingStrategy  # noqa: F401
+from .token_uncertainty_downsampling import PerTokenUncertaintyDownsamplingStrategy  # noqa: F401
 from .utils import instantiate_downsampler  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))

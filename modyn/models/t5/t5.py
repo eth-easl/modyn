@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict, Optional
 
 import torch
 from torch import nn
@@ -8,113 +8,99 @@ from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class T5:
-    # pylint: disable-next=unused-argument
-    def __init__(self, hparams: Any, device: str, amp: bool) -> None:
+    def __init__(self, model_config: Dict[str, Any], device: str, amp: bool) -> None:
         """
-        Initializes the T5 model and sends it to the specified device.
-
         Args:
-            hparams (Any): Hyperparameters for the model.
-            device (str): Device to use ('cuda' or 'cpu').
-            amp (bool): Whether to use automatic mixed precision.
+            model_config: dict with optional keys
+                - "model_name_or_path" (str, default "t5-base")
+                - "max_length" (int, default 128)
+                - "temperature" (float, default 1.0)
+                - "top_k" (int, default 50)
+                - "top_p" (float, default 0.95)
+                - "num_return_sequences" (int, default 1)
+                - "dtype" (torch.dtype, default torch.float32)
+            device: e.g. "cuda" or "cpu"
+            amp: if True and on CUDA, cast model to half precision
         """
-        self.model = T5Modyn(hparams)
+        self.model = T5Modyn(model_config)
         self.model.to(device)
 
 
 class T5Modyn(CoresetSupportingModule):
-    def __init__(self, hparams: Any) -> None:
+    def __init__(self, model_config: Dict[str, Any]) -> None:
         super().__init__()
 
-        # Use hparams to decide the T5 version
-        model_name = hparams.model_name_or_path if hasattr(hparams, "model_name_or_path") else "t5-base"
+        # hyperparameters
+        self.model_name = model_config.get("model_name_or_path", "t5-base")
+        self.max_length = model_config.get("max_length", 128)
+        self.temperature = model_config.get("temperature", 1.0)
+        self.top_k = model_config.get("top_k", 50)
+        self.top_p = model_config.get("top_p", 0.95)
+        self.num_return_sequences = model_config.get("num_return_sequences", 1)
+        self.dtype = model_config.get("dtype", torch.float32)
+         
+        # validate model name
+        valid = {"t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"}
+        assert self.model_name in valid, f"Invalid model name: {self.model_name}"
 
-        # Assert that the model name is valid
-        valid_model_names = {"t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"}
-        assert model_name in valid_model_names, f"Invalid model name: {model_name}. Must be one of {valid_model_names}."
+        # tokenizer & model
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+        self.model = T5ForConditionalGeneration.from_pretrained(
+            self.model_name, torch_dtype=self.dtype
+        )
 
-        # Load the T5 tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-        # Load the specified T5 model
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name)
-        self.config = T5Config.from_pretrained(model_name)
-
-    def forward(self, data: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:  # T5 does need labeöls in some form
+    def forward(self, data: torch.Tensor, labels: Optional[torch.Tensor] = None) -> Any:
+        """
+        If labels is provided: returns the full Seq2SeqLMOutput (with loss & logits).
+        If labels is None: returns encoder embeddings (batch, seq_len, d_model).
+        """
         input_ids = data[:, :, 0]
         attention_mask = data[:, :, 1]
-        if labels.dim() == 3:
-            labels = labels[:, :, 0]
 
-        output = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+        if labels is not None:
+            if labels.dim() == 3:
+                labels = labels[:, :, 0]
+            return self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).logits
 
-        # Since we always want the logits
-        return output.logits if hasattr(output, "logits") else output
+        # no labels: return encoder hidden states
+        encoder_out = self.model.encoder(
+            input_ids=input_ids, attention_mask=attention_mask, return_dict=True
+        )
+        return encoder_out.last_hidden_state
 
     def get_last_layer(self) -> nn.Module:
-        """
-        Retrieve the last layer (lm_head) of the model.
-
-        Returns:
-            The final linear layer of the T5 model.
-        """
         return self.model.lm_head
 
     def freeze_params(self) -> None:
-        """Freezes all model parameters."""
-        for param in self.model.parameters():
-            param.requires_grad = False
+        for p in self.model.parameters():
+            p.requires_grad = False
 
     def unfreeze_params(self) -> None:
-        """Unfreezes all model parameters."""
-        for param in self.model.parameters():
-            param.requires_grad = True
+        for p in self.model.parameters():
+            p.requires_grad = True
 
     def generate(
         self,
-        data: torch.Tensor,
-        max_length: int = 128,
-        temperature: float = 1.0,
-        top_k: int = 50,
-        top_p: float = 0.95,
-        num_return_sequences: int = 1,
+        input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
-        Generates text sequences from input texts and pads them to max_length.
-
+        Generates sequences using stored hyperparameters.
         Args:
-            data (torch.Tensor): Input tensor with input_ids and attention_mask.
-            max_length (int): Maximum length of generated sequence.
-            temperature (float): Sampling temperature.
-            top_k (int): Top-k filtering.
-            top_p (float): Top-p (nucleus) sampling.
-            num_return_sequences (int): Number of sequences to generate.
-
+            input_ids: (batch, seq_len)
+            attention_mask: optional (batch, seq_len)
         Returns:
-            torch.Tensor: Generated token IDs padded to max_length.
+            generated_ids: (batch * num_return_sequences, max_length)
         """
-        input_ids = data[:, :, 0]
-        attention_mask = data[:, :, 1]
-
-        # Generate output sequences
         outputs = self.model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            max_length=max_length,
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            num_return_sequences=num_return_sequences,
+            max_length=self.max_length,
+            temperature=self.temperature,
+            top_k=self.top_k,
+            top_p=self.top_p,
+            num_return_sequences=self.num_return_sequences,
             pad_token_id=self.tokenizer.pad_token_id,
-            early_stopping=False,
+            early_stopping=True,
         )
-
-        # Pad outputs to max_length if necessary
-        if outputs.size(1) < max_length:
-            pad_length = max_length - outputs.size(1)
-            padding = torch.full(
-                (outputs.size(0), pad_length), self.tokenizer.pad_token_id, dtype=outputs.dtype, device=outputs.device
-            )
-            outputs = torch.cat([outputs, padding], dim=1)
-
         return outputs

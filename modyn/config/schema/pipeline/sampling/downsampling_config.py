@@ -66,8 +66,45 @@ class UncertaintyDownsamplingConfig(BaseDownsamplingConfig):
     score_metric: Literal["LeastConfidence", "Entropy", "Margin"] = Field(
         description="the metric used to score uncertainty for the datapoints"
     )
-    balance: bool = Field(False, description="If True, the samples are balanced.")
+    balance: bool = Field(False, description="If True, the samples are downsambalanced.")
 
+class PerTokenUncertaintyDownsamplingConfig(BaseDownsamplingConfig):
+    """Config for the Uncertainty downsampling strategy."""
+
+    strategy: Literal["TokenUncertainty"] = "TokenUncertainty"
+    generative: bool = Field(
+        True,
+        description="Whether this strategy applies to generative tasks (must be True)."
+    )
+    score_metric: Literal["LeastConfidence", "Entropy", "Margin"] = Field(
+        description="Metric used to score token uncertainty."
+    )
+    # Mutually exclusive per-sample selection options
+    per_sample_top_k: int | None = Field(
+        None,
+        description="If set, select top-K tokens per sample by uncertainty."
+    )
+    per_sample_ratio: float | None = Field(
+        None,
+        description="If set, select this fraction of tokens per sample (per_sample_ratio * length / ratio_max)."
+    )
+    balance: bool = Field(
+        False,
+        description="If True, selected tokens are balanced across classes or buckets."
+    )
+    weight_per_sample: bool = Field(
+        False,
+        description=(
+            "If True, perform sample-level selection (all tokens in a selected sample get weight=1, others 0). "
+            "If False, perform token-level selection."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def validate_per_sample(cls, values: Self) -> Self:
+        if values.per_sample_top_k is not None and values.per_sample_ratio is not None:
+            raise ValueError("Specify only one of 'per_sample_top_k' or 'per_sample_ratio'.")
+        return values
 
 class KcenterGreedyDownsamplingConfig(BaseDownsamplingConfig):
     """Config for the KcenterGreedy downsampling strategy."""
@@ -201,6 +238,7 @@ class RS2DownsamplingConfig(BaseDownsamplingConfig):
 
 SingleDownsamplingConfig = Annotated[
     UncertaintyDownsamplingConfig
+    | PerTokenUncertaintyDownsamplingConfig
     | KcenterGreedyDownsamplingConfig
     | GradMatchDownsamplingConfig
     | CraigDownsamplingConfig
