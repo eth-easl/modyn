@@ -174,9 +174,16 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     BYTES_PARSER_FIELD_NUMBER: builtins.int
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
+    GENERATIVE_FIELD_NUMBER: builtins.int
+    MAX_TOKEN_LENGTH_FIELD_NUMBER: builtins.int
+    BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
+    TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
+    generative: builtins.bool
+    max_token_length: builtins.int
+    transform_list_target: builtins.str
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
@@ -189,6 +196,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     def label_transformer(self) -> global___PythonString: ...
     @property
     def tokenizer(self) -> global___PythonString: ...
+    @property
+    def bytes_parser_target(self) -> global___PythonString: ...
     def __init__(
         self,
         *,
@@ -201,37 +210,65 @@ class EvaluateModelRequest(google.protobuf.message.Message):
         bytes_parser: global___PythonString | None = ...,
         label_transformer: global___PythonString | None = ...,
         tokenizer: global___PythonString | None = ...,
+        generative: builtins.bool = ...,
+        max_token_length: builtins.int | None = ...,
+        bytes_parser_target: global___PythonString | None = ...,
+        transform_list_target: builtins.str | None = ...,
     ) -> None: ...
     def HasField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_max_token_length",
+            b"_max_token_length",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "label_transformer",
             b"label_transformer",
+            "max_token_length",
+            b"max_token_length",
             "tokenizer",
             b"tokenizer",
+            "transform_list_target",
+            b"transform_list_target",
         ],
     ) -> builtins.bool: ...
     def ClearField(
         self,
         field_name: typing.Literal[
+            "_bytes_parser_target",
+            b"_bytes_parser_target",
+            "_max_token_length",
+            b"_max_token_length",
             "_tokenizer",
             b"_tokenizer",
+            "_transform_list_target",
+            b"_transform_list_target",
             "batch_size",
             b"batch_size",
             "bytes_parser",
             b"bytes_parser",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "device",
             b"device",
+            "generative",
+            b"generative",
             "label_transformer",
             b"label_transformer",
+            "max_token_length",
+            b"max_token_length",
             "metrics",
             b"metrics",
             "model_id",
@@ -240,11 +277,26 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"tokenizer",
             "transform_list",
             b"transform_list",
+            "transform_list_target",
+            b"transform_list_target",
         ],
     ) -> None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_bytes_parser_target", b"_bytes_parser_target"]
+    ) -> typing.Literal["bytes_parser_target"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_max_token_length", b"_max_token_length"]
+    ) -> typing.Literal["max_token_length"] | None: ...
+    @typing.overload
     def WhichOneof(
         self, oneof_group: typing.Literal["_tokenizer", b"_tokenizer"]
     ) -> typing.Literal["tokenizer"] | None: ...
+    @typing.overload
+    def WhichOneof(
+        self, oneof_group: typing.Literal["_transform_list_target", b"_transform_list_target"]
+    ) -> typing.Literal["transform_list_target"] | None: ...
 
 global___EvaluateModelRequest = EvaluateModelRequest
 
@@ -277,7 +329,10 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     INTERVAL_RESPONSES_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
-    """only when all interval evaluations failed, this field will be set to false"""
+    """only when all interval evaluations failed, this field will be set to false
+    it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+    the client can always check the interval_responses
+    """
     evaluation_id: builtins.int
     @property
     def interval_responses(
@@ -378,7 +433,14 @@ class EvaluationIntervalData(google.protobuf.message.Message):
     INTERVAL_INDEX_FIELD_NUMBER: builtins.int
     EVALUATION_DATA_FIELD_NUMBER: builtins.int
     interval_index: builtins.int
-    """multiple metrics are required on on evaluation on one interval"""
+    """Since not every interval evaluation from EvaluateModelRequest may be successful,
+    the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+    evaluation data corresponds to. The interval_index is the index of the interval in the list
+    Datainfo.evaluation_intervals in the EvaluateModelRequest.
+    For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+    and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+    0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
+    """
     @property
     def evaluation_data(
         self,

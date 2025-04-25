@@ -149,6 +149,7 @@ def get_evaluate_model_request(intervals=None):
         transform_list=[],
         bytes_parser=PythonString(value=get_mock_bytes_parser()),
         label_transformer=PythonString(value=""),
+        generative=False,
     )
 
 

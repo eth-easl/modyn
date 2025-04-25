@@ -76,7 +76,14 @@ class RocAucMetricConfig(_BaseMetricConfig):
     name: Literal["RocAuc"] = Field("RocAuc")
 
 
-MetricConfig = Annotated[AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig, Field(discriminator="name")]
+class PerplexityMetricConfig(_BaseMetricConfig):
+    name: Literal["Perplexity"] = Field("Perplexity")
+
+
+MetricConfig = Annotated[
+    AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig | PerplexityMetricConfig,
+    Field(discriminator="name"),
+]
 
 
 class _MetricWrapper(BaseModel):

@@ -15,7 +15,7 @@ _sym_db = _symbol_database.Default()
 
 
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n\x0f\x65valuator.proto\x12\x0fmodyn.evaluator"t\n\x12\x45valuationInterval\x12\x1c\n\x0fstart_timestamp\x18\x01 \x01(\x03H\x00\x88\x01\x01\x12\x1a\n\rend_timestamp\x18\x02 \x01(\x03H\x01\x88\x01\x01\x42\x12\n\x10_start_timestampB\x10\n\x0e_end_timestamp"}\n\x0b\x44\x61tasetInfo\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\x12\x41\n\x14\x65valuation_intervals\x18\x03 \x03(\x0b\x32#.modyn.evaluator.EvaluationInterval"\x1d\n\x0cPythonString\x12\r\n\x05value\x18\x01 \x01(\t"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t"\xfa\x02\n\x14\x45valuateModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05\x12\x32\n\x0c\x64\x61taset_info\x18\x02 \x01(\x0b\x32\x1c.modyn.evaluator.DatasetInfo\x12\x0e\n\x06\x64\x65vice\x18\x03 \x01(\t\x12\x12\n\nbatch_size\x18\x04 \x01(\x05\x12,\n\x07metrics\x18\x05 \x03(\x0b\x32\x1b.modyn.evaluator.JsonString\x12\x16\n\x0etransform_list\x18\x06 \x03(\t\x12\x33\n\x0c\x62ytes_parser\x18\x07 \x01(\x0b\x32\x1d.modyn.evaluator.PythonString\x12\x38\n\x11label_transformer\x18\x08 \x01(\x0b\x32\x1d.modyn.evaluator.PythonString\x12\x35\n\ttokenizer\x18\t \x01(\x0b\x32\x1d.modyn.evaluator.PythonStringH\x00\x88\x01\x01\x42\x0c\n\n_tokenizer"|\n\x1d\x45valuateModelIntervalResponse\x12\x14\n\x0c\x64\x61taset_size\x18\x01 \x01(\x03\x12\x45\n\x13\x65val_aborted_reason\x18\x02 \x01(\x0e\x32(.modyn.evaluator.EvaluationAbortedReason"\x96\x01\n\x15\x45valuateModelResponse\x12\x1a\n\x12\x65valuation_started\x18\x01 \x01(\x08\x12\x15\n\revaluation_id\x18\x02 \x01(\x05\x12J\n\x12interval_responses\x18\x03 \x03(\x0b\x32..modyn.evaluator.EvaluateModelIntervalResponse"0\n\x17\x45valuationStatusRequest\x12\x15\n\revaluation_id\x18\x01 \x01(\x05"c\n\x18\x45valuationStatusResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x12\n\nis_running\x18\x02 \x01(\x08\x12\x16\n\texception\x18\x03 \x01(\tH\x00\x88\x01\x01\x42\x0c\n\n_exception"4\n\x12SingleMetricResult\x12\x0e\n\x06metric\x18\x01 \x01(\t\x12\x0e\n\x06result\x18\x02 \x01(\x02"n\n\x16\x45valuationIntervalData\x12\x16\n\x0einterval_index\x18\x01 \x01(\x05\x12<\n\x0f\x65valuation_data\x18\x02 \x03(\x0b\x32#.modyn.evaluator.SingleMetricResult"0\n\x17\x45valuationResultRequest\x12\x15\n\revaluation_id\x18\x01 \x01(\x05"2\n\x18\x45valuationCleanupRequest\x12\x16\n\x0e\x65valuation_ids\x18\x01 \x03(\x05"n\n\x18\x45valuationResultResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x43\n\x12\x65valuation_results\x18\x02 \x03(\x0b\x32\'.modyn.evaluator.EvaluationIntervalData".\n\x19\x45valuationCleanupResponse\x12\x11\n\tsucceeded\x18\x01 \x03(\x05*\xcb\x01\n\x17\x45valuationAbortedReason\x12\x0f\n\x0bNOT_ABORTED\x10\x00\x12\x1f\n\x1bMODEL_NOT_EXIST_IN_METADATA\x10\x01\x12\x18\n\x14MODEL_IMPORT_FAILURE\x10\x02\x12\x1e\n\x1aMODEL_NOT_EXIST_IN_STORAGE\x10\x03\x12\x15\n\x11\x44\x41TASET_NOT_FOUND\x10\x04\x12\x11\n\rEMPTY_DATASET\x10\x05\x12\x1a\n\x16\x44OWNLOAD_MODEL_FAILURE\x10\x06\x32\xbe\x03\n\tEvaluator\x12\x61\n\x0e\x65valuate_model\x12%.modyn.evaluator.EvaluateModelRequest\x1a&.modyn.evaluator.EvaluateModelResponse"\x00\x12n\n\x15get_evaluation_status\x12(.modyn.evaluator.EvaluationStatusRequest\x1a).modyn.evaluator.EvaluationStatusResponse"\x00\x12n\n\x15get_evaluation_result\x12(.modyn.evaluator.EvaluationResultRequest\x1a).modyn.evaluator.EvaluationResultResponse"\x00\x12n\n\x13\x63leanup_evaluations\x12).modyn.evaluator.EvaluationCleanupRequest\x1a*.modyn.evaluator.EvaluationCleanupResponse"\x00\x62\x06proto3'
+    b'\n\x0f\x65valuator.proto\x12\x0fmodyn.evaluator"t\n\x12\x45valuationInterval\x12\x1c\n\x0fstart_timestamp\x18\x01 \x01(\x03H\x00\x88\x01\x01\x12\x1a\n\rend_timestamp\x18\x02 \x01(\x03H\x01\x88\x01\x01\x42\x12\n\x10_start_timestampB\x10\n\x0e_end_timestamp"}\n\x0b\x44\x61tasetInfo\x12\x12\n\ndataset_id\x18\x01 \x01(\t\x12\x17\n\x0fnum_dataloaders\x18\x02 \x01(\x05\x12\x41\n\x14\x65valuation_intervals\x18\x03 \x03(\x0b\x32#.modyn.evaluator.EvaluationInterval"\x1d\n\x0cPythonString\x12\r\n\x05value\x18\x01 \x01(\t"\x1b\n\nJsonString\x12\r\n\x05value\x18\x01 \x01(\t"\xd9\x04\n\x14\x45valuateModelRequest\x12\x10\n\x08model_id\x18\x01 \x01(\x05\x12\x32\n\x0c\x64\x61taset_info\x18\x02 \x01(\x0b\x32\x1c.modyn.evaluator.DatasetInfo\x12\x0e\n\x06\x64\x65vice\x18\x03 \x01(\t\x12\x12\n\nbatch_size\x18\x04 \x01(\x05\x12,\n\x07metrics\x18\x05 \x03(\x0b\x32\x1b.modyn.evaluator.JsonString\x12\x16\n\x0etransform_list\x18\x06 \x03(\t\x12\x33\n\x0c\x62ytes_parser\x18\x07 \x01(\x0b\x32\x1d.modyn.evaluator.PythonString\x12\x38\n\x11label_transformer\x18\x08 \x01(\x0b\x32\x1d.modyn.evaluator.PythonString\x12\x35\n\ttokenizer\x18\t \x01(\x0b\x32\x1d.modyn.evaluator.PythonStringH\x00\x88\x01\x01\x12\x12\n\ngenerative\x18\x0b \x01(\x08\x12\x1d\n\x10max_token_length\x18\x0c \x01(\x05H\x01\x88\x01\x01\x12?\n\x13\x62ytes_parser_target\x18\r \x01(\x0b\x32\x1d.modyn.evaluator.PythonStringH\x02\x88\x01\x01\x12"\n\x15transform_list_target\x18\x0e \x01(\tH\x03\x88\x01\x01\x42\x0c\n\n_tokenizerB\x13\n\x11_max_token_lengthB\x16\n\x14_bytes_parser_targetB\x18\n\x16_transform_list_target"|\n\x1d\x45valuateModelIntervalResponse\x12\x14\n\x0c\x64\x61taset_size\x18\x01 \x01(\x03\x12\x45\n\x13\x65val_aborted_reason\x18\x02 \x01(\x0e\x32(.modyn.evaluator.EvaluationAbortedReason"\x96\x01\n\x15\x45valuateModelResponse\x12\x1a\n\x12\x65valuation_started\x18\x01 \x01(\x08\x12\x15\n\revaluation_id\x18\x02 \x01(\x05\x12J\n\x12interval_responses\x18\x03 \x03(\x0b\x32..modyn.evaluator.EvaluateModelIntervalResponse"0\n\x17\x45valuationStatusRequest\x12\x15\n\revaluation_id\x18\x01 \x01(\x05"c\n\x18\x45valuationStatusResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x12\n\nis_running\x18\x02 \x01(\x08\x12\x16\n\texception\x18\x03 \x01(\tH\x00\x88\x01\x01\x42\x0c\n\n_exception"4\n\x12SingleMetricResult\x12\x0e\n\x06metric\x18\x01 \x01(\t\x12\x0e\n\x06result\x18\x02 \x01(\x02"n\n\x16\x45valuationIntervalData\x12\x16\n\x0einterval_index\x18\x01 \x01(\x05\x12<\n\x0f\x65valuation_data\x18\x02 \x03(\x0b\x32#.modyn.evaluator.SingleMetricResult"0\n\x17\x45valuationResultRequest\x12\x15\n\revaluation_id\x18\x01 \x01(\x05"2\n\x18\x45valuationCleanupRequest\x12\x16\n\x0e\x65valuation_ids\x18\x01 \x03(\x05"n\n\x18\x45valuationResultResponse\x12\r\n\x05valid\x18\x01 \x01(\x08\x12\x43\n\x12\x65valuation_results\x18\x02 \x03(\x0b\x32\'.modyn.evaluator.EvaluationIntervalData".\n\x19\x45valuationCleanupResponse\x12\x11\n\tsucceeded\x18\x01 \x03(\x05*\xcb\x01\n\x17\x45valuationAbortedReason\x12\x0f\n\x0bNOT_ABORTED\x10\x00\x12\x1f\n\x1bMODEL_NOT_EXIST_IN_METADATA\x10\x01\x12\x18\n\x14MODEL_IMPORT_FAILURE\x10\x02\x12\x1e\n\x1aMODEL_NOT_EXIST_IN_STORAGE\x10\x03\x12\x15\n\x11\x44\x41TASET_NOT_FOUND\x10\x04\x12\x11\n\rEMPTY_DATASET\x10\x05\x12\x1a\n\x16\x44OWNLOAD_MODEL_FAILURE\x10\x06\x32\xbe\x03\n\tEvaluator\x12\x61\n\x0e\x65valuate_model\x12%.modyn.evaluator.EvaluateModelRequest\x1a&.modyn.evaluator.EvaluateModelResponse"\x00\x12n\n\x15get_evaluation_status\x12(.modyn.evaluator.EvaluationStatusRequest\x1a).modyn.evaluator.EvaluationStatusResponse"\x00\x12n\n\x15get_evaluation_result\x12(.modyn.evaluator.EvaluationResultRequest\x1a).modyn.evaluator.EvaluationResultResponse"\x00\x12n\n\x13\x63leanup_evaluations\x12).modyn.evaluator.EvaluationCleanupRequest\x1a*.modyn.evaluator.EvaluationCleanupResponse"\x00\x62\x06proto3'
 )
 
 _globals = globals()
@@ -23,8 +23,8 @@ _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "evaluator_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
     DESCRIPTOR._loaded_options = None
-    _globals["_EVALUATIONABORTEDREASON"]._serialized_start = 1581
-    _globals["_EVALUATIONABORTEDREASON"]._serialized_end = 1784
+    _globals["_EVALUATIONABORTEDREASON"]._serialized_start = 1804
+    _globals["_EVALUATIONABORTEDREASON"]._serialized_end = 2007
     _globals["_EVALUATIONINTERVAL"]._serialized_start = 36
     _globals["_EVALUATIONINTERVAL"]._serialized_end = 152
     _globals["_DATASETINFO"]._serialized_start = 154
@@ -34,27 +34,27 @@ if not _descriptor._USE_C_DESCRIPTORS:
     _globals["_JSONSTRING"]._serialized_start = 312
     _globals["_JSONSTRING"]._serialized_end = 339
     _globals["_EVALUATEMODELREQUEST"]._serialized_start = 342
-    _globals["_EVALUATEMODELREQUEST"]._serialized_end = 720
-    _globals["_EVALUATEMODELINTERVALRESPONSE"]._serialized_start = 722
-    _globals["_EVALUATEMODELINTERVALRESPONSE"]._serialized_end = 846
-    _globals["_EVALUATEMODELRESPONSE"]._serialized_start = 849
-    _globals["_EVALUATEMODELRESPONSE"]._serialized_end = 999
-    _globals["_EVALUATIONSTATUSREQUEST"]._serialized_start = 1001
-    _globals["_EVALUATIONSTATUSREQUEST"]._serialized_end = 1049
-    _globals["_EVALUATIONSTATUSRESPONSE"]._serialized_start = 1051
-    _globals["_EVALUATIONSTATUSRESPONSE"]._serialized_end = 1150
-    _globals["_SINGLEMETRICRESULT"]._serialized_start = 1152
-    _globals["_SINGLEMETRICRESULT"]._serialized_end = 1204
-    _globals["_EVALUATIONINTERVALDATA"]._serialized_start = 1206
-    _globals["_EVALUATIONINTERVALDATA"]._serialized_end = 1316
-    _globals["_EVALUATIONRESULTREQUEST"]._serialized_start = 1318
-    _globals["_EVALUATIONRESULTREQUEST"]._serialized_end = 1366
-    _globals["_EVALUATIONCLEANUPREQUEST"]._serialized_start = 1368
-    _globals["_EVALUATIONCLEANUPREQUEST"]._serialized_end = 1418
-    _globals["_EVALUATIONRESULTRESPONSE"]._serialized_start = 1420
-    _globals["_EVALUATIONRESULTRESPONSE"]._serialized_end = 1530
-    _globals["_EVALUATIONCLEANUPRESPONSE"]._serialized_start = 1532
-    _globals["_EVALUATIONCLEANUPRESPONSE"]._serialized_end = 1578
-    _globals["_EVALUATOR"]._serialized_start = 1787
-    _globals["_EVALUATOR"]._serialized_end = 2233
+    _globals["_EVALUATEMODELREQUEST"]._serialized_end = 943
+    _globals["_EVALUATEMODELINTERVALRESPONSE"]._serialized_start = 945
+    _globals["_EVALUATEMODELINTERVALRESPONSE"]._serialized_end = 1069
+    _globals["_EVALUATEMODELRESPONSE"]._serialized_start = 1072
+    _globals["_EVALUATEMODELRESPONSE"]._serialized_end = 1222
+    _globals["_EVALUATIONSTATUSREQUEST"]._serialized_start = 1224
+    _globals["_EVALUATIONSTATUSREQUEST"]._serialized_end = 1272
+    _globals["_EVALUATIONSTATUSRESPONSE"]._serialized_start = 1274
+    _globals["_EVALUATIONSTATUSRESPONSE"]._serialized_end = 1373
+    _globals["_SINGLEMETRICRESULT"]._serialized_start = 1375
+    _globals["_SINGLEMETRICRESULT"]._serialized_end = 1427
+    _globals["_EVALUATIONINTERVALDATA"]._serialized_start = 1429
+    _globals["_EVALUATIONINTERVALDATA"]._serialized_end = 1539
+    _globals["_EVALUATIONRESULTREQUEST"]._serialized_start = 1541
+    _globals["_EVALUATIONRESULTREQUEST"]._serialized_end = 1589
+    _globals["_EVALUATIONCLEANUPREQUEST"]._serialized_start = 1591
+    _globals["_EVALUATIONCLEANUPREQUEST"]._serialized_end = 1641
+    _globals["_EVALUATIONRESULTRESPONSE"]._serialized_start = 1643
+    _globals["_EVALUATIONRESULTRESPONSE"]._serialized_end = 1753
+    _globals["_EVALUATIONCLEANUPRESPONSE"]._serialized_start = 1755
+    _globals["_EVALUATIONCLEANUPRESPONSE"]._serialized_end = 1801
+    _globals["_EVALUATOR"]._serialized_start = 2010
+    _globals["_EVALUATOR"]._serialized_end = 2456
 # @@protoc_insertion_point(module_scope)

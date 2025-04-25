@@ -35,7 +35,10 @@ class MockStorageStub:
     def Get(self, request: GetRequest):  # pylint: disable=invalid-name
         for key in request.keys:
             yield GetResponse(
-                samples=[key.to_bytes(2, "big"), (key + 1).to_bytes(2, "big")], keys=[key, key + 1], labels=[5, 5]
+                samples=[key.to_bytes(2, "big"), (key + 1).to_bytes(2, "big")],
+                keys=[key, key + 1],
+                labels=[5, 5],
+                target=[key.to_bytes(2, "big"), (key + 1).to_bytes(2, "big")],
             )
 
     def GetDataPerWorker(self, request: GetDataPerWorkerRequest):  # pylint: disable=invalid-name
@@ -133,7 +136,7 @@ def test_get_data_from_storage(test_insecure_channel, test_grpc_connection_estab
     for idx, elem in enumerate(evaluation_dataset._get_data_from_storage(range(0, 10, 2))):
         for num_elem, data in enumerate(elem):
             key = idx * 2 + num_elem
-            assert data == (key, key.to_bytes(2, "big"), 5)
+            assert data == (key, key.to_bytes(2, "big"), 5, key.to_bytes(2, "big"))
 
 
 def test_init_transforms():
@@ -224,6 +227,7 @@ def test_dataset_iter_with_parsing(test_insecure_channel, test_grpc_connection_e
         storage_address="localhost:1234",
         evaluation_id=42,
     )
+
     dataset_iter = iter(evaluation_dataset)
     all_data = list(dataset_iter)
     assert [x[0] for x in all_data] == list(range(8))
@@ -283,3 +287,63 @@ def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connec
         assert torch.equal(batch[2], torch.ones(4, dtype=torch.float64) * 5)
 
     assert batch_num == 7
+
+
+def get_main_bytes_parser() -> str:
+    return """\
+def bytes_parser_function(data: bytes):
+    return bytes(data) + b"_MAIN"
+"""
+
+
+def get_target_bytes_parser() -> str:
+    return """\
+def bytes_parser_function(data: bytes):
+    return bytes(data) + b"_TARGET"
+"""
+
+
+def get_main_serialized_transforms() -> list[str]:
+    return ["transforms.Lambda(lambda x: x + b'_MAIN_TF')"]
+
+
+def get_target_serialized_transforms() -> list[str]:
+    return ["transforms.Lambda(lambda x: x + b'_TARGET_TF')"]
+
+
+def fake_get_keys_from_storage(self, worker_id, total_workers):
+    yield [10]
+
+
+def fake_get_data_from_storage(self, keys, worker_id):
+    yield [(10, b"SAMPLE", b"LABEL", b"TARGET")]
+
+
+@patch("modyn.evaluator.internal.dataset.evaluation_dataset.StorageStub", MockStorageStub)
+@patch("modyn.evaluator.internal.dataset.evaluation_dataset.grpc_connection_established", return_value=True)
+@patch.object(grpc, "insecure_channel", return_value=None)
+def test_evaluation_dataset_different_target_parsers_and_transforms(mock_insecure_channel, mock_grpc_conn):
+    dataset = EvaluationDataset(
+        dataset_id="dummy_eval",
+        bytes_parser=get_main_bytes_parser(),
+        serialized_transforms=get_main_serialized_transforms(),
+        storage_address="fake-storage:1234",
+        evaluation_id=42,
+        include_labels=False,  # Use target branch.
+        bytes_parser_target=get_target_bytes_parser(),
+        serialized_target_transforms=get_target_serialized_transforms(),
+        tokenizer=None,
+        start_timestamp=None,
+        end_timestamp=None,
+    )
+
+    dataset._init_grpc = lambda: None
+    dataset._get_keys_from_storage = fake_get_keys_from_storage.__get__(dataset)
+    dataset._get_data_from_storage = fake_get_data_from_storage.__get__(dataset)
+
+    results = list(dataset)
+
+    key1, sample1, out_target = results[0]
+    assert key1 == 10
+    assert sample1.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Unexpected sample: {sample1}"
+    assert out_target.endswith(b"TARGET_TARGET_TARGET_TF"), f"Unexpected target: {out_target}"

@@ -49,7 +49,14 @@ class EvaluationInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
         self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
-
+        self.max_token_length = request.max_token_length
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
+        self.generative = request.generative
+        self.bytes_parser_target = (
+            request.bytes_parser_target.value if request.HasField("bytes_parser_target") else None
+        )
+        self.serialized_transforms_target = (
+            list(request.transform_list_target) if request.HasField("transform_list_target") else None
+        )

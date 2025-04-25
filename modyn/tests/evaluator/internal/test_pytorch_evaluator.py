@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import IterableDataset
 
 from modyn.config import F1ScoreMetricConfig
-from modyn.config.schema.pipeline import AccuracyMetricConfig
+from modyn.config.schema.pipeline import AccuracyMetricConfig, PerplexityMetricConfig
 from modyn.evaluator.internal.grpc.generated.evaluator_pb2 import (
     DatasetInfo,
     EvaluateModelRequest,
@@ -249,3 +249,52 @@ def test_evaluate(_load_state_mock: MagicMock, prepare_dataloader_mock: MagicMoc
                 ("F1-macro", pytest.approx(f1score)),
             ],
         )
+
+
+@patch.object(PytorchEvaluator, "_load_state")
+@patch.object(PytorchEvaluator, "_prepare_dataloader")
+def test_evaluate_generative_pad_mask(load_state_mock: MagicMock, prepare_dataloader_mock):
+
+    # prepare a single‐interval evaluator with only Perplexity
+    metric_queue = mp.Queue()
+    perplexity_json = PerplexityMetricConfig().model_dump_json()
+    evaluator = get_mock_evaluator(
+        trained_model_path="trained_model.modyn",
+        label_transformer=False,
+        metric_queue=metric_queue,
+        not_failed_interval_ids=[0],
+        metric_jsons=[perplexity_json],
+    )
+    evaluator._eval_info.generative = True
+
+    class MockTokenizer:
+        pad_token_id = 0
+
+    class MockLanguageModel:
+        tokenizer = MockTokenizer()
+
+        def eval(self):
+            pass
+
+        def __call__(self, data, target):
+            b, s = target.shape
+            vocab_size = 4
+            return torch.zeros(b, s, vocab_size)
+
+    evaluator._model.model = MockLanguageModel()
+
+    # dataloader yields one batch: target_raw shape (1,3,1) with a pad at [0,1,0]
+    target_raw = torch.tensor([[[1, 0], [0, 0], [0, 2]]], dtype=torch.long)
+    prepare_dataloader_mock.return_value = [(None, torch.Tensor([0, 0]), target_raw)]
+
+    evaluator.evaluate()
+
+    idx, metrics = metric_queue.get(timeout=1)
+    assert idx == 0
+
+    # only one metric reported
+    assert len(metrics) == 1
+    name, value = metrics[0]
+    assert name == "Perplexity"
+
+    assert value > 0
