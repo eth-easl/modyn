@@ -15,11 +15,8 @@ class _BaseMetricConfig(ModynBaseModel):
         description="A function used to transform the model output before evaluation.",
     )
     tokenizer: str | None = Field(None, description="The tokenizer used for the evaluation.")
-    requires_generation: bool = Field(
-        False,
-        description="Whether the metric requires generation of text (e.g. BLEU)."
-    )
-   
+    requires_generation: bool = Field(False, description="Whether the metric requires generation of text (e.g. BLEU).")
+
     @field_validator("evaluation_transformer_function", mode="before")
     @classmethod
     def validate_evaluation_transformer_function(cls, value: str) -> str | None:
@@ -81,13 +78,12 @@ class RocAucMetricConfig(_BaseMetricConfig):
     name: Literal["RocAuc"] = Field("RocAuc")
 
 
-class PerplexityMetricConfig(_BaseMetricConfig):
-    name: Literal["Perplexity"] = Field("Perplexity")
+class BleuMetricConfig(_BaseMetricConfig):
+    name: Literal["Bleu"] = Field("Bleu")
 
 
 MetricConfig = Annotated[
-    AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig | PerplexityMetricConfig,
-    Field(discriminator="name"),
+    AccuracyMetricConfig | F1ScoreMetricConfig | RocAucMetricConfig | BleuMetricConfig, Field(discriminator="name")
 ]
 
 

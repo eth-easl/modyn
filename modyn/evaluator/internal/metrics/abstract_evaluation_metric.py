@@ -24,9 +24,7 @@ class AbstractEvaluationMetric(ABC):
         self.evaluation_transformer_function: Callable[[torch.Tensor], torch.Tensor] | None = None
         if config.tokenizer is not None:
             self._tokenizer = (
-                instantiate_class("modyn.models.tokenizers", config.tokenizer, max_token_length=config.seq_length)
-                if config.tokenizer
-                else None
+                instantiate_class("modyn.models.tokenizers", config.tokenizer) if config.tokenizer else None
             )
         self.requires_generation = config.requires_generation
 
@@ -84,7 +82,7 @@ class AbstractEvaluationMetric(ABC):
         ids = token_ids.tolist()
         # If a tokenizer was set up on this metric, use it:
         if hasattr(self, "_tokenizer") and self._tokenizer is not None:
-            return self._tokenizer.decode(
+            return self._tokenizer.tokenizer.decode(
                 ids,
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=True,
