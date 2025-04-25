@@ -14,7 +14,12 @@ class _BaseMetricConfig(ModynBaseModel):
         None,
         description="A function used to transform the model output before evaluation.",
     )
-
+    tokenizer: str | None = Field(None, description="The tokenizer used for the evaluation.")
+    requires_generation: bool = Field(
+        False,
+        description="Whether the metric requires generation of text (e.g. BLEU)."
+    )
+   
     @field_validator("evaluation_transformer_function", mode="before")
     @classmethod
     def validate_evaluation_transformer_function(cls, value: str) -> str | None:
