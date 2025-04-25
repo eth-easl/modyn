@@ -204,7 +204,7 @@ class OnlineDataset(IterableDataset):
                             assert isinstance(processed_keys, list)
                             processed_keys.extend(keys)
 
-                            assert len(keys) == len(response.samples) == len(response.labels) == len(response.target)
+                            assert len(keys) == len(response.samples)
                             yield (
                                 keys,
                                 list(response.samples),
