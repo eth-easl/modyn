@@ -1,14 +1,14 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 import torch
 from torch import nn
-from transformers import AutoTokenizer, T5Config, T5ForConditionalGeneration
+from transformers import AutoTokenizer, T5ForConditionalGeneration
 
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
 class T5:
-    def __init__(self, model_config: Dict[str, Any], device: str, amp: bool) -> None:
+    def __init__(self, model_config: dict[str, Any], device: str, amp: bool) -> None:
         """
         Args:
             model_config: dict with optional keys
@@ -27,7 +27,7 @@ class T5:
 
 
 class T5Modyn(CoresetSupportingModule):
-    def __init__(self, model_config: Dict[str, Any]) -> None:
+    def __init__(self, model_config: dict[str, Any]) -> None:
         super().__init__()
 
         # hyperparameters
@@ -38,18 +38,16 @@ class T5Modyn(CoresetSupportingModule):
         self.top_p = model_config.get("top_p", 0.95)
         self.num_return_sequences = model_config.get("num_return_sequences", 1)
         self.dtype = model_config.get("dtype", torch.float32)
-         
+
         # validate model name
         valid = {"t5-small", "t5-base", "t5-large", "t5-3b", "t5-11b"}
         assert self.model_name in valid, f"Invalid model name: {self.model_name}"
 
         # tokenizer & model
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(
-            self.model_name, torch_dtype=self.dtype
-        )
+        self.model = T5ForConditionalGeneration.from_pretrained(self.model_name, torch_dtype=self.dtype)
 
-    def forward(self, data: torch.Tensor, labels: Optional[torch.Tensor] = None) -> Any:
+    def forward(self, data: torch.Tensor, labels: torch.Tensor | None = None) -> Any:
         """
         If labels is provided: returns the full Seq2SeqLMOutput (with loss & logits).
         If labels is None: returns encoder embeddings (batch, seq_len, d_model).
@@ -62,11 +60,18 @@ class T5Modyn(CoresetSupportingModule):
                 labels = labels[:, :, 0]
             return self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels).logits
 
-        # no labels: return encoder hidden states
-        encoder_out = self.model.encoder(
-            input_ids=input_ids, attention_mask=attention_mask, return_dict=True
-        )
-        return encoder_out.last_hidden_state
+        enc_out = self.model.encoder(                   # BaseT5EncoderModel
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            return_dict=True,
+        ).last_hidden_state                             # (B, L, d_model)
+
+        # pool the sequence → fixed-size vector (choose mean pooling)
+        pooled = enc_out.mean(dim=1)                    # (B, d_model)
+
+        # record & return
+        pooled = self.embedding_recorder(pooled)        # records when recording is active
+        return pooled  
 
     def get_last_layer(self) -> nn.Module:
         return self.model.lm_head
@@ -82,7 +87,7 @@ class T5Modyn(CoresetSupportingModule):
     def generate(
         self,
         input_ids: torch.Tensor,
-        attention_mask: Optional[torch.Tensor] = None,
+        attention_mask: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """
         Generates sequences using stored hyperparameters.

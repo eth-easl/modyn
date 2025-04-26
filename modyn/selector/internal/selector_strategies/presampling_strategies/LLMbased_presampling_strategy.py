@@ -1,14 +1,17 @@
-import uuid
 import time
-import logging
+import uuid
+
 import openai
-from sqlalchemy import MetaData, Table, Column, Integer, select
+from sqlalchemy import Column, Integer, MetaData, Table, select
 from sqlalchemy.orm.session import Session
+
 from modyn.config.schema.pipeline import PresamplingConfig
 from modyn.metadata_database.models import SelectorStateMetadata
-from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import AbstractPresamplingStrategy
+from modyn.selector.internal.selector_strategies.presampling_strategies.abstract_presampling_strategy import (
+    AbstractPresamplingStrategy,
+)
 from modyn.selector.internal.storage_backend.abstract_storage_backend import AbstractStorageBackend
-from modyn.common.benchmark.stopwatch import Stopwatch
+
 
 class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
     def __init__(
@@ -23,18 +26,18 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         custom_prompt: str | None = None,
         api_key: str = "sk-rc-75HStaTc3UOSoVgyXSEU7w",
         base_url: str = "https://fmapi.swissai.cscs.ch",
-        datatset_id: str = "abstracts_train_gen"
+        dataset_id: str = "abstracts_train_gen",
     ):
         super().__init__(presampling_config, modyn_config, pipeline_id, storage_backend)
         self.batch_size = batch_size
         self.model_name = model_name
         self.ratio = ratio
         self.custom_prompt = custom_prompt
-        self.dataset_id=datatset_id
+        self.dataset_id = dataset_id
         # Create an OpenAI client with customizable API key and base URL.
         self.client = openai.Client(api_key=api_key, base_url=base_url)
 
-    def evaluate_batch_quality(self, keys: list[int], model_name: str , dataset_id:str ) -> list[bool]:
+    def evaluate_batch_quality(self, keys: list[int], model_name: str, dataset_id: str) -> list[bool]:
         """
         Retrieve sample texts from storage for the given keys and evaluate their quality using the LLM.
         Uses a custom prompt if provided, otherwise builds a default prompt.
@@ -74,16 +77,13 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         while True:
             try:
                 response = self.client.chat.completions.create(
-                    model=model_name,
-                    messages=[{"role": "user", "content": eval_prompt}],
-                    max_tokens=512,
-                    stream=False
+                    model=model_name, messages=[{"role": "user", "content": eval_prompt}], max_tokens=512, stream=False
                 )
                 break
-            except Exception as e:
+            except Exception:
                 # Debug: print(f"[DEBUG] Error evaluating batch quality: {e}")
                 time.sleep(5)
-        
+
         content = response.choices[0].message.content.strip().lower()
         results = content.split("\n")
         # Debug: print(f"[DEBUG] Evaluation prompt response: {results}")
@@ -98,10 +98,10 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
     ) -> select:
         base_query = select(SelectorStateMetadata.sample_key).filter(
             SelectorStateMetadata.pipeline_id == self.pipeline_id,
-            SelectorStateMetadata.seen_in_trigger_id == next_trigger_id
+            SelectorStateMetadata.seen_in_trigger_id == next_trigger_id,
         )
         # Debug: print(f"[DEBUG] Base query: {base_query}")
-        
+
         def fetch_raw_keys(session: Session) -> list[int]:
             keys = session.execute(base_query).scalars().all()
             # Debug: print(f"[DEBUG] Raw keys fetched from DB: {len(keys)}")
@@ -110,11 +110,11 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         raw_keys = self._storage_backend._execute_on_session(fetch_raw_keys)
         # Debug: print(f"[DEBUG] Raw keys obtained: {len(raw_keys)}")
         filtered_keys = []
-        
+
         for i in range(0, len(raw_keys), self.batch_size):
-            batch_keys = raw_keys[i: i + self.batch_size]
+            batch_keys = raw_keys[i : i + self.batch_size]
             # Directly evaluate the quality by calling get_data_from_storage within evaluate_batch_quality.
-            results = self.evaluate_batch_quality(batch_keys,model_name=self.model_name,dataset_id=self.dataset_id)
+            results = self.evaluate_batch_quality(batch_keys, model_name=self.model_name, dataset_id=self.dataset_id)
             for idx, keep in enumerate(results):
                 if keep:
                     filtered_keys.append(batch_keys[idx])
@@ -143,5 +143,3 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         self._storage_backend._execute_on_session(create_temp_table_and_insert)
         # Debug: print(f"[DEBUG] Returning presampling query based on temporary table: {temp_table_name}")
         return select(temp_table.c.sample_key)
-    
-   

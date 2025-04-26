@@ -3,12 +3,14 @@ import logging
 from typing import Any
 
 import torch
+
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
     unsqueeze_dimensions_if_necessary,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class RemoteGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
     """

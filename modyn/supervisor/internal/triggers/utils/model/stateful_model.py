@@ -54,5 +54,4 @@ class StatefulModel:
         self.model.model.load_state_dict(checkpoint["model"])
 
         # delete trained model from disk
-        path.unlink() 
-
+        path.unlink()

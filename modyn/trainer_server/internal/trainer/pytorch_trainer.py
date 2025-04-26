@@ -27,8 +27,8 @@ import transformers
 from modyn.common.benchmark.stopwatch import Stopwatch
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 from modyn.models.dlrm.dlrm import DLRM
-from modyn.models.t5.t5 import T5
 from modyn.models.modular_adapters.modular_adapters import apply_adapters
+from modyn.models.t5.t5 import T5
 from modyn.selector.internal.grpc.generated.selector_pb2 import (
     AvailableLabelsResponse,
     GetAvailableLabelsRequest,
@@ -355,7 +355,7 @@ class PytorchTrainer:
                                 # Compute per-timestep loss (currently 1D, shape: [L])
                                 loss_per_timestep = self._criterion_nored(output, target)
                                 batch_size = weights.size(0)
-                                seq_length = loss_per_timestep.numel() // batch_size  
+                                seq_length = loss_per_timestep.numel() // batch_size
                                 loss_per_timestep = loss_per_timestep.reshape(batch_size, seq_length)
                                 normalized_weights = weights / weights.sum()
                                 expanded_weights = normalized_weights.unsqueeze(1).expand(batch_size, seq_length)
@@ -669,14 +669,12 @@ class PytorchTrainer:
         # If this becomes a problem for more models, we might want to make it a field on the model class instead.
         # Some Huggingface models also show strange behavior inference_mode() because of the way they are initialized
         no_grad_mgr = (
-            torch.no_grad()
-            if isinstance(self._model, DLRM) or isinstance(self._model,T5 )
-            else torch.inference_mode()
+            torch.no_grad() if isinstance(self._model, DLRM) or isinstance(self._model, T5) else torch.inference_mode()
         )
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
 
         with context_manager:
-            if isinstance(self._model,T5):
+            if isinstance(self._model, T5):
                 big_batch_output = (
                     self._model.model(data, labels=target) if self._downsampler.forward_required else torch.Tensor()
                 )
@@ -1065,7 +1063,7 @@ class PytorchTrainer:
                 target = torch.Tensor()
             number_of_samples += len(sample_ids)
 
-            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) or  isinstance(self._model, T5) else torch.inference_mode()
+            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
             context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):

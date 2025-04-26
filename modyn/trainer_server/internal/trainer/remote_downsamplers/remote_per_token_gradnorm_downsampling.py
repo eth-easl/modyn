@@ -2,14 +2,15 @@
 import logging
 from typing import Any
 
-import torch
 import numpy as np
+import torch
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_remote_downsampling_strategy import (
     AbstractRemoteDownsamplingStrategy,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class RemoteTokenGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
     """
@@ -63,7 +64,7 @@ class RemoteTokenGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
                 # Single-token loss => forward_output[i, j, :] => shape (V,)
                 # We'll build a tiny shape(1,V) input for that token
                 token_logits = forward_output[i, j, :].unsqueeze(0)  # shape(1,V)
-                token_target = target[i, j].unsqueeze(0)             # shape(1,)
+                token_target = target[i, j].unsqueeze(0)  # shape(1,)
 
                 # Clear grads
                 token_logits.requires_grad_(True)
@@ -90,7 +91,9 @@ class RemoteTokenGradNormDownsampling(AbstractRemoteDownsamplingStrategy):
             token_gradnorms_np = token_gradnorms_np / denom
 
         target_size = max(int(self.downsampling_ratio * self.number_of_tokens_seen / self.ratio_max), 1)
-        selected_indices = np.random.choice(len(token_gradnorms_np), size=target_size, replace=False, p=token_gradnorms_np)
+        selected_indices = np.random.choice(
+            len(token_gradnorms_np), size=target_size, replace=False, p=token_gradnorms_np
+        )
 
         weights = 1.0 / (self.number_of_tokens_seen * token_gradnorms_np[selected_indices])
         selected_tokens = [self.token_ids[idx] for idx in selected_indices]

@@ -10,7 +10,7 @@ from modyn.utils import DownsamplingMode
 logger = logging.getLogger(__name__)
 
 
-class PerTokenUncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
+class TokenUncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
     """
     Always-per-token uncertainty sampling for generative tasks.
 
@@ -41,8 +41,6 @@ class PerTokenUncertaintyDownsamplingStrategy(AbstractDownsamplingStrategy):
         config["weight_per_sample"] = False
 
         if config["balance"] and self.downsampling_mode == DownsamplingMode.BATCH_THEN_SAMPLE:
-            raise ValueError(
-                "Balanced sampling (balance=True) can be used only in Sample then Batch mode."
-            )
+            raise ValueError("Balanced sampling (balance=True) can be used only in Sample then Batch mode.")
 
         return config

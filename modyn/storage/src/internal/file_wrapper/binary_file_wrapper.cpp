@@ -91,7 +91,7 @@ std::vector<unsigned char> BinaryFileWrapper::get_target(uint64_t index) {
 
   std::vector<unsigned char> target_vec(target_size_);
   get_stream()->read(reinterpret_cast<char*>(target_vec.data()), static_cast<int64_t>(target_size_));
-  
+
   return target_vec;
 }
 
@@ -204,7 +204,7 @@ std::vector<std::vector<unsigned char>> BinaryFileWrapper::get_samples_from_indi
   for (const uint64_t index : indices) {
     record_start = index * record_size_;
 
-   
+
     get_stream()->seekg(
         static_cast<int64_t>(record_start + ((has_labels_ ? label_size_ : 0) + (has_targets_ ? target_size_ : 0))),
         std::ios::beg);

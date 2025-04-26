@@ -106,10 +106,12 @@ def _alibi_detect_metric_factory(config: AlibiDetectDriftMetric, embeddings_ref:
     kernel = None
     if isinstance(config, AlibiDetectMmdDriftMetric):
         kernel = getattr(alibi_detect.utils.pytorch, config.kernel)
-
+  
     kwargs = {}
     if config.preprocessor:
         kwargs.update({"preprocess_fn": config.preprocessor.gen_preprocess_fn(config.device)})
+    print(f"[DBG FACT] x_ref type={type(embeddings_ref)}  shape={getattr(embeddings_ref,'shape',None)} "f"preprocess_fn will be {'None' if isinstance(embeddings_ref, (torch.Tensor, np.ndarray)) else 'tokenizer'}")
+
 
     if isinstance(config, AlibiDetectMmdDriftMetric):
         assert kernel is not None

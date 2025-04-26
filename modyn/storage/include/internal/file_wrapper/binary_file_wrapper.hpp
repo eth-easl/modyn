@@ -19,7 +19,7 @@ class BinaryFileWrapper : public FileWrapper {
     ASSERT(fw_config["record_size"], "record_size must be specified in the file wrapper config.");
     record_size_ = fw_config["record_size"].as<uint64_t>();
 
-    
+
     if (!file_wrapper_config_["has_labels"] || file_wrapper_config_["has_labels"].as<bool>()) {
       has_labels_ = true;
       ASSERT(fw_config["label_size"], "label_size must be specified in the file wrapper config.");
@@ -29,7 +29,7 @@ class BinaryFileWrapper : public FileWrapper {
       label_size_ = 0;  // No labels exist
     }
 
-    
+
     if (fw_config["has_targets"] && fw_config["has_targets"].as<bool>()) {
       has_targets_ = true;
       ASSERT(fw_config["target_size"], "target_size must be specified in the file wrapper config.");

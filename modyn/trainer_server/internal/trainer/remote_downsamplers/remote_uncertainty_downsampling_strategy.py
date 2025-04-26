@@ -1,7 +1,8 @@
-import numpy as np
-import torch
 import logging
 from typing import Any
+
+import numpy as np
+import torch
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_per_label_remote_downsample_strategy import (
     AbstractPerLabelRemoteDownsamplingStrategy,
@@ -13,13 +14,14 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.sh
 
 logger = logging.getLogger(__name__)
 
+
 class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingStrategy):
     """
     Strategy introduced in:
       *Selection via Proxy: Efficient Data Selection for Deep Learning*
     Implementation adapted from:
       *DEEPCORE* https://github.com/PatrickZH/DeepCore (uncertainty.py)
-    
+
     This strategy collects a measure of uncertainty (LeastConfidence, Entropy or Margin) for each *sample*
     and selects the top-k most uncertain samples.
 
@@ -49,7 +51,6 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
             raise ValueError("Please provide a 'score_metric': LeastConfidence, Entropy, or Margin.")
         self.score_metric = params_from_selector["score_metric"]
 
-      
         self.generative = generative
         # Balanced selection across classes?
         self.balance = params_from_selector["balance"]
@@ -71,7 +72,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     ) -> None:
         assert embedding is None
         if hasattr(forward_output, "logits"):
-                forward_output = forward_output.logits
+            forward_output = forward_output.logits
         forward_output, _ = unsqueeze_dimensions_if_necessary(forward_output, target)
         these_scores = self._compute_score(forward_output.detach())
         self.scores = np.append(self.scores, these_scores)
@@ -80,19 +81,16 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
     def _compute_score(self, forward_output: torch.Tensor, disable_softmax: bool = False) -> np.ndarray:
         """
         * Classification case: shape (B, num_classes)
-        * Generative case:    shape (B, T, vocab) 
+        * Generative case:    shape (B, T, vocab)
             - We'll do only 'Entropy' here by summing token-level negative entropies => single sample-level score.
         """
 
         if self.generative:
             # For demonstration, we only implement 'Entropy' in the generative case
-            
+
             if self.score_metric != "Entropy":
-                raise ValueError(
-                    f"In generative mode, only 'Entropy' is supported. Got {self.score_metric}."
-                )
-            
-            
+                raise ValueError(f"In generative mode, only 'Entropy' is supported. Got {self.score_metric}.")
+
             # forward_output shape: (B, T, V)
             batch_size, seq_length, vocab_size = forward_output.shape
             if not disable_softmax:
@@ -123,11 +121,7 @@ class RemoteUncertaintyDownsamplingStrategy(AbstractPerLabelRemoteDownsamplingSt
                 preds = torch.sigmoid(forward_output) if not disable_softmax else forward_output
                 preds = torch.cat((1 - preds, preds), dim=1)
             else:
-                preds = (
-                    torch.nn.functional.softmax(forward_output, dim=1)
-                    if not disable_softmax
-                    else forward_output
-                )
+                preds = torch.nn.functional.softmax(forward_output, dim=1) if not disable_softmax else forward_output
 
             if self.score_metric == "Entropy":
                 scores = (np.log(preds + 1e-6) * preds).sum(axis=1)

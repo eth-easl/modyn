@@ -1,8 +1,9 @@
 # remote_grad_match_downsampling_strategy.py
 
+from typing import Any
+
 import numpy as np
 import torch
-from typing import Any
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
@@ -15,6 +16,7 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.or
     orthogonal_matching_pursuit,
     orthogonal_matching_pursuit_np,
 )
+
 
 class RemoteGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
     """

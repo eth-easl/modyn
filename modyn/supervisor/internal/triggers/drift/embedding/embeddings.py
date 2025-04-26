@@ -1,60 +1,40 @@
 import torch
 from torch.utils.data import DataLoader
-from transformers import T5Config
+
 from modyn.supervisor.internal.triggers.utils.model.stateful_model import StatefulModel
+
 
 def get_embeddings(stateful_model: StatefulModel, dataloader: DataLoader) -> torch.Tensor:
     """
-    input: embedding_encoder with downloaded model (T5Modyn or other)
+    input: embedding_encoder with downloaded model
     output: embeddings Tensor
     """
     assert stateful_model.model is not None
-    wrapped = stateful_model.model.model
-    wrapped.eval()
+    all_embeddings: torch.Tensor | None = None
 
-    # detect T5
-    from transformers import T5Config
-    cfg = getattr(wrapped, "config", None)
-    is_t5 = isinstance(cfg, T5Config) and cfg.model_type == "t5"
-    if is_t5:
-        wrapped.model.shared.register_forward_hook(
-            lambda m, i, o: stateful_model.model.model.embedding_recorder.record(o)
-        )
-
+    stateful_model.model.model.eval()
     stateful_model.model.model.embedding_recorder.start_recording()
-    all_embeddings = None
 
     with torch.no_grad():
-        for _, batch in dataloader:
-            raw = batch[1]
-            if is_t5:
-                # unpack tensor→ids+mask or dict→ids+mask
-                if isinstance(raw, torch.Tensor):
-                    t = raw.to(stateful_model.device)
-                    input_ids, attention_mask = t[..., 0], t[..., 1]
-                elif isinstance(raw, dict):
-                    input_ids = raw["input_ids"].to(stateful_model.device)
-                    attention_mask = raw["attention_mask"].to(stateful_model.device)
-                else:
-                    raise ValueError(f"{type(raw)} not supported for T5")
-
-                with torch.autocast(stateful_model.device_type, enabled=stateful_model.amp):
-                    _ = wrapped.model.encoder(input_ids=input_ids, attention_mask=attention_mask)
-
+        for batch in dataloader:
+            data: torch.Tensor | dict
+            if isinstance(batch[1], torch.Tensor):
+                data = batch[1].to(stateful_model.device)
+            elif isinstance(batch[1], dict):
+                data: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
+                for name, tensor in batch[1].items():
+                    data[name] = tensor.to(stateful_model.device)
             else:
-                # original path
-                if isinstance(raw, torch.Tensor):
-                    data = raw.to(stateful_model.device)
-                elif isinstance(raw, dict):
-                    data = {k: v.to(stateful_model.device) for k, v in raw.items()}
+                raise ValueError(f"data type {type(batch[1])} not supported")
+
+            with torch.autocast(stateful_model.device_type, enabled=stateful_model.amp):
+                stateful_model.model.model(data)
+                embeddings = stateful_model.model.model.embedding_recorder.embedding
+                if all_embeddings is None:
+                    all_embeddings = embeddings
                 else:
-                    raise ValueError(f"{type(raw)} not supported")
-
-                with torch.autocast(stateful_model.device_type, enabled=stateful_model.amp):
-                    _ = wrapped(data)
-
-            emb = stateful_model.model.model.embedding_recorder.embedding
-            all_embeddings = emb if all_embeddings is None else torch.cat((all_embeddings, emb), dim=0)
+                    all_embeddings = torch.cat((all_embeddings, embeddings), 0)
 
     stateful_model.model.model.embedding_recorder.end_recording()
+ 
     return all_embeddings

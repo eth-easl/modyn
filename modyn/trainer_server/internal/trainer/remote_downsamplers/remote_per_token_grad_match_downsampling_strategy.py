@@ -1,19 +1,21 @@
 # remote_token_grad_match_downsampling_strategy.py
-import numpy as np
-import torch
 import logging
 from typing import Any
+
+import numpy as np
+import torch
 
 from modyn.trainer_server.internal.trainer.remote_downsamplers.abstract_matrix_downsampling_strategy import (
     AbstractMatrixDownsamplingStrategy,
     MatrixContent,
 )
 from modyn.trainer_server.internal.trainer.remote_downsamplers.deepcore_utils.orthogonal_matching_pursuit import (
-    orthogonal_matching_pursuit_np,
     orthogonal_matching_pursuit,
+    orthogonal_matching_pursuit_np,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class RemoteTokenGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrategy):
     """
@@ -39,7 +41,7 @@ class RemoteTokenGradMatchDownsamplingStrategy(AbstractMatrixDownsamplingStrateg
             modyn_config,
             per_sample_loss,
             device,
-            MatrixContent.LAST_LAYER_GRADIENTS  # or last_two_layers, but watch out
+            MatrixContent.LAST_LAYER_GRADIENTS,  # or last_two_layers, but watch out
         )
         self.generative: bool = True
         logger.warning("Token-level GradMatch is extremely large overhead.")

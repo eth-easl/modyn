@@ -47,7 +47,7 @@ class Perplexity(AbstractDecomposableMetric):
 
     def get_name(self) -> str:
         return "Perplexity"
-    
+
     def transform_prediction(self, y_true: torch.Tensor, y_pred: torch.Tensor, num_elements: int) -> torch.Tensor:
         """Checks whether the label and prediction values match in dimensions
         and that they contain num_elements elements. Additionally, transform
@@ -63,7 +63,7 @@ class Perplexity(AbstractDecomposableMetric):
         """
         if self.evaluation_transformer_function:
             y_pred = self.evaluation_transformer_function(y_pred)
-        
+
         assert y_pred.shape[0] == num_elements, "Batch size and target label amount is not equal."
 
         return y_pred

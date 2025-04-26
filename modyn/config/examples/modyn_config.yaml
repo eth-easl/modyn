@@ -664,7 +664,7 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 2500,
-       
+
       },
       {
         name: "pubmed_test_context",
@@ -683,7 +683,7 @@ storage:
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
         selector_batch_size: 2500,
-       
+
       },
 
     ]

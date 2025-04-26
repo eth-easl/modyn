@@ -7,7 +7,6 @@ from modyn.trainer_server.internal.trainer.remote_downsamplers.remote_token_unce
 
 
 @pytest.fixture
-
 def base_params():
     return {
         "downsampling_ratio": 50,
@@ -18,14 +17,12 @@ def base_params():
 
 
 @pytest.fixture
-
 def dummy_uniform_forward_output():
     # B=2, T=4, V=2: uniform logits -> identical entropy
     return torch.zeros((2, 4, 2), dtype=torch.float32)
 
 
 @pytest.fixture
-
 def dummy_varied_forward_output():
     # B=2, T=4, V=2: varied logits so entropy differs per token
     # Sample 0: tokens [uniform, peaked, uniform, peaked]
@@ -39,22 +36,24 @@ def dummy_varied_forward_output():
 
 
 @pytest.fixture
-
 def dummy_target_all_valid():
     return torch.zeros((2, 4), dtype=torch.long)
 
 
 @pytest.fixture
-
 def dummy_target_with_padding():
-    return torch.tensor([
-        [0, -100, 1, -100],
-        [2, 3, -100, 4],
-    ], dtype=torch.long)
+    return torch.tensor(
+        [
+            [0, -100, 1, -100],
+            [2, 3, -100, 4],
+        ],
+        dtype=torch.long,
+    )
 
 
-@ pytest.mark.parametrize(
-    "forward_fixture, per_sample_top_k, per_sample_ratio, expected_mask", [
+@pytest.mark.parametrize(
+    "forward_fixture, per_sample_top_k, per_sample_ratio, expected_mask",
+    [
         # Uniform logits -> arbitrary token order; pick first K per sample
         ("dummy_uniform_forward_output", 1, None, [1, 0, 0, 0, 1, 0, 0, 0]),
         ("dummy_uniform_forward_output", None, 50, [1, 1, 0, 0, 1, 1, 0, 0]),
@@ -63,7 +62,6 @@ def dummy_target_with_padding():
         ("dummy_varied_forward_output", None, 50, [1, 0, 1, 0, 0, 1, 0, 1]),
     ],
 )
-
 def test_per_sample_selection(
     base_params,
     request,

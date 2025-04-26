@@ -76,7 +76,7 @@ def perform_evaluation(
                 if generative:
                     target = target[:, :, 0]
                     target[target == model.tokenizer.pad_token_id] = -100
-                    
+
                     output = model(data, target)
 
                 else:
