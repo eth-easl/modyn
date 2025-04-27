@@ -50,7 +50,15 @@ class MockStorageStub:
 @patch.object(
     PerClassOnlineDataset,
     "_get_data_from_storage",
-    return_value=[(list(range(16)), [x.to_bytes(2, "big") for x in range(16)], [0, 1, 2, 3, 0, 0, 0, 1] * 2, 0)],
+    return_value=[
+        (
+            list(range(16)),
+            [x.to_bytes(2, "big") for x in range(16)],
+            [0, 1, 2, 3, 0, 0, 0, 1] * 2,
+            [x.to_bytes(2, "big") for x in range(16)],
+            0,
+        )
+    ],
 )
 @patch.object(SelectorKeySource, "get_keys_and_weights", return_value=(list(range(16)), None))
 @patch.object(SelectorKeySource, "get_num_data_partitions", return_value=1)

@@ -43,7 +43,9 @@ class TrainingInfo:
         self.grad_scaler_configuration = json.loads(request.grad_scaler_configuration.value)
 
         self.transform_list = list(request.transform_list)
+        self.transform_target = list(request.transform_list_target)
         self.bytes_parser = request.bytes_parser.value
+        self.bytes_parser_target = request.bytes_parser_target.value
         self.label_transformer = request.label_transformer.value
 
         self.model_class_name = model_class_name
@@ -75,8 +77,9 @@ class TrainingInfo:
 
         self.storage_address = storage_address
         self.selector_address = selector_address
-
+        self.training_type: str = request.training_type
         self.final_checkpoint_path = final_checkpoint_path
+        self.offline_dataset_path = offline_dataset_path
 
         self.seed: int | None = request.seed if request.HasField("seed") else None
         self.tokenizer: str | None = request.tokenizer.value if request.HasField("tokenizer") else None
