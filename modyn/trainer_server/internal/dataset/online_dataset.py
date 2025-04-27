@@ -549,9 +549,14 @@ class OnlineDataset(IterableDataset):
         container["data"] = [container["data"][i] for i in indices]
         container["keys"] = [container["keys"][i] for i in indices]
         container["weights"] = [container["weights"][i] for i in indices]
-        container["labels"] = [container["labels"][i] for i in indices]
-        container["gen_targets"] = [container["gen_targets"][i] for i in indices]
-
+        if len(container["labels"]) != 0:
+            container["labels"] = [container["labels"][i] for i in indices]
+        else:
+            container["labels"] = [None for _ in range(len(indices))]
+        if len(container["gen_targets"]) != 0:
+            container["gen_targets"] = [container["gen_targets"][i] for i in indices]
+        else:
+            container["gen_targets"] = [None for _ in range(len(indices))]
         self._info(f"Shuffled partition {partition_id}", worker_id)
 
     def prefetched_partition_generator(
