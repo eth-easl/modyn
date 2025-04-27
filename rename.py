@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import os
 
+
 def main():
     base_dir = "/scratch/sjohn/modyn/datasets"
     # List of ending patterns to check
-    endings = ("10","20", "30", "40", "50")
-    
+    endings = ("10", "20", "30", "40", "50")
+
     # Iterate over subdirectories in base_dir that start with "dmixreview"
     for folder in os.listdir(base_dir):
         if folder.startswith("dmixreview"):
@@ -22,6 +23,7 @@ def main():
                             new_filepath = os.path.join(folder_path, new_filename)
                             os.rename(filepath, new_filepath)
                             print(f"Renamed {filename} -> {new_filename}")
+
 
 if __name__ == "__main__":
     main()

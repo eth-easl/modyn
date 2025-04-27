@@ -59,7 +59,7 @@ class RemoteTokenUncertaintyDownsampling(AbstractRemoteDownsamplingStrategy):
 
         # one entry PER TOKEN – (sample_id, token_position)
         self.token_ids: list[Tuple[int, int]] = []
-
+        self.device = device
     # ------------------------------------------------------------------ #
     #                           BOOK-KEEPING                              #
     # ------------------------------------------------------------------ #
@@ -184,10 +184,10 @@ class RemoteTokenUncertaintyDownsampling(AbstractRemoteDownsamplingStrategy):
 
                     # take the `quota` most-uncertain valid tokens inside this sample
                     local_top = torch.argsort(token_scores[valid_idxs])[:quota]
-                    keep_mask[torch.tensor(valid_idxs)[local_top]] = True
+                    keep_mask[torch.tensor(valid_idxs,device=self.device)[local_top]] = True
             else:
                 # --- global quota ---------------------------------------
-                valid_idxs = torch.arange(num_tokens)[token_valid]
+                valid_idxs = torch.arange(num_tokens, device=token_valid.device)[token_valid]
                 quota = max(int(self.downsampling_ratio * valid_idxs.numel() / self.ratio_max), 1)
 
                 global_top = torch.argsort(token_scores[valid_idxs])[:quota]
@@ -195,8 +195,15 @@ class RemoteTokenUncertaintyDownsampling(AbstractRemoteDownsamplingStrategy):
 
         # invalid tokens remain False → weight 0
         weights = keep_mask.float()
-        return self.token_ids.copy(), weights
+        selected_sample_ids: list[int] = []
+        for idx, keep in enumerate(keep_mask):
+            if keep:                         # token kept?
+                sid, _ = self.token_ids[idx]
+                if sid not in selected_sample_ids:
+                    selected_sample_ids.append(sid)
 
+        # Return those sample IDs together with the weight mask.
+        return selected_sample_ids, weights
     # ------------------------------------------------------------------ #
     @property
     def requires_grad(self) -> bool:  # required by Modyn interface

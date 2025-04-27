@@ -54,7 +54,7 @@ data:
   tokenizer: "T5TokenizerTransform"
 trigger:
   id: TimeTrigger
-  every: "6y"
+  every: "5y"
 evaluation:
   handlers:
     - execution_time: after_training
@@ -92,6 +92,3 @@ evaluation:
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.argmax(model_output, dim=-1)
-  
-
-        

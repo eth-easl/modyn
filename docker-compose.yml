@@ -20,7 +20,7 @@ services:
       - ./conf/metadata_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
-    #  - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -41,7 +41,7 @@ services:
       - ./conf/storage_postgresql.conf:/etc/postgresql/postgresql.conf
       - ./conf/pg_hba.conf:/tmp/pg_hba.conf
       - ./conf/init_pg_hba.sh:/docker-entrypoint-initdb.d/init_pg_hba.sh
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -58,7 +58,7 @@ services:
     volumes:
       - storage-data:/app/storage
       - /scratch/sjohn/datasets:/datasets
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
 
   #      - .:/modyn_host
   metadata_processor:
@@ -78,8 +78,8 @@ services:
       context: .
       dockerfile: docker/Model_Storage/Dockerfile
     volumes:
-      - /pub/nfs-data/sjohn/checkpoints_modyn:/tmp/models
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /pub/nfs-data/sjohn/checkpoints_modyngpu03:/tmp/models
+      - /scratch/sjohn/modyn/modyn:/src/modyn
    # CUDASTART (ignore/delete if enabling cuda manually)
     runtime: nvidia
     deploy:
@@ -102,7 +102,7 @@ services:
     volumes:
       - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
      # - /scratch/sjohn/modyn/modyn:/src/modyn
-      - /pub/nfs-data/sjohn/checkpoints:/checkpoints
+      - /pub/nfs-data/sjohn/checkpoints3:/checkpoints
   #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
   #      - .:/modyn_host
     shm_size: 8gb
@@ -128,8 +128,8 @@ services:
       dockerfile: docker/Trainer_Server/Dockerfile
     volumes:
       - downsampling-data:/tmp/offline_dataset # Remove when using a fast other storage directory (line below)
-    #  - /scratch/sjohn/modyn/modyn:/src/modyn
-      - /pub/nfs-data/sjohn/checkpoints:/checkpoints
+      - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /pub/nfs-data/sjohn/checkpoints3:/checkpoints
   #      - /mnt/ssd/offline_dataset:/tmp/offline_dataset
   #      - .:/modyn_host
     shm_size: 8gb
@@ -155,7 +155,7 @@ services:
     volumes:
       - selector-localstorage-data:/tmp/local_storage # Remove when using a fast other storage directory (lines below)
       - selector-data:/tmp/trigger_samples # Remove when using a fast other storage directory (lines below)
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
   #      - /mnt/ssd/local_storage:/tmp/local_storage
   #      - /mnt/ssd/trigger_samples:/tmp/trigger_samples
   #      - .:/modyn_host
@@ -185,7 +185,7 @@ services:
       dockerfile: docker/Supervisor/Dockerfile
     volumes:
       - /scratch/sjohn/evaluation_results:/tmp/evaluation_results
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
     #      - .:/modyn_host
     # CUDASTART (ignore/delete if enabling cuda manually)
     runtime: nvidia
@@ -225,7 +225,7 @@ services:
       dockerfile: docker/Tests/Dockerfile
     volumes:
       - storage-data:/app/storage
-     # - /scratch/sjohn/modyn/modyn:/src/modyn
+      - /scratch/sjohn/modyn/modyn:/src/modyn
 
 volumes:
   storage-data:

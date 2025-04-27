@@ -111,4 +111,3 @@ evaluation:
             import torch
             def evaluation_transformer_function(model_output: torch.Tensor) -> torch.Tensor:
               return torch.argmax(model_output, dim=-1)
-  

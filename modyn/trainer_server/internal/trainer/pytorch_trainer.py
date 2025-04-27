@@ -242,8 +242,8 @@ class PytorchTrainer:
             post_downsampling_size = max(
                 (self._downsampler.downsampling_ratio * self._batch_size) // self._downsampling_ratio_max, 1
             )
-
-            assert post_downsampling_size < self._batch_size
+     
+            assert post_downsampling_size <= self._batch_size
             if self._batch_size % post_downsampling_size != 0:
                 raise ValueError(
                     f"The target batch size of {self._batch_size} is not a multiple of the batch size "
@@ -360,7 +360,7 @@ class PytorchTrainer:
                                 normalized_weights = weights / weights.sum()
                                 expanded_weights = normalized_weights.unsqueeze(1).expand(batch_size, seq_length)
                                 loss = torch.dot(loss_per_timestep.reshape(-1), expanded_weights.reshape(-1))
-
+                            
                             else:
                                 loss = self._criterion(output, target)
                         else:

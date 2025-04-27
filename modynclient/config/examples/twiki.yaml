@@ -40,7 +40,7 @@ training:
       warmup_min_lr: 0.0          # Minimum learning rate at the start of warmup
       warmup_max_lr: 0.0001         # Maximum learning rate after warmup
       warmup_num_steps:  13682  # Number of steps for the warmup phase
-      warmup_type: "log"          # Type of warmup progression 
+      warmup_type: "log"          # Type of warmup progression
       last_batch_iteration: -1
   optimization_criterion:
     name: "CrossEntropyLoss"
@@ -55,7 +55,7 @@ data:
     import torch
     def bytes_parser_function(data: memoryview) -> torch.Tensor:
       text = str(data, 'utf8')
-      
+
       # Remove surrounding quotes if they exist
       if text.startswith('"') and text.endswith('"'):
           text = text[1:-1]
@@ -71,4 +71,3 @@ selection_strategy:
   storage_backend: "database"
   limit: -1
   tail_triggers: 0
-
