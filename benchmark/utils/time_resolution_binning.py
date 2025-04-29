@@ -25,6 +25,7 @@ def bin_dataframe_wrt_time_resolution(
     pandas_time_unit = {
         "year": "Y",
         "month": "M",
+        "week": "W",
         "day": "D",
         "hour": "h",
         "minute": "min",
@@ -44,7 +45,7 @@ def bin_dataframe_wrt_time_resolution(
 
 def df_to_csv_with_timestamp(df: pd.DataFrame, period: pd.Period, data_dir: Path) -> None:
     """Stores the dataframe in a file with the timestamp."""
-    label_file = data_dir / f"{period}.csv"
+    label_file = data_dir / f"{str(period).replace('/', '_')}.csv"
     df.to_csv(label_file, index=False, sep="\t", lineterminator="\n", header=False)
     timestamp = int(period.to_timestamp().to_pydatetime().timestamp())
     os.utime(label_file, (timestamp, timestamp))

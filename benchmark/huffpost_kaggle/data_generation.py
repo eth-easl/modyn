@@ -38,14 +38,14 @@ class HuffpostKaggleDataGenerator:
     def clean_folder(self) -> None:
         self.data_json.unlink()
 
-    def load_into_dataframe(self) -> pd.DataFrame:
+    def load_into_dataframe(self, keep_true_category: bool = False) -> pd.DataFrame:
         records = []
         for line in self.data_json.read_text().splitlines():
             record = json.loads(line)
             records.append({field: record[field] for field in ["headline", "category", "date"]})
 
         df = pd.DataFrame(records)
-        return HuffpostKaggleDataGenerator.sanitize_dataframe(df)
+        return HuffpostKaggleDataGenerator.sanitize_dataframe(df, keep_true_category=keep_true_category)
 
     def store_data(
         self, cleaned_df: pd.DataFrame, resolution: TimeResolution, test_split: bool, dummy_period: bool = False
@@ -64,7 +64,9 @@ class HuffpostKaggleDataGenerator:
                     df_to_csv_with_timestamp(partition[self.fields_to_keep], name, self.data_dir / "train")
                 else:
                     df_train, df_test = train_test_split(
-                        partition[self.fields_to_keep], test_size=self.test_holdout, random_state=42
+                        partition[self.fields_to_keep],
+                        test_size=self.test_holdout,
+                        random_state=42,
                     )
                     df_to_csv_with_timestamp(df_train, name, self.data_dir / "train")
                     df_to_csv_with_timestamp(df_test, name, self.data_dir / "test")
@@ -79,14 +81,15 @@ class HuffpostKaggleDataGenerator:
             )
 
     @staticmethod
-    def sanitize_dataframe(raw_df: pd.DataFrame) -> pd.DataFrame:
+    def sanitize_dataframe(raw_df: pd.DataFrame, keep_true_category: bool = False) -> pd.DataFrame:
         transformed = raw_df
 
         # escape new lines
         transformed["headline"] = transformed["headline"].str.replace("\n", " ").replace(r"\s+", " ", regex=True)
 
-        # to int-categorical
-        transformed["category"] = pd.Categorical(transformed["category"]).codes
+        if not keep_true_category:
+            # to int-categorical
+            transformed["category"] = pd.Categorical(transformed["category"]).codes
 
         # parse the date
         transformed["date"] = pd.to_datetime(transformed["date"])

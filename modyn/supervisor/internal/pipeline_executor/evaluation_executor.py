@@ -176,9 +176,15 @@ class EvaluationExecutor:
         logs = self._launch_evaluations_async(eval_requests, log, num_workers)
         return logs
 
-    def run_post_pipeline_evaluations(self, manual_run: bool = False) -> SupervisorLogs:
+    def run_post_pipeline_evaluations(self, manual_run: bool = False, num_workers: int | None = None) -> SupervisorLogs:
         """Evaluate the trained models after the core pipeline and store the
-        results."""
+        results.
+
+        Args:
+            manual_run: If True, only the evaluations that are marked as manual will be executed.
+            num_workers: The number of workers to use for the evaluations. If None, the number of workers will be
+                determined by the pipeline configuration.
+        """
         if not self.pipeline.evaluation:
             return SupervisorLogs(stage_runs=[])
 
@@ -201,7 +207,8 @@ class EvaluationExecutor:
                 continue
 
             handler_eval_requests = eval_handler.get_eval_requests_after_pipeline(
-                df_trainings=df_trainings, dataset_end_time=self.context.dataset_end_time
+                df_trainings=df_trainings,
+                dataset_end_time=self.context.dataset_end_time,
             )
             eval_requests += handler_eval_requests
 
@@ -224,7 +231,7 @@ class EvaluationExecutor:
                 sample_time=-1,
                 trigger_idx=-1,
             ),
-            num_workers=self.pipeline.evaluation.after_pipeline_evaluation_workers,
+            num_workers=(num_workers if num_workers else self.pipeline.evaluation.after_pipeline_evaluation_workers),
         )
         return logs
 
@@ -254,7 +261,9 @@ class EvaluationExecutor:
             key_ = (eval_req.dataset_id, eval_req.id_model)
             eval_requests_by_model[key_] += [eval_req]
 
-        def worker_func(model_eval_req: tuple[tuple[str, int], list[EvalRequest]]) -> StageLog:
+        def worker_func(
+            model_eval_req: tuple[tuple[str, int], list[EvalRequest]],
+        ) -> StageLog:
             """
             Args:
                 model_eval_req: A tuple of model_id and a list of evaluation requests for that model.
@@ -418,7 +427,10 @@ class EvaluationExecutor:
                         eval_results.append(
                             (
                                 None,
-                                {"dataset_size": interval_response.dataset_size, "metrics": []},
+                                {
+                                    "dataset_size": interval_response.dataset_size,
+                                    "metrics": [],
+                                },
                             )
                         )
 
@@ -466,17 +478,17 @@ class EvaluationExecutor:
 # ------------------------------------------------------------------------------------ #
 
 
-def eval_executor_single_pipeline(pipeline_dir: Path) -> SupervisorLogs:
+def eval_executor_single_pipeline(pipeline_dir: Path, num_workers: int) -> SupervisorLogs:
     # restart evaluation executor
     ex = EvaluationExecutor.init_from_path(pipeline_dir)
 
-    supervisor_eval_logs = ex.run_post_pipeline_evaluations(manual_run=True)
+    supervisor_eval_logs = ex.run_post_pipeline_evaluations(manual_run=True, num_workers=num_workers)
     logger.info("Done with manual evaluation.")
 
     return supervisor_eval_logs
 
 
-def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = None) -> None:
+def eval_executor_multi_pipeline(pipelines_dir: Path, num_workers: int, pids: list[int] | None = None) -> None:
     """Run the evaluation executor for multiple pipelines."""
     faulty_dir = pipelines_dir / "_faulty"
     done_dir = pipelines_dir / "_done"
@@ -500,7 +512,7 @@ def eval_executor_multi_pipeline(pipelines_dir: Path, pids: list[int] | None = N
 
         (finished_dir / p_dir.stem).mkdir(exist_ok=True)
 
-        supervisor_eval_logs = eval_executor_single_pipeline(p_dir)
+        supervisor_eval_logs = eval_executor_single_pipeline(p_dir, num_workers=num_workers)
 
         shutil.copytree(p_dir, done_dir / p_dir.stem, dirs_exist_ok=True)
         full_logs = PipelineLogs.model_validate_json((done_dir / p_dir.stem / "pipeline.log").read_text())
@@ -519,11 +531,15 @@ if __name__ == "__main__":
         print("Path not found")
         sys.exit(1)
 
+    NUM_WORKERS: int = int(input("Enter number of workers (<= 0 will use the pipeline default): "))
+    if NUM_WORKERS <= 0:
+        NUM_WORKERS = 1
+
     if single_pipeline_mode.lower() == "y":
         p_id = int(input("Enter pipeline id: "))
-        eval_executor_multi_pipeline(userpath, [p_id])
+        eval_executor_multi_pipeline(userpath, num_workers=NUM_WORKERS, pids=[p_id])
     elif single_pipeline_mode.lower() == "n":
-        eval_executor_multi_pipeline(userpath)
+        eval_executor_multi_pipeline(userpath, num_workers=NUM_WORKERS)
     else:
         print("Invalid input")
         sys.exit(1)

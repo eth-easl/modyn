@@ -1,8 +1,5 @@
 from collections import deque
 
-import numpy as np
-from sklearn import linear_model
-
 
 class CostTracker:
     """Observes a stream trigger costs (wall clack time measurements) and
@@ -18,16 +15,18 @@ class CostTracker:
         """List of measurements of number of samples and the resulted training
         time for the last `window_size` triggers."""
 
-        self._linear_model = linear_model.Ridge()
+        # make this work more robustly
+        # self._linear_model = linear_model.Ridge()
 
     def inform_trigger(self, number_samples: int, elapsed_time: float) -> None:
         """Informs the tracker about new data batch."""
         self.measurements.append((number_samples, elapsed_time))
 
-        samples = np.array([x[0] for x in self.measurements]).reshape(-1, 1)
-        observations = [x[1] for x in self.measurements]
+        # make this work more robustly
+        # samples = np.array([x[0] for x in self.measurements]).reshape(-1, 1)
+        # observations = [x[1] for x in self.measurements]
 
-        self._linear_model.fit(samples, observations)
+        # self._linear_model.fit(samples, observations)
 
     def needs_calibration(self) -> bool:
         """Checks if the tracker has enough data for a forecast.
@@ -36,9 +35,16 @@ class CostTracker:
         model. With the second trigger the model can learn the
         y-intercept and start making meaningful forecasts.
         """
-        return len(self.measurements) == 0 or not hasattr(self._linear_model, "coef_")
+        return len(self.measurements) == 0
 
     def forecast_training_time(self, number_samples: int) -> float:
         """Forecasts the training time for a given number of samples."""
         assert not self.needs_calibration(), "The tracker needs more data to make a forecast."
-        return self._linear_model.predict(np.array([[number_samples]]))[0]
+
+        # rolling average based: sum up all training durations in the window and divide by the number of samples;
+        # then we can use this average to predict the training time for the next batch
+        total_samples = sum(x[0] for x in self.measurements)
+        total_training_sum = sum(x[1] for x in self.measurements)
+        train_time_per_sample = total_training_sum / total_samples
+
+        return train_time_per_sample * number_samples

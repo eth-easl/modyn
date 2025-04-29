@@ -59,7 +59,7 @@ class CostTrigger(BatchedTrigger):
         traintime_estimate = -1.0
 
         regret_metric, regret_log = self._compute_regret_metric(batch, batch_start, batch_duration)
-        regret_in_traintime_unit = regret_metric * self.config.conversion_factor
+        regret_in_traintime_unit = regret_metric / self.config.conversion_factor
 
         # --------------------------------------------- Trigger Decision --------------------------------------------- #
 
@@ -103,10 +103,14 @@ class CostTrigger(BatchedTrigger):
     ) -> None:
         """Update the cost tracker with the new model metadata."""
         self._unincorporated_samples = 0
+
+        # reset regret
+        self.latency_tracker.inform_trigger()
+
         assert not self._triggered_once or (
             number_samples is not None and training_time is not None
         ), "Only the pre-trained model is allowed to not supply the training time and number of samples"
-        if number_samples and training_time:
+        if number_samples is not None and training_time is not None:
             self.cost_tracker.inform_trigger(number_samples, training_time)
 
     # ---------------------------------------------------------------------------------------------------------------- #

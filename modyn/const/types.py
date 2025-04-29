@@ -9,6 +9,7 @@ class TimeResolution(str, Enum):
     YEAR = "year"
     MONTH = "month"
     DAY = "day"
+    WEEK = "week"
     HOUR = "hour"
     MINUTE = "minute"
     SECOND = "second"
