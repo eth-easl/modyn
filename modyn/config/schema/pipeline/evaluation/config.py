@@ -21,10 +21,6 @@ class EvalDataConfig(DataConfig):
         description="All metrics used to evaluate the model on the given dataset.",
         min_length=1,
     )
-    light_tuning: bool = Field(False, description="Whether to perform a light tuning.")
-    tuning_config: TuningConfig | None = Field(
-        None, description="Configuration for tuning parameters. Unnecessary if light_tuning is false"
-    )
     generative: bool = Field(False, description="Whether the task is generative.")
 
 

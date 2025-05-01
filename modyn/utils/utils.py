@@ -169,11 +169,10 @@ def instantiate_class(class_module_name: str, class_name: str, *class_args: Any,
     Dynamically imports and instantiates a class from a module.
 
     Args:
-        class_module_name: Full Python module path (e.g., "modyn.models.tokenizers").
-        class_name: Name of the class to instantiate.
-        *class_args: Positional arguments for the class constructor.
-        **class_kwargs: Keyword arguments for the class constructor.
-
+        class_module_name: name of the module, ex "modyn.selector.internal.selector_strategies.presampling_strategies"
+        class_name: name of the class
+        *class_params: parameters for class' __init__
+         **class_kwargs: Keyword arguments for the class constructor.
     Returns:
         An instance of the specified class.
     """

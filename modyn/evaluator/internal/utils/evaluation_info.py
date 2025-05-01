@@ -55,7 +55,7 @@ class EvaluationInfo:
         self.bytes_parser = request.bytes_parser.value
         self.label_transformer = request.label_transformer.value
         self.tokenizer = request.tokenizer.value if request.HasField("tokenizer") else None
-        self.seq_length = request.sequence_length
+        self.max_token_length = request.max_token_length
         self.evaluation_id = evaluation_id
         self.storage_address = storage_address
         self.model_path = model_path
@@ -65,10 +65,4 @@ class EvaluationInfo:
         )
         self.serialized_transforms_target = (
             list(request.transform_list_target) if request.HasField("transform_list_target") else None
-        )
-        self.light_tuning = request.light_tuning
-        self.tuning_info = json.loads(request.tuning_config) if request.HasField("tuning_config") else None
-        self.model_wrappers: list[str] = list(request.model_wrappers)
-        self.model_wrapper_args: dict[str, dict[str, Any]] = (
-            json.loads(request.model_wrapper_args.value) if request.model_wrapper_args.value else {}
         )

@@ -5,6 +5,7 @@ from collections.abc import Callable
 import torch
 
 from modyn.config.schema.pipeline import MetricConfig
+from modyn.utils.utils import instantiate_class
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,11 @@ class AbstractEvaluationMetric(ABC):
         """
         self.config = config
         self.evaluation_transformer_function: Callable[[torch.Tensor], torch.Tensor] | None = None
+        if config.tokenizer is not None:
+            self._tokenizer = (
+                instantiate_class("modyn.models.tokenizers", config.tokenizer) if config.tokenizer else None
+            )
+        self.requires_generation = config.requires_generation
 
     def deserialize_evaluation_transformer(self) -> None:
         """Deserialize the evaluation transform function."""
@@ -67,3 +73,19 @@ class AbstractEvaluationMetric(ABC):
         assert y_pred.shape[0] == num_elements, "Batch size and target label amount is not equal."
 
         return y_pred
+
+    def decode_ids(self, token_ids: torch.Tensor) -> str:
+        """
+        Turn a tensor of token-IDs into a single string, using the
+        tokenizer if available, otherwise just join the IDs.
+        """
+        ids = token_ids.tolist()
+        # If a tokenizer was set up on this metric, use it:
+        if hasattr(self, "_tokenizer") and self._tokenizer is not None:
+            return self._tokenizer.tokenizer.decode(
+                ids,
+                skip_special_tokens=True,
+                clean_up_tokenization_spaces=True,
+            )
+        # Fallback: space-join the raw IDs
+        return " ".join(str(i) for i in ids)

@@ -175,20 +175,12 @@ class EvaluateModelRequest(google.protobuf.message.Message):
     LABEL_TRANSFORMER_FIELD_NUMBER: builtins.int
     TOKENIZER_FIELD_NUMBER: builtins.int
     GENERATIVE_FIELD_NUMBER: builtins.int
-    LIGHT_TUNING_FIELD_NUMBER: builtins.int
-    SEQUENCE_LENGTH_FIELD_NUMBER: builtins.int
-    TUNING_CONFIG_FIELD_NUMBER: builtins.int
+    MAX_TOKEN_LENGTH_FIELD_NUMBER: builtins.int
     BYTES_PARSER_TARGET_FIELD_NUMBER: builtins.int
     TRANSFORM_LIST_TARGET_FIELD_NUMBER: builtins.int
-    MODEL_WRAPPERS_FIELD_NUMBER: builtins.int
-    MODEL_WRAPPER_ARGS_FIELD_NUMBER: builtins.int
     model_id: builtins.int
     device: builtins.str
     batch_size: builtins.int
-    generative: builtins.bool
-    light_tuning: builtins.bool
-    sequence_length: builtins.int
-    transform_list_target: builtins.str
     @property
     def dataset_info(self) -> global___DatasetInfo: ...
     @property
@@ -245,6 +237,8 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"bytes_parser",
             "bytes_parser_target",
             b"bytes_parser_target",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "label_transformer",
@@ -276,10 +270,14 @@ class EvaluateModelRequest(google.protobuf.message.Message):
             b"bytes_parser",
             "bytes_parser_target",
             b"bytes_parser_target",
+            "bytes_parser_target",
+            b"bytes_parser_target",
             "dataset_info",
             b"dataset_info",
             "device",
             b"device",
+            "generative",
+            b"generative",
             "generative",
             b"generative",
             "label_transformer",
@@ -354,6 +352,10 @@ class EvaluateModelResponse(google.protobuf.message.Message):
     EVALUATION_ID_FIELD_NUMBER: builtins.int
     INTERVAL_RESPONSES_FIELD_NUMBER: builtins.int
     evaluation_started: builtins.bool
+    """only when all interval evaluations failed, this field will be set to false
+    it is a field of convenience for the client to decide whether to wait for the evaluation completion.
+    the client can always check the interval_responses
+    """
     """only when all interval evaluations failed, this field will be set to false
     it is a field of convenience for the client to decide whether to wait for the evaluation completion.
     the client can always check the interval_responses
@@ -458,6 +460,14 @@ class EvaluationIntervalData(google.protobuf.message.Message):
     INTERVAL_INDEX_FIELD_NUMBER: builtins.int
     EVALUATION_DATA_FIELD_NUMBER: builtins.int
     interval_index: builtins.int
+    """Since not every interval evaluation from EvaluateModelRequest may be successful,
+    the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
+    evaluation data corresponds to. The interval_index is the index of the interval in the list
+    Datainfo.evaluation_intervals in the EvaluateModelRequest.
+    For example if Datainfo.evaluation_intervals have 3 intervals, [interval1, interval2, interval3],
+    and interval2 fails. Then the EvaluationResultResponse will have 2 EvaluationIntervalData, one with interval_index
+    0 (which corresponds to interval1) and the other with interval_index 2 (which corresponds to interval3).
+    """
     """Since not every interval evaluation from EvaluateModelRequest may be successful,
     the EvaluationIntervalData contained in the EvaluationResultResponse must explicitly specify what interval this
     evaluation data corresponds to. The interval_index is the index of the interval in the list

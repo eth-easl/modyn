@@ -36,7 +36,7 @@ class EvaluationResult:
     metrics_data: dict[str, AbstractEvaluationMetric]
 
 
-# pylint: disable=too-many-locals, too-many-branches
+# pylint: disable=too-many-locals, too-many-branches, too-many-statements
 def perform_evaluation(
     model: Any,
     dataloader: torch.utils.data.DataLoader,
@@ -48,9 +48,11 @@ def perform_evaluation(
 ) -> EvaluationResult:
     device_type = "cuda" if "cuda" in device else "cpu"
     contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
-
+    do_forward_pass = False
+    use_model_generate = False
     y_true = []
     y_score = []
+    y_score_gen = []
     model.eval()
     num_samples = 0
     with torch.inference_mode():
@@ -73,22 +75,37 @@ def perform_evaluation(
             batch_size = target.shape[0]
 
             with torch.autocast(device_type, enabled=amp):
+                for metric in metrics.values():
+                    if metric.requires_generation:
+                        use_model_generate = True
+                    else:
+                        do_forward_pass = True  # We can skip the forward pass if we only need the model to generate
+
                 if generative:
                     target = target[:, :, 0]
                     target[target == model.tokenizer.pad_token_id] = -100
-
-                    output = model(data, target)
+                    if use_model_generate:
+                        output_gen = model.generate(data, target)
+                    if do_forward_pass:
+                        output = model(data, target)
 
                 else:
                     output = model(data)
 
                 for metric in metrics.values():
                     if isinstance(metric, AbstractDecomposableMetric):
-                        metric.evaluate_batch(target, output, batch_size)
+                        # pylint: disable=possibly-used-before-assignment, used-before-assignment
+                        metric.evaluate_batch(
+                            target,
+                            output if not metric.requires_generation else output_gen,
+                            batch_size,
+                        )
 
                 if contains_holistic_metric:
                     y_true.append(target.detach().cpu())
                     y_score.append(output.detach().cpu())
+                    if use_model_generate:
+                        y_score_gen.append(output_gen.detach().cpu())  #
 
             num_samples += batch_size
 
@@ -99,7 +116,7 @@ def perform_evaluation(
 
         for metric in metrics.values():
             if isinstance(metric, AbstractHolisticMetric):
-                metric.evaluate_dataset(y_true, y_score, num_samples)
+                metric.evaluate_dataset(y_true, y_score if not metric.requires_generation else y_score_gen, num_samples)
 
     metric_result: dict[str, float] = {
         metric_name: metric.get_evaluation_result() for metric_name, metric in metrics.items()

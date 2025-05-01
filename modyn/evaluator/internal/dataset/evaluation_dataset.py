@@ -38,7 +38,7 @@ class EvaluationDataset(IterableDataset):
         tokenizer: str | None = None,
         start_timestamp: int | None = None,
         end_timestamp: int | None = None,
-        sequence_length: int = 256,
+        max_token_length: int = 256,
     ):
         self._evaluation_id = evaluation_id
         self._dataset_id = dataset_id
@@ -66,7 +66,7 @@ class EvaluationDataset(IterableDataset):
         self._tokenizer_name = tokenizer
 
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, max_token_length=sequence_length)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, max_token_length=max_token_length)
 
         logger.debug("Initialized EvaluationDataset.")
 

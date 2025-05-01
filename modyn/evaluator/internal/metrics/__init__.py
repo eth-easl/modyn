@@ -11,6 +11,7 @@ from .abstract_evaluation_metric import AbstractEvaluationMetric  # noqa: F401
 from .abstract_holistic_metric import AbstractHolisticMetric  # noqa: F401
 from .abstract_text_metric import AbstractTextMetric  # noqa: F401
 from .accuracy import Accuracy  # noqa: F401
+from .bleu import BleuScore  # noqa: F401
 from .f1_score import F1Score  # noqa: F401
 from .llm_evaluation import LLMEvaluation  # noqa: F401
 from .meteor import Meteor  # noqa: F401

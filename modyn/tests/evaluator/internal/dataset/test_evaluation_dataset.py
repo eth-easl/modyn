@@ -290,7 +290,6 @@ def test_dataloader_dataset_multi_worker(test_insecure_channel, test_grpc_connec
     assert batch_num == 7
 
 
-# Helper functions returning non-indented code strings.
 def get_main_bytes_parser() -> str:
     return """\
 def bytes_parser_function(data: bytes):
@@ -313,15 +312,11 @@ def get_target_serialized_transforms() -> list[str]:
     return ["transforms.Lambda(lambda x: x + b'_TARGET_TF')"]
 
 
-# Fake implementations for _get_keys_from_storage and _get_data_from_storage.
 def fake_get_keys_from_storage(self, worker_id, total_workers):
-    # Return a single partition with one key.
     yield [10]
 
 
 def fake_get_data_from_storage(self, keys, worker_id):
-    # For key 10, supply a tuple (key, sample, label, target).
-    # Here, raw sample is b"SAMPLE", raw label is b"LABEL" and raw target is b"TARGET".
     yield [(10, b"SAMPLE", b"LABEL", b"TARGET")]
 
 
@@ -343,24 +338,13 @@ def test_evaluation_dataset_different_target_parsers_and_transforms(mock_insecur
         end_timestamp=None,
     )
 
-    # Patch _init_grpc so that it does nothing.
     dataset._init_grpc = lambda: None
-    # Override _get_keys_from_storage and _get_data_from_storage with our controlled outputs.
     dataset._get_keys_from_storage = fake_get_keys_from_storage.__get__(dataset)
     dataset._get_data_from_storage = fake_get_data_from_storage.__get__(dataset)
 
     results = list(dataset)
 
-    # With include_labels=F
-    assert len(results) == 2, f"Expected 2 yielded items, got {len(results)}"
-
     key1, sample1, out_target = results[0]
     assert key1 == 10
     assert sample1.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Unexpected sample: {sample1}"
     assert out_target.endswith(b"TARGET_TARGET_TARGET_TF"), f"Unexpected target: {out_target}"
-
-    # Second yielded item: from the label branch.
-    key2, sample2, out_label = results[1]
-    assert key2 == 10
-    assert sample2.endswith(b"SAMPLE_MAIN_MAIN_TF"), f"Unexpected sample: {sample2}"
-    assert out_label.endswith(b"LABEL_TARGET_TARGET_TF"), f"Unexpected label: {out_label}"

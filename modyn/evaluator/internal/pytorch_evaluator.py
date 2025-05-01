@@ -62,7 +62,7 @@ class PytorchEvaluator:
             tokenizer=evaluation_info.tokenizer,
             start_timestamp=start_timestamp,
             end_timestamp=end_timestamp,
-            sequence_length=evaluation_info.seq_length,
+            max_token_length=evaluation_info.max_token_length,
         )
         dataloader = torch.utils.data.DataLoader(
             dataset,
