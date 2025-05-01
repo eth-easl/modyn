@@ -316,6 +316,7 @@ class PytorchTrainer:
                         # torch.cuda.reset_peak_memory_stats()  # Reset peak memory tracking
                         if self.training_type == "generative":
                             output = self._model.model(data, labels=target)
+                            
                         elif self.training_type == "pretraining":
                             output = self._model.model(data)
 
@@ -344,7 +345,7 @@ class PytorchTrainer:
                                 pad_tensor = torch.full(
                                     (target.size(0), diff), -100, dtype=target.dtype, device=target.device
                                 )
-                                target = torch.cat([pad_tensor, target], dim=1)
+                                target = torch.cat([target,pad_tensor], dim=1)
 
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))
@@ -1063,12 +1064,15 @@ class PytorchTrainer:
                 target = torch.Tensor()
             number_of_samples += len(sample_ids)
 
-            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) else torch.inference_mode()
+            no_grad_mgr = torch.no_grad() if isinstance(self._model, DLRM) or isinstance(self._model,T5) else torch.inference_mode()
             context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
             with context_manager:
                 with torch.autocast(self._device_type, enabled=self._amp):
                     # compute the scores and accumulate them
-                    model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
+                    if(isinstance(self._model,T5) ):
+                        model_output=self._model.model(data,labels=target)
+                    else:
+                        model_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
                     embeddings = self.get_embeddings_if_recorded()
                     self._downsampler.inform_samples(sample_ids, data, model_output, target, embeddings)
 

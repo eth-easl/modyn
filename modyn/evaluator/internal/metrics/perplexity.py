@@ -18,26 +18,30 @@ class Perplexity(AbstractDecomposableMetric):
         if y_pred.dim() < 2:
             raise RuntimeError("Invalid shape: y_pred must have at least 2 dimensions (batch, num_classes)")
 
-        # Determine the expected number of tokens based on y_pred shape.
         assert y_pred.dim() in (2, 3), "y_pred must have 2 or 3 dimensions"
-        if y_pred.dim() == 2:
-            expected_tokens = y_pred.numel()
-        elif y_pred.dim() == 3:
-            expected_tokens = y_pred.size(0) * y_pred.size(1)
-        if y_true.numel() != expected_tokens:  # pylint: disable=possibly-used-before-assignment
-            print(f"y_true: {y_true.shape}, expected: {expected_tokens}, y_pred: {y_pred.shape}")
-            raise RuntimeError("Mismatch in number of tokens between y_true and y_pred")
+        
+        # Reshape logits and labels
+        logits = y_pred.view(-1, y_pred.size(-1))  # [batch*seq_len, vocab]
+        labels = y_true.view(-1)                   # [batch*seq_len]
 
+        # Pad y_true with -100 if it's shorter
+        if logits.size(0) > labels.size(0):
+            diff = logits.size(0) - labels.size(0)
+            pad_tensor = torch.full((diff,), -100, dtype=labels.dtype, device=labels.device)
+            labels = torch.cat([labels,pad_tensor], dim=0)
+        elif logits.size(0) < labels.size(0):
+            raise RuntimeError(f"y_true is longer than y_pred: {labels.size(0)} > {logits.size(0)}")
+
+        # Compute loss
         loss_fn = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction="sum")
-        loss = loss_fn(
-            y_pred.view(-1, y_pred.size(-1)),
-            y_true.view(-1),
-        )
-        # count only the tokens that weren't ignored
-        valid_tokens = (y_true.view(-1) != loss_fn.ignore_index).sum().item()
+        loss = loss_fn(logits, labels)
+
+        # Count valid tokens
+        valid_tokens = (labels != -100).sum().item()
 
         self.total_loss += loss.item()
         self.total_tokens += valid_tokens
+
 
     def get_evaluation_result(self) -> float:
         if self.total_tokens == 0:

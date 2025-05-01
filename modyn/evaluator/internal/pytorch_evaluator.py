@@ -86,8 +86,11 @@ class PytorchEvaluator:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
+        print(model_wrappers)
         self._model.model = apply_adapters(self._model.model, model_wrappers, model_wrapper_args)
-        self._model.model.load_state_dict(checkpoint["model"])
+        incompat=self._model.model.load_state_dict(checkpoint["model"],strict=False,)
+        print("missing:", incompat.missing_keys)
+        print("unexpected:", incompat.unexpected_keys)
 
         # delete trained model from disk
         path.unlink()

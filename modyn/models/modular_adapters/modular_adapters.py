@@ -51,7 +51,7 @@ def apply_lora(model: nn.Module, **kwargs: Any) -> nn.Module:
         adapter_alpha (int): LoRA alpha. Default = 32
         dropout (float): LoRA dropout. Default = 0.0
     """
-    target_modules = kwargs.get("target_modules", ["c_attn", "c_proj"])
+    target_modules = kwargs.get("target_modules", ["q", "v"]) #["c_attn", "c_proj"]
     adapter_dim = kwargs.get("adapter_dim", 16)
     adapter_alpha = kwargs.get("adapter_alpha", 32)
     dropout = kwargs.get("dropout", 0.0)
@@ -59,12 +59,12 @@ def apply_lora(model: nn.Module, **kwargs: Any) -> nn.Module:
     print(f"\n Trainable parameters BEFORE applying LoRA: {count_trainable_params(model)}")
 
     lora_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
+        task_type=TaskType.SEQ_2_SEQ_LM,                       # CHANGED
         r=adapter_dim,
         lora_alpha=adapter_alpha,
         lora_dropout=dropout,
         target_modules=target_modules,
-    )
+    )  # CHANGED: removed stray “task” argument
     model.model = get_peft_model(model.model, lora_config)
 
     print(f"\n Trainable parameters AFTER applying LoRA: {count_trainable_params(model)}")

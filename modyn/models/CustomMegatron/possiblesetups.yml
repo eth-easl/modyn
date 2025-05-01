@@ -1,0 +1,107 @@
+
+possible_model_configs:
+
+  # GPT-2 Variants
+  gpt2_small:
+    num_layers: 12
+    hidden_size: 768
+    num_attention_heads: 12
+    seq_length: 1024
+
+  gpt2_medium:
+    num_layers: 24
+    hidden_size: 1024
+    num_attention_heads: 16
+    seq_length: 1024
+
+  gpt2_large:
+    num_layers: 36
+    hidden_size: 1280
+    num_attention_heads: 20
+    seq_length: 1024
+
+  gpt2_xl:
+    num_layers: 48
+    hidden_size: 1600
+    num_attention_heads: 25
+    seq_length: 1024
+
+
+  # GPT-Neo / GPT-J (EleutherAI) Style
+  # (Note: these can be adapted for Megatron by setting the same hidden sizes/layers.)
+  gpt_neo_2_7b:
+    num_layers: 32
+    hidden_size: 2560
+    num_attention_heads: 20
+    seq_length: 2048
+
+  gpt_j_6b:
+    num_layers: 28
+    hidden_size: 4096
+    num_attention_heads: 16
+    seq_length: 2048
+
+
+  # GPT-NeoX (Example 20B config)
+  gpt_neox_20b:
+    num_layers: 44
+    hidden_size: 6144
+    num_attention_heads: 64
+    seq_length: 2048
+
+
+  # T5 Variants (Encoder–Decoder)
+  # - In Megatron, you would choose the T5 model code rather than GPTModel,
+  #   but hyperparams are similar in naming.
+  t5_base:
+    # Typically: 220M parameters total
+    encoder_layers: 12
+    decoder_layers: 12
+    hidden_size: 768
+    num_attention_heads: 12
+    seq_length: 512  # often 512 or 1024 for T5
+
+  t5_large:
+    # Typically: 770M parameters total
+    encoder_layers: 24
+    decoder_layers: 24
+    hidden_size: 1024
+    num_attention_heads: 16
+    seq_length: 512
+
+  t5_11b:
+    # ~11B parameters
+    encoder_layers: 24
+    decoder_layers: 24
+    hidden_size: 1024
+    d_ff: 65536   # T5 often sets feed-forward dim (d_ff) ~4x hidden_size
+    num_attention_heads: 128
+    seq_length: 512
+
+
+  # LLaMA Variants (Meta AI)
+  # - LLaMA uses RoPE embeddings rather than absolute position embeddings.
+  #   For Megatron, you'd adapt its GPT code or use a LLaMA-capable fork.
+  llama_7b:
+    num_layers: 32
+    hidden_size: 4096
+    num_attention_heads: 32
+    seq_length: 2048
+
+  llama_13b:
+    num_layers: 40
+    hidden_size: 5120
+    num_attention_heads: 40
+    seq_length: 2048
+
+  llama_30b:
+    num_layers: 60
+    hidden_size: 6656
+    num_attention_heads: 52
+    seq_length: 2048
+
+  llama_65b:
+    num_layers: 80
+    hidden_size: 8192
+    num_attention_heads: 64
+    seq_length: 2048
