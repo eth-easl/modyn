@@ -230,9 +230,8 @@ class DatabaseStorageBackend(AbstractStorageBackend):
     def _get_data_from_storage(
         self, selector_keys: list[int], dataset_id: str
     ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
-        """
-        Retrieve full sample data (samples plus labels/targets) via a gRPC call.
-        """
+        """Retrieve full sample data (samples plus labels/targets) via a gRPC
+        call."""
         if self._storagestub is None:
             self._init_grpc()
         processed_keys: set[int] | list[int] = []

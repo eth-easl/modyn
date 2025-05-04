@@ -30,13 +30,13 @@ class LLMEvaluationPresamplingStrategy(AbstractPresamplingStrategy):
         self.client = openai.Client(api_key=presampling_config.api_key, base_url=presampling_config.base_url)
 
     def evaluate_batch_quality(self, keys: list[int], model_name: str, dataset_id: str) -> list[bool]:
+        """Retrieve sample texts from storage for the given keys and evaluate
+        their quality using the LLM.
+
+        Uses a custom prompt if provided, otherwise builds a default
+        prompt. If ratio is not 100, instructs the LLM to only keep the
+        top ratio percent.
         """
-        Retrieve sample texts from storage for the given keys and evaluate their quality using the LLM.
-        Uses a custom prompt if provided, otherwise builds a default prompt.
-        If ratio is not 100, instructs the LLM to only keep the top ratio percent.
-        """
-        if model_name is None:
-            model_name = self.model_name
 
         # Retrieve samples directly via the storage backend.
         sample_map: dict[int, str] = {}

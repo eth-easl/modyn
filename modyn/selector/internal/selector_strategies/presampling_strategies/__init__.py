@@ -5,7 +5,6 @@ from .abstract_presampling_strategy import AbstractPresamplingStrategy  # noqa: 
 from .label_balanced_presampling_strategy import LabelBalancedPresamplingStrategy  # noqa: F401
 from .llm_based_presampling_strategy import LLMEvaluationPresamplingStrategy  # noqa: F401
 from .no_presampling_strategy import NoPresamplingStrategy  # noqa: F401
-from .original_set_strategy import OriginalSetPresamplingStrategy  # noqa: F401
 from .random_no_replacement_presampling_strategy import RandomNoReplacementPresamplingStrategy  # noqa: F401
 from .random_presampling_strategy import RandomPresamplingStrategy  # noqa: F401
 from .trigger_balanced_presampling_strategy import TriggerBalancedPresamplingStrategy  # noqa: F401

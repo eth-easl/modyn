@@ -243,7 +243,5 @@ class LocalStorageBackend(AbstractStorageBackend):
     def _get_data_from_storage(
         self, selector_keys: list[int], dataset_id: str
     ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
-        """
-        Retrieve full sample data from storage given a list of keys.
-        """
+        """Retrieve full sample data from storage given a list of keys."""
         raise NotImplementedError()
