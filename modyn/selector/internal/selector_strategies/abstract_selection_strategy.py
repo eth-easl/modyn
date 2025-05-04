@@ -29,7 +29,7 @@ class AbstractSelectionStrategy(ABC):
     """
 
     # pylint: disable-next=too-many-branches
-    def __init__(self, config: SelectionStrategy, modyn_config: dict, pipeline_id: int):
+    def __init__(self, config: SelectionStrategy, modyn_config: dict, pipeline_id: int) -> None:
         self._config = config
 
         self.training_set_size_limit: int = config.limit

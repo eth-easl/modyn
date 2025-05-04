@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from typing import Any
 
 from modyn.selector.internal.storage_backend import AbstractStorageBackend
@@ -27,4 +27,9 @@ class MockStorageBackend(AbstractStorageBackend):
         pass
 
     def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
+        pass
+
+    def _get_data_from_storage(
+        self, selector_keys: list[int], worker_id: int | None = None
+    ) -> Iterator[tuple[list[int], list[bytes], list[int] | list[bytes], int]]:
         pass

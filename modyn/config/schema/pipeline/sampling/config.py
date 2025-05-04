@@ -28,7 +28,6 @@ class PresamplingConfig(ModynBaseModel):
         ),
         min=0,
     )
-
     ratio_max: int = Field(
         description=(
             "Reference maximum ratio value. Defaults to 100, which implies percent."
@@ -37,13 +36,30 @@ class PresamplingConfig(ModynBaseModel):
         default=100,
         min=1,
     )
+    custom_prompt: str | None = Field(
+        None, description="Optional custom prompt to override the default evaluation prompt for the LLM."
+    )
+    api_key: str = Field("", description="API key for the LLM service. Required if strategy is LLMEvaluation.")
+    base_url: str = Field("https://fmapi.swissai.cscs.ch", description="Base URL for the LLM service.")
+    model_name: str = Field("meta-llama/Llama-3.3-70B-Instruct", description="Model name for the LLM service.")
+    dataset_id: str | None = Field(
+        None, description="Dataset ID for the LLM service. Must be provided if we use LLMEvaluation."
+    )
+    batch_size: int = Field(10, description="Batch size to use during LLM evaluation.")
     force_column_balancing: bool = Field(False)
     force_required_target_size: bool = Field(False)
 
     @model_validator(mode="after")
-    def validate_ratio(self) -> Self:
+    def validate_config(self) -> Self:
         if self.ratio > self.ratio_max:
             raise ValueError("ratio cannot be greater than ratio_max.")
+
+        if self.strategy == "LLMEvaluation":
+            if not self.dataset_id:
+                raise ValueError("dataset_id must be provided when strategy is 'LLMEvaluation'.")
+            if not self.api_key:
+                raise ValueError("api_key must be provided when strategy is 'LLMEvaluation'.")
+
         return self
 
 

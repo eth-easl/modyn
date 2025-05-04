@@ -1,7 +1,7 @@
 import ctypes
 import logging
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from pathlib import Path
 from sys import platform
 from typing import Any
@@ -239,3 +239,11 @@ class LocalStorageBackend(AbstractStorageBackend):
 
     def get_all_data(self) -> Iterable[tuple[list[int], dict[str, object]]]:
         return self.get_data_since_trigger(-1)
+
+    def _get_data_from_storage(
+        self, selector_keys: list[int], dataset_id: str
+    ) -> Iterator[tuple[list[int], list[bytes], list[int], list[bytes], int]]:
+        """
+        Retrieve full sample data from storage given a list of keys.
+        """
+        raise NotImplementedError()

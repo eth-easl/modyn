@@ -261,3 +261,47 @@ def test__partitioned_execute_stmt():
     assert dbsb_test_part_exec_callback_call_count == 3
 
     del dbsb_test_part_exec_callback_call_count  # Cleanup global
+
+
+class MockStorageStub:
+    def __init__(self) -> None:
+        pass
+
+    def Get(self, request):  # pylint: disable=invalid-name  # noqa: N802
+        # Return a fake response with predetermined values.
+        class FakeResponse:
+            def __init__(self):
+                self.keys = [10, 20]
+                self.samples = [b"sample10", b"sample20"]
+                self.labels = [100, 200]
+                self.target = [b"target10", b"target20"]
+
+        yield FakeResponse()
+
+
+# --- Fixture: Create an instance of DatabaseStorageBackend ---
+@pytest.fixture
+def db_storage_backend():
+    backend = DatabaseStorageBackend(42, get_minimal_modyn_config(), 2)
+    return backend
+
+
+# --- Test for _get_data_from_storage ---
+def test_get_data_from_storage(db_storage_backend):
+    """
+    Verifies that _get_data_from_storage returns a 5-tuple in the proper order:
+      (keys, samples, targets, labels, response_time)
+    """
+    # Patch _init_grpc so that no real connection is attempted.
+    db_storage_backend._init_grpc = lambda worker_id=None: None
+    # Override _storagestub with our fake stub.
+    db_storage_backend._storagestub = MockStorageStub()
+    results = list(db_storage_backend._get_data_from_storage(selector_keys=[10, 20], dataset_id="test_dataset"))
+
+    # We expect exactly one response from our fake stub.
+    assert len(results) == 1
+    keys, samples, labels, targets, resp_time = results[0]
+    assert keys == [10, 20]
+    assert samples == [b"sample10", b"sample20"]
+    assert targets == [b"target10", b"target20"]
+    assert labels == [100, 200]
