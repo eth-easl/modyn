@@ -4,11 +4,20 @@ from transformers import AutoTokenizer
 from modyn.models import T5
 
 
-class HParams:
-    def __init__(self, model_name_or_path="t5-base", device="cpu", amp=False):
-        self.model_name_or_path = model_name_or_path
-        self.device = device
-        self.amp = amp
+class HParams(dict):
+    def __init__(self):
+        super().__init__({
+            "model_name_or_path": "t5-base",
+            "max_length": 128,
+            "temperature": 1.0,
+            "top_k": 50,
+            "top_p": 0.95,
+            "num_return_sequences": 1,
+            "dtype": torch.float32
+        })
+        self.device = "cpu"
+        self.amp = False
+
 
 
 def test_t5modyn_initialization():
@@ -60,16 +69,36 @@ def test_text_generation():
     model = T5(hparams, hparams.device, hparams.amp)
     tokenizer = model.model.tokenizer
 
-    input_text = "translate English to French: I love programming"
-    tokens = tokenizer(input_text, return_tensors="pt", padding=True)
+    input_texts = [
+        "translate English to French: I love programming",
+        "translate English to French: How are you today?",
+        "translate English to French: This is a test sentence.",
+        "translate English to French: The weather is nice."
+    ]
+
+    tokens = tokenizer(input_texts, return_tensors="pt", padding=True, truncation=True)
+
+    # Stack input_ids and attention_mask into final shape (B, L, 2)
     stacked_input = torch.stack([tokens.input_ids, tokens.attention_mask], dim=-1)
 
-    generated = model.model.generate(stacked_input, max_length=20, num_return_sequences=1)
+    print(f"Stacked input shape: {stacked_input.shape}")  # Should be (4, seq_len, 2)
 
-    # Decode generated tokens
+    # Use your custom generate() wrapper
+    generated = model.model.generate(stacked_input)
+    print(f"Type of outputs: {type(generated)}")
+    print(f"Generated token IDs shape: {generated.shape}")
+    print(f"Generated token IDs:\n{generated}")
+    print(generated.shape)
     decoded = tokenizer.batch_decode(generated, skip_special_tokens=True)
-
+    print("Decoded outputs:")
+    for i, text in enumerate(decoded):
+        print(f"[{i}] {text}")
+    
     assert isinstance(decoded, list)
-    assert len(decoded) == 1
-    assert isinstance(decoded[0], str)
-    assert len(decoded[0]) > 0
+    assert len(decoded) == len(input_texts)
+    for output in decoded:
+        assert isinstance(output, str)
+        assert len(output) > 0
+
+
+test_text_generation()

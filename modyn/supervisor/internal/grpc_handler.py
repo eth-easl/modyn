@@ -283,7 +283,6 @@ class GRPCHandler(TrainerServerGRPCHandlerMixin):
             bytes_parser=EvaluatorPythonString(value=bytes_parser_function),
             label_transformer=EvaluatorPythonString(value=label_transformer),
             tokenizer=tokenizer_arg,
-            light_tuning=light_tuning,
            
             model_wrappers=model_wrappers,
             model_wrapper_args=EvaluatorJsonString(value=json.dumps(model_wrapper_args)),

@@ -51,6 +51,7 @@ def perform_evaluation(
     do_forward_pass = False
     use_model_generate = False
     y_true = []
+    y_true_gen = []
     y_score = []
     y_score_gen = []
     model.eval()
@@ -83,9 +84,10 @@ def perform_evaluation(
 
                 if generative:
                     target = target[:, :, 0]
+                    target_gen = target.clone()
                     target[target == model.tokenizer.pad_token_id] = -100
                     if use_model_generate:
-                        output_gen = model.generate(data, target)
+                        output_gen = model.generate(data)
                     if do_forward_pass:
                         output = model(data, target)
 
@@ -96,28 +98,33 @@ def perform_evaluation(
                     if isinstance(metric, AbstractDecomposableMetric):
                         # pylint: disable=possibly-used-before-assignment, used-before-assignment
                         metric.evaluate_batch(
-                            target,
+                            target if not metric.requires_generation else target_gen,
                             output if not metric.requires_generation else output_gen,
                             batch_size,
                         )
 
                 if contains_holistic_metric:
                     y_true.append(target.detach().cpu())
-                    y_score.append(output.detach().cpu())
+                    if do_forward_pass:
+                        y_score.append(output.detach().cpu())
                     if use_model_generate:
-                        y_score_gen.append(output_gen.detach().cpu())  #
-
+                        y_score_gen.append(output_gen.detach().cpu()) 
+                        y_true_gen.append(target_gen.detach().cpu()) #
+                
             num_samples += batch_size
 
     if len(y_true) > 0:
         assert contains_holistic_metric  # We only track y_true in case of holistic metrics
         y_true = torch.cat(y_true)
-        y_score = torch.cat(y_score)
-
+        if do_forward_pass:
+            y_score = torch.cat(y_score)
+        if use_model_generate:
+            y_score_gen = torch.cat(y_score_gen)
+            y_true_gen = torch.cat(y_true_gen)
         for metric in metrics.values():
             if isinstance(metric, AbstractHolisticMetric):
-                metric.evaluate_dataset(y_true, y_score if not metric.requires_generation else y_score_gen, num_samples)
-
+                metric.evaluate_dataset(y_true if not metric.requires_generation else y_true_gen, y_score if not metric.requires_generation else y_score_gen, num_samples)
+            
     metric_result: dict[str, float] = {
         metric_name: metric.get_evaluation_result() for metric_name, metric in metrics.items()
     }

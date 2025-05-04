@@ -28,7 +28,7 @@ class Perplexity(AbstractDecomposableMetric):
         if logits.size(0) > labels.size(0):
             diff = logits.size(0) - labels.size(0)
             pad_tensor = torch.full((diff,), -100, dtype=labels.dtype, device=labels.device)
-            labels = torch.cat([labels,pad_tensor], dim=0)
+            labels = torch.cat([pad_tensor,labels], dim=0)
         elif logits.size(0) < labels.size(0):
             raise RuntimeError(f"y_true is longer than y_pred: {labels.size(0)} > {logits.size(0)}")
 

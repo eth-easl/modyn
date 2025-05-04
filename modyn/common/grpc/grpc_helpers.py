@@ -262,7 +262,7 @@ class TrainerServerGRPCHandlerMixin:
             gradient_accumulation_steps=training_config.gradient_accumulation_steps,
             model_wrappers=training_config.model_wrappers,
             model_wrapper_args=TrainerServerJsonString(value=json.dumps(training_config.model_wrapper_args)),
-            tokenizer_seq_length=data_config.tokenizer_seq_length,
+            tokenizer_seq_length=data_config.max_token_length,
         )
 
     def start_training(

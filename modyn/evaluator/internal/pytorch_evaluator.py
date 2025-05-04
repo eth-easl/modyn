@@ -10,7 +10,6 @@ import torch
 
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.dataset.evaluation_dataset import EvaluationDataset
-from modyn.evaluator.internal.pytorch_lighttuner import PytorchTuner
 from modyn.evaluator.internal.utils import EvaluationInfo, TuningInfo
 from modyn.models.modular_adapters.modular_adapters import apply_adapters
 from modyn.utils import LABEL_TRANSFORMER_FUNC_NAME, deserialize_function
@@ -117,14 +116,6 @@ class PytorchEvaluator:
             f"Queue size = {self._metric_result_queue.qsize()}"
         )
 
-    def _light_tune(self, tuning_info: TuningInfo) -> None:
-        tuner = PytorchTuner(
-            tuning_info=tuning_info,
-            logger=self.logger,
-            model=self._model.model,
-            storage_address=self._eval_info.storage_address,
-        )
-        tuner.train()
 
     def evaluate(self) -> None:
         for idx, interval_idx in enumerate(self._eval_info.not_failed_interval_ids):
@@ -142,7 +133,6 @@ def evaluate(
     log_path: pathlib.Path,
     exception_queue: mp.Queue,
     metric_result_queue: mp.Queue,
-    light_tuning_info: TuningInfo | None = None,  # Dictionary to pass tuning parameters
 ) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
@@ -155,19 +145,6 @@ def evaluate(
 
     try:
         evaluator = PytorchEvaluator(evaluation_info, logger, metric_result_queue)
-
-        # Perform light tuning before evaluation if enabled
-        if evaluation_info.light_tuning:
-            logger.info("Performing light tuning before evaluation.")
-            light_tuning_info = evaluation_info.tuning_info
-            # Ensure light_tuning_info is valid
-            if not isinstance(light_tuning_info, TuningInfo):
-                raise ValueError("light_tuning_info must be a dictionary with tuning parameters.")
-
-            evaluator._light_tune(light_tuning_info)  # Pass tuning info
-
-            logger.info("Light tuning completed.")
-
         evaluator.evaluate()  # Run evaluation after tuning
         logger.info("Evaluator returned.")
     except Exception:  # pylint: disable=broad-except

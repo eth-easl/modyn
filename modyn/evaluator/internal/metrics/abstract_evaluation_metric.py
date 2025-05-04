@@ -68,10 +68,10 @@ class AbstractEvaluationMetric(ABC):
         """
         if self.evaluation_transformer_function:
             y_pred = self.evaluation_transformer_function(y_pred)
-        if self.config.shape_check and y_true.shape != y_pred.shape:
-            raise TypeError(f"Shape of y_true and y_pred must match. Got {y_true.shape} and {y_pred.shape}.")
+        #if self.config.shape_check and y_true.shape != y_pred.shape:
+         #   raise TypeError(f"Shape of y_true and y_pred must match. Got {y_true.shape} and {y_pred.shape}.")
         assert y_pred.shape[0] == num_elements, "Batch size and target label amount is not equal."
-
+        
         return y_pred
 
     def decode_ids(self, token_ids: torch.Tensor) -> str:

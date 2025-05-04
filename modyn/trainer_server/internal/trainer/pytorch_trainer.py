@@ -345,7 +345,7 @@ class PytorchTrainer:
                                 pad_tensor = torch.full(
                                     (target.size(0), diff), -100, dtype=target.dtype, device=target.device
                                 )
-                                target = torch.cat([target,pad_tensor], dim=1)
+                                target = torch.cat([pad_tensor,target], dim=1)
 
                             # Use reshape instead of view to handle non-contiguous tensors safely
                             output = output.reshape(-1, output.size(-1))

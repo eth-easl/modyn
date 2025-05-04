@@ -3,7 +3,7 @@ from typing import Any
 import torch
 from torch import nn
 from transformers import AutoTokenizer, T5ForConditionalGeneration
-
+import torch.nn.functional as F
 from modyn.models.coreset_methods_support import CoresetSupportingModule
 
 
@@ -84,19 +84,21 @@ class T5Modyn(CoresetSupportingModule):
         for p in self.model.parameters():
             p.requires_grad = True
 
+ 
+
     def generate(
         self,
-        input_ids: torch.Tensor,
-        attention_mask: torch.Tensor | None = None,
+        data: torch.Tensor,
     ) -> torch.Tensor:
         """
         Generates sequences using stored hyperparameters.
         Args:
-            input_ids: (batch, seq_len)
-            attention_mask: optional (batch, seq_len)
+            data: (batch, seq_len, 2) where last dim is [input_id, attention_mask]
         Returns:
             generated_ids: (batch * num_return_sequences, max_length)
         """
+        input_ids = data[:, :, 0]
+        attention_mask = data[:, :, 1]
         outputs = self.model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -108,4 +110,15 @@ class T5Modyn(CoresetSupportingModule):
             pad_token_id=self.tokenizer.pad_token_id,
             early_stopping=True,
         )
-        return outputs
+
+        return (
+            F.pad(
+                outputs,
+                (0, self.max_length - outputs.shape[1]),
+                value=self.tokenizer.pad_token_id,
+            )
+            if outputs.shape[1] < self.max_length
+            else outputs
+        )
+
+

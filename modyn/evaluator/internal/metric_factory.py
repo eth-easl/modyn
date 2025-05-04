@@ -31,6 +31,7 @@ class MetricFactory:
     @staticmethod
     def get_evaluation_metric(config: str | MetricConfig) -> AbstractEvaluationMetric:
         if isinstance(config, str):
+            print(f"Parsing metric config from JSON: {config}")
             parsed_metric_config = validate_metric_config_json(config)
         else:
             parsed_metric_config = config

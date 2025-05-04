@@ -5,7 +5,7 @@ from modyn.config.schema.pipeline.evaluation.metrics import BleuMetricConfig
 from modyn.evaluator.internal.metrics import AbstractHolisticMetric
 
 
-class BleuScore(AbstractHolisticMetric):
+class Bleu(AbstractHolisticMetric):
     def __init__(self, config: BleuMetricConfig):
         super().__init__(config)
         self._all_references: list[list[list[str]]] = []

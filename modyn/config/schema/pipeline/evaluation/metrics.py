@@ -87,7 +87,7 @@ class BleuMetricConfig(_BaseMetricConfig):
 
 
 class MeteorMetricConfig(_BaseMetricConfig):
-    name: Literal["MeteorScore"] = Field("Meteor")
+    name: Literal["Meteor"] = Field("Meteor")
 
 
 class LLMMetricConfig(_BaseMetricConfig):
@@ -113,7 +113,8 @@ MetricConfig = Annotated[
     | RocAucMetricConfig
     | PerplexityMetricConfig
     | BleuMetricConfig
-    | RougeMetricConfig,
+    | RougeMetricConfig
+    | MeteorMetricConfig,
     Field(discriminator="name"),
 ]
 
