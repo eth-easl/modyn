@@ -26,6 +26,7 @@ dependencies:
       - evidently==0.4.27
       - alibi-detect==0.12.*
       - tenacity
+      - openai
   - jsonschema
   - psycopg2
   - sqlalchemy>=2.0
