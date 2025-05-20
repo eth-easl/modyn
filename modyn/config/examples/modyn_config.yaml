@@ -191,7 +191,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 4096,
+        selector_batch_size: 40960,
       },
       {
         name: "arxiv_test",
@@ -208,7 +208,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 4096,
+        selector_batch_size: 40960,
       },
       # -------------------------------- ARXIV KAGGLE -------------------------------- #
       {
@@ -585,7 +585,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 2500,
+        selector_batch_size: 25000,
 
       },
       # ------------------------------------ abstracts ------------------------------------ #
@@ -605,7 +605,7 @@ storage:
           },
         ignore_last_timestamp: false,
         file_watcher_interval: 5,
-        selector_batch_size: 2500,
+        selector_batch_size: 25000,
 
       },
       # ------------------------------------ abstracts ------------------------------------ #

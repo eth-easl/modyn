@@ -3,6 +3,7 @@ from modyn.config.schema.pipeline.trigger.performance.performance import (
 )
 from modyn.evaluator.internal.core_evaluation import perform_evaluation, setup_metrics
 from modyn.evaluator.internal.metrics.accuracy import Accuracy
+
 from modyn.supervisor.internal.triggers.performance.data_density_tracker import (
     DataDensityTracker,
 )
@@ -117,16 +118,19 @@ class PerformanceTriggerMixin:
             metrics=self._metrics,
             label_transformer_function=self._label_transformer_function,
             amp=False,
+            generative=True,
+
         )
 
         evaluation_scores = {
             metric_name: metric.get_evaluation_result() for metric_name, metric in self._metrics.items()
         }
-
+        """
         accuracy_metric = eval_results.metrics_data["Accuracy"]
         assert isinstance(accuracy_metric, Accuracy)
         num_misclassifications = accuracy_metric.samples_seen - accuracy_metric.total_correct
-
+        """
+        num_misclassifications = 0
         return (
             self.most_recent_model_id,
             eval_results.num_samples,
@@ -146,13 +150,17 @@ class PerformanceTriggerMixin:
             num_dataloaders=training_config.dataloader_workers,
             batch_size=training_config.batch_size,
             bytes_parser=data_config.bytes_parser_function,
+            bytes_parser_target=data_config.bytes_parser_function_target,
             transform_list=data_config.transformations,
+            transform_list_target=data_config.transformations_target,
             storage_address=f"{self.context.modyn_config.storage.address}",
             selector_address=f"{self.context.modyn_config.selector.address}",
             num_prefetched_partitions=training_config.num_prefetched_partitions,
             parallel_prefetch_requests=training_config.parallel_prefetch_requests,
             shuffle=training_config.shuffle,
             tokenizer=data_config.tokenizer,
+            max_token_length=data_config.max_token_length,
+            include_labels=training_config.training_type == "labeled",
         )
 
     def _init_model_downloader(self) -> None:

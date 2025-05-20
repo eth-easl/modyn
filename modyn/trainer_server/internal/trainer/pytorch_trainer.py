@@ -106,18 +106,18 @@ class PytorchTrainer:
 
         self._scaler = torch.cuda.amp.GradScaler(enabled=training_info.amp, **training_info.grad_scaler_configuration)
         self._info("Grad scaler created.")
-
+        
         self._model.model = apply_adapters(
             self._model.model, training_info.model_wrappers, training_info.model_wrapper_args
         )
-
+        print(training_info.model_wrappers)
         self.expert_mixture = False
         self._setup_optimizers(training_info)
 
         if training_info.use_pretrained_model:
             self._info("Loading model state from pretrained model.")
             self.load_state_if_given(training_info.pretrained_model_path, training_info.load_optimizer_state)
-
+        
         self._model.model.to(device)
         criterion_func = getattr(torch.nn, training_info.torch_criterion)
         self._criterion = criterion_func(**training_info.criterion_dict)
@@ -341,6 +341,7 @@ class PytorchTrainer:
                             # output = output.logits[..., :, :]  # Output for all tokens except the last one
                             # Target for all tokens except the first one
                             if output.size(1) > target.size(1):
+                                
                                 diff = output.size(1) - target.size(1)
                                 pad_tensor = torch.full(
                                     (target.size(0), diff), -100, dtype=target.dtype, device=target.device
@@ -492,6 +493,7 @@ class PytorchTrainer:
 
         # save final model
         final_checkpoint_file_name = self._final_checkpoint_path / "model_final.modyn"
+        
         self.save_state(final_checkpoint_file_name)
 
         # clean temporary directories in dataloader
@@ -599,32 +601,25 @@ class PytorchTrainer:
         stopw.stop("PreprocSampleIDs")
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveLabelToGPU", self._device, stopw, resume=True):
-            if self.training_type == "generative":
-                target: torch.Tensor | dict
-                if isinstance(batch[2], torch.Tensor):
-                    target = batch[2].to(self._device)
-                elif isinstance(batch[2], dict):
-                    target: dict[str, torch.Tensor] = {}  # type: ignore[no-redef]
-                    for name, tensor in batch[2].items():
-                        target[name] = tensor.to(self._device)
-                else:
-                    raise ValueError(
-                        "The format of the data provided is not supported in modyn. "
-                        "Please use either torch tensors or dict[str, torch.Tensor]"
-                    )
-            else:
-                stopw.start("LabelTransform", resume=True)
+            # ── pick the right label tensor on CPU ───────────────────────────────
+            target_cpu = batch[1] if self.training_type == "pretrain" else batch[2]
 
-                if self._label_transformer_function is not None:
-                    target = self._label_transformer_function(batch[2])
-                else:
-                    target = batch[2]
+            # optional label‑transform (only for “labeled” pipelines)
+            if self.training_type == "labeled" and self._label_transformer_function is not None:
+                target_cpu = self._label_transformer_function(target_cpu)
 
-                stopw.stop("LabelTransform")
-                target = target.to(self._device)
+            # slice before the copy
+            if self.training_type != "labeled":          # generative / pretrain
+                target_cpu = target_cpu[:, :, 0]
+
+            # async copy to GPU (one call only)
+            target = target_cpu.to(self._device, non_blocking=True)
+
+            # mask pad tokens for CE loss
             if self.training_type != "labeled":
-                target = target[:, :, 0]
-                target[target == self._model.model.tokenizer.pad_token_id] = -100
+                pad_id = self._model.model.tokenizer.pad_token_id
+                target[target == pad_id] = -100
+
 
         with GPUMeasurement(self._measure_gpu_ops, "MoveDataToGPU", self._device, stopw, resume=True):
             data: torch.Tensor | dict
@@ -669,17 +664,18 @@ class PytorchTrainer:
         # first forward pass and hence they are created as inference tensors if inference mode is used here.
         # If this becomes a problem for more models, we might want to make it a field on the model class instead.
         # Some Huggingface models also show strange behavior inference_mode() because of the way they are initialized
+        
         no_grad_mgr = (
             torch.no_grad() if isinstance(self._model, DLRM) or isinstance(self._model, T5) else torch.inference_mode()
         )
         context_manager = contextlib.nullcontext() if self._downsampler.requires_grad else no_grad_mgr
 
         with context_manager:
+            
             if isinstance(self._model, T5):
                 big_batch_output = (
                     self._model.model(data, labels=target) if self._downsampler.forward_required else torch.Tensor()
                 )
-                big_batch_output = big_batch_output if self._downsampler.forward_required else torch.Tensor()
 
             else:
                 big_batch_output = self._model.model(data) if self._downsampler.forward_required else torch.Tensor()
@@ -687,7 +683,8 @@ class PytorchTrainer:
             self._downsampler.inform_samples(sample_ids, data, big_batch_output, target, embeddings)
 
         self.end_embedding_recorder_if_needed()
-        torch.set_printoptions(threshold=10_000)
+       
+
 
         # TODO(#218) Persist information on the sample IDs/weights when downsampling is performed
         selected_indexes, weights = self._downsampler.select_points()
@@ -760,6 +757,7 @@ class PytorchTrainer:
 
     def send_model_state_to_server(self) -> None:
         buffer = io.BytesIO()
+        
         self.save_state(buffer)
         buffer.seek(0)
         bytes_state = buffer.read()
@@ -813,13 +811,15 @@ class PytorchTrainer:
 
     def save_state(self, destination: pathlib.Path | io.BytesIO, iteration: int | None = None) -> None:
         dict_to_save = {}
+        print(f"Saving model state to {destination}")
+        print(list(self._model.model.state_dict().keys()))
         dict_to_save["model"] = self._model.model.state_dict()
         for optimizer_name, optimizer in self._optimizers.items():
             dict_to_save[f"optimizer-{optimizer_name}"] = optimizer.state_dict()
 
         if iteration is not None:
             dict_to_save["iteration"] = iteration
-
+        print(f"Checkpoint keys: {dict_to_save['model'].keys()}")
         torch.save(dict_to_save, destination)
 
     def load_state_if_given(self, path: pathlib.Path | None, load_optimizer_state: bool = False) -> None:
@@ -832,7 +832,8 @@ class PytorchTrainer:
             checkpoint = torch.load(io.BytesIO(state_file.read()), map_location=torch.device("cpu"))
 
         assert "model" in checkpoint
-        self._model.model.load_state_dict(checkpoint["model"])
+        print(f"Checkpoint keys: {checkpoint['model'].keys()}")
+        self._model.model.load_state_dict(checkpoint["model"],strict=False)
         if load_optimizer_state:
             for optimizer_name, optimizer in self._optimizers.items():
                 if f"optimizer-{optimizer_name}" in checkpoint:

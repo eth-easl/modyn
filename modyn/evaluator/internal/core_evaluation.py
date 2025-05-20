@@ -46,6 +46,7 @@ def perform_evaluation(
     amp: bool = False,
     generative: bool = False,
 ) -> EvaluationResult:
+    
     device_type = "cuda" if "cuda" in device else "cpu"
     contains_holistic_metric = MetricFactory.prepare_metrics(metrics)
     do_forward_pass = False
@@ -112,7 +113,6 @@ def perform_evaluation(
                         y_true_gen.append(target_gen.detach().cpu()) #
                 
             num_samples += batch_size
-
     if len(y_true) > 0:
         assert contains_holistic_metric  # We only track y_true in case of holistic metrics
         y_true = torch.cat(y_true)

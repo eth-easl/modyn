@@ -79,8 +79,8 @@ def apply_prompt_tuning(model: nn.Module, **kwargs: Any) -> nn.Module:
         num_virtual_tokens (int): Default = 20
         task_type (TaskType): Default = TaskType.CAUSAL_LM
     """
-    num_virtual_tokens = kwargs.get("num_virtual_tokens", 20)
-    task_type = kwargs.get("task_type", TaskType.CAUSAL_LM)
+    num_virtual_tokens = kwargs.get("num_virtual_tokens", 30)
+    task_type = kwargs.get("task_type", TaskType.SEQ_2_SEQ_LM)
 
     prompt_config = PromptTuningConfig(
         task_type=task_type,

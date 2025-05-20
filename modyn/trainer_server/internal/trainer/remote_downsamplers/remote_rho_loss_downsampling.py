@@ -24,6 +24,7 @@ class RemoteRHOLossDownsampling(AbstractRemoteDownsamplingStrategy):
         modyn_config: dict,
         per_sample_loss: torch.nn.modules.loss,
         device: str,
+        generative: bool = False,
     ) -> None:
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
         self.per_sample_loss_fct = per_sample_loss

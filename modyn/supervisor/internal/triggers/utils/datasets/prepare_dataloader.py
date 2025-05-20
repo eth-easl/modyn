@@ -64,7 +64,11 @@ def prepare_trigger_dataloader_fixed_keys(
         dataloader_info.transform_list,
         dataloader_info.storage_address,
         keys,
+        dataloader_info.bytes_parser_target,
+        dataloader_info.transform_list_target,
+        dataloader_info.include_labels,
         dataloader_info.tokenizer,
+        dataloader_info.max_token_length,
     )
 
     logger.debug("Creating fixed keys DataLoader.")
@@ -73,3 +77,5 @@ def prepare_trigger_dataloader_fixed_keys(
         batch_size=dataloader_info.batch_size,
         num_workers=dataloader_info.num_dataloaders,
     )
+
+

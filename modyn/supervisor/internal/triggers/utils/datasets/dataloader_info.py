@@ -16,5 +16,9 @@ class DataLoaderInfo:
     num_prefetched_partitions: int
     parallel_prefetch_requests: int
     shuffle: bool
+    include_labels: bool = True
+    bytes_parser_target: str | None = None
+    transform_list_target: list[str] | None = None
     tokenizer: str | None = None
+    max_token_length: int = 128
     training_id: int = -1

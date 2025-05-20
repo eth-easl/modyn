@@ -44,11 +44,16 @@ class FixedKeysDataset(IterableDataset):
         serialized_transforms: list[str],
         storage_address: str,
         keys: list[int],
+        bytes_parser_target: str | None = None,
+        serialized_target_transforms: list[str] | None = None,
+        include_labels: bool = True,
         tokenizer: str | None = None,
+        max_token_length: int =128
+
     ):
         self._dataset_id = dataset_id
         self._first_call = True
-
+        self._include_labels = include_labels
         self._bytes_parser = bytes_parser
         self._serialized_transforms = serialized_transforms
         self._storage_address = storage_address
@@ -56,12 +61,16 @@ class FixedKeysDataset(IterableDataset):
         self._transform: Callable | None = None
         self._storagestub: StorageStub = None
         self._bytes_parser_function: Callable | None = None
+        self._serialized_target_transforms = serialized_target_transforms
+        # Use target bytes parser if provided; otherwise, use the normal one.
+        self._bytes_parser_target = bytes_parser_target if bytes_parser_target is not None else bytes_parser
+        self._bytes_parser_function_target: Callable | None = None
 
-        # tokenizer for NLP tasks
         self._tokenizer = None
         self._tokenizer_name = tokenizer
+
         if tokenizer is not None:
-            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer)
+            self._tokenizer = instantiate_class("modyn.models.tokenizers", tokenizer, max_token_length=max_token_length)
 
         self._keys = keys
 
@@ -69,22 +78,35 @@ class FixedKeysDataset(IterableDataset):
 
     def _init_transforms(self) -> None:
         self._bytes_parser_function = deserialize_function(self._bytes_parser, BYTES_PARSER_FUNC_NAME)
+        self._bytes_parser_function_target = deserialize_function(self._bytes_parser_target, BYTES_PARSER_FUNC_NAME)
         self._transform = self._bytes_parser_function
+        # Ensure _transform_target is always callable.
+        self._transform_target = self._bytes_parser_function_target
         self._setup_composed_transform()
+        self._setup_composed_target_transform()
 
     def _setup_composed_transform(self) -> None:
         assert self._bytes_parser_function is not None
-
         self._transform_list = [self._bytes_parser_function]
         for transform in self._serialized_transforms:
             function = eval(transform)  # pylint: disable=eval-used
             self._transform_list.append(function)
-
         if self._tokenizer is not None:
             self._transform_list.append(self._tokenizer)
-
-        if len(self._transform_list) > 0:
+        if self._transform_list:
             self._transform = transforms.Compose(self._transform_list)
+
+    def _setup_composed_target_transform(self) -> None:
+        target_transform_list = []
+        if self._bytes_parser_function_target is not None:
+            target_transform_list.append(self._bytes_parser_function_target)
+        for transform in self._serialized_target_transforms or []:
+            function = eval(transform)  # pylint: disable=eval-used
+            target_transform_list.append(function)
+        if self._tokenizer is not None:
+            target_transform_list.append(self._tokenizer)
+        if target_transform_list:
+            self._transform_target = transforms.Compose(target_transform_list)
 
     def _init_grpc(self) -> None:
         storage_channel = grpc.insecure_channel(
@@ -113,7 +135,10 @@ class FixedKeysDataset(IterableDataset):
         request = GetRequest(dataset_id=self._dataset_id, keys=keys)
         response: GetResponse
         for response in self._storagestub.Get(request):
-            yield list(zip(response.keys, response.samples, response.labels))
+            if not self._include_labels:
+                yield list(zip(response.keys, response.samples, response.target))
+            else:
+                yield list(zip(response.keys, response.samples, response.labels))
 
     def __iter__(self) -> Generator:
         worker_info = get_worker_info()
@@ -144,4 +169,7 @@ class FixedKeysDataset(IterableDataset):
         # TODO(#175): we might want to do/accelerate prefetching here.
         for data in self._get_data_from_storage(worker_keys):
             for key, sample, label in data:
-                yield key, self._transform(sample), label
+                if self._include_labels:
+                    yield key, self._transform(sample), label
+                else:
+                    yield key, self._transform(sample), self._transform_target(label)

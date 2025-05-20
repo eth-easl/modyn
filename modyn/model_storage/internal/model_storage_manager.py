@@ -48,13 +48,18 @@ class ModelStorageManager:
         Returns:
             int: the model id which identifies the stored model.
         """
-        checkpoint = torch.load(checkpoint_path)
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location= torch.device("cuda:0")   # force CPU
+        )
+
         policy = self.get_model_storage_policy(pipeline_id)
 
         # split the model (stored under the "model" key) from metadata.
         assert "model" in checkpoint
         state_dict = checkpoint["model"]
-
+        # NEW: move every tensor to CPU before any policy handles it
+        state_dict = {k: v.to("cuda:0") for k, v in state_dict.items()}
         local_model_filename = f"{current_time_millis()}_{pipeline_id}_{trigger_id}.model"
         model_path = self._storage_dir / local_model_filename
 
@@ -174,7 +179,7 @@ class ModelStorageManager:
 
         model_handler = getattr(model_module, model_class_name)
         # TODO(create issue): remove cuda and fix GPU loading for DLRM (also apex for model storage)
-        device = "cuda:1" if torch.cuda.is_available() else "cpu"
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
         return model_handler(json.loads(model_config), device, amp).model.state_dict()
 
     def _determine_parent_model_id(self, pipeline_id: int, trigger_id: int) -> int | None:
@@ -228,7 +233,7 @@ class ModelStorageManager:
 
         # append the metadata to the dictionary if specified.
         if metadata:
-            metadata_dict = torch.load(self._storage_dir / model.metadata_path)
+            metadata_dict = torch.load(self._storage_dir / model.metadata_path,map_location="cuda:0" )
             model_dict.update(metadata_dict)
             del metadata_dict
             self._clear_cuda_mem()

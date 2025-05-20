@@ -1,5 +1,5 @@
 import torch
-from transformers import GPT2Tokenizer
+from transformers import GPT2TokenizerFast
 
 from .hf_tokenizer import HFTokenizerTransform
 
@@ -12,7 +12,7 @@ class GPT2TokenizerTransform(HFTokenizerTransform):
         Transformers library:
         https://huggingface.co/docs/transformers/model_doc/gpt2
         """
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt2-large")
+        tokenizer = GPT2TokenizerFast.from_pretrained("gpt2-large")
         tokenizer.pad_token = tokenizer.eos_token  # Set pad token to eos token to avoid padding errors
 
         tokenizer.padding_side = padding_side

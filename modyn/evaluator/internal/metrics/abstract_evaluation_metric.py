@@ -74,18 +74,4 @@ class AbstractEvaluationMetric(ABC):
         
         return y_pred
 
-    def decode_ids(self, token_ids: torch.Tensor) -> str:
-        """
-        Turn a tensor of token-IDs into a single string, using the
-        tokenizer if available, otherwise just join the IDs.
-        """
-        ids = token_ids.tolist()
-        # If a tokenizer was set up on this metric, use it:
-        if hasattr(self, "_tokenizer") and self._tokenizer is not None:
-            return self._tokenizer.tokenizer.decode(
-                ids,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=True,
-            )
-        # Fallback: space-join the raw IDs
-        return " ".join(str(i) for i in ids)
+    

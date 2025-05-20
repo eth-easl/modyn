@@ -32,6 +32,7 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
         modyn_config: dict,
         per_sample_loss: Any,
         device: str,
+        generative: bool = False,
     ):
         super().__init__(
             pipeline_id,
@@ -42,6 +43,7 @@ class RemoteKcenterGreedyDownsamplingStrategy(AbstractMatrixDownsamplingStrategy
             per_sample_loss,
             device,
             MatrixContent.EMBEDDINGS,
+           
         )
         self.metric = euclidean_dist
 

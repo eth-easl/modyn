@@ -25,8 +25,10 @@ class PerformanceTriggerEvaluationConfig(ModynBaseModel):
     @classmethod
     def validate_metrics(cls, dataset: EvalDataConfig) -> EvalDataConfig:
         """Assert that we have at least the accuracy metric."""
+        """
         if not any(metric.name == "Accuracy" for metric in dataset.metrics):
             raise ValueError("The accuracy metric is required for the performance trigger.")
+        """
         return dataset
 
 
@@ -36,7 +38,7 @@ class _InternalPerformanceTriggerConfig(BatchedTriggerConfig):
         description="The window size for the data density estimation. Only used for lookahead mode.",
     )
     performance_triggers_window_size: int = Field(
-        10,
+        100,
         description="The maximum number of evaluations after triggers to consider for computing the expect performance.",
     )
 

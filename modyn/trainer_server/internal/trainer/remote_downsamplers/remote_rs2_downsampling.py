@@ -27,6 +27,7 @@ class RemoteRS2Downsampling(AbstractRemoteDownsamplingStrategy):
         # pylint: disable-next=unused-argument
         per_sample_loss: Any,
         device: str,
+        generative: bool = False
     ) -> None:
         super().__init__(pipeline_id, trigger_id, batch_size, params_from_selector, modyn_config, device)
         self.forward_required = False

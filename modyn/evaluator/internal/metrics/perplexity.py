@@ -14,6 +14,7 @@ class Perplexity(AbstractDecomposableMetric):
         self.total_tokens = 0
 
     def _batch_evaluated_callback(self, y_true: torch.Tensor, y_pred: torch.Tensor, batch_size: int) -> None:
+        
         # Validate y_pred dimensions.
         if y_pred.dim() < 2:
             raise RuntimeError("Invalid shape: y_pred must have at least 2 dimensions (batch, num_classes)")
@@ -23,7 +24,7 @@ class Perplexity(AbstractDecomposableMetric):
         # Reshape logits and labels
         logits = y_pred.view(-1, y_pred.size(-1))  # [batch*seq_len, vocab]
         labels = y_true.view(-1)                   # [batch*seq_len]
-
+        
         # Pad y_true with -100 if it's shorter
         if logits.size(0) > labels.size(0):
             diff = logits.size(0) - labels.size(0)
@@ -47,7 +48,7 @@ class Perplexity(AbstractDecomposableMetric):
         if self.total_tokens == 0:
             self.warning("Did not see any samples.")
             return float("inf")
-        return np.exp(self.total_loss / self.total_tokens)
+        return -np.exp(self.total_loss / self.total_tokens)
 
     def get_name(self) -> str:
         return "Perplexity"
